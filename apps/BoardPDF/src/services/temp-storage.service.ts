@@ -5,6 +5,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { redis } from '../config/redis.config.js';
 import { ensureBucketExists, isS3Configured, S3_BUCKET_NAME, s3Client } from '../config/s3.config.js';
+import { markFileOperationDeleted, markFileOperationExpired, recordFileOperation } from './db-storage-log.service.js';
 import { logger } from './logger.service.js';
 
 export interface StoredTempFile {
@@ -34,6 +35,7 @@ export interface TempFileStreamResult {
 const memoryStore = new Map<string, StoredTempFile>();
 const memoryMetaStore = new Map<string, StoredTempFileMeta>();
 const PREFIX_META = 'tempfile:meta:';
+const EXPIRATION_QUEUE_KEY = 's3:expiration_queue';
 export const DEFAULT_TTL_SECONDS = 60 * 60;
 
 const TEMP_STORAGE_DIR = path.resolve(process.cwd(), 'temp_storage');
@@ -106,6 +108,8 @@ export async function storeTempFile(
   if (redis.status === 'ready') {
     try {
       await redis.set(`${PREFIX_META}${token}`, JSON.stringify(meta), 'EX', ttlSeconds);
+      const expiresAtEpoch = Math.floor(Date.now() / 1000) + ttlSeconds;
+      await redis.zadd(EXPIRATION_QUEUE_KEY, expiresAtEpoch, token);
     } catch {}
   }
 
@@ -132,9 +136,21 @@ export async function storeTempFile(
             Metadata: metadata,
           })
         );
+
+        await recordFileOperation({
+          fileSize: file.fileSize,
+          filename: file.filename || 'documento.pdf',
+          mimeType: file.contentType || file.mimeType || 'application/pdf',
+          s3Bucket: S3_BUCKET_NAME,
+          s3Key,
+          token,
+          toolName: file.toolName || 'general',
+          ttlSeconds,
+        });
+
         return;
       } catch (err) {
-        logger.db.warn('Error al guardar archivo temporal en S3, recurriendo a disco local', err);
+        logger.db.warn('Error al guardar archivo en AWS S3 / MinIO', err);
       }
     }
   }
@@ -160,6 +176,7 @@ export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
     const ttlMs = (meta.ttlSeconds || DEFAULT_TTL_SECONDS) * 1000;
     if (now - meta.createdAt > ttlMs) {
       await deleteTempFile(token);
+      await markFileOperationExpired(token);
       return null;
     }
   }
@@ -230,6 +247,7 @@ export async function getTempFileStream(token: string): Promise<TempFileStreamRe
     const ttlMs = (meta.ttlSeconds || DEFAULT_TTL_SECONDS) * 1000;
     if (now - meta.createdAt > ttlMs) {
       await deleteTempFile(token);
+      await markFileOperationExpired(token);
       return null;
     }
   }
@@ -400,9 +418,12 @@ export async function deleteTempFile(token: string): Promise<void> {
 
   if (redis.status === 'ready') {
     try {
+      await redis.zrem(EXPIRATION_QUEUE_KEY, token);
       await redis.del(`${PREFIX_META}${token}`);
     } catch (err) {
       logger.db.warn('Error al eliminar metadatos de archivo temporal en Redis', err);
     }
   }
+
+  await markFileOperationDeleted(token);
 }

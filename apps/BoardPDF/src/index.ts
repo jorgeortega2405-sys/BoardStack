@@ -4,6 +4,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
+import { checkDatabaseConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
 import { ensureBucketExists } from './config/s3.config.js';
@@ -169,6 +170,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
 }
 
 async function startServer(): Promise<void> {
+  void checkDatabaseConnection();
   void checkRedisConnection();
   void ensureBucketExists();
   const app = express();

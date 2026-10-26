@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY scripts/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY scripts/storage_cleaner.py /app/storage_cleaner.py
+
+CMD ["python", "-u", "/app/storage_cleaner.py"]
