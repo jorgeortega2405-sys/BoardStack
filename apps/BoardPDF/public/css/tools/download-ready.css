@@ -1,6 +1,160 @@
 
 @import './tool-base.css';
 
+.download-ready-wrapper {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.download-layout {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.download-workspace {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 100%;
+  overflow-y: auto;
+  padding: 32px 24px;
+  width: 100%;
+}
+
+.download-canvas {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: auto;
+  max-width: 760px;
+  width: 100%;
+}
+
+.download-card {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 760px;
+  text-align: center;
+  width: 100%;
+}
+
+.download-card__title {
+  color: var(--text-primary);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
+
+.download-card__desc {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 auto 32px;
+  max-width: 580px;
+}
+
+.download-card__actions {
+  margin-bottom: 24px;
+}
+
+.download-expired-screen {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+  min-height: 100%;
+  overflow-y: auto;
+  padding: 32px 20px;
+  width: 100%;
+}
+
+.download-expired-card {
+  align-items: center;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--sl-border-radius-card, 16px);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 480px;
+  padding: 48px 36px;
+  text-align: center;
+  width: 100%;
+}
+
+.download-expired-card__icon-wrap {
+  align-items: center;
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  display: flex;
+  height: 72px;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 72px;
+}
+
+.download-expired-card__icon-wrap--danger {
+  background-color: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--action-danger, #ef4444);
+}
+
+.download-expired-card__icon {
+  height: 36px;
+  width: 36px;
+}
+
+.download-expired-card__badge {
+  margin-bottom: 14px;
+}
+
+.download-expired-card__title {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 10px;
+}
+
+.download-expired-card__desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0 0 28px;
+}
+
+.download-expired-card__actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
 .tool-hero-dropzone__actions--ready {
   align-items: center;
   display: flex;
@@ -283,5 +437,17 @@
   .tool-thankyou-card {
     align-items: center;
     text-align: center;
+  }
+
+  .download-expired-card {
+    padding: 36px 20px;
+  }
+
+  .download-expired-card__actions {
+    flex-direction: column;
+  }
+
+  .download-expired-card__actions .component-button {
+    width: 100%;
   }
 }

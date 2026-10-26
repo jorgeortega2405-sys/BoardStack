@@ -1,7 +1,8 @@
+import { openModal } from '../../../components/modal.component.js';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { escapeHtml, postFormApi, postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
@@ -25,6 +26,7 @@ export class ToPdfConverterController implements ViewController {
   private config: ToPdfRouteConfig;
   private container: HTMLElement;
   private currentFile: File | null = null;
+  private currentUrl: string | null = null;
   private isConverting = false;
   private previewImageUrl: string | null = null;
   private sidebarModal: ToolSidebarModalController | null = null;
@@ -45,7 +47,7 @@ export class ToPdfConverterController implements ViewController {
       container: workspace,
       onRetry: () => {
         this.statusManager?.hide();
-        if (this.currentFile) {
+        if (this.currentFile || this.currentUrl) {
           const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
           const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
           const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
@@ -96,6 +98,28 @@ export class ToPdfConverterController implements ViewController {
     const heroDescEl = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-desc"]');
     if (heroDescEl) heroDescEl.textContent = this.config.subtitle;
 
+    const browseTextEl = this.container.querySelector<HTMLElement>('[data-ref="txt-browse-file"]');
+    if (browseTextEl) browseTextEl.textContent = this.config.browseText || 'Seleccionar Archivo';
+
+    const hintEl = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-hint"]');
+    if (hintEl) hintEl.textContent = this.config.hintText || 'o arrastra y suelta tu archivo aquí';
+
+    const cloudBtns = this.container.querySelector<HTMLElement>('[data-ref="hero-cloud-btns"]');
+    if (cloudBtns) {
+      cloudBtns.style.display = this.config.isUrlMode ? 'none' : 'flex';
+    }
+
+    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
+    if (fabAddMoreBtn && this.config.isUrlMode) {
+      fabAddMoreBtn.setAttribute('data-tooltip', 'Cambiar URL');
+      fabAddMoreBtn.setAttribute('aria-label', 'Cambiar URL');
+    }
+
+    const fabOptions = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-options"]');
+    if (fabOptions && this.config.isUrlMode) {
+      fabOptions.style.display = 'none';
+    }
+
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-title"]');
     if (titleEl) titleEl.textContent = this.config.title;
 
@@ -110,6 +134,17 @@ export class ToPdfConverterController implements ViewController {
 
     const iconBoxUse = this.container.querySelector<SVGElement>('[data-ref="selected-file-symbol"] use');
     if (iconBoxUse) iconBoxUse.setAttribute('href', `/icons.svg#${this.config.icon}`);
+
+    if (this.config.isUrlMode) {
+      const noticeTextEl = this.container.querySelector<HTMLElement>('[data-ref="txt-converter-info-notice"]');
+      if (noticeTextEl) {
+        noticeTextEl.textContent = 'La página web se convertirá a documento PDF con máxima fidelidad, conservando diseño, estilos e imágenes.';
+      }
+      const hintSelectedEl = this.container.querySelector<HTMLElement>('[data-ref="txt-converter-hint"]');
+      if (hintSelectedEl) {
+        hintSelectedEl.textContent = 'La página web se convertirá a formato PDF manteniendo el diseño original, tipografías e imágenes.';
+      }
+    }
   }
 
   private bindEvents(): void {
@@ -139,12 +174,20 @@ export class ToPdfConverterController implements ViewController {
 
     browseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      fileInput?.click();
+      if (this.config.isUrlMode) {
+        this.openUrlModal();
+      } else {
+        fileInput?.click();
+      }
     }, { signal });
 
     fabAddMoreBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      fileInput?.click();
+      if (this.config.isUrlMode) {
+        this.openUrlModal();
+      } else {
+        fileInput?.click();
+      }
     }, { signal });
 
     heroDriveBtn?.addEventListener('click', async (e) => {
@@ -180,7 +223,11 @@ export class ToPdfConverterController implements ViewController {
     }, { signal });
 
     dropzone?.addEventListener('click', () => {
-      fileInput?.click();
+      if (this.config.isUrlMode) {
+        this.openUrlModal();
+      } else {
+        fileInput?.click();
+      }
     }, { signal });
 
     removeBtn?.addEventListener('click', (e) => {
@@ -195,7 +242,7 @@ export class ToPdfConverterController implements ViewController {
       }
     }, { signal });
 
-    if (dropzone) {
+    if (dropzone && !this.config.isUrlMode) {
       bindFileDropzone({
         dropTarget: dropzone,
         visualTarget: dropzone,
@@ -213,6 +260,101 @@ export class ToPdfConverterController implements ViewController {
     }, { signal });
   }
 
+  private openUrlModal(): void {
+    const currentVal = this.currentUrl || '';
+    const modal = openModal({
+      bodyHtml: `
+        <label class="field" data-ref="field-web-url">
+          <input class="field__input" data-ref="input-web-url" type="url" placeholder=" " value="${escapeHtml(currentVal)}" autocomplete="off" spellcheck="false" />
+          <span class="field__label">URL de la página web (ej. https://ejemplo.com)</span>
+        </label>
+      `,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Añadir URL',
+      description: 'Escribe la URL de la página web que deseas convertir a PDF.',
+      onConfirm: async (m) => {
+        const input = m.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
+        let raw = (input?.value || '').trim();
+        if (!raw) {
+          m.showError('Debes ingresar la URL de una página web.');
+          return false;
+        }
+        if (!/^https?:\/\//i.test(raw)) {
+          raw = `https://${raw}`;
+        }
+        try {
+          const parsed = new URL(raw);
+          if (!parsed.hostname || !parsed.hostname.includes('.')) {
+            m.showError('Por favor ingresa una URL válida (ej. https://ejemplo.com).');
+            return false;
+          }
+        } catch {
+          m.showError('Por favor ingresa una URL válida con formato https://...');
+          return false;
+        }
+
+        this.handleUrlSelected(raw);
+        return true;
+      },
+      size: 'sm',
+      title: 'Añadir URL',
+    });
+
+    setTimeout(() => {
+      const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
+      if (input) {
+        input.focus();
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            modal.confirmBtn?.click();
+          }
+        });
+      }
+    }, 60);
+  }
+
+  private handleUrlSelected(url: string): void {
+    this.hideError();
+    this.currentUrl = url;
+    this.currentFile = null;
+
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
+    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
+    const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
+    const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
+    const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
+    const imgEl = this.container.querySelector<HTMLImageElement>('[data-ref="doc-preview-img"]');
+    const iconEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-icon"]');
+    const iconBoxUse = this.container.querySelector<SVGElement>('[data-ref="selected-file-symbol"] use');
+    const fabBadge = this.container.querySelector<HTMLElement>('[data-ref="badge-fab-count"]');
+
+    if (fileNameEl) fileNameEl.textContent = url;
+    if (fileSizeEl) fileSizeEl.textContent = 'Página Web';
+    if (convertBtn) convertBtn.disabled = false;
+    if (iconBoxUse) iconBoxUse.setAttribute('href', '/icons.svg#language');
+    if (fabBadge) fabBadge.textContent = '1';
+
+    if (imgEl) {
+      imgEl.removeAttribute('src');
+      imgEl.style.display = 'none';
+    }
+    if (iconEl) iconEl.style.display = 'flex';
+
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (selectedCard) selectedCard.style.display = 'flex';
+
+    if (sidebar) sidebar.style.display = 'flex';
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    if (fabMore) fabMore.style.display = 'block';
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+  }
+
   private handleFileSelected(file: File): void {
     this.hideError();
     const limits = getCurrentUserToolLimits('to-pdf-converter');
@@ -222,6 +364,7 @@ export class ToPdfConverterController implements ViewController {
     }
 
     this.currentFile = file;
+    this.currentUrl = null;
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
@@ -270,6 +413,7 @@ export class ToPdfConverterController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
+    this.currentUrl = null;
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-source-file"]');
     if (fileInput) fileInput.value = '';
 
@@ -326,7 +470,7 @@ export class ToPdfConverterController implements ViewController {
   }
 
   private async handleConvert(button: HTMLButtonElement): Promise<void> {
-    if (!this.currentFile || this.isConverting) return;
+    if ((!this.currentFile && !this.currentUrl) || this.isConverting) return;
     this.hideError();
 
     this.isConverting = true;
@@ -336,7 +480,11 @@ export class ToPdfConverterController implements ViewController {
     await withButtonLoading(button, async () => {
       try {
         const formData = new FormData();
-        formData.append('file', this.currentFile as Blob, this.currentFile?.name);
+        if (this.currentUrl) {
+          formData.append('url', this.currentUrl);
+        } else if (this.currentFile) {
+          formData.append('file', this.currentFile as Blob, this.currentFile?.name);
+        }
         formData.append('sourceType', this.config.sourceType);
 
         const response = await postFormWithProgress(
@@ -366,7 +514,9 @@ export class ToPdfConverterController implements ViewController {
             filename: data.filename,
             returnText: this.config.title,
             returnUrl: window.location.pathname,
-            subtitle: 'Tu archivo ha sido transformado en PDF con la máxima calidad y fidelidad.',
+            subtitle: this.currentUrl
+              ? 'La página web ha sido transformada en un documento PDF con la máxima calidad y fidelidad.'
+              : 'Tu archivo ha sido transformado en PDF con la máxima calidad y fidelidad.',
             title: `¡${this.config.title} completada con éxito!`,
             token: data.downloadToken,
           })
@@ -376,9 +526,11 @@ export class ToPdfConverterController implements ViewController {
         navigate(`/download/${data.downloadToken}`);
       } catch {
         this.statusManager?.showError({
-          boxText: 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.',
+          boxText: this.currentUrl
+            ? 'Comprueba que la dirección URL sea accesible públicamente y no requiera inicio de sesión. Si el problema continúa, contacta a soporte.'
+            : 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.',
           boxTitle: 'Error en la conversión a PDF',
-          desc: 'Ha ocurrido un error inesperado al procesar el documento. Por favor intenta más tarde.',
+          desc: 'Ha ocurrido un error inesperado al procesar la conversión. Por favor intenta más tarde.',
           retryText: 'Reintentar Conversión',
           title: '¡Oh no! No hemos podido convertir tu archivo.',
         });

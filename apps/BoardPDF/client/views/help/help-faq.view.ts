@@ -168,69 +168,50 @@ export class HelpFaqController implements ViewController {
     if (!itemsContainer) return;
 
     const query = this.searchQuery.toLowerCase().trim();
-    const filteredGroups = FAQ_GROUPS.filter((group) => {
-      if (this.activeCategory !== 'all' && group.id !== this.activeCategory) {
+    const filteredItems = FAQ_ITEMS.filter((item) => {
+      if (this.activeCategory !== 'all' && item.category !== this.activeCategory) {
         return false;
       }
-      return true;
+      if (!query) return true;
+      const q = t(item.questionKey).toLowerCase();
+      const a = t(item.answerKey).toLowerCase();
+      return q.includes(query) || a.includes(query);
     });
 
-    let renderedCount = 0;
-    const html = filteredGroups.map((group) => {
-      const items = FAQ_ITEMS.filter((item) => {
-        if (item.category !== group.id) return false;
-        const q = t(item.questionKey).toLowerCase();
-        const a = t(item.answerKey).toLowerCase();
-        if (!query) return true;
-        return q.includes(query) || a.includes(query);
-      });
-
-      if (items.length === 0) return '';
-      renderedCount += items.length;
-
-      const itemsHtml = items.map((item) => {
-        const question = t(item.questionKey);
-        const answer = t(item.answerKey);
-
-        return `
-          <div class="faq-item" data-ref="faq-item-${item.id}">
-            <button type="button" class="faq-item__trigger" data-ref="faq-trigger-${item.id}" aria-expanded="false">
-              <span>${question}</span>
-              <svg class="component-icon faq-item__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-            </button>
-            <div class="faq-item__content" data-ref="faq-content-${item.id}">
-              <div class="faq-item__inner" data-ref="faq-inner-${item.id}">
-                <div class="faq-item__body" data-ref="faq-body-${item.id}">${answer}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      const groupTitle = t(group.titleKey) || group.id;
-
-      return `
-        <div class="faq-group" data-ref="faq-group-${group.id}">
-          <div class="faq-group__header" data-ref="faq-group-header-${group.id}">
-            <h2 class="faq-group__title" data-ref="faq-group-title-${group.id}">${groupTitle}</h2>
-          </div>
-          <div class="faq-accordion" data-ref="faq-accordion-${group.id}">
-            ${itemsHtml}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    if (renderedCount === 0) {
+    if (filteredItems.length === 0) {
       itemsContainer.innerHTML = `
         <div class="faq-group" data-ref="faq-empty-state" style="padding: 48px 24px; text-align: center;">
           <h3 class="faq-group__title" data-ref="faq-empty-title" style="margin-bottom: 8px;">${t('help.faq.empty_title') || 'No se encontraron resultados'}</h3>
           <p class="settings-subtitle" data-ref="faq-empty-desc" style="margin: 0;">${t('help.faq.empty_desc') || 'Intenta buscar con otras palabras o selecciona otra categoría.'}</p>
         </div>
       `;
-    } else {
-      itemsContainer.innerHTML = html;
+      return;
     }
+
+    const itemsHtml = filteredItems.map((item) => {
+      const question = t(item.questionKey);
+      const answer = t(item.answerKey);
+
+      return `
+        <div class="faq-item" data-ref="faq-item-${item.id}">
+          <button type="button" class="faq-item__trigger" data-ref="faq-trigger-${item.id}" aria-expanded="false">
+            <span>${question}</span>
+            <svg class="component-icon faq-item__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="faq-item__content" data-ref="faq-content-${item.id}">
+            <div class="faq-item__inner" data-ref="faq-inner-${item.id}">
+              <div class="faq-item__body" data-ref="faq-body-${item.id}">${answer}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    itemsContainer.innerHTML = `
+      <div class="faq-accordion" data-ref="faq-accordion">
+        ${itemsHtml}
+      </div>
+    `;
 
     renderIcons(itemsContainer);
   }

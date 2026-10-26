@@ -383,11 +383,15 @@ export class EditPdfController implements ViewController {
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       if (topControls) topControls.style.display = 'flex';
       if (topActions) topActions.style.display = 'flex';
+      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+      if (topHeader) topHeader.style.display = 'flex';
     } catch {
       this.showError('El archivo seleccionado no se pudo abrir porque estaba dañado o contiene errores en su estructura.');
       if (dropzoneCard) dropzoneCard.style.display = '';
       if (editorCard) editorCard.style.display = 'none';
       if (sidebar) sidebar.style.display = 'none';
+      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+      if (topHeader) topHeader.style.display = 'none';
     }
   }
 
@@ -1297,8 +1301,10 @@ export class EditPdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     if (topControls) topControls.style.display = 'none';
     if (topActions) topActions.style.display = 'none';
+    if (topHeader) topHeader.style.display = 'none';
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -1323,6 +1329,8 @@ export class EditPdfController implements ViewController {
     if (editorCard) editorCard.style.display = 'none';
     if (topControls) topControls.style.display = 'none';
     if (topActions) topActions.style.display = 'none';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    if (topHeader) topHeader.style.display = 'none';
     if (sidebar) sidebar.style.display = 'none';
 
     this.statusManager?.showUploading(1, 1);
@@ -1424,6 +1432,8 @@ export class EditPdfController implements ViewController {
       if (sidebar) sidebar.style.display = 'flex';
       if (topControls) topControls.style.display = 'flex';
       if (topActions) topActions.style.display = 'flex';
+      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+      if (topHeader) topHeader.style.display = 'flex';
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     } else {
       this.resetSelectedFile();

@@ -319,7 +319,9 @@ export class SummarizePdfController implements ViewController {
       outputNameInput.value = `${baseName}_resumen.pdf`;
     }
     const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     if (zoomActions) zoomActions.style.display = 'flex';
+    if (topHeader) topHeader.style.display = 'flex';
 
     const numPages = this.pdfDocument?.numPages || 1;
     if (fileNameEl) fileNameEl.textContent = file.name;
@@ -498,7 +500,9 @@ export class SummarizePdfController implements ViewController {
       outputNameInput.value = 'resumen.pdf';
     }
     const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     if (zoomActions) zoomActions.style.display = 'none';
+    if (topHeader) topHeader.style.display = 'none';
     this.sidebarModal?.close();
 
     if (actionBtn) actionBtn.disabled = true;

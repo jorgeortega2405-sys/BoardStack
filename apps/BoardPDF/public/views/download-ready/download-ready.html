@@ -1,12 +1,12 @@
-<div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="download-ready-wrapper">
-  <div class="tool-layout" data-ref="download-ready-layout">
-    <main class="tool-layout__workspace" data-ref="download-ready-workspace">
-      <div class="tool-workspace__canvas" data-ref="pdf-dropzone-card">
-        <div class="tool-hero-dropzone" data-ref="pdf-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="ready-title">¡Los PDFs se han unido!</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="ready-subtitle">El proceso se ha completado con éxito y tu documento está listo para descargar.</p>
+<div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper download-ready-wrapper" data-ref="download-ready-wrapper">
+  <div class="tool-layout download-layout" data-ref="ready-success-screen">
+    <main class="tool-layout__workspace download-workspace" data-ref="download-ready-workspace">
+      <div class="tool-workspace__canvas download-canvas" data-ref="download-ready-canvas">
+        <div class="download-card" data-ref="download-card">
+          <h1 class="tool-hero-dropzone__title download-card__title" data-ref="ready-title">¡Tu archivo está listo para descargar!</h1>
+          <p class="tool-hero-dropzone__desc download-card__desc" data-ref="ready-subtitle">El proceso se ha completado con éxito y tu documento está listo para descargar.</p>
 
-          <div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready" data-ref="ready-actions-group">
+          <div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready download-card__actions" data-ref="ready-actions-group">
             <a class="component-button component-button--black tool-hero-dropzone__btn-select tool-hero-dropzone__btn-download" data-ref="btn-download-file" href="#" download>
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
               <span data-ref="ready-btn-text">Descargar PDF</span>
@@ -72,5 +72,26 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <div class="download-expired-screen" data-ref="ready-expired-screen" style="display: none;">
+    <div class="download-expired-card" data-ref="download-expired-card">
+      <div class="download-expired-card__icon-wrap" data-ref="expired-icon-wrap">
+        <svg class="component-icon download-expired-card__icon" data-ref="expired-icon" aria-hidden="true"><use href="/icons.svg#link_off"></use></svg>
+      </div>
+      <span class="component-badge component-badge--danger component-badge--sm download-expired-card__badge" data-ref="expired-badge">Enlace caducado</span>
+      <h1 class="download-expired-card__title" data-ref="expired-title">Enlace no disponible o caducado</h1>
+      <p class="download-expired-card__desc" data-ref="expired-desc">El archivo ya no está disponible en nuestro servidor o el enlace ha caducado. Por razones de seguridad y privacidad, los archivos temporales se conservan únicamente durante 1 hora.</p>
+      <div class="download-expired-card__actions" data-ref="expired-actions">
+        <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-expired-home">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          <span>Volver al inicio</span>
+        </button>
+        <button type="button" class="component-button component-button--outline component-button--h44" data-ref="btn-expired-tools">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+          <span>Ver herramientas</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>

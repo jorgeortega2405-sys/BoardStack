@@ -290,9 +290,11 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (topControls) topControls.style.display = 'flex';
     if (topActions) topActions.style.display = 'flex';
+    if (topHeader) topHeader.style.display = 'flex';
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
@@ -346,9 +348,11 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (topControls) topControls.style.display = 'none';
     if (topActions) topActions.style.display = 'none';
+    if (topHeader) topHeader.style.display = 'none';
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
   }
 

@@ -1,4 +1,4 @@
-import { getLocalizedPath } from '../config/seo.config.js';
+import { getLocalizedPath, resolveRouteFromSlug } from '../config/seo.config.js';
 import { TOOLS_REGISTRY } from '../config/tools.registry.js';
 import { escapeHtml } from '../services/api.service.js';
 import { getCurrentLanguage, t, translateElement } from '../services/i18n.service.js';
@@ -6,6 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getWorkflows } from '../services/workflow-storage.service.js';
+import { isSupportedLanguage } from '../utils/languages.util.js';
 
 export let isDrawerOpen = false;
 export let currentDrawerMode: 'apps' | 'help' | 'workflows' = 'workflows';
@@ -14,18 +15,55 @@ let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 let sidebarInitPromise: Promise<HTMLElement> | null = null;
 let sidebarInstance: HTMLElement | null = null;
 
+function getActiveHelpSection(raw: string): 'documentation' | 'faq' | 'security' | 'privacy' | 'terms' | 'cookies' | null {
+  const clean = (raw || '').split('?')[0].split('#')[0].toLowerCase().replace(/^\/[a-z]{2,3}(?:-[a-z]{2,4})?(?=\/|$)/i, '').replace(/^\/+|\/+$/g, '');
+  if (!clean) return null;
+
+  if (clean === 'help-documentation' || clean === 'help/documentation' || clean === 'documentation' || clean === 'documentacion' || clean === 'herramientas') {
+    return 'documentation';
+  }
+  if (clean === 'help-faq' || clean === 'help/faq' || clean === 'faq' || clean === 'preguntas-frecuentes') {
+    return 'faq';
+  }
+  if (clean === 'help-security' || clean === 'help/security' || clean === 'security' || clean === 'security-policy' || clean === 'seguridad' || clean === 'help') {
+    return 'security';
+  }
+  if (clean === 'help-privacy' || clean === 'help/privacy' || clean === 'privacy' || clean === 'privacy-policy' || clean === 'privacidad') {
+    return 'privacy';
+  }
+  if (clean === 'help-terms' || clean === 'help/terms' || clean === 'terms' || clean === 'terms-and-conditions' || clean === 'terminos') {
+    return 'terms';
+  }
+  if (clean === 'help-cookies' || clean === 'help/cookies' || clean === 'cookies' || clean === 'cookie-policy') {
+    return 'cookies';
+  }
+
+  const resolved = resolveRouteFromSlug(clean);
+  if (resolved) {
+    if (resolved.routeId === 'help-documentation') return 'documentation';
+    if (resolved.routeId === 'help-faq') return 'faq';
+    if (resolved.routeId === 'help-security' || resolved.routeId === 'help') return 'security';
+    if (resolved.routeId === 'help-privacy') return 'privacy';
+    if (resolved.routeId === 'help-terms') return 'terms';
+    if (resolved.routeId === 'help-cookies') return 'cookies';
+  }
+
+  return null;
+}
+
 export function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
-  return pathname.includes('/help') || pathname.includes('/workflows') || pathname.includes('/workflow/');
+  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/');
 }
 
 export function updateSidebarAuthState(_sidebar?: HTMLElement): void {}
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
-  const isHome = path === '/' || path === '' || /^\/[a-z]{2}\/?$/i.test(path);
-  const isHelp = path.includes('/help') || path.includes('/preguntas-frecuentes') || path.includes('/herramientas') || path.includes('/seguridad') || path.includes('/privacidad') || path.includes('/terminos') || path.includes('/cookies');
-  const isAi = path === '/ai' || path.startsWith('/ai') || /^\/[a-z]{2}\/ai(\/.*)?$/i.test(path);
-  const isWorkflows = path.includes('/workflows') || path.includes('/workflow/');
+  const cleanPath = (path || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  const isAi = cleanPath === '/ai' || cleanPath.startsWith('/ai/') || /^\/[a-z]{2,3}\/ai(\/.*)?$/i.test(cleanPath);
+  const isHome = !isAi && (cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1))));
+  const isHelp = getActiveHelpSection(cleanPath) !== null;
+  const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
 
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
@@ -53,7 +91,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     } else if (isWorkflows && currentDrawerMode !== 'workflows') {
       currentDrawerMode = 'workflows';
     }
-    void updateDynamicDrawer(sidebar);
+    void updateDynamicDrawer(sidebar, cleanPath);
   }
 }
 
@@ -149,7 +187,7 @@ function createDrawerElement(): HTMLElement {
   return drawer;
 }
 
-export async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
+export async function populateDrawerContent(drawer: HTMLElement, activePath?: string): Promise<void> {
   const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
   const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
   if (!drawerBody) return;
@@ -160,18 +198,19 @@ export async function populateDrawerContent(drawer: HTMLElement): Promise<void> 
   }
 
   if (currentDrawerMode === 'help') {
-    renderHelpDrawerContent(drawerBody);
+    renderHelpDrawerContent(drawerBody, activePath);
   } else if (currentDrawerMode === 'apps') {
     renderAppsDrawerContent(drawerBody);
   } else {
-    renderWorkflowsDrawerContent(drawerBody, drawerFooter);
+    renderWorkflowsDrawerContent(drawerBody, drawerFooter, activePath);
   }
 
   renderIcons(drawerBody);
 }
 
-function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElement | null): void {
-  const currentPath = window.location.pathname;
+function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElement | null, activePath?: string): void {
+  const rawPath = activePath || window.location.pathname;
+  const currentPath = (rawPath || '').split('?')[0].split('#')[0].replace(/^\/[a-z]{2,3}(?:-[a-z]{2,4})?(?=\/|$)/i, '') || '/';
 
   const bindNavLink = (btn: HTMLElement | null, path: string) => {
     btn?.addEventListener('click', (e) => {
@@ -236,16 +275,17 @@ function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTM
   translateElement(drawerBody);
 }
 
-function renderHelpDrawerContent(drawerBody: HTMLElement): void {
-  const currentPath = window.location.pathname;
+function renderHelpDrawerContent(drawerBody: HTMLElement, activePath?: string): void {
+  const currentLang = getCurrentLanguage();
+  const currentPath = activePath || window.location.pathname;
 
-  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+  const bindNavLink = (btn: HTMLElement | null, routeId: string, fallbackPath: string) => {
     btn?.addEventListener('click', (e) => {
       e.preventDefault();
       if (window.innerWidth <= 768) {
         toggleDrawer(false);
       }
-      navigate(path);
+      navigate(getLocalizedPath(routeId, currentLang) || fallbackPath);
     });
   };
 
@@ -288,26 +328,21 @@ function renderHelpDrawerContent(drawerBody: HTMLElement): void {
   const btnTerms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-terms"]');
   const btnCookies = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-cookies"]');
 
-  if (currentPath === '/help/documentation' || currentPath === '/documentation' || currentPath === '/herramientas') {
-    btnDocs?.classList.add('is-active');
-  } else if (currentPath === '/help/faq' || currentPath === '/faq' || currentPath === '/preguntas-frecuentes') {
-    btnFaq?.classList.add('is-active');
-  } else if (currentPath === '/help' || currentPath === '/help/security' || currentPath === '/security-policy') {
-    btnSecurity?.classList.add('is-active');
-  } else if (currentPath === '/help/privacy' || currentPath === '/privacy' || currentPath === '/privacy-policy') {
-    btnPrivacy?.classList.add('is-active');
-  } else if (currentPath === '/help/terms' || currentPath === '/terms' || currentPath === '/terms-and-conditions') {
-    btnTerms?.classList.add('is-active');
-  } else if (currentPath === '/help/cookies' || currentPath === '/cookies' || currentPath === '/cookie-policy') {
-    btnCookies?.classList.add('is-active');
-  }
+  const activeSection = getActiveHelpSection(currentPath);
 
-  bindNavLink(btnDocs, '/help/documentation');
-  bindNavLink(btnFaq, '/help/faq');
-  bindNavLink(btnSecurity, '/help/security');
-  bindNavLink(btnPrivacy, '/help/privacy');
-  bindNavLink(btnTerms, '/help/terms');
-  bindNavLink(btnCookies, '/help/cookies');
+  btnDocs?.classList.toggle('is-active', activeSection === 'documentation');
+  btnFaq?.classList.toggle('is-active', activeSection === 'faq');
+  btnSecurity?.classList.toggle('is-active', activeSection === 'security');
+  btnPrivacy?.classList.toggle('is-active', activeSection === 'privacy');
+  btnTerms?.classList.toggle('is-active', activeSection === 'terms');
+  btnCookies?.classList.toggle('is-active', activeSection === 'cookies');
+
+  bindNavLink(btnDocs, 'help-documentation', '/help/documentation');
+  bindNavLink(btnFaq, 'help-faq', '/help/faq');
+  bindNavLink(btnSecurity, 'help-security', '/help/security');
+  bindNavLink(btnPrivacy, 'help-privacy', '/help/privacy');
+  bindNavLink(btnTerms, 'help-terms', '/help/terms');
+  bindNavLink(btnCookies, 'help-cookies', '/help/cookies');
 }
 
 function renderAppsDrawerContent(drawerBody: HTMLElement): void {
@@ -374,33 +409,23 @@ function renderAppsDrawerContent(drawerBody: HTMLElement): void {
   });
 }
 
-async function openDynamicDrawer(sidebar: HTMLElement): Promise<void> {
+async function openDynamicDrawer(sidebar: HTMLElement, activePath?: string): Promise<void> {
   let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
   if (!drawer) {
     drawer = createDrawerElement();
     sidebar.appendChild(drawer);
   }
-  await populateDrawerContent(drawer);
+  await populateDrawerContent(drawer, activePath);
   drawer.classList.add('is-open');
 }
 
 function closeDynamicDrawer(): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const drawer = sidebar?.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
-  const itemApps = sidebar?.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');
-  const btnApps = sidebar?.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
-  const itemHelp = sidebar?.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
-  const btnRailHelp = sidebar?.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
-  const btnToggle = sidebar?.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
-  itemApps?.classList.remove('is-active');
-  btnApps?.classList.remove('is-active');
-  itemHelp?.classList.remove('is-active');
-  btnRailHelp?.classList.remove('is-active');
-
-  const currentPath = window.location.pathname;
-  const isWorkflows = currentPath.includes('/workflows') || currentPath.includes('/workflow/');
-  btnToggle?.classList.toggle('is-active', isWorkflows);
+  if (sidebar) {
+    updateSidebarActiveState(sidebar);
+  }
 
   if (drawer) {
     drawer.classList.remove('is-open');
@@ -416,15 +441,11 @@ function closeDynamicDrawer(): void {
 
 export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'workflows'): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
-  const btnToggle = sidebar?.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]') || document.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
-  const itemApps = sidebar?.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');
-  const btnApps = sidebar?.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
-  const itemHelp = sidebar?.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
-  const btnRailHelp = sidebar?.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
-
   const currentPath = window.location.pathname;
-  const isWorkflows = currentPath.includes('/workflows') || currentPath.includes('/workflow/');
-  const targetMode = mode || (currentPath.includes('/help') ? 'help' : (isWorkflows ? 'workflows' : 'workflows'));
+  const cleanPath = (currentPath || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
+  const isHelp = getActiveHelpSection(cleanPath) !== null;
+  const targetMode = mode || (isHelp ? 'help' : (isWorkflows ? 'workflows' : 'workflows'));
 
   if (forceState === undefined) {
     if (isDrawerOpen && currentDrawerMode === targetMode) {
@@ -442,13 +463,9 @@ export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'wor
     }
   }
 
-  btnToggle?.classList.toggle('is-active', (isDrawerOpen && currentDrawerMode === 'workflows') || (!isDrawerOpen && isWorkflows));
-  const isAppsActive = isDrawerOpen && currentDrawerMode === 'apps';
-  const isHelpActive = isDrawerOpen && currentDrawerMode === 'help';
-  itemApps?.classList.toggle('is-active', isAppsActive);
-  btnApps?.classList.toggle('is-active', isAppsActive);
-  itemHelp?.classList.toggle('is-active', isHelpActive);
-  btnRailHelp?.classList.toggle('is-active', isHelpActive);
+  if (sidebar) {
+    updateSidebarActiveState(sidebar, cleanPath);
+  }
 
   if (isDrawerOpen) {
     if (drawerRemovalTimer) {
@@ -456,19 +473,19 @@ export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'wor
       drawerRemovalTimer = null;
     }
     if (sidebar) {
-      void openDynamicDrawer(sidebar);
+      void openDynamicDrawer(sidebar, cleanPath);
     }
   } else {
     closeDynamicDrawer();
   }
 }
 
-export async function updateDynamicDrawer(sidebar?: HTMLElement): Promise<void> {
+export async function updateDynamicDrawer(sidebar?: HTMLElement, activePath?: string): Promise<void> {
   const sb = sidebar || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   if (!sb) return;
   const drawer = sb.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
   if (drawer && isDrawerOpen) {
-    await populateDrawerContent(drawer);
+    await populateDrawerContent(drawer, activePath);
   }
 }
 

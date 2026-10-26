@@ -368,6 +368,8 @@ export class CropPdfController implements ViewController {
       if (settingsBtn) settingsBtn.classList.add('is-visible');
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       if (pageNav) pageNav.style.display = 'flex';
+      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+      if (topHeader) topHeader.style.display = 'flex';
       if (filenameInput) {
         const base = file.name.replace(/\.[^/.]+$/, '');
         filenameInput.value = `${base}_recortado.pdf`;
@@ -507,6 +509,8 @@ export class CropPdfController implements ViewController {
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (pageNav) pageNav.style.display = 'none';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    if (topHeader) topHeader.style.display = 'none';
     if (filenameInput) filenameInput.value = 'documento_recortado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
     this.hideError();

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { convertToPdf, getStoredToPdfFile } from './to-pdf-converter.service.js';
+import { convertToPdf, convertUrlToPdf, getStoredToPdfFile, isValidPublicUrl } from './to-pdf-converter.service.js';
 import { ToPdfSourceType } from './to-pdf-converter.types.js';
 
 const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
@@ -14,6 +14,33 @@ const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
 
 export async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
   try {
+    const sourceType = (req.body?.sourceType || req.query?.sourceType) as ToPdfSourceType;
+    if (!sourceType || !ALLOWED_SOURCE_TYPES.has(sourceType)) {
+      res.status(400).json({ error: 'Tipo de conversión no válido.', success: false });
+      return;
+    }
+
+    const rawUrl = req.body?.url ? String(req.body.url).trim() : '';
+
+    if (!req.file && (!rawUrl || sourceType !== 'html-to-pdf')) {
+      res.status(400).json({ error: 'Debes seleccionar un archivo o ingresar una URL para convertir.', success: false });
+      return;
+    }
+
+    if (sourceType === 'html-to-pdf' && rawUrl) {
+      if (!isValidPublicUrl(rawUrl)) {
+        res.status(400).json({
+          error: 'La URL proporcionada no es válida o apunta a una dirección restringida.',
+          success: false,
+        });
+        return;
+      }
+
+      const result = await convertUrlToPdf(rawUrl);
+      res.json({ data: result, success: true });
+      return;
+    }
+
     if (!req.file) {
       res.status(400).json({ error: 'Debes seleccionar un archivo para convertir.', success: false });
       return;
@@ -27,12 +54,6 @@ export async function convertToPdfHandler(req: Request, res: Response): Promise<
         error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar documentos de mayor tamaño.`,
         success: false,
       });
-      return;
-    }
-
-    const sourceType = (req.body?.sourceType || req.query?.sourceType) as ToPdfSourceType;
-    if (!sourceType || !ALLOWED_SOURCE_TYPES.has(sourceType)) {
-      res.status(400).json({ error: 'Tipo de conversión no válido.', success: false });
       return;
     }
 

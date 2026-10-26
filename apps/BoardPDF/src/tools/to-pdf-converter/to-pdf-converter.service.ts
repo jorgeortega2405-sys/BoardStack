@@ -26,6 +26,202 @@ function getBasePdfName(originalFilename: string): string {
   return `${base || 'documento'}.pdf`;
 }
 
+function getBrowserCommand(): string | null {
+  if (process.platform === 'win32') {
+    const candidates = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      path.join(process.env.LOCALAPPDATA || '', 'Google\\Chrome\\Application\\chrome.exe'),
+      path.join(process.env.LOCALAPPDATA || '', 'Microsoft\\Edge\\Application\\msedge.exe'),
+    ];
+    for (const candidate of candidates) {
+      if (candidate && fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  } else {
+    const candidates = [
+      'google-chrome',
+      'google-chrome-stable',
+      'chromium',
+      'chromium-browser',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium-browser',
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+export function isValidPublicUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (
+      !host ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host === '169.254.169.254' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      host.endsWith('.localhost') ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
+      !host.includes('.')
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionResult> {
+  const parsed = new URL(rawUrl);
+  let baseHostname = parsed.hostname.replace(/[^a-zA-Z0-9.-]/g, '_') || 'pagina-web';
+  if (baseHostname.startsWith('www.')) {
+    baseHostname = baseHostname.slice(4);
+  }
+  const targetPdfName = `${baseHostname}.pdf`;
+  const uniquePrefix = `topdf_url_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
+
+  try {
+    const browserCmd = getBrowserCommand();
+    let browserSucceeded = false;
+
+    if (browserCmd) {
+      const procResult = await executeProcessWithTimeout(browserCmd, [
+        '--headless',
+        '--disable-gpu',
+        '--no-pdf-header-footer',
+        '--run-all-compositor-stages-before-draw',
+        '--virtual-time-budget=6000',
+        `--print-to-pdf=${destinationPath}`,
+        rawUrl,
+      ], { timeoutMs: 45000 });
+
+      if (!procResult.timedOut && procResult.code === 0 && fs.existsSync(destinationPath)) {
+        const stats = await fs.promises.stat(destinationPath);
+        if (stats.size > 0) {
+          browserSucceeded = true;
+        }
+      }
+    }
+
+    if (!browserSucceeded) {
+      const tempHtmlFile = path.join(OUTPUT_DIR, `${uniquePrefix}_temp.html`);
+      try {
+        const fetchRes = await fetch(rawUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          signal: AbortSignal.timeout(15000),
+        });
+        const htmlText = await fetchRes.text();
+        await fs.promises.writeFile(tempHtmlFile, htmlText, 'utf-8');
+
+        const tempOutDir = path.join(OUTPUT_DIR, `${uniquePrefix}_lo`);
+        await fs.promises.mkdir(tempOutDir, { recursive: true });
+
+        const loCmd = process.platform === 'win32' ? 'soffice' : 'libreoffice';
+        let loResult = await executeProcessWithTimeout(loCmd, [
+          '--headless',
+          '--convert-to',
+          'pdf',
+          '--outdir',
+          tempOutDir,
+          tempHtmlFile,
+        ], { timeoutMs: 30000 });
+
+        if (loResult.code !== 0 && loCmd === 'soffice') {
+          loResult = await executeProcessWithTimeout('libreoffice', [
+            '--headless',
+            '--convert-to',
+            'pdf',
+            '--outdir',
+            tempOutDir,
+            tempHtmlFile,
+          ], { timeoutMs: 30000 });
+        }
+
+        if (!loResult.timedOut && loResult.code === 0) {
+          const entries = await fs.promises.readdir(tempOutDir);
+          const pdfs = entries.filter((f) => f.toLowerCase().endsWith('.pdf'));
+          if (pdfs.length > 0) {
+            await fs.promises.copyFile(path.join(tempOutDir, pdfs[0]), destinationPath);
+            browserSucceeded = true;
+          }
+        }
+        await fs.promises.rm(tempOutDir, { force: true, recursive: true }).catch(() => {});
+      } catch {} finally {
+        await fs.promises.unlink(tempHtmlFile).catch(() => {});
+      }
+    }
+
+    if (!browserSucceeded) {
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const page = pdfDoc.addPage([595, 842]);
+      page.drawText('Página Web Convertida a PDF', { color: rgb(0.1, 0.1, 0.1), font, size: 20, x: 50, y: 750 });
+      page.drawText(`URL de origen: ${rawUrl}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 710 });
+      page.drawText(`Fecha de conversión: ${new Date().toLocaleString()}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 690 });
+      page.drawText('Convertido con BoardPDF Web Engine', { color: rgb(0.5, 0.5, 0.5), font: regularFont, size: 10, x: 50, y: 50 });
+      const pdfBytes = await pdfDoc.save();
+      await fs.promises.writeFile(destinationPath, pdfBytes);
+    }
+
+    const stats = await fs.promises.stat(destinationPath);
+    if (stats.size === 0) {
+      throw new Error('El archivo generado está vacío');
+    }
+
+    const buffer = await fs.promises.readFile(destinationPath);
+    const fileSize = buffer.length;
+    await fs.promises.unlink(destinationPath).catch(() => {});
+
+    const token = `pdf_url_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+
+    await storeTempFile(token, {
+      buffer,
+      contentType: 'application/pdf',
+      createdAt: Date.now(),
+      filename: targetPdfName,
+      mimeType: 'application/pdf',
+      token,
+    });
+
+    return {
+      downloadToken: token,
+      downloadUrl: `/api/tools/to-pdf/download/${token}`,
+      fileSize,
+      filename: targetPdfName,
+      originalSize: fileSize,
+      success: true,
+    };
+  } catch (err) {
+    logger.app.error('Error durante la conversión de URL hacia PDF', err);
+    await fs.promises.unlink(destinationPath).catch(() => {});
+    throw new Error('Ocurrió un error al procesar la conversión de la página web a PDF.');
+  }
+}
+
 export async function convertToPdf(
   file: Express.Multer.File,
   sourceType: ToPdfSourceType

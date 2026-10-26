@@ -117,25 +117,21 @@ export class DownloadReadyController implements ViewController {
   }
 
   private render(): void {
+    const successScreen = this.container.querySelector<HTMLElement>('[data-ref="ready-success-screen"]');
+    const expiredScreen = this.container.querySelector<HTMLElement>('[data-ref="ready-expired-screen"]');
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="ready-title"]');
     const subtitleEl = this.container.querySelector<HTMLElement>('[data-ref="ready-subtitle"]');
     const downloadBtn = this.container.querySelector<HTMLAnchorElement>('[data-ref="btn-download-file"]');
     const actionBtns = this.container.querySelector<HTMLElement>('[data-ref="ready-action-btns"]');
-    const workflowSection = this.container.querySelector<HTMLElement>('[data-ref="continue-workflow-section"]');
-    const thankyouCard = this.container.querySelector<HTMLElement>('[data-ref="thankyou-card"]');
 
     if (!this.data || !this.data.downloadUrl) {
-      if (titleEl) titleEl.textContent = 'Enlace no disponible';
-      if (subtitleEl) {
-        subtitleEl.textContent =
-          'El archivo ya no está disponible en nuestro servidor o el enlace ha caducado (los archivos temporales se conservan durante 1 hora).';
-      }
-      if (downloadBtn) downloadBtn.style.display = 'none';
-      if (actionBtns) actionBtns.style.display = 'none';
-      if (workflowSection) workflowSection.style.display = 'none';
-      if (thankyouCard) thankyouCard.style.display = 'none';
+      if (successScreen) successScreen.style.display = 'none';
+      if (expiredScreen) expiredScreen.style.display = 'flex';
       return;
     }
+
+    if (successScreen) successScreen.style.display = 'flex';
+    if (expiredScreen) expiredScreen.style.display = 'none';
 
     if (titleEl && this.data.title) titleEl.textContent = this.data.title;
     if (subtitleEl && this.data.subtitle) subtitleEl.textContent = this.data.subtitle;
@@ -286,6 +282,22 @@ export class DownloadReadyController implements ViewController {
       },
       { signal }
     );
+
+    this.container.querySelector('[data-ref="btn-expired-home"]')?.addEventListener(
+      'click',
+      () => {
+        navigate('/');
+      },
+      { signal }
+    );
+
+    this.container.querySelector('[data-ref="btn-expired-tools"]')?.addEventListener(
+      'click',
+      () => {
+        navigate('/#tools');
+      },
+      { signal }
+    );
   }
 
   private openShareModal(): void {
@@ -391,17 +403,21 @@ export class DownloadReadyController implements ViewController {
   }
 
   private renderDeletedState(): void {
-    const titleEl = this.container.querySelector<HTMLElement>('[data-ref="ready-title"]');
-    const subtitleEl = this.container.querySelector<HTMLElement>('[data-ref="ready-subtitle"]');
-    const actionsGroup = this.container.querySelector<HTMLElement>('[data-ref="ready-actions-group"]');
-    const workflowSection = this.container.querySelector<HTMLElement>('[data-ref="continue-workflow-section"]');
-    const thankyouCard = this.container.querySelector<HTMLElement>('[data-ref="thankyou-card"]');
+    const successScreen = this.container.querySelector<HTMLElement>('[data-ref="ready-success-screen"]');
+    const expiredScreen = this.container.querySelector<HTMLElement>('[data-ref="ready-expired-screen"]');
+    const expiredTitle = this.container.querySelector<HTMLElement>('[data-ref="expired-title"]');
+    const expiredDesc = this.container.querySelector<HTMLElement>('[data-ref="expired-desc"]');
+    const expiredBadge = this.container.querySelector<HTMLElement>('[data-ref="expired-badge"]');
+    const iconWrap = this.container.querySelector<HTMLElement>('[data-ref="expired-icon-wrap"]');
+    const iconUse = this.container.querySelector<SVGUseElement>('[data-ref="expired-icon"] use');
 
-    if (titleEl) titleEl.textContent = 'Archivo eliminado';
-    if (subtitleEl) subtitleEl.textContent = 'El archivo ha sido borrado del servidor de forma permanente.';
-    if (actionsGroup) actionsGroup.style.display = 'none';
-    if (workflowSection) workflowSection.style.display = 'none';
-    if (thankyouCard) thankyouCard.style.display = 'none';
+    if (successScreen) successScreen.style.display = 'none';
+    if (expiredScreen) expiredScreen.style.display = 'flex';
+    if (expiredTitle) expiredTitle.textContent = 'Archivo eliminado';
+    if (expiredDesc) expiredDesc.textContent = 'El archivo ha sido borrado del servidor de forma permanente a petición tuya.';
+    if (expiredBadge) expiredBadge.textContent = 'Archivo eliminado';
+    if (iconWrap) iconWrap.classList.add('download-expired-card__icon-wrap--danger');
+    if (iconUse) iconUse.setAttribute('href', '/icons.svg#delete');
   }
 }
 

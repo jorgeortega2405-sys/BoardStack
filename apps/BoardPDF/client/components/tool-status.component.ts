@@ -25,10 +25,9 @@ export class ToolStatusManager {
       this.toolName = options.toolName || 'Herramienta PDF';
       this.onRetry = options.onRetry;
     }
-    this.ensureElements();
   }
 
-  private ensureElements(): void {
+  private getOrCreateUploadScreen(): HTMLElement {
     let uploadEl = this.container.querySelector<HTMLElement>('[data-ref="tool-upload-screen"]');
     if (!uploadEl) {
       uploadEl = document.createElement('div');
@@ -54,7 +53,10 @@ export class ToolStatusManager {
       this.container.appendChild(uploadEl);
     }
     this.uploadScreen = uploadEl;
+    return uploadEl;
+  }
 
+  private getOrCreateErrorScreen(): HTMLElement {
     let errorEl = this.container.querySelector<HTMLElement>('[data-ref="tool-error-screen"]');
     if (!errorEl) {
       errorEl = document.createElement('div');
@@ -103,26 +105,26 @@ export class ToolStatusManager {
                   <line x1="10" y1="36" x2="24" y2="36" stroke="var(--text-tertiary)" stroke-width="2.5" stroke-linecap="round"/>
                 </g>
               </svg>
-            </div>
-          </div>
-        </div>
-      `;
+             </div>
+           </div>
+         </div>
+       `;
       this.container.appendChild(errorEl);
+      this.bindRetryEvent(errorEl);
+      renderIcons(errorEl);
     }
     this.errorScreen = errorEl;
-
-    this.bindEvents();
-    renderIcons(this.container);
+    return errorEl;
   }
 
-  private bindEvents(): void {
+  private bindRetryEvent(errorEl: HTMLElement): void {
     if (this.abortController) {
       this.abortController.abort();
     }
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const retryBtn = this.errorScreen?.querySelector<HTMLButtonElement>('[data-ref="btn-retry-tool"]');
+    const retryBtn = errorEl.querySelector<HTMLButtonElement>('[data-ref="btn-retry-tool"]');
     retryBtn?.addEventListener('click', () => {
       this.hide();
       if (this.onRetry) {
@@ -133,34 +135,33 @@ export class ToolStatusManager {
 
   public showUploading(currentFileIndex = 1, totalFiles = 1): void {
     this.currentTotalFiles = totalFiles;
+    const uploadScreen = this.getOrCreateUploadScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) layoutEl.style.display = 'none';
     if (this.errorScreen) this.errorScreen.style.display = 'none';
-    if (this.uploadScreen) {
-      this.uploadScreen.style.display = 'flex';
-      const titleEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
-      const subEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
-      const etaEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
-      const speedEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
-      const fillEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
-      const percentEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
-      const badgeEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
+    uploadScreen.style.display = 'flex';
+    const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
+    const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
+    const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
+    const speedEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
+    const fillEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
+    const percentEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
+    const badgeEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
 
-      if (titleEl) {
-        titleEl.textContent = totalFiles > 1
-          ? `Subiendo archivo ${currentFileIndex} de ${totalFiles}`
-          : 'Subiendo archivo...';
-      }
-      if (subEl) subEl.textContent = 'Subiendo...';
-      if (etaEl) etaEl.textContent = 'Tiempo restante: calculando...';
-      if (speedEl) speedEl.textContent = 'Velocidad de subida: -- MB/s';
-      if (fillEl) {
-        fillEl.classList.remove('is-processing');
-        fillEl.style.width = '0%';
-      }
-      if (percentEl) percentEl.textContent = '0%';
-      if (badgeEl) badgeEl.textContent = 'SUBIENDO';
+    if (titleEl) {
+      titleEl.textContent = totalFiles > 1
+        ? `Subiendo archivo ${currentFileIndex} de ${totalFiles}`
+        : 'Subiendo archivo...';
     }
+    if (subEl) subEl.textContent = 'Subiendo...';
+    if (etaEl) etaEl.textContent = 'Tiempo restante: calculando...';
+    if (speedEl) speedEl.textContent = 'Velocidad de subida: -- MB/s';
+    if (fillEl) {
+      fillEl.classList.remove('is-processing');
+      fillEl.style.width = '0%';
+    }
+    if (percentEl) percentEl.textContent = '0%';
+    if (badgeEl) badgeEl.textContent = 'SUBIENDO';
   }
 
   public updateUploadProgress(info: UploadProgressInfo | number, totalOrFileIndex = 1): void {
@@ -220,30 +221,29 @@ export class ToolStatusManager {
   }
 
   public showProcessing(title = 'Procesando documento...', subtitle = 'Por favor espera mientras finaliza la tarea'): void {
+    const uploadScreen = this.getOrCreateUploadScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) layoutEl.style.display = 'none';
     if (this.errorScreen) this.errorScreen.style.display = 'none';
-    if (this.uploadScreen) {
-      this.uploadScreen.style.display = 'flex';
-      const titleEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
-      const subEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
-      const etaEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
-      const speedEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
-      const fillEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
-      const percentEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
-      const badgeEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
+    uploadScreen.style.display = 'flex';
+    const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
+    const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
+    const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
+    const speedEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
+    const fillEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
+    const percentEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
+    const badgeEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
 
-      if (titleEl) titleEl.textContent = title;
-      if (subEl) subEl.textContent = subtitle;
-      if (etaEl) etaEl.textContent = 'Procesando en servidor...';
-      if (speedEl) speedEl.textContent = 'Optimizando salida';
-      if (fillEl) {
-        fillEl.style.width = '100%';
-        fillEl.classList.add('is-processing');
-      }
-      if (percentEl) percentEl.textContent = '100%';
-      if (badgeEl) badgeEl.textContent = 'PROCESANDO';
+    if (titleEl) titleEl.textContent = title;
+    if (subEl) subEl.textContent = subtitle;
+    if (etaEl) etaEl.textContent = 'Procesando en servidor...';
+    if (speedEl) speedEl.textContent = 'Optimizando salida';
+    if (fillEl) {
+      fillEl.style.width = '100%';
+      fillEl.classList.add('is-processing');
     }
+    if (percentEl) percentEl.textContent = '100%';
+    if (badgeEl) badgeEl.textContent = 'PROCESANDO';
   }
 
   public showProcessingState(opts?: { subtitle?: string; title?: string } | string, subtitle?: string): void {
@@ -265,32 +265,39 @@ export class ToolStatusManager {
       this.onRetry = onRetry;
     }
     const opt = typeof options === 'string' ? { desc: options } : options;
+    const errorScreen = this.getOrCreateErrorScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) layoutEl.style.display = 'none';
     if (this.uploadScreen) this.uploadScreen.style.display = 'none';
-    if (this.errorScreen) {
-      this.errorScreen.style.display = 'flex';
-      const titleEl = this.errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-title"]');
-      const descEl = this.errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-desc"]');
-      const boxTitleEl = this.errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-title"]');
-      const boxTextEl = this.errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-text"]');
-      const retryTextEl = this.errorScreen.querySelector<HTMLElement>('[data-ref="txt-retry-btn"]');
+    errorScreen.style.display = 'flex';
+    const titleEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-title"]');
+    const descEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-desc"]');
+    const boxTitleEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-title"]');
+    const boxTextEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-text"]');
+    const retryTextEl = errorScreen.querySelector<HTMLElement>('[data-ref="txt-retry-btn"]');
 
-      if (titleEl) titleEl.textContent = opt.title || '¡Oh no! No hemos podido procesar tus archivos.';
-      if (descEl) descEl.textContent = opt.desc || 'El archivo no se ha procesado porque ocurrió un error durante el procesamiento.';
-      if (boxTitleEl) boxTitleEl.textContent = opt.boxTitle || 'Archivo dañado o no compatible';
-      if (boxTextEl) {
-        boxTextEl.textContent = opt.boxText || 'No podemos procesar archivos dañados, protegidos o con formato incorrecto. Comprueba que tu archivo se pueda abrir correctamente e inténtalo de nuevo.';
-      }
-      if (retryTextEl) retryTextEl.textContent = opt.retryText || `Reintentar ${this.toolName}`;
+    if (titleEl) titleEl.textContent = opt.title || '¡Oh no! No hemos podido procesar tus archivos.';
+    if (descEl) descEl.textContent = opt.desc || 'El archivo no se ha procesado porque ocurrió un error durante el procesamiento.';
+    if (boxTitleEl) boxTitleEl.textContent = opt.boxTitle || 'Archivo dañado o no compatible';
+    if (boxTextEl) {
+      boxTextEl.textContent = opt.boxText || 'No podemos procesar archivos dañados, protegidos o con formato incorrecto. Comprueba que tu archivo se pueda abrir correctamente e inténtalo de nuevo.';
     }
+    if (retryTextEl) retryTextEl.textContent = opt.retryText || `Reintentar ${this.toolName}`;
   }
 
   public hide(): void {
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) layoutEl.style.display = '';
-    if (this.uploadScreen) this.uploadScreen.style.display = 'none';
-    if (this.errorScreen) this.errorScreen.style.display = 'none';
+    if (this.uploadScreen) {
+      this.uploadScreen.style.display = 'none';
+      this.uploadScreen.remove();
+      this.uploadScreen = null;
+    }
+    if (this.errorScreen) {
+      this.errorScreen.style.display = 'none';
+      this.errorScreen.remove();
+      this.errorScreen = null;
+    }
   }
 
   public destroy(): void {
@@ -300,7 +307,13 @@ export class ToolStatusManager {
     }
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) layoutEl.style.display = '';
-    this.uploadScreen = null;
-    this.errorScreen = null;
+    if (this.uploadScreen) {
+      this.uploadScreen.remove();
+      this.uploadScreen = null;
+    }
+    if (this.errorScreen) {
+      this.errorScreen.remove();
+      this.errorScreen = null;
+    }
   }
 }
