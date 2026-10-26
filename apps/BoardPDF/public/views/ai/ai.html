@@ -1,0 +1,205 @@
+<div class="component-wrapper component-wrapper--full view-wrapper ai-page-wrapper" data-ref="ai-wrapper">
+  <header class="component-top ai-top" data-ref="component-top">
+    <div class="component-top-left" data-ref="component-top-left"></div>
+    <div class="component-top-right" data-ref="component-top-right">
+      <button type="button" class="component-button component-button--h36 component-button--subtle component-button--icon-only" data-ref="btn-new-chat" data-tooltip="Nuevo chat" data-i18n-tooltip="ai.new_chat" data-i18n-aria="ai.new_chat" aria-label="Nuevo chat">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom ai-bottom" data-ref="component-bottom">
+    <div class="ai-drop-overlay" data-ref="ai-drop-overlay">
+      <div class="ai-drop-overlay__card" data-ref="ai-drop-card">
+        <svg class="component-icon ai-drop-overlay__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+        <h3 class="ai-drop-overlay__title">Suelta tus archivos aquí</h3>
+        <p class="ai-drop-overlay__desc">Soporta PDF, Word, Excel, PowerPoint e imágenes</p>
+      </div>
+    </div>
+
+    <div class="ai-chat-container" data-ref="ai-chat-container">
+      <div class="ai-chat-hero" data-ref="ai-chat-hero">
+        <h1 class="ai-chat-greeting" data-ref="ai-chat-greeting" data-i18n="ai.greeting">¿Con qué quieres trabajar hoy?</h1>
+        <p class="ai-chat-subtitle" data-ref="ai-chat-subtitle">Comprime, une, convierte o analiza tus documentos utilizando lenguaje natural con IA.</p>
+
+        <div class="ai-quick-chips-grid" data-ref="ai-quick-chips" style="display: none;"></div>
+      </div>
+
+      <div class="ai-messages-scroll" data-ref="ai-messages-scroll">
+        <div class="ai-messages-list" data-ref="ai-messages-list"></div>
+
+        <div class="ai-thinking-state" data-ref="ai-thinking-indicator" style="display: none;">
+          <div class="ai-message-avatar ai-message-avatar--ai" data-ref="ai-thinking-avatar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          </div>
+          <div class="ai-thinking-content" data-ref="ai-thinking-content">
+            <div class="ai-thinking-header" data-ref="ai-thinking-header">
+              <div class="ai-thinking-left" data-ref="ai-thinking-left">
+                <div class="ai-thinking-dots" data-ref="ai-thinking-dots">
+                  <span class="ai-dot"></span>
+                  <span class="ai-dot"></span>
+                  <span class="ai-dot"></span>
+                </div>
+                <span class="ai-thinking-step-badge" data-ref="ai-thinking-step" style="display: none;"></span>
+              </div>
+              <span class="ai-thinking-percent" data-ref="ai-thinking-percent">10%</span>
+            </div>
+            <span class="ai-thinking-text" data-ref="ai-thinking-text">Procesando y analizando...</span>
+            <div class="ai-thinking-progress-track" data-ref="ai-thinking-track">
+              <div class="ai-thinking-progress-bar" data-ref="ai-thinking-bar" style="width: 10%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-chat-bottom-dock" data-ref="ai-chat-bottom">
+        <div class="ai-staged-tray" data-ref="ai-staged-tray" style="display: none;">
+          <div class="ai-staged-list" data-ref="ai-staged-list"></div>
+        </div>
+
+        <div class="ai-chat-input-wrapper" data-ref="ai-chat-input-wrapper">
+          <input class="ai-hidden-file-input" data-ref="ai-file-input" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt" />
+
+          <div class="chat-pill-input has-attach" data-ref="chat-input-box">
+            <div class="ai-dropdown-wrapper ai-attach-dropdown-wrapper" data-ref="ai-attach-dropdown-wrapper">
+              <button type="button" class="component-button component-button--icon-only chat-pill-input__attach" data-ref="btn-attach-files" data-tooltip="Adjuntar archivos" aria-label="Adjuntar archivos" aria-haspopup="true" aria-expanded="false">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#attach_file"></use></svg>
+              </button>
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto ai-attach-dropdown-menu" data-ref="menu-attach-options" style="display: none;">
+                <div class="menu-panel__list" data-ref="list-attach-options">
+                  <button type="button" class="menu-item" data-ref="btn-attach-device">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+                    <span class="menu-item__text">Desde este dispositivo</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-attach-drive">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+                    <span class="menu-item__text">Google Drive</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-attach-dropbox">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+                    <span class="menu-item__text">Dropbox</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <textarea class="chat-pill-input__field" data-ref="ai-chat-input" placeholder="Escribe un mensaje o pide una acción (ej. Comprímeme este PDF, pásame este word a pdf...)" data-i18n-placeholder="ai.input_placeholder" rows="1" maxlength="2000"></textarea>
+            <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-send-message" data-tooltip="Enviar mensaje" data-i18n-tooltip="ai.send" data-i18n-aria="ai.send" aria-label="Enviar mensaje">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
+            </button>
+          </div>
+          <p class="chat-disclaimer" data-ref="chat-disclaimer" data-i18n="ai.disclaimer">La IA puede cometer errores, verifica que la información sea correcta.</p>
+        </div>
+
+        <div class="banner banner--danger ai-chat-banner" data-ref="ai-error-banner" style="display: none;">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
+          <span class="banner__text" data-ref="ai-error-text"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ai-preview-modal-backdrop" data-ref="ai-preview-modal" style="display: none;">
+    <div class="ai-preview-modal-dialog" data-ref="ai-preview-dialog">
+      <header class="ai-preview-modal-header" data-ref="ai-preview-header">
+        <div class="ai-preview-modal-title-box" data-ref="ai-preview-title-box">
+          <svg class="component-icon ai-preview-modal-title-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          <div class="ai-preview-modal-titles" data-ref="ai-preview-titles">
+            <h3 class="ai-preview-modal-title" data-ref="preview-title">Vista previa de documento</h3>
+            <span class="ai-preview-modal-subtitle" data-ref="preview-subtitle">Comparación de calidad y peso</span>
+          </div>
+        </div>
+        <div class="ai-preview-modal-controls" data-ref="preview-controls">
+          <div class="ai-preview-mode-tabs" data-ref="preview-mode-tabs">
+            <button type="button" class="ai-preview-tab is-active" data-ref="tab-mode-compare" data-mode="compare">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare"></use></svg>
+              <span>Lado a lado</span>
+            </button>
+            <button type="button" class="ai-preview-tab" data-ref="tab-mode-slider" data-mode="slider">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              <span>Deslizador</span>
+            </button>
+            <button type="button" class="ai-preview-tab" data-ref="tab-mode-result" data-mode="result">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+              <span>Resultado</span>
+            </button>
+          </div>
+          <button type="button" class="component-button component-button--icon-only component-button--subtle" data-ref="btn-close-preview" data-tooltip="Cerrar vista previa" aria-label="Cerrar vista previa">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="ai-preview-modal-body" data-ref="preview-body">
+        <div class="ai-preview-compare-grid" data-ref="preview-compare-grid">
+          <div class="ai-preview-pane ai-preview-pane--before" data-ref="preview-pane-before">
+            <div class="ai-preview-pane__header" data-ref="preview-before-header">
+              <span class="ai-preview-pane__tag ai-preview-pane__tag--original">Antes (Original)</span>
+              <span class="ai-preview-pane__size" data-ref="preview-before-size">--</span>
+            </div>
+            <div class="ai-preview-pane__viewport" data-ref="preview-before-viewport">
+              <canvas class="ai-preview-canvas" data-ref="canvas-before"></canvas>
+            </div>
+          </div>
+
+          <div class="ai-preview-pane ai-preview-pane--after" data-ref="preview-pane-after">
+            <div class="ai-preview-pane__header" data-ref="preview-after-header">
+              <span class="ai-preview-pane__tag ai-preview-pane__tag--result">Después (Optimizado)</span>
+              <span class="ai-preview-pane__size" data-ref="preview-after-size">--</span>
+              <span class="ai-savings-badge" data-ref="preview-savings-badge" style="display: none;">-0%</span>
+            </div>
+            <div class="ai-preview-pane__viewport" data-ref="preview-after-viewport">
+              <canvas class="ai-preview-canvas" data-ref="canvas-after"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-preview-slider-container" data-ref="preview-slider-container" style="display: none;">
+          <div class="ai-preview-slider-wrap" data-ref="preview-slider-wrap">
+            <div class="ai-preview-slider-after" data-ref="preview-slider-after">
+              <canvas class="ai-preview-canvas" data-ref="canvas-slider-after"></canvas>
+              <span class="ai-slider-floating-tag ai-slider-floating-tag--right">Después</span>
+            </div>
+            <div class="ai-preview-slider-before" data-ref="preview-slider-before" style="width: 50%;">
+              <canvas class="ai-preview-canvas" data-ref="canvas-slider-before"></canvas>
+              <span class="ai-slider-floating-tag ai-slider-floating-tag--left">Antes</span>
+            </div>
+            <div class="ai-preview-slider-divider" data-ref="preview-slider-divider" style="left: 50%;">
+              <div class="ai-preview-slider-handle" data-ref="preview-slider-handle">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#drag_handle"></use></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="ai-preview-modal-footer" data-ref="preview-footer">
+        <div class="ai-preview-pagination" data-ref="preview-pagination">
+          <button type="button" class="component-button component-button--icon-only component-button--subtle" data-ref="btn-prev-page" data-tooltip="Página anterior" aria-label="Página anterior">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#navigate_before"></use></svg>
+          </button>
+          <span class="ai-preview-page-info" data-ref="preview-page-info">Página 1 de 1</span>
+          <button type="button" class="component-button component-button--icon-only component-button--subtle" data-ref="btn-next-page" data-tooltip="Página siguiente" aria-label="Página siguiente">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
+          </button>
+        </div>
+
+        <div class="ai-preview-zoom-controls" data-ref="preview-zoom-controls">
+          <button type="button" class="component-button component-button--icon-only component-button--subtle" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
+          </button>
+          <span class="ai-preview-zoom-text" data-ref="preview-zoom-text">100%</span>
+          <button type="button" class="component-button component-button--icon-only component-button--subtle" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          </button>
+        </div>
+
+        <div class="ai-preview-footer-actions" data-ref="preview-footer-actions">
+          <a class="component-button component-button--black component-button--h36" data-ref="btn-preview-download" href="#" download="documento.pdf">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            <span>Descargar archivo</span>
+          </a>
+        </div>
+      </footer>
+    </div>
+  </div>
+</div>

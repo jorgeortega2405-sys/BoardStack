@@ -1,0 +1,1118 @@
+import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { API_ROUTES } from '../../../config/api-routes.js';
+import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
+import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { pickDropboxFiles } from '../../../services/dropbox.service.js';
+import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
+import { t } from '../../../services/i18n.service.js';
+import { renderIcons } from '../../../services/icon.service.js';
+import { navigate } from '../../../services/navigation.service.js';
+import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadTemplate } from '../../../services/template.service.js';
+import { showToast } from '../../../services/toast.service.js';
+import { ViewController } from '../../../types/common.types.js';
+import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+function parsePageNumbers(raw: string, maxPages: number): number[] {
+  const result = new Set<number>();
+  const parts = raw.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    if (trimmed.includes('-')) {
+      const [startStr, endStr] = trimmed.split('-');
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+      if (!isNaN(start) && !isNaN(end)) {
+        const from = Math.max(1, Math.min(start, end));
+        const to = Math.min(maxPages, Math.max(start, end));
+        for (let i = from; i <= to; i++) {
+          result.add(i);
+        }
+      }
+    } else {
+      const page = parseInt(trimmed, 10);
+      if (!isNaN(page) && page >= 1 && page <= maxPages) {
+        result.add(page);
+      }
+    }
+  }
+  return Array.from(result).sort((a, b) => a - b);
+}
+
+function formatPageNumbers(pages: number[]): string {
+  if (pages.length === 0) return '';
+  const sorted = Array.from(new Set(pages)).sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const curr = sorted[i];
+    if (curr === prev + 1) {
+      prev = curr;
+    } else {
+      ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+      start = curr;
+      prev = curr;
+    }
+  }
+  ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+  return ranges.join(', ');
+}
+
+export class SplitPdfController implements ViewController {
+  private abortController: AbortController | null = null;
+  private activeMode: SplitMode = 'range';
+  private container: HTMLElement;
+  private currentFile: File | null = null;
+  private currentResult: SplitPdfResponseData | null = null;
+  private fixedPageBlock = 1;
+  private isProcessing = false;
+  private pages: PageItem[] = [];
+  private pagesSubmode: 'all' | 'custom' = 'all';
+  private pdfDocument: any = null;
+  private rangeSubmode: 'custom' | 'fixed' = 'custom';
+  private ranges: RangeItem[] = [];
+  private selectedPages: Set<number> = new Set();
+  private sidebarModal: ToolSidebarModalController | null = null;
+  private sizeLimitValue = 200;
+  private sizeUnit: 'KB' | 'MB' = 'KB';
+  private statusManager: ToolStatusManager | null = null;
+
+  constructor(container: HTMLElement, initialMode: SplitMode = 'range') {
+    this.container = container;
+    this.activeMode = initialMode;
+  }
+
+  public async init(): Promise<void> {
+    this.abortController = new AbortController();
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]') || this.container;
+    this.statusManager = new ToolStatusManager({
+      container: workspace,
+      onRetry: () => {
+        this.statusManager?.hide();
+        this.renderFilesView();
+      },
+      toolName: 'Dividir PDF',
+    });
+    renderIcons(this.container);
+    if (this.activeMode !== 'range') {
+      this.switchMode(this.activeMode);
+      if (this.activeMode === 'pages') {
+        const heroTitle = this.container.querySelector<HTMLElement>('[data-ref="pdf-hero-title"]');
+        const heroSubtitle = this.container.querySelector<HTMLElement>('[data-ref="pdf-hero-subtitle"]');
+        if (heroTitle) heroTitle.textContent = t('home.tool_extract_pdf_pages_title') || 'Extraer páginas';
+        if (heroSubtitle) heroSubtitle.textContent = t('home.tool_extract_pdf_pages_desc') || 'Extrae páginas seleccionadas de tu documento PDF.';
+      }
+    }
+    this.bindEvents();
+  }
+
+  public destroy(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    if (this.sidebarModal) {
+      this.sidebarModal.destroy();
+      this.sidebarModal = null;
+    }
+    if (this.statusManager) {
+      this.statusManager.destroy();
+      this.statusManager = null;
+    }
+    if (this.pdfDocument) {
+      try {
+        void this.pdfDocument.destroy();
+      } catch {}
+      this.pdfDocument = null;
+    }
+  }
+
+  private async handleDriveImport(): Promise<void> {
+    if (this.isProcessing) return;
+    this.hideError();
+    try {
+      const files = await pickGoogleDriveFiles({ multiselect: false });
+      if (files.length > 0) {
+        await this.handleFileSelected(files[0]);
+      }
+    } catch (err: any) {
+      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
+    }
+  }
+
+  private async handleDropboxImport(): Promise<void> {
+    if (this.isProcessing) return;
+    this.hideError();
+    try {
+      const files = await pickDropboxFiles({ multiselect: false });
+      if (files.length > 0) {
+        await this.handleFileSelected(files[0]);
+      }
+    } catch (err: any) {
+      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
+    }
+  }
+
+  private bindEvents(): void {
+    if (!this.abortController) return;
+    const { signal } = this.abortController;
+
+    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
+    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone"]');
+    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
+    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
+    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
+    const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
+    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const downloadResultBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
+    const restartSplitBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-restart-split"]');
+    const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="split-pages-grid"]');
+
+    this.sidebarModal = setupToolSidebarModal({
+      backdrop: sidebarBackdrop,
+      closeBtn: sidebarCloseBtn,
+      dragZone: sidebarDragZone,
+      settingsBtn,
+      sidebar,
+      signal,
+    });
+
+    browseBtn?.addEventListener('click', () => {
+      fileInput?.click();
+    }, { signal });
+
+    heroDriveBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleDriveImport();
+    }, { signal });
+
+    heroDropboxBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleDropboxImport();
+    }, { signal });
+
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
+    const dropTarget = dropzoneCard || dropzone;
+    bindFileDropzone({
+      dropTarget,
+      visualTarget: dropTarget,
+      onFiles: (files) => {
+        if (files.length > 0) {
+          void this.handleFileSelected(files[0]);
+        }
+      },
+      signal,
+    });
+
+    fileInput?.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        void this.handleFileSelected(fileInput.files[0]);
+      }
+    }, { signal });
+
+    mainActionBtn?.addEventListener('click', () => {
+      if (this.currentResult) {
+        this.downloadSplitResult();
+      } else if (!this.currentFile) {
+        fileInput?.click();
+      } else {
+        void this.startSplitProcess();
+      }
+    }, { signal });
+
+    downloadResultBtn?.addEventListener('click', () => {
+      this.downloadSplitResult();
+    }, { signal });
+
+    restartSplitBtn?.addEventListener('click', () => {
+      this.resetToInitial();
+    }, { signal });
+
+    const tabRange = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-range"]');
+    const tabPages = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-pages"]');
+    const tabSize = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-size"]');
+
+    tabRange?.addEventListener('click', () => this.switchMode('range'), { signal });
+    tabPages?.addEventListener('click', () => this.switchMode('pages'), { signal });
+    tabSize?.addEventListener('click', () => this.switchMode('size'), { signal });
+
+    const rangeSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-range-submode-toggle"]');
+    const btnRangeCustom = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-range-submode-custom"]');
+    const btnRangeFixed = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-range-submode-fixed"]');
+
+    btnRangeCustom?.addEventListener('click', () => {
+      this.rangeSubmode = 'custom';
+      rangeSubmodeToggle?.setAttribute('data-submode', 'custom');
+      btnRangeCustom.classList.add('is-active');
+      btnRangeFixed?.classList.remove('is-active');
+      this.updateSubmodeViews();
+      this.renderPagesWorkspace();
+      this.updateSummary();
+    }, { signal });
+
+    btnRangeFixed?.addEventListener('click', () => {
+      this.rangeSubmode = 'fixed';
+      rangeSubmodeToggle?.setAttribute('data-submode', 'fixed');
+      btnRangeFixed.classList.add('is-active');
+      btnRangeCustom?.classList.remove('is-active');
+      this.updateSubmodeViews();
+      this.renderPagesWorkspace();
+      this.updateSummary();
+    }, { signal });
+
+    const btnAddRange = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-add-range"]');
+    btnAddRange?.addEventListener('click', () => {
+      this.addNewRange();
+    }, { signal });
+
+    const inputFixedPages = this.container.querySelector<HTMLInputElement>('[data-ref="input-fixed-pages"]');
+    inputFixedPages?.addEventListener('input', () => {
+      const val = parseInt(inputFixedPages.value, 10);
+      this.fixedPageBlock = isNaN(val) || val < 1 ? 1 : Math.min(val, this.pages.length || 1);
+      this.updateSummary();
+    }, { signal });
+
+    const mergeRangesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-ranges-toggle"]');
+    const btnMergeRangesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-no"]');
+    const btnMergeRangesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-yes"]');
+    const checkMergeRanges = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-ranges"]');
+
+    btnMergeRangesNo?.addEventListener('click', () => {
+      if (checkMergeRanges) checkMergeRanges.checked = false;
+      mergeRangesToggle?.setAttribute('data-merge', 'no');
+      btnMergeRangesNo.classList.add('is-active');
+      btnMergeRangesYes?.classList.remove('is-active');
+      this.updateSummary();
+    }, { signal });
+
+    btnMergeRangesYes?.addEventListener('click', () => {
+      if (checkMergeRanges) checkMergeRanges.checked = true;
+      mergeRangesToggle?.setAttribute('data-merge', 'yes');
+      btnMergeRangesYes.classList.add('is-active');
+      btnMergeRangesNo?.classList.remove('is-active');
+      this.updateSummary();
+    }, { signal });
+
+    const pagesSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-pages-submode-toggle"]');
+    const btnPagesAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pages-submode-all"]');
+    const btnPagesCustom = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pages-submode-custom"]');
+
+    btnPagesAll?.addEventListener('click', () => {
+      this.pagesSubmode = 'all';
+      pagesSubmodeToggle?.setAttribute('data-submode', 'all');
+      btnPagesAll.classList.add('is-active');
+      btnPagesCustom?.classList.remove('is-active');
+      this.updateSubmodeViews();
+      this.renderPagesWorkspace();
+      this.updateSummary();
+    }, { signal });
+
+    btnPagesCustom?.addEventListener('click', () => {
+      this.pagesSubmode = 'custom';
+      pagesSubmodeToggle?.setAttribute('data-submode', 'pages-custom');
+      btnPagesCustom.classList.add('is-active');
+      btnPagesAll?.classList.remove('is-active');
+      this.updateSubmodeViews();
+      this.renderPagesWorkspace();
+      this.updateSummary();
+    }, { signal });
+
+    const mergePagesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-pages-toggle"]');
+    const btnMergePagesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-no"]');
+    const btnMergePagesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-yes"]');
+    const checkMergePages = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
+
+    btnMergePagesNo?.addEventListener('click', () => {
+      if (checkMergePages) checkMergePages.checked = false;
+      mergePagesToggle?.setAttribute('data-merge', 'no');
+      btnMergePagesNo.classList.add('is-active');
+      btnMergePagesYes?.classList.remove('is-active');
+      this.updateSummary();
+    }, { signal });
+
+    btnMergePagesYes?.addEventListener('click', () => {
+      if (checkMergePages) checkMergePages.checked = true;
+      mergePagesToggle?.setAttribute('data-merge', 'yes');
+      btnMergePagesYes.classList.add('is-active');
+      btnMergePagesNo?.classList.remove('is-active');
+      this.updateSummary();
+    }, { signal });
+
+    const inputPagesSelection = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-selection"]');
+    inputPagesSelection?.addEventListener('input', () => {
+      const parsed = parsePageNumbers(inputPagesSelection.value, this.pages.length);
+      this.selectedPages = new Set(parsed);
+      this.renderPagesWorkspace();
+      this.updateSummary();
+    }, { signal });
+
+    checkMergePages?.addEventListener('change', () => {
+      this.updateSummary();
+    }, { signal });
+
+    const inputMaxSize = this.container.querySelector<HTMLInputElement>('[data-ref="input-max-size"]');
+    inputMaxSize?.addEventListener('input', () => {
+      const val = parseInt(inputMaxSize.value, 10);
+      this.sizeLimitValue = isNaN(val) || val < 10 ? 10 : val;
+      this.updateSizeNotice();
+      this.updateSummary();
+    }, { signal });
+
+    const btnUnitKb = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-unit-kb"]');
+    const btnUnitMb = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-unit-mb"]');
+
+    btnUnitKb?.addEventListener('click', () => {
+      this.sizeUnit = 'KB';
+      btnUnitKb.classList.add('is-active');
+      btnUnitMb?.classList.remove('is-active');
+      this.updateSizeNotice();
+      this.updateSummary();
+    }, { signal });
+
+    btnUnitMb?.addEventListener('click', () => {
+      this.sizeUnit = 'MB';
+      btnUnitMb.classList.add('is-active');
+      btnUnitKb?.classList.remove('is-active');
+      this.updateSizeNotice();
+      this.updateSummary();
+    }, { signal });
+
+    pagesGrid?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const card = target.closest<HTMLElement>('.split-page-card[data-page]');
+      if (!card) return;
+
+      const pageNum = parseInt(card.getAttribute('data-page') || '', 10);
+      if (isNaN(pageNum)) return;
+
+      if (this.activeMode === 'pages') {
+        if (this.pagesSubmode === 'all') {
+          this.pagesSubmode = 'custom';
+          btnPagesCustom?.click();
+        }
+        if (this.selectedPages.has(pageNum)) {
+          this.selectedPages.delete(pageNum);
+        } else {
+          this.selectedPages.add(pageNum);
+        }
+        if (inputPagesSelection) {
+          inputPagesSelection.value = formatPageNumbers(Array.from(this.selectedPages));
+        }
+        this.renderPagesWorkspace();
+        this.updateSummary();
+      }
+    }, { signal });
+  }
+
+  public async handleFileSelected(file: File): Promise<void> {
+    if (this.isProcessing) return;
+    this.hideError();
+
+    const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
+    const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
+    if (!isPdfExt && !isPdfMime) {
+      this.showError('Selecciona únicamente un documento en formato PDF.');
+      return;
+    }
+
+    const limits = getCurrentUserToolLimits('split-pdf');
+    if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
+      this.showError(`El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`);
+      return;
+    }
+
+    this.currentFile = file;
+
+    try {
+      const pdfjsLib = await loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({
+        cMapPacked: true,
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/cmaps/',
+        data: new Uint8Array(arrayBuffer),
+        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/standard_fonts/',
+      });
+      this.pdfDocument = await loadingTask.promise;
+      const count = this.pdfDocument.numPages || 1;
+
+      this.pages = Array.from({ length: count }, (_, i) => ({
+        id: `page-${i + 1}`,
+        num: i + 1,
+      }));
+
+      this.ranges = [
+        {
+          from: 1,
+          id: `range-${Date.now()}-1`,
+          to: count,
+        },
+      ];
+
+      this.selectedPages = new Set(this.pages.map((p) => p.num));
+      const inputPagesSelection = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-selection"]');
+      if (inputPagesSelection) {
+        inputPagesSelection.value = formatPageNumbers(Array.from(this.selectedPages));
+      }
+
+      this.renderFilesView();
+      this.renderRangesInputs();
+      this.updateSizeNotice();
+      this.updateSummary();
+
+      for (const page of this.pages) {
+        void this.generatePageThumbnail(page);
+      }
+    } catch {
+      this.showError('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado o protegido.');
+      this.resetToInitial();
+    }
+  }
+
+  private async generatePageThumbnail(item: PageItem): Promise<void> {
+    if (!this.pdfDocument) return;
+    try {
+      const page = await this.pdfDocument.getPage(item.num);
+      const origViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 220;
+      const scale = targetWidth / Math.max(origViewport.width, 1);
+      const viewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        await page.render({
+          canvas,
+          canvasContext: ctx,
+          viewport,
+        }).promise;
+
+        item.thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        const sheets = this.container.querySelectorAll<HTMLElement>(`[data-ref="sheet-page-${item.num}"]`);
+        sheets.forEach((sheet) => {
+          sheet.innerHTML = `<img class="split-page-card__preview-img" data-ref="img-page-${item.num}" src="${item.thumbnailDataUrl}" alt="Página ${item.num}" />`;
+        });
+      }
+    } catch {}
+  }
+
+  private switchMode(mode: SplitMode): void {
+    this.activeMode = mode;
+
+    const tabsNav = this.container.querySelector<HTMLElement>('[data-ref="split-tabs-nav"]');
+    if (tabsNav) tabsNav.setAttribute('data-mode', mode);
+
+    const tabRange = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-range"]');
+    const tabPages = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-pages"]');
+    const tabSize = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-size"]');
+
+    tabRange?.classList.toggle('is-active', mode === 'range');
+    tabPages?.classList.toggle('is-active', mode === 'pages');
+    tabSize?.classList.toggle('is-active', mode === 'size');
+
+    const panelRange = this.container.querySelector<HTMLElement>('[data-ref="panel-mode-range"]');
+    const panelPages = this.container.querySelector<HTMLElement>('[data-ref="panel-mode-pages"]');
+    const panelSize = this.container.querySelector<HTMLElement>('[data-ref="panel-mode-size"]');
+
+    if (panelRange) panelRange.style.display = mode === 'range' ? 'block' : 'none';
+    if (panelPages) panelPages.style.display = mode === 'pages' ? 'block' : 'none';
+    if (panelSize) panelSize.style.display = mode === 'size' ? 'block' : 'none';
+
+    const hint = this.container.querySelector<HTMLElement>('[data-ref="split-instruction-text"]');
+    if (hint) {
+      if (mode === 'range') {
+        hint.textContent = 'Configura los rangos de páginas que deseas extraer a la derecha.';
+      } else if (mode === 'pages') {
+        hint.textContent = 'Haz clic en las tarjetas de página o especifica los números a extraer en el panel.';
+      } else {
+        hint.textContent = 'Define el peso máximo de cada segmento para dividir el documento equitativamente.';
+      }
+    }
+
+    this.renderPagesWorkspace();
+    this.updateSummary();
+  }
+
+  private updateSubmodeViews(): void {
+    const rangeCustom = this.container.querySelector<HTMLElement>('[data-ref="section-range-custom"]');
+    const rangeFixed = this.container.querySelector<HTMLElement>('[data-ref="section-range-fixed"]');
+    if (rangeCustom) rangeCustom.style.display = this.rangeSubmode === 'custom' ? 'block' : 'none';
+    if (rangeFixed) rangeFixed.style.display = this.rangeSubmode === 'fixed' ? 'block' : 'none';
+
+    const pagesCustom = this.container.querySelector<HTMLElement>('[data-ref="section-pages-custom"]');
+    if (pagesCustom) pagesCustom.style.display = this.pagesSubmode === 'custom' ? 'block' : 'none';
+
+    this.updatePagesNotice();
+    this.updateFixedNotice();
+  }
+
+  private updatePagesNotice(): void {
+    const notice = this.container.querySelector<HTMLElement>('[data-ref="txt-pages-info-notice"]');
+    if (!notice) return;
+
+    const checkMerge = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
+    const isMerged = checkMerge?.checked || false;
+    const totalSelected = this.pagesSubmode === 'all' ? this.pages.length : this.selectedPages.size;
+
+    if (isMerged) {
+      notice.innerHTML = 'Las páginas seleccionadas se convertirán en un único archivo PDF. <strong>1 PDF</strong> será creado.';
+    } else if (totalSelected === 1) {
+      notice.innerHTML = 'Las páginas seleccionadas se convertirán en un archivo PDF. <strong>1 PDF</strong> será creado.';
+    } else {
+      notice.innerHTML = `Las páginas seleccionadas se convertirán en diferentes archivos PDF. <strong>${totalSelected} PDF</strong> serán creados.`;
+    }
+  }
+
+  private updateFixedNotice(): void {
+    const notice = this.container.querySelector<HTMLElement>('[data-ref="txt-fixed-info-notice"]');
+    if (!notice) return;
+
+    const totalPages = this.pages.length || 1;
+    const blockSize = Math.max(1, this.fixedPageBlock || 1);
+    const expectedFiles = Math.ceil(totalPages / blockSize);
+    const pageText = blockSize === 1 ? '1 página' : `${blockSize} páginas`;
+    const pdfText = expectedFiles === 1 ? '1 PDF será creado' : `${expectedFiles} PDFs serán creados`;
+
+    notice.innerHTML = `Este PDF se dividirá en archivos de ${pageText}. <strong>${pdfText}.</strong>`;
+  }
+
+  private updateSizeNotice(): void {
+    const notice = this.container.querySelector<HTMLElement>('[data-ref="txt-size-info-notice"]');
+    if (notice) {
+      notice.textContent = `Este PDF se dividirá en archivos de no más de ${this.sizeLimitValue} ${this.sizeUnit} cada uno.`;
+    }
+  }
+
+  private addNewRange(): void {
+    const total = this.pages.length || 1;
+    let nextStart = 1;
+    if (this.ranges.length > 0) {
+      const last = this.ranges[this.ranges.length - 1];
+      nextStart = Math.min(total, last.to + 1);
+    }
+
+    this.ranges.push({
+      from: nextStart,
+      id: `range-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      to: total,
+    });
+
+    this.renderRangesInputs();
+    this.renderPagesWorkspace();
+    this.updateSummary();
+  }
+
+  private removeRange(id: string): void {
+    if (this.ranges.length <= 1) return;
+    this.ranges = this.ranges.filter((r) => r.id !== id);
+    this.renderRangesInputs();
+    this.renderPagesWorkspace();
+    this.updateSummary();
+  }
+
+  private renderRangesInputs(): void {
+    const container = this.container.querySelector<HTMLElement>('[data-ref="split-ranges-list"]');
+    if (!container) return;
+
+    const total = this.pages.length || 1;
+
+    container.innerHTML = this.ranges.map((range, index) => {
+      const canDelete = this.ranges.length > 1;
+      return `
+        <div class="split-range-card" data-ref="range-card-${range.id}" data-id="${range.id}">
+          <div class="split-range-card__header">
+            <span class="split-range-card__title">Rango ${index + 1}</span>
+            ${canDelete ? `
+              <button type="button" class="split-range-card__btn-delete" data-ref="btn-delete-range" data-id="${range.id}" title="Eliminar rango">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            ` : ''}
+          </div>
+          <div class="split-range-card__inputs">
+            <label class="field" data-ref="field-range-from-${range.id}">
+              <input class="field__input" data-ref="input-range-from" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.from}" />
+              <span class="field__label">Desde pág.</span>
+            </label>
+            <label class="field" data-ref="field-range-to-${range.id}">
+              <input class="field__input" data-ref="input-range-to" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.to}" />
+              <span class="field__label">Hasta pág.</span>
+            </label>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    renderIcons(container);
+
+    container.querySelectorAll<HTMLButtonElement>('[data-ref="btn-delete-range"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        if (id) this.removeRange(id);
+      });
+    });
+
+    container.querySelectorAll<HTMLInputElement>('[data-ref="input-range-from"]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const id = input.getAttribute('data-id');
+        const found = this.ranges.find((r) => r.id === id);
+        if (found) {
+          const val = parseInt(input.value, 10);
+          found.from = isNaN(val) ? 1 : Math.max(1, Math.min(total, val));
+          this.renderPagesWorkspace();
+          this.updateSummary();
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLInputElement>('[data-ref="input-range-to"]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const id = input.getAttribute('data-id');
+        const found = this.ranges.find((r) => r.id === id);
+        if (found) {
+          const val = parseInt(input.value, 10);
+          found.to = isNaN(val) ? total : Math.max(1, Math.min(total, val));
+          this.renderPagesWorkspace();
+          this.updateSummary();
+        }
+      });
+    });
+  }
+
+  private renderFilesView(): void {
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
+    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
+    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
+    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
+    const badge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
+    const title = this.container.querySelector<HTMLElement>('[data-ref="pdf-file-title"]');
+
+    if (!itemsCard) return;
+
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (processingCard) processingCard.style.display = 'none';
+    if (resultCard) resultCard.style.display = 'none';
+    if (itemsCard) itemsCard.style.display = 'flex';
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    if (sidebar) sidebar.style.display = 'flex';
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    if (outputNameInput && this.currentFile) {
+      const base = this.currentFile.name.replace(/\.[^/.]+$/, '');
+      outputNameInput.value = `${base}_dividido.pdf`;
+    }
+
+    if (badge) badge.textContent = `${this.pages.length} págs.`;
+
+    const valOrigBytes = this.container.querySelector<HTMLElement>('[data-ref="val-size-orig-bytes"]');
+    const valOrigPages = this.container.querySelector<HTMLElement>('[data-ref="val-size-orig-pages"]');
+    if (valOrigBytes && this.currentFile) valOrigBytes.textContent = formatBytes(this.currentFile.size);
+    if (valOrigPages) valOrigPages.textContent = this.pages.length.toString();
+
+    this.renderPagesWorkspace();
+    this.updateActionButtons();
+  }
+
+  private renderPagesWorkspace(): void {
+    const grid = this.container.querySelector<HTMLElement>('[data-ref="split-pages-grid"]');
+    if (!grid) return;
+
+    grid.innerHTML = this.pages.map((p) => {
+      let isSelected = false;
+      let isDimmed = false;
+      let rangeLabel = '';
+
+      if (this.activeMode === 'range') {
+        if (this.rangeSubmode === 'custom') {
+          const matchedRanges: number[] = [];
+          this.ranges.forEach((r, idx) => {
+            const from = Math.max(1, r.from);
+            const to = Math.min(this.pages.length, Math.max(from, r.to));
+            if (p.num >= from && p.num <= to) {
+              matchedRanges.push(idx + 1);
+            }
+          });
+          isSelected = matchedRanges.length > 0;
+          isDimmed = !isSelected;
+          if (matchedRanges.length > 0) {
+            rangeLabel = matchedRanges.length === 1 ? `Rango ${matchedRanges[0]}` : `Rangos ${matchedRanges.join(', ')}`;
+          }
+        } else if (this.rangeSubmode === 'fixed') {
+          isSelected = true;
+          isDimmed = false;
+          const blockIdx = Math.floor((p.num - 1) / Math.max(1, this.fixedPageBlock)) + 1;
+          rangeLabel = `Parte ${blockIdx}`;
+        }
+      } else if (this.activeMode === 'pages') {
+        isSelected = this.pagesSubmode === 'all' || this.selectedPages.has(p.num);
+        isDimmed = this.pagesSubmode === 'custom' && !this.selectedPages.has(p.num);
+      } else if (this.activeMode === 'size') {
+        isSelected = true;
+        isDimmed = false;
+      }
+
+      return this.renderPageCardHtml(p, isSelected, isDimmed, rangeLabel);
+    }).join('');
+
+    renderIcons(grid);
+  }
+
+  private renderPageCardHtml(page: PageItem, isSelected: boolean, isDimmed = false, rangeLabel = ''): string {
+    const sheetContent = page.thumbnailDataUrl
+      ? `<img class="split-page-card__preview-img" data-ref="img-page-${page.num}" src="${page.thumbnailDataUrl}" alt="Página ${page.num}" />`
+      : `
+        <div class="split-page-card__placeholder">
+          <svg class="component-icon split-page-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+          <span style="font-size: 0.75rem; color: var(--text-tertiary);">${page.num}</span>
+        </div>
+      `;
+
+    const selectedClass = isSelected ? 'is-selected' : '';
+    const dimmedClass = isDimmed ? 'is-dimmed' : '';
+    const pageLabel = rangeLabel ? `${rangeLabel} · Pág. ${page.num}` : `Página ${page.num}`;
+
+    return `
+      <div class="pdf-card split-page-card ${selectedClass} ${dimmedClass}" data-ref="card-page-${page.num}" data-page="${page.num}">
+        <div class="split-page-card__order-badge">#${page.num}</div>
+        <div class="split-page-card__check-badge">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+        </div>
+        <div class="split-page-card__sheet-wrapper">
+          <div class="split-page-card__sheet" data-ref="sheet-page-${page.num}">
+            ${sheetContent}
+          </div>
+        </div>
+        <span class="split-page-card__page-num">${pageLabel}</span>
+      </div>
+    `;
+  }
+
+  private updateSummary(): void {
+    const summaryFilesEl = this.container.querySelector<HTMLElement>('[data-ref="val-summary-files"]');
+    const summaryPagesEl = this.container.querySelector<HTMLElement>('[data-ref="val-summary-pages"]');
+    const summarySizeEl = this.container.querySelector<HTMLElement>('[data-ref="val-summary-size"]');
+
+    const totalPages = this.pages.length;
+    let expectedFiles = 1;
+
+    if (this.activeMode === 'range') {
+      if (this.rangeSubmode === 'fixed') {
+        const blockSize = Math.max(1, this.fixedPageBlock);
+        expectedFiles = Math.ceil(totalPages / blockSize);
+      } else {
+        const checkMerge = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-ranges"]');
+        if (checkMerge?.checked) {
+          expectedFiles = 1;
+        } else {
+          expectedFiles = this.ranges.length;
+        }
+      }
+    } else if (this.activeMode === 'pages') {
+      const checkMerge = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
+      if (this.pagesSubmode === 'all') {
+        expectedFiles = checkMerge?.checked ? 1 : totalPages;
+      } else {
+        expectedFiles = checkMerge?.checked ? 1 : Math.max(1, this.selectedPages.size);
+      }
+    } else {
+      expectedFiles = Math.max(1, Math.ceil(totalPages / 2));
+    }
+
+    if (summaryFilesEl) {
+      summaryFilesEl.textContent = expectedFiles === 1 ? '1 archivo (PDF)' : `${expectedFiles} archivos (ZIP)`;
+    }
+    if (summaryPagesEl) {
+      summaryPagesEl.textContent = `${totalPages} ${totalPages === 1 ? 'página' : 'páginas'}`;
+    }
+    if (summarySizeEl && this.currentFile) {
+      summarySizeEl.textContent = formatBytes(this.currentFile.size);
+    }
+
+    this.updatePagesNotice();
+    this.updateFixedNotice();
+    this.updateActionButtons();
+  }
+
+  private updateActionButtons(): void {
+    const mainBtnText = this.container.querySelector<HTMLElement>('[data-ref="txt-main-action"]');
+    const mainBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+
+    if (!mainBtnText || !mainBtn) return;
+
+    if (this.currentResult) {
+      mainBtnText.textContent = t('tools.split_pdf_btn_download') || 'Descargar PDF(s) Dividido(s)';
+    } else if (this.currentFile) {
+      mainBtnText.textContent = t('tools.split_pdf_btn_split') || 'Dividir PDF';
+    } else {
+      mainBtnText.textContent = t('tools.split_pdf_btn_select') || 'Seleccionar PDF';
+    }
+  }
+
+  private async startSplitProcess(): Promise<void> {
+    if (this.isProcessing || !this.currentFile) return;
+
+    this.isProcessing = true;
+    this.hideError();
+    this.statusManager?.showUploading(1, 1);
+
+    try {
+      const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+      const customFilename = outputNameInput?.value.trim() || (this.currentFile
+        ? this.currentFile.name.replace(/\.pdf$/i, '') + '_dividido.pdf'
+        : 'documento_dividido.pdf');
+
+      const checkMergeRanges = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-ranges"]');
+      const checkMergePages = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
+
+      let optionsPayload: any = {
+        filename: customFilename,
+        mode: this.activeMode,
+      };
+
+      if (this.activeMode === 'range') {
+        optionsPayload = {
+          ...optionsPayload,
+          fixedPageCount: this.fixedPageBlock,
+          mergeSelected: checkMergeRanges?.checked || false,
+          ranges: this.ranges.map((r) => ({ from: r.from, to: r.to })),
+          submode: this.rangeSubmode,
+        };
+      } else if (this.activeMode === 'pages') {
+        optionsPayload = {
+          ...optionsPayload,
+          mergeSelected: checkMergePages?.checked || false,
+          selectedPages: Array.from(this.selectedPages),
+          submode: this.pagesSubmode,
+        };
+      } else if (this.activeMode === 'size') {
+        const multiplier = this.sizeUnit === 'MB' ? 1024 * 1024 : 1024;
+        optionsPayload = {
+          ...optionsPayload,
+          maxSizeBytes: this.sizeLimitValue * multiplier,
+        };
+      }
+
+      const formData = new FormData();
+      formData.append('pdf', this.currentFile, this.currentFile.name);
+      formData.append('options', JSON.stringify(optionsPayload));
+
+      const response = await postFormWithProgress(
+        API_ROUTES.tools.splitPdf.split,
+        formData,
+        (progress) => {
+          this.statusManager?.updateUploadProgress(progress, 1);
+        },
+        this.abortController?.signal
+      );
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        const errorMsg = json.error || 'No se pudo dividir el documento PDF. Intenta nuevamente.';
+        this.statusManager?.showError({
+          boxText: 'Uno o más rangos o páginas no pudieron procesarse. Comprueba el formato de división.',
+          boxTitle: 'Error al dividir PDF',
+          desc: errorMsg,
+          retryText: 'Reintentar Dividir PDF',
+          title: '¡Oh no! No hemos podido dividir tu archivo.',
+        });
+        return;
+      }
+
+      this.currentResult = json.data as SplitPdfResponseData;
+      const token = this.currentResult.fileId;
+      const downloadPayload = {
+        downloadUrl: `/api/download/${token}`,
+        fileSize: this.currentResult.fileSize,
+        filename: this.currentResult.filename,
+        returnText: 'Dividir otro documento PDF',
+        returnUrl: '/split-pdf',
+        subtitle: `Se ha dividido exitosamente "${this.currentFile?.name}".`,
+        title: '¡PDF dividido con éxito!',
+        token,
+      };
+      sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
+      showToast('¡Documento PDF dividido exitosamente!', 'success');
+      this.statusManager?.hide();
+      navigate(`/download/${token}`);
+    } catch {
+      this.statusManager?.showError({
+        boxText: 'Comprueba tu conexión a internet o intenta con un archivo de menor tamaño.',
+        boxTitle: 'Error de conexión',
+        desc: 'Ha ocurrido un error inesperado al procesar el archivo. Por favor intenta más tarde.',
+        retryText: 'Reintentar Dividir PDF',
+        title: '¡Oh no! No hemos podido dividir tu archivo.',
+      });
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  private showProcessingState(): void {
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
+    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
+
+    if (sidebar) sidebar.style.display = 'none';
+    if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    if (fabMore) fabMore.style.display = 'none';
+    this.sidebarModal?.close();
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (itemsCard) itemsCard.style.display = 'none';
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+  }
+
+  private renderResultState(result: SplitPdfResponseData): void {
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
+    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
+    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
+    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
+
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (itemsCard) itemsCard.style.display = 'none';
+    if (processingCard) processingCard.style.display = 'none';
+    if (resultCard) resultCard.style.display = 'flex';
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+
+    const nameEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-name"]');
+    const partsEl = this.container.querySelector<HTMLElement>('[data-ref="result-parts-count"]');
+    const pagesEl = this.container.querySelector<HTMLElement>('[data-ref="result-total-pages"]');
+    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-size"]');
+    const downloadTxt = this.container.querySelector<HTMLElement>('[data-ref="txt-download-result"]');
+
+    if (nameEl) nameEl.textContent = result.filename;
+    if (partsEl) partsEl.textContent = `${result.partsCount} ${result.partsCount === 1 ? 'archivo' : 'archivos'}`;
+    if (pagesEl) pagesEl.textContent = `${result.totalPages} ${result.totalPages === 1 ? 'página' : 'páginas'}`;
+    if (sizeEl) sizeEl.textContent = formatBytes(result.fileSize);
+    if (downloadTxt) {
+      downloadTxt.textContent = result.isZip ? 'Descargar Archivos (.ZIP)' : 'Descargar PDF Dividido';
+    }
+
+    this.updateActionButtons();
+    renderIcons(this.container);
+  }
+
+  private downloadSplitResult(): void {
+    if (!this.currentResult) return;
+    const downloadUrl = this.currentResult.downloadUrl || API_ROUTES.tools.splitPdf.download(this.currentResult.fileId);
+    const filename = this.currentResult.filename || 'documento_dividido.zip';
+
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Iniciando descarga del archivo...', 'success');
+  }
+
+  private resetToInitial(): void {
+    this.currentFile = null;
+    this.currentResult = null;
+    this.isProcessing = false;
+    this.pages = [];
+    this.ranges = [];
+    this.selectedPages.clear();
+    this.pdfDocument = null;
+
+    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
+    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
+    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
+    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
+
+    if (fileInput) fileInput.value = '';
+
+    this.statusManager?.hide();
+    if (processingCard) processingCard.style.display = 'none';
+    if (itemsCard) itemsCard.style.display = 'none';
+    if (resultCard) resultCard.style.display = 'none';
+    if (dropzoneCard) dropzoneCard.style.display = 'flex';
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    if (sidebar) sidebar.style.display = 'none';
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    if (outputNameInput) outputNameInput.value = 'documento_dividido.pdf';
+    if (this.sidebarModal) this.sidebarModal.close();
+
+    const tabsNav = this.container.querySelector<HTMLElement>('[data-ref="split-tabs-nav"]');
+    if (tabsNav) tabsNav.setAttribute('data-mode', 'range');
+    const rangeSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-range-submode-toggle"]');
+    if (rangeSubmodeToggle) rangeSubmodeToggle.setAttribute('data-submode', 'custom');
+    const mergeRangesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-ranges-toggle"]');
+    if (mergeRangesToggle) mergeRangesToggle.setAttribute('data-merge', 'no');
+    const btnMergeRangesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-no"]');
+    const btnMergeRangesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-yes"]');
+    btnMergeRangesNo?.classList.add('is-active');
+    btnMergeRangesYes?.classList.remove('is-active');
+
+    const pagesSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-pages-submode-toggle"]');
+    if (pagesSubmodeToggle) pagesSubmodeToggle.setAttribute('data-submode', 'all');
+    const mergePagesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-pages-toggle"]');
+    if (mergePagesToggle) mergePagesToggle.setAttribute('data-merge', 'no');
+    const btnMergePagesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-no"]');
+    const btnMergePagesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-yes"]');
+    btnMergePagesNo?.classList.add('is-active');
+    btnMergePagesYes?.classList.remove('is-active');
+
+    this.updateSummary();
+    this.updateActionButtons();
+    this.hideError();
+  }
+
+  private showError(msg: string): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="split-pdf-error"]');
+    if (banner) {
+      banner.textContent = msg;
+      banner.style.display = '';
+    }
+  }
+
+  private hideError(): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="split-pdf-error"]');
+    if (banner) {
+      banner.textContent = '';
+      banner.style.display = 'none';
+    }
+  }
+}
+
+export async function createSplitPdfView(initialMode: SplitMode = 'range'): Promise<HTMLElement> {
+  const container = await loadTemplate('/views/tools/split-pdf/split-pdf.html');
+  const controller = new SplitPdfController(container, initialMode);
+  await controller.init();
+  (container as any).__controller = controller;
+  return container;
+}

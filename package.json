@@ -1,0 +1,19 @@
+{
+  "name": "boardstack",
+  "version": "1.0.0",
+  "description": "BoardStack - Monorepo for BoardPDF and Web Applications",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=apps/BoardPDF",
+    "build:boardpdf": "npm run build --workspace=apps/BoardPDF",
+    "dev": "npm run dev --workspace=apps/BoardPDF",
+    "dev:boardpdf": "npm run dev --workspace=apps/BoardPDF",
+    "test": "npm test --workspace=apps/BoardPDF",
+    "test:boardpdf": "npm test --workspace=apps/BoardPDF",
+    "typecheck": "npm run typecheck --workspace=apps/BoardPDF",
+    "typecheck:boardpdf": "npm run typecheck --workspace=apps/BoardPDF"
+  }
+}
