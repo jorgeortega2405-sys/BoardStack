@@ -1,15 +1,15 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
 import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
@@ -180,8 +180,6 @@ export class SplitPdfController implements ViewController {
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
-    const downloadResultBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const restartSplitBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-restart-split"]');
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="split-pages-grid"]');
 
     this.sidebarModal = setupToolSidebarModal({
@@ -229,21 +227,11 @@ export class SplitPdfController implements ViewController {
     }, { signal });
 
     mainActionBtn?.addEventListener('click', () => {
-      if (this.currentResult) {
-        this.downloadSplitResult();
-      } else if (!this.currentFile) {
+      if (!this.currentFile) {
         fileInput?.click();
       } else {
         void this.startSplitProcess();
       }
-    }, { signal });
-
-    downloadResultBtn?.addEventListener('click', () => {
-      this.downloadSplitResult();
-    }, { signal });
-
-    restartSplitBtn?.addEventListener('click', () => {
-      this.resetToInitial();
     }, { signal });
 
     const tabRange = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-range"]');
@@ -703,7 +691,6 @@ export class SplitPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
     const badge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
     const title = this.container.querySelector<HTMLElement>('[data-ref="pdf-file-title"]');
@@ -712,7 +699,6 @@ export class SplitPdfController implements ViewController {
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'flex';
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -864,9 +850,7 @@ export class SplitPdfController implements ViewController {
 
     if (!mainBtnText || !mainBtn) return;
 
-    if (this.currentResult) {
-      mainBtnText.textContent = t('tools.split_pdf_btn_download') || 'Descargar PDF(s) Dividido(s)';
-    } else if (this.currentFile) {
+    if (this.currentFile) {
       mainBtnText.textContent = t('tools.split_pdf_btn_split') || 'Dividir PDF';
     } else {
       mainBtnText.textContent = t('tools.split_pdf_btn_select') || 'Seleccionar PDF';
@@ -945,7 +929,9 @@ export class SplitPdfController implements ViewController {
 
       this.currentResult = json.data as SplitPdfResponseData;
       const token = this.currentResult.fileId;
-      const downloadPayload = {
+      showToast('¡Documento PDF dividido exitosamente!', 'success');
+      this.statusManager?.hide();
+      saveDownloadPayloadAndNavigate({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -954,11 +940,7 @@ export class SplitPdfController implements ViewController {
         subtitle: `Se ha dividido exitosamente "${this.currentFile?.name}".`,
         title: '¡PDF dividido con éxito!',
         token,
-      };
-      sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-      showToast('¡Documento PDF dividido exitosamente!', 'success');
-      this.statusManager?.hide();
-      navigate(`/download/${token}`);
+      });
     } catch {
       this.statusManager?.showError({
         boxText: 'Comprueba tu conexión a internet o intenta con un archivo de menor tamaño.',
@@ -989,51 +971,6 @@ export class SplitPdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
-  private renderResultState(result: SplitPdfResponseData): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
-
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'flex';
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-
-    const nameEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-name"]');
-    const partsEl = this.container.querySelector<HTMLElement>('[data-ref="result-parts-count"]');
-    const pagesEl = this.container.querySelector<HTMLElement>('[data-ref="result-total-pages"]');
-    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-size"]');
-    const downloadTxt = this.container.querySelector<HTMLElement>('[data-ref="txt-download-result"]');
-
-    if (nameEl) nameEl.textContent = result.filename;
-    if (partsEl) partsEl.textContent = `${result.partsCount} ${result.partsCount === 1 ? 'archivo' : 'archivos'}`;
-    if (pagesEl) pagesEl.textContent = `${result.totalPages} ${result.totalPages === 1 ? 'página' : 'páginas'}`;
-    if (sizeEl) sizeEl.textContent = formatBytes(result.fileSize);
-    if (downloadTxt) {
-      downloadTxt.textContent = result.isZip ? 'Descargar Archivos (.ZIP)' : 'Descargar PDF Dividido';
-    }
-
-    this.updateActionButtons();
-    renderIcons(this.container);
-  }
-
-  private downloadSplitResult(): void {
-    if (!this.currentResult) return;
-    const downloadUrl = this.currentResult.downloadUrl || API_ROUTES.tools.splitPdf.download(this.currentResult.fileId);
-    const filename = this.currentResult.filename || 'documento_dividido.zip';
-
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('Iniciando descarga del archivo...', 'success');
-  }
-
   private resetToInitial(): void {
     this.currentFile = null;
     this.currentResult = null;
@@ -1047,7 +984,6 @@ export class SplitPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
 
     if (fileInput) fileInput.value = '';
@@ -1055,7 +991,6 @@ export class SplitPdfController implements ViewController {
     this.statusManager?.hide();
     if (processingCard) processingCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (dropzoneCard) dropzoneCard.style.display = 'flex';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 

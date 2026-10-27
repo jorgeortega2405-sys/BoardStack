@@ -2,15 +2,15 @@ import Sortable from 'sortablejs';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
 import { OrganizePageItem, OrganizePdfResponseData } from './organize-pdf.types.js';
@@ -311,12 +311,10 @@ export class OrganizePdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'block';
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -512,8 +510,6 @@ export class OrganizePdfController implements ViewController {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.organize_pdf_btn_select') || 'Seleccionar PDF';
         mainActionBtn.style.display = '';
-      } else if (this.currentResult) {
-        mainActionBtn.style.display = 'none';
       } else {
         txtMainAction.textContent = t('tools.organize_pdf_btn_action') || 'Ordenar PDF';
         mainActionBtn.style.display = '';
@@ -566,7 +562,9 @@ export class OrganizePdfController implements ViewController {
 
       this.currentResult = json.data as OrganizePdfResponseData;
       const token = this.currentResult.fileId;
-      const downloadPayload = {
+      showToast('Documento PDF organizado con éxito.', 'success');
+      this.statusManager?.hide();
+      saveDownloadPayloadAndNavigate({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -575,10 +573,7 @@ export class OrganizePdfController implements ViewController {
         subtitle: `Se ha reorganizado exitosamente el archivo "${this.currentFile?.name}".`,
         title: '¡PDF organizado con éxito!',
         token,
-      };
-      sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-      showToast('Documento PDF organizado con éxito.', 'success');
-      navigate(`/download/${token}`);
+      });
     } catch {
       this.statusManager?.showError({
         boxText: 'Uno o más archivos seleccionados están dañados, protegidos o en un formato no compatible.',
@@ -609,37 +604,6 @@ export class OrganizePdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
-  private showResultState(): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
-
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'flex';
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-
-    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
-    if (mainActionBtn) {
-      mainActionBtn.disabled = false;
-    }
-
-    if (this.currentResult) {
-      const resName = this.container.querySelector<HTMLElement>('[data-ref="result-file-name"]');
-      const resTotal = this.container.querySelector<HTMLElement>('[data-ref="result-total-pages"]');
-      const resSize = this.container.querySelector<HTMLElement>('[data-ref="result-file-size"]');
-
-      if (resName) resName.textContent = this.currentResult.filename;
-      if (resTotal) resTotal.textContent = `${this.currentResult.totalPages}`;
-      if (resSize) resSize.textContent = formatBytes(this.currentResult.fileSize);
-    }
-
-    this.updateActionButtons();
-  }
-
   private resetToInitial(): void {
     this.currentFile = null;
     this.currentResult = null;
@@ -658,14 +622,12 @@ export class OrganizePdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
     if (fileInput) fileInput.value = '';
 
     if (processingCard) processingCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (dropzoneCard) dropzoneCard.style.display = 'flex';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 

@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { ClientRedactionBox, ClientRedactTool, RedactPdfResultData } from './redact-pdf.types.js';
@@ -1023,7 +1023,8 @@ export class RedactPdfController implements ViewController {
 
       if (response.ok && result.success && result.data) {
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('Documento censurado con éxito.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename || `${this.currentFile.name.replace(/\.pdf$/i, '')}_censurado.pdf`,
@@ -1032,11 +1033,7 @@ export class RedactPdfController implements ViewController {
           subtitle: `Se ha censurado y protegido exitosamente el documento "${this.currentFile?.name}".`,
           title: '¡PDF censurado con éxito!',
           token,
-        };
-
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('Documento censurado con éxito.', 'success');
-        navigate(`/download/${token}`);
+        });
       } else {
         throw new Error(result.error || result.message || 'Error al censurar el documento PDF.');
       }

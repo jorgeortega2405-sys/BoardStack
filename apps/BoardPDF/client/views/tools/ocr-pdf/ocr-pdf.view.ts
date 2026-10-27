@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { ClientOcrLanguage, OcrResultData } from './ocr-pdf.types.js';
@@ -25,7 +25,6 @@ export class OcrPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
-  private currentResult: OcrResultData | null = null;
   private isProcessing = false;
   private selectedLanguage: ClientOcrLanguage = 'spa';
   private sidebarModal: ToolSidebarModalController | null = null;
@@ -56,6 +55,7 @@ export class OcrPdfController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    this.currentFile = null;
   }
 
   private bindEvents(): void {
@@ -81,8 +81,6 @@ export class OcrPdfController implements ViewController {
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');
-    const downloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const anotherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-another"]');
 
     fabAddBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -152,14 +150,6 @@ export class OcrPdfController implements ViewController {
     ocrBtn?.addEventListener('click', () => {
       void this.handleOcr(ocrBtn);
     }, { signal });
-
-    downloadBtn?.addEventListener('click', () => {
-      this.handleDownload();
-    }, { signal });
-
-    anotherBtn?.addEventListener('click', () => {
-      this.resetToDropzone();
-    }, { signal });
   }
 
   private handleFileSelected(file: File): void {
@@ -183,7 +173,6 @@ export class OcrPdfController implements ViewController {
   private renderSelectedState(file: File): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-result-card"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-sidebar"]');
@@ -192,7 +181,6 @@ export class OcrPdfController implements ViewController {
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (selectedCard) selectedCard.style.display = 'flex';
 
     if (sidebar) sidebar.style.display = 'flex';
@@ -249,14 +237,12 @@ export class OcrPdfController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    this.currentResult = null;
     this.statusManager?.hide();
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     if (fileInput) fileInput.value = '';
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-workspace"]');
@@ -264,7 +250,6 @@ export class OcrPdfController implements ViewController {
 
     if (dropzoneCard) dropzoneCard.style.display = '';
     if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
 
     if (sidebar) sidebar.style.display = 'none';
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
@@ -283,10 +268,6 @@ export class OcrPdfController implements ViewController {
     if (outputNameInput) outputNameInput.value = 'documento_ocr.pdf';
 
     this.hideError();
-  }
-
-  private resetToDropzone(): void {
-    this.resetSelectedFile();
   }
 
   private async handleOcr(button: HTMLButtonElement): Promise<void> {
@@ -332,9 +313,9 @@ export class OcrPdfController implements ViewController {
           throw new Error(result.error || 'Error al procesar el reconocimiento óptico de texto.');
         }
 
-        this.currentResult = result.data;
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('Texto reconocido y documento generado con éxito.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.processedSize,
           filename: customFilename || result.data.filename,
@@ -343,10 +324,7 @@ export class OcrPdfController implements ViewController {
           subtitle: `Se ha aplicado reconocimiento óptico de texto exitosamente a "${this.currentFile?.name}".`,
           title: '¡Texto reconocido con éxito!',
           token,
-        };
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('Texto reconocido y documento generado con éxito.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch (err: unknown) {
         if (selectedCard) selectedCard.style.display = 'flex';
         if (sidebar) sidebar.style.display = 'flex';
@@ -359,34 +337,6 @@ export class OcrPdfController implements ViewController {
         this.isProcessing = false;
       }
     });
-  }
-
-  private renderResultState(data: OcrResultData): void {
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-result-card"]');
-    const pagesEl = this.container.querySelector<HTMLElement>('[data-ref="val-ocr-pages"]');
-    const langEl = this.container.querySelector<HTMLElement>('[data-ref="val-ocr-lang"]');
-    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="val-ocr-size"]');
-
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = '';
-
-    if (pagesEl) pagesEl.textContent = `${data.pageCount} ${data.pageCount === 1 ? 'página' : 'páginas'}`;
-    if (langEl) {
-      langEl.textContent = data.language === 'eng' ? 'Inglés' : data.language === 'spa+eng' ? 'Español + Inglés' : 'Español';
-    }
-    if (sizeEl) sizeEl.textContent = formatBytes(data.processedSize);
-  }
-
-  private handleDownload(): void {
-    if (!this.currentResult?.downloadUrl) return;
-    const downloadLink = document.createElement('a');
-    downloadLink.href = this.currentResult.downloadUrl;
-    downloadLink.download = this.currentResult.filename;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    downloadLink.remove();
-    showToast('Iniciando descarga del PDF con OCR...', 'success');
   }
 
   private showError(message: string): void {

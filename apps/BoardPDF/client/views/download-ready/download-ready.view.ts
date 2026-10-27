@@ -140,6 +140,23 @@ export class DownloadReadyController implements ViewController {
       downloadBtn.download = this.data.filename;
       downloadBtn.style.display = 'inline-flex';
     }
+    const btnTextEl = this.container.querySelector<HTMLElement>('[data-ref="ready-btn-text"]');
+    if (btnTextEl && this.data.filename) {
+      const ext = this.data.filename.split('.').pop()?.toLowerCase();
+      if (ext === 'md') {
+        btnTextEl.textContent = 'Descargar Markdown (.md)';
+      } else if (ext === 'docx') {
+        btnTextEl.textContent = 'Descargar Word (.docx)';
+      } else if (ext === 'xlsx') {
+        btnTextEl.textContent = 'Descargar Excel (.xlsx)';
+      } else if (ext === 'pptx') {
+        btnTextEl.textContent = 'Descargar PowerPoint (.pptx)';
+      } else if (ext === 'zip') {
+        btnTextEl.textContent = 'Descargar Archivo (.zip)';
+      } else {
+        btnTextEl.textContent = 'Descargar PDF';
+      }
+    }
     if (actionBtns) {
       actionBtns.style.display = 'grid';
     }

@@ -1,15 +1,15 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
@@ -386,12 +386,10 @@ export class RemovePdfPagesController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'block';
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -484,8 +482,6 @@ export class RemovePdfPagesController implements ViewController {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select') || 'Seleccionar PDF';
         mainActionBtn.style.display = '';
-      } else if (this.currentResult) {
-        mainActionBtn.style.display = 'none';
       } else {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action') || 'Eliminar páginas';
         mainActionBtn.style.display = '';
@@ -539,7 +535,9 @@ export class RemovePdfPagesController implements ViewController {
 
       this.currentResult = json.data as RemovePdfResponseData;
       const token = this.currentResult.fileId;
-      const downloadPayload = {
+      showToast('Páginas eliminadas con éxito.', 'success');
+      this.statusManager?.hide();
+      saveDownloadPayloadAndNavigate({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -548,10 +546,7 @@ export class RemovePdfPagesController implements ViewController {
         subtitle: `Se han eliminado exitosamente ${this.currentResult.removedPages} páginas de "${this.currentFile?.name}".`,
         title: '¡Páginas eliminadas con éxito!',
         token,
-      };
-      sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-      showToast('Páginas eliminadas con éxito.', 'success');
-      navigate(`/download/${token}`);
+      });
     } catch {
       this.statusManager?.showError({
         boxText: 'Comprueba que el documento no esté protegido con contraseña o dañado.',
@@ -582,41 +577,6 @@ export class RemovePdfPagesController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
-  private showResultState(): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
-
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'flex';
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-
-    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
-    if (mainActionBtn) {
-      mainActionBtn.disabled = false;
-    }
-
-    if (this.currentResult) {
-      const resName = this.container.querySelector<HTMLElement>('[data-ref="result-file-name"]');
-      const resTotal = this.container.querySelector<HTMLElement>('[data-ref="result-total-pages"]');
-      const resRemoved = this.container.querySelector<HTMLElement>('[data-ref="result-removed-pages"]');
-      const resRemain = this.container.querySelector<HTMLElement>('[data-ref="result-remaining-pages"]');
-      const resSize = this.container.querySelector<HTMLElement>('[data-ref="result-file-size"]');
-
-      if (resName) resName.textContent = this.currentResult.filename;
-      if (resTotal) resTotal.textContent = `${this.currentResult.originalPages}`;
-      if (resRemoved) resRemoved.textContent = `${this.currentResult.removedPages}`;
-      if (resRemain) resRemain.textContent = `${this.currentResult.remainingPages}`;
-      if (resSize) resSize.textContent = formatBytes(this.currentResult.fileSize);
-    }
-
-    this.updateActionButtons();
-  }
-
   private resetToInitial(): void {
     this.currentFile = null;
     this.currentResult = null;
@@ -632,7 +592,6 @@ export class RemovePdfPagesController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
     if (fileInput) fileInput.value = '';
@@ -640,7 +599,6 @@ export class RemovePdfPagesController implements ViewController {
 
     if (processingCard) processingCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (dropzoneCard) dropzoneCard.style.display = 'flex';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 

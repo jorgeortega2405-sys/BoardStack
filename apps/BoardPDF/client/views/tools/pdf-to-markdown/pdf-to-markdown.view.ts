@@ -1,13 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PdfToMarkdownResultData } from './pdf-to-markdown.types.js';
@@ -24,7 +25,6 @@ export class PdfToMarkdownController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
-  private currentResult: PdfToMarkdownResultData | null = null;
   private isProcessing = false;
   private sidebarModal: ToolSidebarModalController | null = null;
   private statusManager: ToolStatusManager | null = null;
@@ -55,7 +55,6 @@ export class PdfToMarkdownController implements ViewController {
       this.abortController = null;
     }
     this.currentFile = null;
-    this.currentResult = null;
   }
 
   private bindEvents(): void {
@@ -81,9 +80,6 @@ export class PdfToMarkdownController implements ViewController {
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
-    const downloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const copyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-result"]');
-    const anotherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-another"]');
 
     browseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -137,18 +133,6 @@ export class PdfToMarkdownController implements ViewController {
     convertBtn?.addEventListener('click', () => {
       void this.handleConvert(convertBtn);
     }, { signal });
-
-    downloadBtn?.addEventListener('click', () => {
-      this.handleDownload();
-    }, { signal });
-
-    copyBtn?.addEventListener('click', () => {
-      this.handleCopy();
-    }, { signal });
-
-    anotherBtn?.addEventListener('click', () => {
-      this.resetSelectedFile();
-    }, { signal });
   }
 
   private handleFileSelected(file: File): void {
@@ -166,7 +150,6 @@ export class PdfToMarkdownController implements ViewController {
     }
 
     this.currentFile = file;
-    this.currentResult = null;
     this.renderSelectedState(file);
   }
 
@@ -174,7 +157,6 @@ export class PdfToMarkdownController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-selected-card"]');
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-processing-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-result-card"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
@@ -183,7 +165,6 @@ export class PdfToMarkdownController implements ViewController {
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (processingCard) processingCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (selectedCard) selectedCard.style.display = 'flex';
 
     if (sidebar) sidebar.style.display = 'flex';
@@ -232,21 +213,18 @@ export class PdfToMarkdownController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    this.currentResult = null;
     this.statusManager?.hide();
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     if (fileInput) fileInput.value = '';
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
     if (dropzoneCard) dropzoneCard.style.display = '';
     if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
 
     if (sidebar) sidebar.style.display = 'none';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
@@ -290,10 +268,19 @@ export class PdfToMarkdownController implements ViewController {
           throw new Error(result.error || 'Error al convertir el documento a Markdown.');
         }
 
-        this.currentResult = result.data;
+        const token = result.data.fileId;
         this.statusManager?.hide();
         showToast('Documento convertido a Markdown con éxito.', 'success');
-        this.renderResultState(result.data);
+        saveDownloadPayloadAndNavigate({
+          downloadUrl: result.data.downloadUrl || `/api/download/${token}`,
+          fileSize: result.data.characterCount || 0,
+          filename: result.data.filename || 'documento.md',
+          returnText: 'Volver a PDF a Markdown',
+          returnUrl: '/pdf-to-markdown',
+          subtitle: 'Tu documento se ha convertido a Markdown estructurado con éxito.',
+          title: '¡Tu archivo Markdown está listo!',
+          token,
+        });
       } catch (err: unknown) {
         if (selectedCard) selectedCard.style.display = 'flex';
         if (sidebar) sidebar.style.display = 'flex';
@@ -306,49 +293,6 @@ export class PdfToMarkdownController implements ViewController {
         this.isProcessing = false;
       }
     });
-  }
-
-  private renderResultState(data: PdfToMarkdownResultData): void {
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-result-card"]');
-    const wordsEl = this.container.querySelector<HTMLElement>('[data-ref="val-md-words"]');
-    const linesEl = this.container.querySelector<HTMLElement>('[data-ref="val-md-lines"]');
-    const modelEl = this.container.querySelector<HTMLElement>('[data-ref="val-md-model"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
-
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'none';
-
-    if (wordsEl) wordsEl.textContent = `${data.wordCount}`;
-    if (linesEl) linesEl.textContent = `${data.lineCount}`;
-    if (modelEl) modelEl.textContent = 'BoardPDF AI';
-  }
-
-  private handleDownload(): void {
-    if (!this.currentResult?.markdown) return;
-
-    const blob = new Blob([this.currentResult.markdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = this.currentResult.filename || 'documento.md';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Descarga iniciada.', 'info');
-  }
-
-  private handleCopy(): void {
-    if (!this.currentResult?.markdown) return;
-    navigator.clipboard.writeText(this.currentResult.markdown)
-      .then(() => {
-        showToast('Código Markdown copiado al portapapeles.', 'success');
-      })
-      .catch(() => {
-        showToast('No se pudo copiar el texto al portapapeles.', 'error');
-      });
   }
 
   private showError(message: string): void {

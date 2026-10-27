@@ -105,30 +105,68 @@ export function getCurrentLanguage(): string {
   return currentLanguage;
 }
 
+const LEGAL_MODULES = ['privacy', 'terms', 'cookies', 'security'] as const;
+
+async function fetchJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetch(filePath);
+    if (res.ok) {
+      return (await res.json()) as Record<string, unknown>;
+    }
+  } catch {}
+  return null;
+}
+
+async function fetchLanguageBundle(norm: string): Promise<Record<string, unknown> | null> {
+  const generalData = await fetchJsonFile(`/translations/${encodeURIComponent(norm)}/general.json`);
+  if (!generalData) {
+    return await fetchJsonFile(`/translations/${encodeURIComponent(norm)}.json`);
+  }
+
+  const bundle: Record<string, unknown> = { ...generalData };
+  if (!bundle.help || typeof bundle.help !== 'object') {
+    bundle.help = {};
+  }
+  const helpObj = bundle.help as Record<string, unknown>;
+
+  const legalResults = await Promise.all(
+    LEGAL_MODULES.map(async (mod) => {
+      const data = await fetchJsonFile(`/translations/${encodeURIComponent(norm)}/${mod}.json`);
+      return { data, mod };
+    })
+  );
+
+  for (const { data, mod } of legalResults) {
+    if (data) {
+      bundle[mod] = data;
+      helpObj[mod] = data;
+    }
+  }
+
+  return bundle;
+}
+
 async function loadTranslationFile(code: string): Promise<void> {
   const norm = normalizeLanguageCode(code);
-  const targetFile = norm === 'es' ? 'es-419' : norm;
-  try {
-    const res = await fetch(`/translations/${encodeURIComponent(targetFile)}.json`);
-    if (res.ok) {
-      currentTranslations = await res.json();
-      try {
-        sessionStorage.setItem(`boardpdf_i18n_${norm}`, JSON.stringify(currentTranslations));
-      } catch {}
-      return;
-    }
-  } catch {}
+  const bundle = await fetchLanguageBundle(norm);
+  if (bundle) {
+    currentTranslations = bundle;
+    try {
+      sessionStorage.setItem(`boardpdf_i18n_${norm}`, JSON.stringify(currentTranslations));
+    } catch {}
+    return;
+  }
 
-  try {
-    const fallbackRes = await fetch('/translations/es-419.json');
-    if (fallbackRes.ok) {
-      currentTranslations = await fallbackRes.json();
+  if (norm !== DEFAULT_LANGUAGE) {
+    const fallbackBundle = await fetchLanguageBundle(DEFAULT_LANGUAGE);
+    if (fallbackBundle) {
+      currentTranslations = fallbackBundle;
       try {
-        sessionStorage.setItem('boardpdf_i18n_es-419', JSON.stringify(currentTranslations));
+        sessionStorage.setItem(`boardpdf_i18n_${DEFAULT_LANGUAGE}`, JSON.stringify(currentTranslations));
       } catch {}
       return;
     }
-  } catch {}
+  }
 
   currentTranslations = FALLBACK_TRANSLATIONS;
 }

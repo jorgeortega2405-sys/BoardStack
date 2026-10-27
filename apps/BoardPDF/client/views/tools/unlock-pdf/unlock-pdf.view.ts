@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
@@ -326,7 +326,8 @@ export class UnlockPdfController implements ViewController {
         }
 
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('PDF desbloqueado correctamente.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
@@ -335,11 +336,7 @@ export class UnlockPdfController implements ViewController {
           subtitle: `Se han eliminado exitosamente las restricciones del documento "${this.currentFile?.name}".`,
           title: '¡PDF desbloqueado con éxito!',
           token,
-        };
-
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('PDF desbloqueado correctamente.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch {
         this.statusManager?.showError({
           boxText: 'Comprueba que la contraseña ingresada sea la correcta o que el archivo PDF no esté dañado.',

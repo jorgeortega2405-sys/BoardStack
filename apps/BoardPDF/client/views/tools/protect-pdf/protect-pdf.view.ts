@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
@@ -346,7 +346,8 @@ export class ProtectPdfController implements ViewController {
         }
 
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('PDF protegido correctamente.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
@@ -355,11 +356,7 @@ export class ProtectPdfController implements ViewController {
           subtitle: `Se ha protegido y cifrado exitosamente el documento "${this.currentFile?.name}".`,
           title: '¡PDF protegido con éxito!',
           token,
-        };
-
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('PDF protegido correctamente.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch {
         this.statusManager?.showError({
           boxText: 'Comprueba que el archivo PDF no esté protegido o dañado y vuelve a intentarlo.',

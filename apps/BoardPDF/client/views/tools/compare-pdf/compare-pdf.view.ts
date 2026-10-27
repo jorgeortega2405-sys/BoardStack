@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { ClientDiffItem, ClientPageComparison, ComparePdfResultData, CompareViewMode } from './compare-pdf.types.js';
@@ -853,16 +853,17 @@ export class ComparePdfController implements ViewController {
       return;
     }
 
-    const downloadUrl = this.comparisonResult.downloadUrl;
-    const filename = this.comparisonResult.filename || 'informe_comparacion.pdf';
-
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Descargando informe de comparación...', 'info');
+    const token = this.comparisonResult.fileId;
+    saveDownloadPayloadAndNavigate({
+      downloadUrl: this.comparisonResult.downloadUrl || `/api/download/${token}`,
+      fileSize: 0,
+      filename: this.comparisonResult.filename || 'informe_comparacion.pdf',
+      returnText: 'Volver a Comparar PDF',
+      returnUrl: '/compare-pdf',
+      subtitle: 'Tu informe detallado de diferencias y análisis comparativo está listo.',
+      title: '¡Informe de comparación listo!',
+      token,
+    });
   }
 
   private showError(msg: string): void {

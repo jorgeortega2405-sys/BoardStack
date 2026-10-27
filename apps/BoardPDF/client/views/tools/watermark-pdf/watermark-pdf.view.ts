@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType } from './watermark-pdf.types.js';
@@ -457,7 +457,8 @@ export class WatermarkPdfController implements ViewController {
         }
 
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('Marca de agua insertada con éxito.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
@@ -466,11 +467,7 @@ export class WatermarkPdfController implements ViewController {
           subtitle: `Se ha aplicado exitosamente la marca de agua en "${this.currentFile?.name}".`,
           title: '¡Marca de agua insertada!',
           token,
-        };
-
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('Marca de agua insertada con éxito.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch (err: unknown) {
         if (workspaceCard) workspaceCard.style.display = 'flex';
         if (sidebar) sidebar.style.display = 'flex';

@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { RepairResultData } from './repair-pdf.types.js';
@@ -25,7 +25,6 @@ export class RepairPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
-  private currentResult: RepairResultData | null = null;
   private isProcessing = false;
   private sidebarModal: ToolSidebarModalController | null = null;
   private statusManager: ToolStatusManager | null = null;
@@ -55,6 +54,7 @@ export class RepairPdfController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    this.currentFile = null;
   }
 
   private bindEvents(): void {
@@ -79,8 +79,6 @@ export class RepairPdfController implements ViewController {
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
-    const downloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const anotherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-another"]');
 
     fabAddBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -124,25 +122,17 @@ export class RepairPdfController implements ViewController {
     const dropTarget = dropzoneCard || dropzone;
     bindFileDropzone({
       dropTarget,
-      visualTarget: dropTarget,
       onFiles: (files) => {
         if (files.length > 0) {
           this.handleFileSelected(files[0]);
         }
       },
       signal,
+      visualTarget: dropTarget,
     });
 
     repairBtn?.addEventListener('click', () => {
       void this.handleRepair(repairBtn);
-    }, { signal });
-
-    downloadBtn?.addEventListener('click', () => {
-      this.handleDownload();
-    }, { signal });
-
-    anotherBtn?.addEventListener('click', () => {
-      this.resetToDropzone();
     }, { signal });
   }
 
@@ -163,7 +153,6 @@ export class RepairPdfController implements ViewController {
   private renderSelectedState(file: File): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="repair-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="repair-result-card"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
@@ -172,7 +161,6 @@ export class RepairPdfController implements ViewController {
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (selectedCard) selectedCard.style.display = 'flex';
 
     if (sidebar) sidebar.style.display = 'flex';
@@ -229,14 +217,12 @@ export class RepairPdfController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    this.currentResult = null;
     this.statusManager?.hide();
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     if (fileInput) fileInput.value = '';
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="repair-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="repair-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-workspace"]');
@@ -244,7 +230,6 @@ export class RepairPdfController implements ViewController {
 
     if (dropzoneCard) dropzoneCard.style.display = '';
     if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
 
     if (sidebar) sidebar.style.display = 'none';
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
@@ -263,10 +248,6 @@ export class RepairPdfController implements ViewController {
     if (outputNameInput) outputNameInput.value = 'documento_reparado.pdf';
 
     this.hideError();
-  }
-
-  private resetToDropzone(): void {
-    this.resetSelectedFile();
   }
 
   private async handleRepair(button: HTMLButtonElement): Promise<void> {
@@ -309,9 +290,9 @@ export class RepairPdfController implements ViewController {
           throw new Error(result.error || 'Error al reparar el archivo PDF.');
         }
 
-        this.currentResult = result.data;
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('PDF reparado con éxito.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.repairedSize,
           filename: customFilename || result.data.filename,
@@ -320,10 +301,7 @@ export class RepairPdfController implements ViewController {
           subtitle: `Se ha reparado exitosamente el archivo "${this.currentFile?.name}".`,
           title: '¡PDF reparado con éxito!',
           token,
-        };
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('PDF reparado con éxito.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch (err: unknown) {
         if (selectedCard) selectedCard.style.display = 'flex';
         if (sidebar) sidebar.style.display = 'flex';
@@ -336,30 +314,6 @@ export class RepairPdfController implements ViewController {
         this.isProcessing = false;
       }
     });
-  }
-
-  private renderResultState(data: RepairResultData): void {
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="repair-result-card"]');
-    const pagesEl = this.container.querySelector<HTMLElement>('[data-ref="val-recovered-pages"]');
-    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="val-repaired-size"]');
-
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = '';
-
-    if (pagesEl) pagesEl.textContent = `${data.pageCount} ${data.pageCount === 1 ? 'página' : 'páginas'}`;
-    if (sizeEl) sizeEl.textContent = formatBytes(data.repairedSize);
-  }
-
-  private handleDownload(): void {
-    if (!this.currentResult?.downloadUrl) return;
-    const downloadLink = document.createElement('a');
-    downloadLink.href = this.currentResult.downloadUrl;
-    downloadLink.download = this.currentResult.filename;
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    downloadLink.remove();
-    showToast('Iniciando descarga del PDF reparado...', 'success');
   }
 
   private showError(message: string): void {

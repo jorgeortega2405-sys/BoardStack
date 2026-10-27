@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { CONVERSION_CONFIGS, ConversionRouteConfig } from './pdf-converter.types.js';
@@ -348,22 +348,17 @@ export class PdfConverterController implements ViewController {
         }
 
         const token = result.data.downloadToken;
-        sessionStorage.setItem(
-          'download_ready_data',
-          JSON.stringify({
-            downloadUrl: `/api/download/${token}`,
-            fileSize: this.currentFile?.size || 0,
-            filename: `${(this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '')}${this.config.targetExtension}`,
-            returnText: this.config.title,
-            returnUrl: window.location.pathname,
-            subtitle: `Tu documento PDF ha sido convertido a formato ${this.config.targetBadge} con total precisión.`,
-            title: `¡${this.config.title} completada con éxito!`,
-            token,
-          })
-        );
-
         showToast('Documento convertido exitosamente', 'success');
-        navigate(`/download/${token}`);
+        saveDownloadPayloadAndNavigate({
+          downloadUrl: `/api/download/${token}`,
+          fileSize: this.currentFile?.size || 0,
+          filename: `${(this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '')}${this.config.targetExtension}`,
+          returnText: this.config.title,
+          returnUrl: window.location.pathname,
+          subtitle: `Tu documento PDF ha sido convertido a formato ${this.config.targetBadge} con total precisión.`,
+          title: `¡${this.config.title} completada con éxito!`,
+          token,
+        });
       } catch {
         this.statusManager?.showError({
           boxText: 'Comprueba que el documento PDF sea válido, no esté bloqueado o protegido por contraseña, y vuelve a intentarlo.',

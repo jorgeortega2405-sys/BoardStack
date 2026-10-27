@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
@@ -494,7 +494,8 @@ export class PageNumbersController implements ViewController {
         }
 
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('Números de página insertados con éxito.', 'success');
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
@@ -503,11 +504,7 @@ export class PageNumbersController implements ViewController {
           subtitle: `Se han insertado exitosamente los números de página en "${this.currentFile?.name}".`,
           title: '¡Números de página insertados!',
           token,
-        };
-
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('Números de página insertados con éxito.', 'success');
-        navigate(`/download/${token}`);
+        });
       } catch (err: unknown) {
         if (workspaceCard) workspaceCard.style.display = 'flex';
         if (sidebar) sidebar.style.display = 'flex';

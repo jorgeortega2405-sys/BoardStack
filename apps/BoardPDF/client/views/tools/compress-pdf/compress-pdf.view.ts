@@ -1,14 +1,14 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
@@ -26,7 +26,6 @@ export class CompressPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
-  private currentResult: CompressResultData | null = null;
   private isProcessing = false;
   private selectedLevel: ClientPdfCompressLevel = 'recommended';
   private sidebarModal: ToolSidebarModalController | null = null;
@@ -84,6 +83,7 @@ export class CompressPdfController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    this.currentFile = null;
   }
 
   private bindEvents(): void {
@@ -110,8 +110,6 @@ export class CompressPdfController implements ViewController {
     const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
-    const downloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const anotherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-another"]');
 
     browseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -196,16 +194,6 @@ export class CompressPdfController implements ViewController {
     compressBtn?.addEventListener('click', () => {
       void this.handleCompress(compressBtn);
     }, { signal });
-
-    downloadBtn?.addEventListener('click', () => {
-      if (this.currentResult?.downloadUrl) {
-        window.location.href = this.currentResult.downloadUrl;
-      }
-    }, { signal });
-
-    anotherBtn?.addEventListener('click', () => {
-      this.resetToDropzone();
-    }, { signal });
   }
 
   private updateActiveLevelOption(level: ClientPdfCompressLevel): void {
@@ -235,7 +223,6 @@ export class CompressPdfController implements ViewController {
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="compress-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
@@ -249,7 +236,6 @@ export class CompressPdfController implements ViewController {
     if (compressBtn) compressBtn.disabled = false;
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (selectedCard) selectedCard.style.display = 'flex';
 
     if (sidebar) sidebar.style.display = 'flex';
@@ -296,13 +282,11 @@ export class CompressPdfController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    this.currentResult = null;
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     if (fileInput) fileInput.value = '';
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="compress-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
@@ -311,7 +295,6 @@ export class CompressPdfController implements ViewController {
 
     if (dropzoneCard) dropzoneCard.style.display = '';
     if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
 
     if (sidebar) sidebar.style.display = 'none';
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
@@ -331,14 +314,9 @@ export class CompressPdfController implements ViewController {
     this.hideError();
   }
 
-  private resetToDropzone(): void {
-    this.resetSelectedFile();
-  }
-
   private showProcessingState(): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="compress-result-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
@@ -350,7 +328,6 @@ export class CompressPdfController implements ViewController {
     this.sidebarModal?.close();
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (selectedCard) selectedCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -382,9 +359,10 @@ export class CompressPdfController implements ViewController {
           throw new Error(result.error || 'Error al comprimir el archivo PDF.');
         }
 
-        this.currentResult = result.data;
         const token = result.data.fileId;
-        const downloadPayload = {
+        showToast('PDF comprimido con éxito.', 'success');
+        this.statusManager?.hide();
+        saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.compressedSize,
           filename: result.data.filename,
@@ -393,11 +371,7 @@ export class CompressPdfController implements ViewController {
           subtitle: `El archivo "${this.currentFile?.name}" se ha comprimido exitosamente.`,
           title: '¡PDF comprimido con éxito!',
           token,
-        };
-        sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-        showToast('PDF comprimido con éxito.', 'success');
-        this.statusManager?.hide();
-        navigate(`/download/${token}`);
+        });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al comprimir el PDF.';
         this.statusManager?.showError({

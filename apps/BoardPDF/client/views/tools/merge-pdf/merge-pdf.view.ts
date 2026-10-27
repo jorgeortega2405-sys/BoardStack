@@ -2,15 +2,15 @@ import Sortable from 'sortablejs';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
 import { MergePdfResponseData, SelectedPdfItem } from './merge-pdf.types.js';
@@ -183,9 +183,7 @@ export class MergePdfController implements ViewController {
     }, { signal });
 
     mainActionBtn?.addEventListener('click', () => {
-      if (this.currentResult) {
-        this.downloadMergedResult();
-      } else if (this.selectedFiles.length === 0) {
+      if (this.selectedFiles.length === 0) {
         fileInput?.click();
       } else if (this.selectedFiles.length === 1) {
         addMoreInput?.click();
@@ -196,14 +194,6 @@ export class MergePdfController implements ViewController {
     }, { signal });
 
     sidebarResetBtn?.addEventListener('click', () => {
-      this.resetToInitial();
-    }, { signal });
-
-    downloadResultBtn?.addEventListener('click', () => {
-      this.downloadMergedResult();
-    }, { signal });
-
-    restartMergeBtn?.addEventListener('click', () => {
       this.resetToInitial();
     }, { signal });
 
@@ -371,7 +361,6 @@ export class MergePdfController implements ViewController {
   private renderFilesList(): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const itemsGrid = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-grid"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
     const badge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
@@ -390,7 +379,6 @@ export class MergePdfController implements ViewController {
     this.statusManager?.hide();
 
     if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'flex';
     if (sidebar) sidebar.style.display = 'flex';
     if (fabSettings) fabSettings.classList.add('is-visible');
@@ -500,11 +488,7 @@ export class MergePdfController implements ViewController {
 
     if (!mainBtnText || !mainBtn) return;
 
-    if (this.currentResult) {
-      mainBtnText.textContent = t('tools.merge_pdf_btn_download') || 'Descargar PDF Unido';
-      if (resetBtn) resetBtn.style.display = '';
-      if (noticeEl) noticeEl.style.display = 'none';
-    } else if (this.selectedFiles.length >= 2) {
+    if (this.selectedFiles.length >= 2) {
       mainBtnText.textContent = t('tools.merge_pdf_btn_merge') || 'Unir PDF';
       if (resetBtn) resetBtn.style.display = '';
       if (noticeEl) noticeEl.style.display = 'flex';
@@ -576,7 +560,9 @@ export class MergePdfController implements ViewController {
 
       this.currentResult = json.data as MergePdfResponseData;
       const token = this.currentResult.fileId;
-      const downloadPayload = {
+      showToast('¡Documentos PDF unidos exitosamente!', 'success');
+      this.statusManager?.hide();
+      saveDownloadPayloadAndNavigate({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -585,10 +571,7 @@ export class MergePdfController implements ViewController {
         subtitle: `Se han unido exitosamente ${this.selectedFiles.length} archivos en un solo documento.`,
         title: '¡PDFs unidos con éxito!',
         token,
-      };
-      sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-      showToast('¡Documentos PDF unidos exitosamente!', 'success');
-      navigate(`/download/${token}`);
+      });
     } catch {
       this.statusManager?.showError({
         boxText: 'Comprueba tu conexión a internet o intenta con archivos de menor tamaño. Si el problema persiste, intenta reparar los documentos antes de unirlos.',
@@ -605,7 +588,6 @@ export class MergePdfController implements ViewController {
   private showProcessingState(): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const fabSettings = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
@@ -617,52 +599,7 @@ export class MergePdfController implements ViewController {
     this.sidebarModal?.close();
     if (dropzoneCard) dropzoneCard.style.display = 'none';
     if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-  }
-
-  private renderResultState(result: MergePdfResponseData): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const fabSettings = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-sidebar"]');
-
-    if (sidebar) sidebar.style.display = 'none';
-    if (fabSettings) fabSettings.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
-    this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'flex';
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-
-    const nameEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-name"]');
-    const pagesEl = this.container.querySelector<HTMLElement>('[data-ref="result-page-count"]');
-    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="result-file-size"]');
-
-    if (nameEl) nameEl.textContent = result.filename;
-    if (pagesEl) pagesEl.textContent = `${result.pageCount} ${result.pageCount === 1 ? 'página' : 'páginas'}`;
-    if (sizeEl) sizeEl.textContent = formatBytes(result.fileSize);
-
-    this.updateActionButtons();
-    renderIcons(this.container);
-  }
-
-  private downloadMergedResult(): void {
-    if (!this.currentResult) return;
-    const downloadUrl = this.currentResult.downloadUrl || API_ROUTES.tools.mergePdf.download(this.currentResult.fileId);
-    const filename = this.currentResult.filename || 'documento_unido.pdf';
-
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('Iniciando descarga del PDF...', 'success');
   }
 
   private resetToInitial(): void {
@@ -679,7 +616,6 @@ export class MergePdfController implements ViewController {
     const addMoreInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-add-more-pdf"]');
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const resultCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-result-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
@@ -695,7 +631,6 @@ export class MergePdfController implements ViewController {
     if (outputNameInput) outputNameInput.value = 'documento_unido.pdf';
 
     if (itemsCard) itemsCard.style.display = 'none';
-    if (resultCard) resultCard.style.display = 'none';
     this.statusManager?.hide();
     if (dropzoneCard) dropzoneCard.style.display = 'flex';
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');

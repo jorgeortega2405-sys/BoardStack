@@ -2,13 +2,13 @@ import { openModal } from '../../../components/modal.component.js';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { escapeHtml, postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { escapeHtml, postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { TO_PDF_CONFIGS, ToPdfRouteConfig, ToPdfSourceType } from './to-pdf-converter.types.js';
@@ -498,24 +498,19 @@ export class ToPdfConverterController implements ViewController {
         }
 
         const data = result.data;
-        sessionStorage.setItem(
-          'download_ready_data',
-          JSON.stringify({
-            downloadUrl: data.downloadUrl,
-            fileSize: data.fileSize,
-            filename: data.filename,
-            returnText: this.config.title,
-            returnUrl: window.location.pathname,
-            subtitle: this.currentUrl
-              ? 'La página web ha sido transformada en un documento PDF con la máxima calidad y fidelidad.'
-              : 'Tu archivo ha sido transformado en PDF con la máxima calidad y fidelidad.',
-            title: `¡${this.config.title} completada con éxito!`,
-            token: data.downloadToken,
-          })
-        );
-
         showToast('Documento convertido exitosamente', 'success');
-        navigate(`/download/${data.downloadToken}`);
+        saveDownloadPayloadAndNavigate({
+          downloadUrl: data.downloadUrl,
+          fileSize: data.fileSize,
+          filename: data.filename,
+          returnText: this.config.title,
+          returnUrl: window.location.pathname,
+          subtitle: this.currentUrl
+            ? 'La página web ha sido transformada en un documento PDF con la máxima calidad y fidelidad.'
+            : 'Tu archivo ha sido transformado en PDF con la máxima calidad y fidelidad.',
+          title: `¡${this.config.title} completada con éxito!`,
+          token: data.downloadToken,
+        });
       } catch (err: unknown) {
         const errorDetail = err instanceof Error ? err.message : '';
         this.statusManager?.showError({
