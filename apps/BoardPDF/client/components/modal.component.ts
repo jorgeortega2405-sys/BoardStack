@@ -1,6 +1,7 @@
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
+import { hideElement, showElement, toggleElement } from '../utils/dom.util.js';
 
 let activeModals: ModalInstance[] = [];
 
@@ -211,7 +212,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     clearError() {
       if (errorBanner) {
         errorBanner.textContent = '';
-        errorBanner.style.display = 'none';
+        hideElement(errorBanner);
       }
     },
     close() {
@@ -269,13 +270,13 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     },
     setConfirmVisible(visible: boolean) {
       if (confirmBtn) {
-        confirmBtn.style.display = visible ? '' : 'none';
+        toggleElement(confirmBtn, visible);
       }
     },
     setDescription(newDesc: string, newKey = '', params: Record<number | string, number | string> = {}) {
       if (descEl) {
         descEl.innerHTML = newKey ? t(newKey, params) : newDesc;
-        descEl.style.display = 'block';
+        showElement(descEl);
       }
     },
     setOnConfirm(fn: ((inst: ModalInstance) => boolean | Promise<boolean | void> | void) | null) {
@@ -289,7 +290,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     showError(message: string) {
       if (errorBanner) {
         errorBanner.textContent = message;
-        errorBanner.style.display = 'block';
+        showElement(errorBanner);
       }
     },
   };

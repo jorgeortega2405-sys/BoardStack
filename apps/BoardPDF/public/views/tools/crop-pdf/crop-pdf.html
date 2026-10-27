@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="crop-pdf-wrapper">
-  <header class="component-top tool-top" data-ref="component-top" style="display: none;">
+  <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left">
-      <div class="crop-page-nav pdf-top-controls" data-ref="crop-page-nav" style="display: none;">
+      <div class="crop-page-nav pdf-top-controls is-hidden" data-ref="crop-page-nav">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-prev-page" data-tooltip="Página anterior" aria-label="Página anterior">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
         </button>
@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      <div class="tool-workspace__canvas" data-ref="crop-workspace-card" style="display: none;">
+      <div class="tool-workspace__canvas is-hidden" data-ref="crop-workspace-card">
         <div class="crop-workspace-container">
           <div class="crop-preview-wrap" data-ref="crop-preview-wrap">
             <canvas class="crop-canvas" data-ref="crop-canvas"></canvas>
@@ -70,7 +70,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar" data-ref="crop-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar is-hidden" data-ref="crop-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="crop-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
@@ -117,7 +117,7 @@
           <span class="component-button__text" data-ref="txt-execute-crop">Recortar PDF</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="crop-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="crop-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

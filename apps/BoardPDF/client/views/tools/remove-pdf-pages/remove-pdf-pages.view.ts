@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
 
@@ -333,13 +333,13 @@ export class RemovePdfPagesController implements ViewController {
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'block';
+    hideElement(dropzoneCard);
+    hideElement(processingCard);
+    showElement(itemsCard);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
@@ -426,10 +426,10 @@ export class RemovePdfPagesController implements ViewController {
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select') || 'Seleccionar PDF';
-        mainActionBtn.style.display = '';
+        showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action') || 'Eliminar páginas';
-        mainActionBtn.style.display = '';
+        showElement(mainActionBtn);
       }
     }
   }
@@ -513,12 +513,12 @@ export class RemovePdfPagesController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(itemsCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -542,13 +542,13 @@ export class RemovePdfPagesController implements ViewController {
     if (fileInput) fileInput.value = '';
     if (inputPagesToRemove) inputPagesToRemove.value = '';
 
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (dropzoneCard) dropzoneCard.style.display = 'flex';
+    hideElement(processingCard);
+    hideElement(itemsCard);
+    showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -564,7 +564,7 @@ export class RemovePdfPagesController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-pdf-error"]');
     if (banner) {
       banner.textContent = msg;
-      banner.style.display = '';
+      showElement(banner);
     }
     showToast(msg, 'danger');
   }
@@ -573,7 +573,7 @@ export class RemovePdfPagesController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-pdf-error"]');
     if (banner) {
       banner.textContent = '';
-      banner.style.display = 'none';
+      hideElement(banner);
     }
   }
 

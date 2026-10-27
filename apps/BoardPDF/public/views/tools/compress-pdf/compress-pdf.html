@@ -4,7 +4,7 @@
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
 
       <div class="tool-fab-container" data-ref="tool-fab-container">
-        <div class="tool-fab-more" data-ref="tool-fab-more" style="display: none;">
+        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
           <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="pdf-items-view" data-ref="compress-selected-card" style="display: none;">
+      <div class="pdf-items-view is-hidden" data-ref="compress-selected-card">
         <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
             <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
@@ -76,7 +76,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar" data-ref="compress-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar is-hidden" data-ref="compress-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
@@ -142,7 +142,7 @@
           <span>Comprimir PDF</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="compress-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="compress-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

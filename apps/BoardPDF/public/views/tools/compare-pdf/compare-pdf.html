@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="compare-pdf-wrapper">
-  <header class="component-top tool-top" data-ref="component-top" style="display: none;">
+  <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left" data-ref="tool-top-left">
-      <div class="compare-top-controls pdf-top-controls" data-ref="compare-top-controls" style="display: none;">
+      <div class="compare-top-controls pdf-top-controls is-hidden" data-ref="compare-top-controls">
         <button type="button" class="component-button component-button--h40 component-button--icon-only compare-sync-btn is-active" data-ref="btn-sync-scroll" data-tooltip="Sincronizar desplazamiento" aria-label="Sincronizar desplazamiento">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sync_alt"></use></svg>
         </button>
@@ -44,7 +44,7 @@
         </div>
       </div>
 
-      <div class="pdf-viewer-workspace pdf-editor-workspace compare-editor-workspace" data-ref="compare-workspace-card" style="display: none;">
+      <div class="pdf-viewer-workspace pdf-editor-workspace compare-editor-workspace is-hidden" data-ref="compare-workspace-card">
         <div class="compare-split-layout" data-ref="split-layout">
           <section class="compare-pane compare-pane--left" data-ref="pane-left">
             <button type="button" class="compare-pane__close-btn" data-ref="btn-remove-doc1" data-tooltip="Quitar archivo antiguo" aria-label="Quitar archivo">
@@ -73,7 +73,7 @@
           </div>
 
           <section class="compare-pane compare-pane--right" data-ref="pane-right">
-            <button type="button" class="compare-pane__close-btn" data-ref="btn-remove-doc2" data-tooltip="Quitar archivo nuevo" aria-label="Quitar archivo" style="display: none;">
+            <button type="button" class="compare-pane__close-btn is-hidden" data-ref="btn-remove-doc2" data-tooltip="Quitar archivo nuevo" aria-label="Quitar archivo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
@@ -96,11 +96,11 @@
               </div>
             </div>
 
-            <div class="compare-scroll-container" data-ref="scroll-container-right" style="display: none;">
+            <div class="compare-scroll-container is-hidden" data-ref="scroll-container-right">
               <div class="compare-pages-wrapper" data-ref="pages-wrapper-right"></div>
             </div>
 
-            <div class="compare-floating-pill" data-ref="floating-pill-right" style="display: none;">
+            <div class="compare-floating-pill is-hidden" data-ref="floating-pill-right">
               <button type="button" class="compare-floating-pill__btn" data-ref="btn-zoom-out-right" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
               </button>
@@ -118,7 +118,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar compare-sidebar" data-ref="compare-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar compare-sidebar is-hidden" data-ref="compare-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar" data-ref="compare-sidebar-mobile-bar">
         <div class="modal-card__drag-zone" data-ref="compare-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
@@ -145,7 +145,7 @@
           <div class="tool-sidebar-notice__text">Compara los cambios y diferencias semánticas y visuales entre ambos archivos PDF.</div>
         </div>
 
-        <div class="tool-sidebar__section compare-overlay-controls" data-ref="section-overlay-controls" style="display: none;">
+        <div class="tool-sidebar__section compare-overlay-controls is-hidden" data-ref="section-overlay-controls">
           <span class="tool-sidebar__section-title">Opacidad de superposición</span>
           <div class="compare-opacity-slider-row">
             <input class="compare-opacity-slider" data-ref="input-overlay-opacity" type="range" min="0" max="100" value="50" />
@@ -174,7 +174,7 @@
           <span>Descargar informe</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="compare-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="compare-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

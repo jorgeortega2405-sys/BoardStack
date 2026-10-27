@@ -1,9 +1,9 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="summarize-pdf-wrapper">
-  <header class="component-top tool-top" data-ref="component-top" style="display: none;">
+  <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left"></div>
 
     <div class="component-top-right tool-top__right">
-      <div class="pdf-viewer-toolbar__group pdf-viewer-toolbar__group--actions pdf-top-controls" data-ref="toolbar-actions-group" style="display: none;">
+      <div class="pdf-viewer-toolbar__group pdf-viewer-toolbar__group--actions pdf-top-controls is-hidden" data-ref="toolbar-actions-group">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
         </button>
@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      <div class="pdf-viewer-workspace" data-ref="summarize-viewer-card" style="display: none;">
+      <div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
         <div class="pdf-viewer-main-layout">
           <aside class="pdf-viewer-pages-sidebar">
             <div class="pdf-viewer-thumbnails-scroll" data-ref="thumbnails-container"></div>
@@ -57,7 +57,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar" data-ref="summarize-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar is-hidden" data-ref="summarize-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="summarize-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
@@ -78,12 +78,12 @@
           <div class="tool-sidebar-notice__text">Nuestra inteligencia artificial leerá y resumirá los puntos clave y conclusiones del documento.</div>
         </div>
 
-        <div class="tool-sidebar__section" data-ref="section-processing" style="display: none;">
+        <div class="tool-sidebar__section is-hidden" data-ref="section-processing">
           <div class="ai-pulse-bar" data-ref="ai-pulse-bar"></div>
           <p class="tool-sidebar__subtitle ai-processing-status">Leyendo documento y sintetizando...</p>
         </div>
 
-        <div class="tool-sidebar__section" data-ref="section-summary-result" style="display: none;">
+        <div class="tool-sidebar__section is-hidden" data-ref="section-summary-result">
           <div class="ai-summary-result-panel">
             <div class="ai-summary-header">
               <div class="ai-summary-meta">
@@ -106,7 +106,7 @@
           <span>Generar Resumen</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="summarize-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="summarize-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

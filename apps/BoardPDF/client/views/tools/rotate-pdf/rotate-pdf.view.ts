@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { RotatePageItem, RotatePdfResponseData } from './rotate-pdf.types.js';
 
 export class RotatePdfController implements ViewController {
@@ -42,11 +42,11 @@ export class RotatePdfController implements ViewController {
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-workspace"]');
 
-          if (dropzoneCard) dropzoneCard.style.display = 'none';
-          if (workspaceCard) workspaceCard.style.display = 'flex';
-          if (sidebar) sidebar.style.display = 'flex';
+          hideElement(dropzoneCard);
+          showElement(workspaceCard);
+          showElement(sidebar);
           if (settingsBtn) settingsBtn.classList.add('is-visible');
-          if (fabMore) fabMore.style.display = 'block';
+          showElement(fabMore);
           if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
         } else {
           this.resetToInitial();
@@ -245,14 +245,14 @@ export class RotatePdfController implements ViewController {
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="rotate-top-actions"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-    if (topActions) topActions.style.display = 'flex';
+    showElement(topActions);
 
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
@@ -369,12 +369,12 @@ export class RotatePdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(sidebar);
+    hideElement(fabMore);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -462,9 +462,9 @@ export class RotatePdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-rotate"]');
 
     if (fileInput) fileInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
+    hideElement(processingCard);
     if (executeBtn) executeBtn.disabled = true;
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-sidebar"]');
@@ -472,12 +472,12 @@ export class RotatePdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-workspace"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="rotate-top-actions"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    if (topActions) topActions.style.display = 'none';
+    hideElement(topActions);
     if (outputNameInput) outputNameInput.value = 'documento_rotado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
   }
@@ -486,7 +486,7 @@ export class RotatePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="rotate-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -495,7 +495,7 @@ export class RotatePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="rotate-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

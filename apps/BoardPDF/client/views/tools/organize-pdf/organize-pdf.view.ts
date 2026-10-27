@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { setupSortableGrid, setupToolSidebarModal, SortableGridController, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { SortableGridController, ToolSidebarModalController, hideElement, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { OrganizePageItem, OrganizePdfResponseData } from './organize-pdf.types.js';
 
@@ -305,18 +305,18 @@ export class OrganizePdfController implements ViewController {
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'block';
+    hideElement(dropzoneCard);
+    hideElement(processingCard);
+    showElement(itemsCard);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="organize-top-actions"]');
-    if (topActions) topActions.style.display = 'flex';
+    showElement(topActions);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput && this.currentFile) {
@@ -503,10 +503,10 @@ export class OrganizePdfController implements ViewController {
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.organize_pdf_btn_select') || 'Seleccionar PDF';
-        mainActionBtn.style.display = '';
+        showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.organize_pdf_btn_action') || 'Ordenar PDF';
-        mainActionBtn.style.display = '';
+        showElement(mainActionBtn);
       }
     }
   }
@@ -589,12 +589,12 @@ export class OrganizePdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(itemsCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -620,17 +620,17 @@ export class OrganizePdfController implements ViewController {
 
     if (fileInput) fileInput.value = '';
 
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (dropzoneCard) dropzoneCard.style.display = 'flex';
+    hideElement(processingCard);
+    hideElement(itemsCard);
+    showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="organize-top-actions"]');
-    if (topActions) topActions.style.display = 'none';
+    hideElement(topActions);
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_organizado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
@@ -644,7 +644,7 @@ export class OrganizePdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-error"]');
     if (banner) {
       banner.textContent = msg;
-      banner.style.display = '';
+      showElement(banner);
     }
     showToast(msg, 'danger');
   }
@@ -653,7 +653,7 @@ export class OrganizePdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-error"]');
     if (banner) {
       banner.textContent = '';
-      banner.style.display = 'none';
+      hideElement(banner);
     }
   }
 

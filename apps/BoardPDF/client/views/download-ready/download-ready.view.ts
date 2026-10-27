@@ -12,6 +12,7 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { setTransferFile } from '../../services/transfer.service.js';
 import { ViewController } from '../../types/common.types.js';
+import { hideElement, showElement } from '../../utils/dom.util.js';
 
 interface DownloadReadyData {
   downloadUrl: string;
@@ -125,20 +126,20 @@ export class DownloadReadyController implements ViewController {
     const actionBtns = this.container.querySelector<HTMLElement>('[data-ref="ready-action-btns"]');
 
     if (!this.data || !this.data.downloadUrl) {
-      if (successScreen) successScreen.style.display = 'none';
-      if (expiredScreen) expiredScreen.style.display = 'flex';
+      hideElement(successScreen);
+      showElement(expiredScreen);
       return;
     }
 
-    if (successScreen) successScreen.style.display = 'flex';
-    if (expiredScreen) expiredScreen.style.display = 'none';
+    showElement(successScreen);
+    hideElement(expiredScreen);
 
     if (titleEl && this.data.title) titleEl.textContent = this.data.title;
     if (subtitleEl && this.data.subtitle) subtitleEl.textContent = this.data.subtitle;
     if (downloadBtn) {
       downloadBtn.href = this.data.downloadUrl;
       downloadBtn.download = this.data.filename;
-      downloadBtn.style.display = 'inline-flex';
+      showElement(downloadBtn);
     }
     const btnTextEl = this.container.querySelector<HTMLElement>('[data-ref="ready-btn-text"]');
     if (btnTextEl && this.data.filename) {
@@ -157,9 +158,7 @@ export class DownloadReadyController implements ViewController {
         btnTextEl.textContent = 'Descargar PDF';
       }
     }
-    if (actionBtns) {
-      actionBtns.style.display = 'grid';
-    }
+    showElement(actionBtns);
   }
 
   private renderContinueWorkflow(): void {
@@ -168,7 +167,7 @@ export class DownloadReadyController implements ViewController {
     if (!gridEl || !workflowSection) return;
 
     if (!this.data || !this.data.downloadUrl) {
-      workflowSection.style.display = 'none';
+      hideElement(workflowSection);
       return;
     }
 
@@ -190,7 +189,7 @@ export class DownloadReadyController implements ViewController {
           <span class="menu-item__icon tool-item__mini-icon">
             ${tool.customSvg || `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>`}
           </span>
-          <span class="menu-item__text" style="font-size: 13px; font-weight: 500;">${toolName}</span>
+          <span class="menu-item__text">${toolName}</span>
         </button>
       `;
       })
@@ -428,8 +427,8 @@ export class DownloadReadyController implements ViewController {
     const iconWrap = this.container.querySelector<HTMLElement>('[data-ref="expired-icon-wrap"]');
     const iconUse = this.container.querySelector<SVGUseElement>('[data-ref="expired-icon"] use');
 
-    if (successScreen) successScreen.style.display = 'none';
-    if (expiredScreen) expiredScreen.style.display = 'flex';
+    hideElement(successScreen);
+    showElement(expiredScreen);
     if (expiredTitle) expiredTitle.textContent = 'Archivo eliminado';
     if (expiredDesc) expiredDesc.textContent = 'El archivo ha sido borrado del servidor de forma permanente a petición tuya.';
     if (expiredBadge) expiredBadge.textContent = 'Archivo eliminado';

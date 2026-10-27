@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, bindInlineControls, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, bindInlineControls, hideElement, setupToolSidebarModal, showElement, toggleElement } from '../../../utils/dom.util.js';
 import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
 
@@ -469,9 +469,9 @@ export class SplitPdfController implements ViewController {
     const panelPages = this.container.querySelector<HTMLElement>('[data-ref="panel-mode-pages"]');
     const panelSize = this.container.querySelector<HTMLElement>('[data-ref="panel-mode-size"]');
 
-    if (panelRange) panelRange.style.display = mode === 'range' ? 'block' : 'none';
-    if (panelPages) panelPages.style.display = mode === 'pages' ? 'block' : 'none';
-    if (panelSize) panelSize.style.display = mode === 'size' ? 'block' : 'none';
+    toggleElement(panelRange, mode === 'range');
+    toggleElement(panelPages, mode === 'pages');
+    toggleElement(panelSize, mode === 'size');
 
     const hint = this.container.querySelector<HTMLElement>('[data-ref="split-instruction-text"]');
     if (hint) {
@@ -491,11 +491,11 @@ export class SplitPdfController implements ViewController {
   private updateSubmodeViews(): void {
     const rangeCustom = this.container.querySelector<HTMLElement>('[data-ref="section-range-custom"]');
     const rangeFixed = this.container.querySelector<HTMLElement>('[data-ref="section-range-fixed"]');
-    if (rangeCustom) rangeCustom.style.display = this.rangeSubmode === 'custom' ? 'block' : 'none';
-    if (rangeFixed) rangeFixed.style.display = this.rangeSubmode === 'fixed' ? 'block' : 'none';
+    toggleElement(rangeCustom, this.rangeSubmode === 'custom');
+    toggleElement(rangeFixed, this.rangeSubmode === 'fixed');
 
     const pagesCustom = this.container.querySelector<HTMLElement>('[data-ref="section-pages-custom"]');
-    if (pagesCustom) pagesCustom.style.display = this.pagesSubmode === 'custom' ? 'block' : 'none';
+    toggleElement(pagesCustom, this.pagesSubmode === 'custom');
 
     this.updatePagesNotice();
     this.updateFixedNotice();
@@ -669,13 +669,13 @@ export class SplitPdfController implements ViewController {
 
     if (!itemsCard) return;
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    hideElement(processingCard);
+    showElement(itemsCard);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
@@ -933,12 +933,12 @@ export class SplitPdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(itemsCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -960,13 +960,13 @@ export class SplitPdfController implements ViewController {
     if (fileInput) fileInput.value = '';
 
     this.statusManager?.hide();
-    if (processingCard) processingCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
-    if (dropzoneCard) dropzoneCard.style.display = 'flex';
+    hideElement(processingCard);
+    hideElement(itemsCard);
+    showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -1002,7 +1002,7 @@ export class SplitPdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="split-pdf-error"]');
     if (banner) {
       banner.textContent = msg;
-      banner.style.display = '';
+      showElement(banner);
     }
     showToast(msg, 'danger');
   }
@@ -1011,7 +1011,7 @@ export class SplitPdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="split-pdf-error"]');
     if (banner) {
       banner.textContent = '';
-      banner.style.display = 'none';
+      hideElement(banner);
     }
   }
 }

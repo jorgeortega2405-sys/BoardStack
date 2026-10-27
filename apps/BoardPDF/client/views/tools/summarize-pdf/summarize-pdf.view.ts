@@ -10,7 +10,7 @@ import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { animateTypewriter, bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, animateTypewriter, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { SummarizePdfResultData } from './summarize-pdf.types.js';
 
@@ -294,9 +294,9 @@ export class SummarizePdfController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (viewerCard) viewerCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(viewerCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -307,8 +307,8 @@ export class SummarizePdfController implements ViewController {
     }
     const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (zoomActions) zoomActions.style.display = 'flex';
-    if (topHeader) topHeader.style.display = 'flex';
+    showElement(zoomActions);
+    showElement(topHeader);
 
     const numPages = this.pdfDocument?.numPages || 1;
     if (fileNameEl) fileNameEl.textContent = file.name;
@@ -474,22 +474,22 @@ export class SummarizePdfController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (viewerCard) viewerCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(viewerCard);
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (scrollContainer) scrollContainer.innerHTML = '';
-    if (resultSection) resultSection.style.display = 'none';
-    if (processingSection) processingSection.style.display = 'none';
+    hideElement(resultSection);
+    hideElement(processingSection);
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
       outputNameInput.value = 'resumen.pdf';
     }
     const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (zoomActions) zoomActions.style.display = 'none';
-    if (topHeader) topHeader.style.display = 'none';
+    hideElement(zoomActions);
+    hideElement(topHeader);
     this.sidebarModal?.close();
 
     if (actionBtn) actionBtn.disabled = true;
@@ -548,7 +548,7 @@ export class SummarizePdfController implements ViewController {
     const modelBadge = this.container.querySelector<HTMLElement>('[data-ref="summary-badge-model"]');
     const wordsBadge = this.container.querySelector<HTMLElement>('[data-ref="summary-badge-words"]');
 
-    if (resultSection) resultSection.style.display = 'block';
+    showElement(resultSection);
     if (modelBadge) modelBadge.textContent = 'BoardPDF AI';
     if (wordsBadge) wordsBadge.textContent = `${data.wordCount} palabras`;
 
@@ -579,7 +579,7 @@ export class SummarizePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = 'block';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -588,7 +588,7 @@ export class SummarizePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

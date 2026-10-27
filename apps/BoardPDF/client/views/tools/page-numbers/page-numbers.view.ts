@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, bindInlineControls, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, bindInlineControls, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
 
 export class PageNumbersController implements ViewController {
@@ -194,7 +194,7 @@ export class PageNumbersController implements ViewController {
         onSelect: (val: string) => {
           this.format = val || '{n}';
           if (customTextBox) {
-            customTextBox.style.display = val === 'custom' ? '' : 'none';
+            toggleElement(customTextBox, val === 'custom');
           }
         },
       });
@@ -267,9 +267,9 @@ export class PageNumbersController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -410,7 +410,7 @@ export class PageNumbersController implements ViewController {
         dot.className = `pn-indicator-dot ${this.resolveDotClass(page.pageNum)}`;
       }
       if (coverBadge && page.pageNum === 1) {
-        coverBadge.style.display = this.firstPageIsCover ? '' : 'none';
+        toggleElement(coverBadge, this.firstPageIsCover);
       }
     }
   }
@@ -463,8 +463,8 @@ export class PageNumbersController implements ViewController {
     };
 
     this.isProcessing = true;
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(workspaceCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -514,8 +514,8 @@ export class PageNumbersController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (workspaceCard) workspaceCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(workspaceCard);
+        showElement(sidebar);
         this.isProcessing = false;
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al numerar el documento.';
         this.statusManager?.showError(errorMessage, () => {
@@ -539,14 +539,14 @@ export class PageNumbersController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
 
     if (fileInput) fileInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -558,7 +558,7 @@ export class PageNumbersController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -567,7 +567,7 @@ export class PageNumbersController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { PdfToMarkdownResultData } from './pdf-to-markdown.types.js';
 
@@ -156,11 +156,11 @@ export class PdfToMarkdownController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    hideElement(processingCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
@@ -216,10 +216,10 @@ export class PdfToMarkdownController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (selectedCard) selectedCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (convertBtn) convertBtn.disabled = true;
 
@@ -233,8 +233,8 @@ export class PdfToMarkdownController implements ViewController {
     this.isProcessing = true;
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(selectedCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -275,8 +275,8 @@ export class PdfToMarkdownController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (selectedCard) selectedCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(selectedCard);
+        showElement(sidebar);
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al convertir el PDF.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();
@@ -292,7 +292,7 @@ export class PdfToMarkdownController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="markdown-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -301,7 +301,7 @@ export class PdfToMarkdownController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="markdown-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

@@ -9,7 +9,7 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { getWorkflow } from '../../services/workflow-storage.service.js';
 import { OrganizePageItem, ToolDefinition, UserWorkflow, WorkflowStep } from '../../types/workflow.types.js';
-import { setupSortableGrid, SortableGridController, withButtonLoading } from '../../utils/dom.util.js';
+import { SortableGridController, hideElement, setupSortableGrid, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { formatBytes } from '../../utils/format.util.js';
 
 export class WorkflowRunnerController {
@@ -103,36 +103,28 @@ export class WorkflowRunnerController {
       const isCompleted = this.currentFile !== null && idx < this.currentStepIndex;
       const isActive = this.currentFile !== null && idx === this.currentStepIndex;
 
-      let badgeBg = 'var(--bg-hover)';
-      let badgeColor = 'var(--text-secondary)';
+      let statusModifier = '';
       let statusText = 'Pendiente';
-      let borderStyle = '1px solid var(--border-color)';
-      let background = 'var(--bg-surface)';
 
       if (isCompleted) {
-        badgeBg = 'color-mix(in srgb, #10b981 14%, transparent)';
-        badgeColor = '#10b981';
+        statusModifier = ' workflow-stepper-item--completed';
         statusText = 'Completado';
-        borderStyle = '1px solid color-mix(in srgb, #10b981 35%, transparent)';
       } else if (isActive) {
-        badgeBg = 'color-mix(in srgb, var(--accent, #3b82f6) 14%, transparent)';
-        badgeColor = 'var(--accent, #3b82f6)';
+        statusModifier = ' workflow-stepper-item--active';
         statusText = 'En curso';
-        borderStyle = '1px solid var(--accent, #3b82f6)';
-        background = 'var(--bg-hover)';
       }
 
       return `
-        <div class="workflow-stepper-item" data-ref="stepper-step-${step.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--radius-lg); border: ${borderStyle}; background: ${background}; transition: all 0.2s ease;">
-          <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${badgeBg}; color: ${badgeColor}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;">
+        <div class="workflow-stepper-item${statusModifier}" data-ref="stepper-step-${step.id}">
+          <div class="workflow-stepper-item__left">
+            <div class="workflow-stepper-item__badge">
               ${isCompleted ? '✓' : idx + 1}
             </div>
-            <div style="overflow: hidden;">
-              <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</div>
+            <div class="workflow-stepper-item__info">
+              <div class="workflow-stepper-item__name">${name}</div>
             </div>
           </div>
-          <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: ${badgeBg}; color: ${badgeColor}; flex-shrink: 0;">${statusText}</span>
+          <span class="workflow-stepper-item__status">${statusText}</span>
         </div>
       `;
     }).join('');
@@ -152,19 +144,19 @@ export class WorkflowRunnerController {
       txtMainAction.textContent = 'Seleccionar PDF';
       mainActionBtn.disabled = true;
       if (iconMainAction) iconMainAction.setAttribute('href', '/icons.svg#upload_file');
-      if (sidebarResetBtn) sidebarResetBtn.style.display = 'none';
+      hideElement(sidebarResetBtn);
       return;
     }
 
     if (this.completedResult) {
-      mainActionBtn.style.display = 'none';
-      if (sidebarResetBtn) sidebarResetBtn.style.display = 'inline-flex';
+      hideElement(mainActionBtn);
+      showElement(sidebarResetBtn);
       return;
     }
 
-    mainActionBtn.style.display = 'inline-flex';
+    showElement(mainActionBtn);
     mainActionBtn.disabled = false;
-    if (sidebarResetBtn) sidebarResetBtn.style.display = 'inline-flex';
+    showElement(sidebarResetBtn);
 
     const isLastStep = this.currentStepIndex >= this.workflow.steps.length - 1;
     if (isLastStep) {
@@ -196,7 +188,7 @@ export class WorkflowRunnerController {
     this.hideError();
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="workflow-dropzone-card"]');
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    hideElement(dropzoneCard);
 
     await this.renderActiveStep();
   }
@@ -212,24 +204,24 @@ export class WorkflowRunnerController {
     const overviewCard = this.container.querySelector<HTMLElement>('[data-ref="workflow-overview-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="workflow-workspace"]');
 
-    if (organizeCard) organizeCard.style.display = 'none';
-    if (splitCard) splitCard.style.display = 'none';
-    if (overviewCard) overviewCard.style.display = 'none';
+    hideElement(organizeCard);
+    hideElement(splitCard);
+    hideElement(overviewCard);
 
     const currentStep = this.workflow.steps[this.currentStepIndex];
     if (!currentStep) return;
 
     if (currentStep.tool === 'organize-pdf') {
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-      if (organizeCard) organizeCard.style.display = 'flex';
+      showElement(organizeCard);
       await this.setupOrganizeStep();
     } else if (currentStep.tool === 'split-pdf') {
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-      if (splitCard) splitCard.style.display = 'flex';
+      showElement(splitCard);
       await this.setupSplitStep();
     } else {
       if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-      if (overviewCard) overviewCard.style.display = 'flex';
+      showElement(overviewCard);
       this.setupOverviewStep(currentStep);
     }
 
@@ -463,21 +455,21 @@ export class WorkflowRunnerController {
       if (p.originalIndex !== idx || p.rotation !== 0) modified++;
     });
 
-    optionsSection.style.display = 'flex';
+    showElement(optionsSection);
     if (optionsTitle) optionsTitle.textContent = 'Organizar páginas';
 
     optionsBody.innerHTML = `
-      <div class="tool-summary-card" style="padding: 14px; border-radius: var(--radius-lg); background: var(--bg-hover); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-          <span style="color: var(--text-secondary);">Páginas totales:</span>
-          <strong style="color: var(--text-primary);">${this.organizePages.length}</strong>
+      <div class="tool-summary-card tool-summary-card--stack">
+        <div class="tool-summary-row">
+          <span class="tool-summary-label">Páginas totales:</span>
+          <strong class="tool-summary-value">${this.organizePages.length}</strong>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-          <span style="color: var(--text-secondary);">Modificadas:</span>
-          <strong style="color: ${modified > 0 ? 'var(--accent, #3b82f6)' : 'var(--text-secondary)'};">${modified}</strong>
+        <div class="tool-summary-row">
+          <span class="tool-summary-label">Modificadas:</span>
+          <strong class="tool-summary-value${modified > 0 ? ' tool-summary-value--accent' : ''}">${modified}</strong>
         </div>
       </div>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.4;">
+      <p class="tool-summary-desc">
         Reordena las páginas arrastrándolas o gira páginas individuales. Al pulsar Continuar, los cambios se guardarán para el siguiente paso.
       </p>
     `;
@@ -594,21 +586,21 @@ export class WorkflowRunnerController {
 
     if (!optionsSection || !optionsBody) return;
 
-    optionsSection.style.display = 'flex';
+    showElement(optionsSection);
     if (optionsTitle) optionsTitle.textContent = 'Dividir / Extraer';
 
     optionsBody.innerHTML = `
-      <div class="tool-summary-card" style="padding: 14px; border-radius: var(--radius-lg); background: var(--bg-hover); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-          <span style="color: var(--text-secondary);">Páginas totales:</span>
-          <strong style="color: var(--text-primary);">${this.splitPages.length}</strong>
+      <div class="tool-summary-card tool-summary-card--stack">
+        <div class="tool-summary-row">
+          <span class="tool-summary-label">Páginas totales:</span>
+          <strong class="tool-summary-value">${this.splitPages.length}</strong>
         </div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px;">
-          <span style="color: var(--text-secondary);">Páginas seleccionadas:</span>
-          <strong style="color: var(--accent, #3b82f6);">${this.splitSelectedPages.size}</strong>
+        <div class="tool-summary-row">
+          <span class="tool-summary-label">Páginas seleccionadas:</span>
+          <strong class="tool-summary-value tool-summary-value--accent">${this.splitSelectedPages.size}</strong>
         </div>
       </div>
-      <p style="font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.4;">
+      <p class="tool-summary-desc">
         Las páginas seleccionadas se extraerán y combinarán para continuar hacia el siguiente paso del flujo.
       </p>
     `;
@@ -632,31 +624,31 @@ export class WorkflowRunnerController {
 
     if (!optionsSection || !optionsBody) return;
 
-    optionsSection.style.display = 'flex';
+    showElement(optionsSection);
     if (optionsTitle) optionsTitle.textContent = toolName;
 
     if (currentStep.tool === 'compress-pdf') {
       optionsBody.innerHTML = `
-        <div class="pdf-compress-options" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="pdf-compress-options">
           <label class="pdf-compress-option ${this.compressLevel === 'extreme' ? 'is-active' : ''}" data-ref="opt-compress-extreme" data-level="extreme">
             <input class="pdf-compress-option__radio" data-ref="radio-compress-extreme" type="radio" name="wf-compress-level" value="extreme" ${this.compressLevel === 'extreme' ? 'checked' : ''} />
             <div class="pdf-compress-option__body">
               <span class="pdf-compress-option__title">Compresión Extrema</span>
-              <p class="pdf-compress-option__desc" style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">Menor calidad, máxima compresión.</p>
+              <p class="pdf-compress-option__desc">Menor calidad, máxima compresión.</p>
             </div>
           </label>
           <label class="pdf-compress-option ${this.compressLevel === 'recommended' ? 'is-active' : ''}" data-ref="opt-compress-recommended" data-level="recommended">
             <input class="pdf-compress-option__radio" data-ref="radio-compress-recommended" type="radio" name="wf-compress-level" value="recommended" ${this.compressLevel === 'recommended' ? 'checked' : ''} />
             <div class="pdf-compress-option__body">
               <span class="pdf-compress-option__title">Compresión Recomendada</span>
-              <p class="pdf-compress-option__desc" style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">Buena compresión y alta calidad visual.</p>
+              <p class="pdf-compress-option__desc">Buena compresión y alta calidad visual.</p>
             </div>
           </label>
           <label class="pdf-compress-option ${this.compressLevel === 'low' ? 'is-active' : ''}" data-ref="opt-compress-low" data-level="low">
             <input class="pdf-compress-option__radio" data-ref="radio-compress-low" type="radio" name="wf-compress-level" value="low" ${this.compressLevel === 'low' ? 'checked' : ''} />
             <div class="pdf-compress-option__body">
               <span class="pdf-compress-option__title">Baja Compresión</span>
-              <p class="pdf-compress-option__desc" style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">Máxima calidad visual posible.</p>
+              <p class="pdf-compress-option__desc">Máxima calidad visual posible.</p>
             </div>
           </label>
         </div>
@@ -676,9 +668,9 @@ export class WorkflowRunnerController {
       });
     } else if (toolDef?.isTerminal) {
       optionsBody.innerHTML = `
-        <div class="tool-summary-card" style="padding: 14px; border-radius: var(--radius-lg); background: var(--bg-hover); border: 1px solid var(--border-color);">
-          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Formato de salida</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">${toolDef.name} (${toolDef.targetType?.toUpperCase()})</div>
+        <div class="tool-summary-card">
+          <div class="tool-summary-title">Formato de salida</div>
+          <div class="tool-summary-subtitle">${toolDef.name} (${toolDef.targetType?.toUpperCase()})</div>
         </div>
       `;
     }
@@ -878,11 +870,11 @@ export class WorkflowRunnerController {
     const overviewCard = this.container.querySelector<HTMLElement>('[data-ref="workflow-overview-card"]');
     const optionsSection = this.container.querySelector<HTMLElement>('[data-ref="section-active-options"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'flex';
-    if (organizeCard) organizeCard.style.display = 'none';
-    if (splitCard) splitCard.style.display = 'none';
-    if (overviewCard) overviewCard.style.display = 'none';
-    if (optionsSection) optionsSection.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(organizeCard);
+    hideElement(splitCard);
+    hideElement(overviewCard);
+    hideElement(optionsSection);
 
     this.renderWorkflowInitialState();
   }
@@ -891,7 +883,7 @@ export class WorkflowRunnerController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="workflow-error-banner"]');
     if (banner) {
       banner.textContent = msg;
-      banner.style.display = '';
+      showElement(banner);
     }
   }
 
@@ -899,7 +891,7 @@ export class WorkflowRunnerController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="workflow-error-banner"]');
     if (banner) {
       banner.textContent = '';
-      banner.style.display = 'none';
+      hideElement(banner);
     }
   }
 

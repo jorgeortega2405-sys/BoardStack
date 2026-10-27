@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
 
@@ -42,11 +42,11 @@ export class UnlockPdfController implements ViewController {
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
 
-          if (dropzoneCard) dropzoneCard.style.display = 'none';
-          if (workspaceCard) workspaceCard.style.display = 'flex';
-          if (sidebar) sidebar.style.display = 'flex';
+          hideElement(dropzoneCard);
+          showElement(workspaceCard);
+          showElement(sidebar);
           if (settingsBtn) settingsBtn.classList.add('is-visible');
-          if (fabMore) fabMore.style.display = 'block';
+          showElement(fabMore);
           if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
         } else {
           this.resetToInitial();
@@ -205,11 +205,11 @@ export class UnlockPdfController implements ViewController {
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (executeBtn) executeBtn.disabled = false;
@@ -221,8 +221,8 @@ export class UnlockPdfController implements ViewController {
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="unlock-doc-canvas"]');
     const lockedPlaceholder = this.container.querySelector<HTMLElement>('[data-ref="unlock-locked-placeholder"]');
 
-    if (canvas) canvas.style.display = 'none';
-    if (lockedPlaceholder) lockedPlaceholder.style.display = 'none';
+    hideElement(canvas);
+    hideElement(lockedPlaceholder);
 
     try {
       const pdfjs = await loadPdfJs();
@@ -236,11 +236,11 @@ export class UnlockPdfController implements ViewController {
       this.pdfDocument = await loadingTask.promise;
 
       if (canvas) {
-        canvas.style.display = 'block';
+        showElement(canvas);
         await this.renderPageThumbnail(this.pdfDocument, 1, canvas);
       }
     } catch {
-      if (lockedPlaceholder) lockedPlaceholder.style.display = 'flex';
+      showElement(lockedPlaceholder);
     }
   }
 
@@ -274,12 +274,12 @@ export class UnlockPdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -362,12 +362,12 @@ export class UnlockPdfController implements ViewController {
 
     if (fileInput) fileInput.value = '';
     if (passwordInput) passwordInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -386,7 +386,7 @@ export class UnlockPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="unlock-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = 'block';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -395,7 +395,7 @@ export class UnlockPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="unlock-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

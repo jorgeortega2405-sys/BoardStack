@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, bindInlineControls, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, bindInlineControls, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType } from './watermark-pdf.types.js';
 
 export class WatermarkPdfController implements ViewController {
@@ -171,16 +171,16 @@ export class WatermarkPdfController implements ViewController {
       this.activeTab = 'text';
       tabText.classList.add('is-active');
       tabImage?.classList.remove('is-active');
-      if (secText) secText.style.display = '';
-      if (secImage) secImage.style.display = 'none';
+      showElement(secText);
+      hideElement(secImage);
     }, { signal });
 
     tabImage?.addEventListener('click', () => {
       this.activeTab = 'image';
       tabImage.classList.add('is-active');
       tabText?.classList.remove('is-active');
-      if (secText) secText.style.display = 'none';
-      if (secImage) secImage.style.display = '';
+      hideElement(secText);
+      showElement(secImage);
     }, { signal });
 
     pickImageBtn?.addEventListener('click', () => imageInput?.click(), { signal });
@@ -297,9 +297,9 @@ export class WatermarkPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -419,8 +419,8 @@ export class WatermarkPdfController implements ViewController {
     this.isProcessing = true;
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="wm-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(workspaceCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -473,8 +473,8 @@ export class WatermarkPdfController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (workspaceCard) workspaceCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(workspaceCard);
+        showElement(sidebar);
         this.isProcessing = false;
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al insertar la marca de agua.';
         this.statusManager?.showError(errorMessage, () => {
@@ -502,15 +502,15 @@ export class WatermarkPdfController implements ViewController {
 
     if (fileInput) fileInput.value = '';
     if (imageInput) imageInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;
     if (txtImgEl) txtImgEl.textContent = 'Añadir Imagen (PNG/JPG)';
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -522,7 +522,7 @@ export class WatermarkPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="wm-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -531,7 +531,7 @@ export class WatermarkPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="wm-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

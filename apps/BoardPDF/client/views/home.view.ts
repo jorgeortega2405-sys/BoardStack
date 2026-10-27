@@ -2,7 +2,7 @@ import { mountSiteFooter } from '../components/footer.component.js';
 import { setupLayoutScrollSync } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
-import { isToolNew, TOOLS_REGISTRY } from '../config/tools.registry.js';
+import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_CREATE_WORKFLOW, SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
@@ -10,7 +10,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { deleteWorkflow, getWorkflows, MAX_WORKFLOWS_LIMIT } from '../services/workflow-storage.service.js';
+import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows } from '../services/workflow-storage.service.js';
 import { UserWorkflow } from '../types/workflow.types.js';
 
 export class HomeController {

@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="redact-pdf-wrapper">
-  <header class="component-top tool-top" data-ref="component-top" style="display: none;">
+  <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left">
-      <div class="redact-top-controls pdf-top-controls" data-ref="redact-top-controls" style="display: none;">
+      <div class="redact-top-controls pdf-top-controls is-hidden" data-ref="redact-top-controls">
         <div class="redact-mode-switcher pdf-top-controls--gap4">
           <button type="button" class="component-button component-button--h40 component-button--icon-only is-active" data-ref="btn-tool-select" data-tool="select" data-tooltip="Seleccionar texto" aria-label="Seleccionar texto">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_text"></use></svg>
@@ -14,7 +14,7 @@
     </div>
 
     <div class="component-top-right tool-top__right">
-      <div class="redact-top-actions pdf-top-controls" data-ref="redact-top-actions" style="display: none;">
+      <div class="redact-top-actions pdf-top-controls is-hidden" data-ref="redact-top-actions">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
         </button>
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <div class="pdf-viewer-workspace pdf-editor-workspace redact-editor-workspace" data-ref="redact-workspace-card" style="display: none;">
+      <div class="pdf-viewer-workspace pdf-editor-workspace redact-editor-workspace is-hidden" data-ref="redact-workspace-card">
         <div class="pdf-viewer-main-layout pdf-editor-main-layout">
           <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar redact-pages-sidebar">
             <div class="pdf-viewer-thumbnails-scroll pdf-editor-thumbnails-scroll" data-ref="thumbnails-container"></div>
@@ -72,7 +72,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar redact-sidebar" data-ref="redact-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar redact-sidebar is-hidden" data-ref="redact-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="redact-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
@@ -121,7 +121,7 @@
           <span>Aplicar Censuras</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="redact-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="redact-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

@@ -1,7 +1,7 @@
 import { getCurrentLanguage } from '../services/i18n.service.js';
 import { loadStylesheet } from '../utils/dom.util.js';
 import { isSupportedLanguage, normalizeLanguageCode } from '../utils/languages.util.js';
-import { getLocalizedPath, resolveRouteFromSlug, SEO_ROUTES } from './seo.config.js';
+import { SEO_ROUTES, getLocalizedPath, resolveRouteFromSlug } from './seo.config.js';
 
 export interface RouteContext {
   params: Record<string, string>;

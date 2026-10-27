@@ -6,7 +6,10 @@ const isInsideBoardPdf = fs.existsSync(path.resolve(process.cwd(), 'src/index.ts
 const basePrefix = isInsideBoardPdf ? 'tests' : 'apps/BoardPDF/tests';
 
 const backendTest = path.join(basePrefix, 'tools-backend.test.ts');
+const cssDeadCodeTest = path.join(basePrefix, 'css-dead-code.test.ts');
 const frontendTest = path.join(basePrefix, 'tools-frontend.test.ts');
+const stylesAuditTest = path.join(basePrefix, 'styles-audit.test.ts');
+const turnstileTest = path.join(basePrefix, 'turnstile-cloudflare.test.ts');
 
 function main(): void {
   process.stdout.write('\n=================================================================\n');
@@ -16,10 +19,19 @@ function main(): void {
   try {
     const isWin = process.platform === 'win32';
     const npxCmd = isWin ? 'call npx' : 'npx';
+    execSync(`${npxCmd} tsx --test "${turnstileTest}"`, {
+      stdio: 'inherit',
+    });
     execSync(`${npxCmd} tsx --test "${backendTest}"`, {
       stdio: 'inherit',
     });
     execSync(`${npxCmd} tsx --test "${frontendTest}"`, {
+      stdio: 'inherit',
+    });
+    execSync(`${npxCmd} tsx --test "${cssDeadCodeTest}"`, {
+      stdio: 'inherit',
+    });
+    execSync(`${npxCmd} tsx --test "${stylesAuditTest}"`, {
       stdio: 'inherit',
     });
 

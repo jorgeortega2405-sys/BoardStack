@@ -6,6 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getWorkflows } from '../services/workflow-storage.service.js';
+import { hideElement, showElement } from '../utils/dom.util.js';
 import { isSupportedLanguage } from '../utils/languages.util.js';
 
 export let isDrawerOpen = false;
@@ -156,7 +157,7 @@ function createDrawerElement(): HTMLElement {
   const drawerFooter = document.createElement('div');
   drawerFooter.className = 'layout-drawer__footer';
   drawerFooter.setAttribute('data-ref', 'drawer-footer');
-  drawerFooter.style.display = 'none';
+  hideElement(drawerFooter);
   drawer.appendChild(drawerFooter);
 
   return drawer;
@@ -169,7 +170,7 @@ export async function populateDrawerContent(drawer: HTMLElement, activePath?: st
 
   if (drawerFooter) {
     drawerFooter.innerHTML = '';
-    drawerFooter.style.display = 'none';
+    hideElement(drawerFooter);
   }
 
   if (currentDrawerMode === 'help') {
@@ -241,7 +242,7 @@ function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTM
         <span class="menu-item__text" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crear flujo de trabajo')}</span>
       </button>
     `;
-    drawerFooter.style.display = 'flex';
+    showElement(drawerFooter);
     translateElement(drawerFooter);
     bindNavLink(drawerFooter.querySelector('[data-ref="btn-nav-create-workflow"]'), '/workflows?new=1');
     renderIcons(drawerFooter);
@@ -312,7 +313,7 @@ function renderHelpDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElem
         <span class="menu-item__text" data-i18n="help.nav_faq">${t('help.nav_faq', t('nav.faq', 'Preguntas frecuentes'))}</span>
       </button>
     `;
-    drawerFooter.style.display = 'flex';
+    showElement(drawerFooter);
     translateElement(drawerFooter);
     bindNavLink(drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-help-faq"]'), 'help-faq', '/help/faq');
     renderIcons(drawerFooter);

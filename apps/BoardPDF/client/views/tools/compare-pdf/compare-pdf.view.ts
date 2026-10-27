@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { ClientDiffItem, ClientPageComparison, ComparePdfResultData, CompareViewMode } from './compare-pdf.types.js';
 
 export class ComparePdfController implements ViewController {
@@ -326,7 +326,7 @@ export class ComparePdfController implements ViewController {
     }
 
     if (overlayControls) {
-      overlayControls.style.display = mode === 'overlay' ? 'flex' : 'none';
+      toggleElement(overlayControls, mode === 'overlay');
     }
 
     this.applyOverlayOpacity();
@@ -401,15 +401,15 @@ export class ComparePdfController implements ViewController {
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="compare-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compare-pdf-sidebar"]');
 
-    if (dropzoneHero) dropzoneHero.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneHero);
+    showElement(workspaceCard);
+    showElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-    if (topControls) topControls.style.display = 'flex';
-    if (topHeader) topHeader.style.display = 'flex';
+    showElement(topControls);
+    showElement(topHeader);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
@@ -459,10 +459,10 @@ export class ComparePdfController implements ViewController {
     const pillRight = this.container.querySelector<HTMLElement>('[data-ref="floating-pill-right"]');
     const removeBtn2 = this.container.querySelector<HTMLElement>('[data-ref="btn-remove-doc2"]');
 
-    if (dropzoneDoc2) dropzoneDoc2.style.display = 'none';
-    if (scrollRight) scrollRight.style.display = 'flex';
-    if (pillRight) pillRight.style.display = 'inline-flex';
-    if (removeBtn2) removeBtn2.style.display = 'inline-flex';
+    hideElement(dropzoneDoc2);
+    showElement(scrollRight);
+    showElement(pillRight);
+    showElement(removeBtn2);
 
     try {
       const buffer = await file.arrayBuffer();
@@ -500,10 +500,10 @@ export class ComparePdfController implements ViewController {
 
     if (fileInput2) fileInput2.value = '';
     if (pagesWrapper2) pagesWrapper2.innerHTML = '';
-    if (dropzoneDoc2) dropzoneDoc2.style.display = 'flex';
-    if (scrollRight) scrollRight.style.display = 'none';
-    if (pillRight) pillRight.style.display = 'none';
-    if (removeBtn2) removeBtn2.style.display = 'none';
+    showElement(dropzoneDoc2);
+    hideElement(scrollRight);
+    hideElement(pillRight);
+    hideElement(removeBtn2);
 
     this.updateSimilarityPill(null);
     this.renderChangesList();
@@ -529,15 +529,15 @@ export class ComparePdfController implements ViewController {
     if (fileInput2) fileInput2.value = '';
     if (pagesWrapper1) pagesWrapper1.innerHTML = '';
     if (pagesWrapper2) pagesWrapper2.innerHTML = '';
-    if (dropzoneHero) dropzoneHero.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    showElement(dropzoneHero);
+    hideElement(workspaceCard);
+    hideElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-    if (topControls) topControls.style.display = 'none';
-    if (topHeader) topHeader.style.display = 'none';
+    hideElement(topControls);
+    hideElement(topHeader);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
 
     this.updateSimilarityPill(null);
@@ -819,16 +819,12 @@ export class ComparePdfController implements ViewController {
         if (leftPageCard && !leftPageCard.querySelector('.compare-diff-marker')) {
           const marker = document.createElement('div');
           marker.className = 'compare-diff-marker compare-diff-marker--deletion';
-          marker.style.top = '10px';
-          marker.style.bottom = '10px';
           leftPageCard.appendChild(marker);
         }
 
         if (rightPageCard && !rightPageCard.querySelector('.compare-diff-marker')) {
           const marker = document.createElement('div');
           marker.className = 'compare-diff-marker compare-diff-marker--addition';
-          marker.style.top = '10px';
-          marker.style.bottom = '10px';
           rightPageCard.appendChild(marker);
         }
       }
@@ -870,7 +866,7 @@ export class ComparePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="compare-global-error"]');
     if (errorEl) {
       errorEl.textContent = msg;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(msg, 'danger');
   }
@@ -879,7 +875,7 @@ export class ComparePdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="compare-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

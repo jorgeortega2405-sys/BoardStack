@@ -3,8 +3,9 @@ import { getApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { getTurnstileResponse, isTurnstileEnabled, removeTurnstile, renderTurnstile, resetTurnstile } from '../services/turnstile.service.js';
 import { ViewController } from '../types/common.types.js';
-import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
+import { hideElement, setupDropdown, showElement, withButtonLoading } from '../utils/dom.util.js';
 import { validateEmail } from '../utils/validators.util.js';
 
 interface TicketMessageData {
@@ -35,6 +36,7 @@ export class ContactController implements ViewController {
   private currentTrackingToken: string | null = null;
   private dropdownController: { destroy: () => void } | null = null;
   private footerController: { destroy: () => void } | null = null;
+  private turnstileContainer: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -43,6 +45,12 @@ export class ContactController implements ViewController {
   async init(): Promise<void> {
     this.abortController = new AbortController();
     this.renderFooter();
+    this.turnstileContainer = this.container.querySelector<HTMLElement>('[data-ref="contact-turnstile-container"]');
+    if (this.turnstileContainer && isTurnstileEnabled()) {
+      void renderTurnstile(this.turnstileContainer, {
+        action: 'contact_submit',
+      });
+    }
     this.bindEvents();
     renderIcons(this.container);
 
@@ -66,6 +74,10 @@ export class ContactController implements ViewController {
     if (this.footerController) {
       this.footerController.destroy();
       this.footerController = null;
+    }
+    if (this.turnstileContainer) {
+      removeTurnstile(this.turnstileContainer);
+      this.turnstileContainer = null;
     }
   }
 
@@ -107,18 +119,18 @@ export class ContactController implements ViewController {
     }
 
     const showError = (msg: string) => {
-      if (successBanner) successBanner.style.display = 'none';
+      hideElement(successBanner);
       if (errorBanner) {
         errorBanner.textContent = msg;
-        errorBanner.style.display = 'block';
+        showElement(errorBanner);
       }
     };
 
     const showSuccess = (msg: string) => {
-      if (errorBanner) errorBanner.style.display = 'none';
+      hideElement(errorBanner);
       if (successBanner) {
         successBanner.textContent = msg;
-        successBanner.style.display = 'block';
+        showElement(successBanner);
       }
     };
 
@@ -156,10 +168,21 @@ export class ContactController implements ViewController {
           return;
         }
 
-        if (errorBanner) errorBanner.style.display = 'none';
+        if (this.turnstileContainer && isTurnstileEnabled()) {
+          const turnstileToken = getTurnstileResponse(this.turnstileContainer);
+          if (!turnstileToken) {
+            showError('Por favor completa la verificación de seguridad antes de continuar.');
+            return;
+          }
+        }
+
+        hideElement(errorBanner);
 
         await withButtonLoading(submitBtn, 'Enviando mensaje...', async () => {
           form.reset();
+          if (this.turnstileContainer) {
+            resetTurnstile(this.turnstileContainer);
+          }
           if (subjectInput) subjectInput.value = '';
           if (subjectText) subjectText.textContent = 'Selecciona un asunto';
           const triggerIconUse = subjectDropdown?.querySelector('[data-ref="icon-contact-subject"] use');
@@ -194,12 +217,12 @@ export class ContactController implements ViewController {
         if (message.length < 2) {
           if (replyError) {
             replyError.textContent = 'Por favor escribe tu mensaje antes de enviar.';
-            replyError.style.display = 'block';
+            showElement(replyError);
           }
           return;
         }
 
-        if (replyError) replyError.style.display = 'none';
+        hideElement(replyError);
 
         await withButtonLoading(replyBtn, 'Enviando respuesta...', async () => {
           const res = await postApi(`/api/support/tickets/${encodeURIComponent(this.currentTrackingToken!)}/reply`, {
@@ -210,7 +233,7 @@ export class ContactController implements ViewController {
           if (!res.ok || !data.message) {
             if (replyError) {
               replyError.textContent = data.error || 'No se pudo enviar la respuesta.';
-              replyError.style.display = 'block';
+              showElement(replyError);
             }
             return;
           }
@@ -218,9 +241,9 @@ export class ContactController implements ViewController {
           if (replyTextarea) replyTextarea.value = '';
           if (replySuccess) {
             replySuccess.textContent = 'Tu respuesta ha sido registrada y notificada a soporte.';
-            replySuccess.style.display = 'block';
+            showElement(replySuccess);
             setTimeout(() => {
-              if (replySuccess) replySuccess.style.display = 'none';
+              hideElement(replySuccess);
             }, 4000);
           }
 
@@ -246,8 +269,8 @@ export class ContactController implements ViewController {
     const replyForm = this.container.querySelector<HTMLFormElement>('[data-ref="ticket-reply-form"]');
     const closedNotice = this.container.querySelector<HTMLElement>('[data-ref="ticket-closed-notice"]');
 
-    if (formCard) formCard.style.display = 'none';
-    if (ticketCard) ticketCard.style.display = 'flex';
+    hideElement(formCard);
+    showElement(ticketCard);
 
     try {
       const res = await getApi(`/api/support/tickets/${encodeURIComponent(token)}`);
@@ -259,10 +282,10 @@ export class ContactController implements ViewController {
           badgeEl.textContent = 'Inválido';
           badgeEl.className = 'contact-ticket-status-badge contact-ticket-status-badge--closed';
         }
-        if (replyForm) replyForm.style.display = 'none';
+        hideElement(replyForm);
         if (closedNotice) {
           closedNotice.textContent = 'El enlace de seguimiento no es válido o ha expirado.';
-          closedNotice.style.display = 'block';
+          showElement(closedNotice);
         }
         return;
       }
@@ -295,17 +318,17 @@ export class ContactController implements ViewController {
       }
 
       if (ticket.status === 'closed') {
-        if (replyForm) replyForm.style.display = 'none';
-        if (closedNotice) closedNotice.style.display = 'block';
+        hideElement(replyForm);
+        showElement(closedNotice);
       } else {
-        if (replyForm) replyForm.style.display = 'flex';
-        if (closedNotice) closedNotice.style.display = 'none';
+        showElement(replyForm);
+        hideElement(closedNotice);
       }
 
       renderIcons(ticketCard || this.container);
     } catch {
       if (titleEl) titleEl.textContent = 'Error al cargar la incidencia';
-      if (replyForm) replyForm.style.display = 'none';
+      hideElement(replyForm);
     }
   }
 

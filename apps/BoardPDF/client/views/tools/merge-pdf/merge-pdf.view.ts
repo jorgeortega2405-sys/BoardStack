@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupSortableGrid, setupToolSidebarModal, SortableGridController, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { SortableGridController, ToolSidebarModalController, bindFileDropzone, hideElement, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { MergePdfResponseData, SelectedPdfItem } from './merge-pdf.types.js';
 
@@ -370,11 +370,11 @@ export class MergePdfController implements ViewController {
 
     this.statusManager?.hide();
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(itemsCard);
+    showElement(sidebar);
     if (fabSettings) fabSettings.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'flex';
+    showElement(fabMore);
     if (fabBadge) fabBadge.textContent = this.selectedFiles.length.toString();
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     if (badge) badge.textContent = this.selectedFiles.length.toString();
@@ -477,22 +477,22 @@ export class MergePdfController implements ViewController {
 
     if (this.selectedFiles.length >= 2) {
       mainBtnText.textContent = t('tools.merge_pdf_btn_merge') || 'Unir PDF';
-      if (resetBtn) resetBtn.style.display = '';
-      if (noticeEl) noticeEl.style.display = 'flex';
+      showElement(resetBtn);
+      showElement(noticeEl);
       if (noticeText) {
         noticeText.innerHTML = 'Para cambiar el orden de tus PDFs, arrastra y suelta los archivos cómo quieras.';
       }
     } else if (this.selectedFiles.length === 1) {
       mainBtnText.textContent = 'Unir PDF';
-      if (resetBtn) resetBtn.style.display = '';
-      if (noticeEl) noticeEl.style.display = 'flex';
+      showElement(resetBtn);
+      showElement(noticeEl);
       if (noticeText) {
         noticeText.innerHTML = `Por favor, selecciona más archivos PDF haciendo click en 'Seleccionar archivos PDF'.<br>Selecciona múltiples archivos manteniendo pulsado ’Ctrl’`;
       }
     } else {
       mainBtnText.textContent = t('tools.merge_pdf_btn_select') || 'Seleccionar PDFs';
-      if (resetBtn) resetBtn.style.display = 'none';
-      if (noticeEl) noticeEl.style.display = 'none';
+      hideElement(resetBtn);
+      hideElement(noticeEl);
     }
   }
 
@@ -580,12 +580,12 @@ export class MergePdfController implements ViewController {
     const fabSettings = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-sidebar"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (fabSettings) fabSettings.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (itemsCard) itemsCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(itemsCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -609,17 +609,17 @@ export class MergePdfController implements ViewController {
     const fabSettings = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-sidebar"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (fabSettings) fabSettings.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
     if (fileInput) fileInput.value = '';
     if (addMoreInput) addMoreInput.value = '';
     if (outputNameInput) outputNameInput.value = 'documento_unido.pdf';
 
-    if (itemsCard) itemsCard.style.display = 'none';
+    hideElement(itemsCard);
     this.statusManager?.hide();
-    if (dropzoneCard) dropzoneCard.style.display = 'flex';
+    showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     this.updateSummary();
@@ -631,7 +631,7 @@ export class MergePdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="merge-pdf-error"]');
     if (banner) {
       banner.textContent = msg;
-      banner.style.display = '';
+      showElement(banner);
     }
     showToast(msg, 'danger');
   }
@@ -640,7 +640,7 @@ export class MergePdfController implements ViewController {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="merge-pdf-error"]');
     if (banner) {
       banner.textContent = '';
-      banner.style.display = 'none';
+      hideElement(banner);
     }
   }
 }

@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { CropBoxPercent, CropPdfResponseData } from './crop-pdf.types.js';
 
 export class CropPdfController implements ViewController {
@@ -342,14 +342,14 @@ export class CropPdfController implements ViewController {
     const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
     const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-    if (pageNav) pageNav.style.display = 'flex';
+    showElement(pageNav);
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (topHeader) topHeader.style.display = 'flex';
+    showElement(topHeader);
     if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
       filenameInput.value = `${base}_recortado.pdf`;
@@ -407,8 +407,8 @@ export class CropPdfController implements ViewController {
     this.isProcessing = true;
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="crop-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(workspaceCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -452,8 +452,8 @@ export class CropPdfController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (workspaceCard) workspaceCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(workspaceCard);
+        showElement(sidebar);
         this.isProcessing = false;
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al recortar el documento.';
         this.statusManager?.showError(errorMessage, () => {
@@ -479,8 +479,8 @@ export class CropPdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
 
     if (fileInput) fileInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
@@ -488,12 +488,12 @@ export class CropPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
     const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
     const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    if (pageNav) pageNav.style.display = 'none';
+    hideElement(pageNav);
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (topHeader) topHeader.style.display = 'none';
+    hideElement(topHeader);
     if (filenameInput) filenameInput.value = 'documento_recortado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
   }
@@ -502,7 +502,7 @@ export class CropPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="crop-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -511,7 +511,7 @@ export class CropPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="crop-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

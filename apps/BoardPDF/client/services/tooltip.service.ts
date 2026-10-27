@@ -1,4 +1,4 @@
-import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
+import { Instance as PopperInstance, Placement, createPopper } from '@popperjs/core';
 
 let activeTarget: HTMLElement | null = null;
 let currentPopperInstance: PopperInstance | null = null;

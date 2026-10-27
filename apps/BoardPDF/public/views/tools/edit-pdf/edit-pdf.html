@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="edit-pdf-wrapper">
-  <header class="component-top tool-top" data-ref="component-top" style="display: none;">
+  <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left">
-      <div class="pdf-editor-top-controls pdf-top-controls" data-ref="editor-top-controls" style="display: none;">
+      <div class="pdf-editor-top-controls pdf-top-controls is-hidden" data-ref="editor-top-controls">
         <div class="pdf-editor-mode-switcher" data-ref="mode-switcher">
           <button type="button" class="pdf-editor-mode-btn is-active" data-ref="btn-mode-annotate" data-mode="annotate">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
@@ -39,7 +39,7 @@
           </button>
         </div>
 
-        <div class="pdf-editor-tools-group" data-ref="tools-group-edit" style="display: none;">
+        <div class="pdf-editor-tools-group is-hidden" data-ref="tools-group-edit">
           <div class="pdf-editor-status-pill pdf-editor-status-pill--success" data-ref="edit-status-pill">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
             <span class="pdf-editor-status-pill__text" data-ref="txt-edit-status">Texto editable: haz clic en cualquier línea para modificarla</span>
@@ -49,7 +49,7 @@
     </div>
 
     <div class="component-top-right tool-top__right">
-      <div class="pdf-editor-top-actions pdf-top-controls" data-ref="editor-top-actions" style="display: none;">
+      <div class="pdf-editor-top-actions pdf-top-controls is-hidden" data-ref="editor-top-actions">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-undo" data-tooltip="Deshacer" aria-label="Deshacer" disabled>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
         </button>
@@ -95,11 +95,11 @@
           </div>
 
           <p class="tool-hero-dropzone__hint">o arrastra y suelta el PDF aquí</p>
-          <div class="banner banner--danger tool-sidebar__error-banner--lg" data-ref="edit-dropzone-error" role="alert" style="display: none;"></div>
+          <div class="banner banner--danger tool-sidebar__error-banner--lg is-hidden" data-ref="edit-dropzone-error" role="alert"></div>
         </div>
       </div>
 
-      <div class="pdf-viewer-workspace pdf-editor-workspace" data-ref="edit-editor-card" style="display: none;">
+      <div class="pdf-viewer-workspace pdf-editor-workspace is-hidden" data-ref="edit-editor-card">
         <div class="pdf-viewer-main-layout pdf-editor-main-layout" data-ref="editor-main-layout">
           <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar" data-ref="pages-sidebar">
             <div class="pdf-viewer-thumbnails-scroll pdf-editor-thumbnails-scroll" data-ref="thumbnails-container"></div>
@@ -114,7 +114,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar" data-ref="edit-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar is-hidden" data-ref="edit-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="edit-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
@@ -196,7 +196,7 @@
           <span class="component-button__text">Descargar PDF Editado</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="edit-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="edit-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

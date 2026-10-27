@@ -4,7 +4,7 @@
       <input class="pdf-dropzone__input" data-ref="input-source-file" type="file" />
 
       <div class="tool-fab-container" data-ref="tool-fab-container">
-        <div class="tool-fab-more" data-ref="tool-fab-more" style="display: none;">
+        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
           <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="pdf-items-view" data-ref="converter-selected-card" style="display: none;">
+      <div class="pdf-items-view is-hidden" data-ref="converter-selected-card">
         <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
             <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
@@ -64,7 +64,7 @@
             </div>
             <div class="pdf-card__sheet-wrapper">
               <div class="pdf-card__sheet">
-                <img class="pdf-card__preview-img" data-ref="doc-preview-img" style="display: none;" alt="Vista previa" />
+                <img class="pdf-card__preview-img is-hidden" data-ref="doc-preview-img" alt="Vista previa" />
                 <div class="pdf-card__placeholder" data-ref="doc-preview-icon">
                   <svg class="component-icon pdf-card__placeholder-icon" data-ref="selected-file-symbol" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
                   <div class="pdf-card__placeholder-lines">
@@ -84,7 +84,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar" data-ref="to-pdf-converter-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar is-hidden" data-ref="to-pdf-converter-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
@@ -112,7 +112,7 @@
           <span data-ref="txt-convert-action">Convertir a PDF</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="converter-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="converter-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

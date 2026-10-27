@@ -1,6 +1,6 @@
-import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
-import Sortable from 'sortablejs';
 import { setupSheetDragToDismiss } from '../components/modal.component.js';
+import { Instance as PopperInstance, Placement, createPopper } from '@popperjs/core';
+import Sortable from 'sortablejs';
 
 export interface BannerManager {
   hideAll: () => void;
@@ -39,6 +39,18 @@ export function setupPasswordToggle(
   });
 }
 
+export function showElement(el: HTMLElement | null): void {
+  el?.classList.remove('is-hidden');
+}
+
+export function hideElement(el: HTMLElement | null): void {
+  el?.classList.add('is-hidden');
+}
+
+export function toggleElement(el: HTMLElement | null, show: boolean): void {
+  el?.classList.toggle('is-hidden', !show);
+}
+
 export function createBannerManager(
   container: HTMLElement,
   options: { errorRef?: string; successRef?: string } = {}
@@ -53,14 +65,14 @@ export function createBannerManager(
 
   const hideError = () => {
     if (errorBanner) {
-      errorBanner.style.display = 'none';
+      hideElement(errorBanner);
       errorBanner.textContent = '';
     }
   };
 
   const hideSuccess = () => {
     if (successBanner) {
-      successBanner.style.display = 'none';
+      hideElement(successBanner);
       successBanner.textContent = '';
     }
   };
@@ -74,7 +86,7 @@ export function createBannerManager(
     hideSuccess();
     if (errorBanner) {
       errorBanner.textContent = msg;
-      errorBanner.style.display = 'block';
+      showElement(errorBanner);
     }
   };
 
@@ -82,7 +94,7 @@ export function createBannerManager(
     hideError();
     if (successBanner) {
       successBanner.textContent = msg;
-      successBanner.style.display = 'block';
+      showElement(successBanner);
     }
   };
 
@@ -393,26 +405,10 @@ export function setupDropdown(
     if (window.innerWidth <= 768 && backdrop && menu) {
       teleportToBody();
       destroyPopper();
-      backdrop.style.display = 'flex';
-      backdrop.style.opacity = '0';
-      backdrop.style.pointerEvents = 'auto';
-      menu.style.transform = 'translateY(100%)';
-      menu.style.transition = 'none';
-      backdrop.style.transition = 'none';
-
-      void menu.offsetHeight;
-
       backdrop.classList.add('is-open');
       menu.classList.add('is-open');
       trigger?.classList.add('is-open');
       wrapper?.classList.add('is-open');
-
-      requestAnimationFrame(() => {
-        backdrop.style.transition = 'opacity 0.25s ease';
-        menu.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
-        backdrop.style.opacity = '1';
-        menu.style.transform = 'translateY(0)';
-      });
 
       cleanupDrag?.();
       if (dragZone) {
@@ -448,23 +444,11 @@ export function setupDropdown(
 
     if (window.innerWidth <= 768 && backdrop && menu) {
       isClosing = true;
-      backdrop.style.pointerEvents = 'none';
-      backdrop.style.transition = 'opacity 0.2s ease';
-      menu.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
-      backdrop.style.opacity = '0';
-      menu.style.transform = 'translateY(100%)';
-
       setTimeout(() => {
         backdrop.classList.remove('is-open');
         menu.classList.remove('is-open');
         trigger?.classList.remove('is-open');
         wrapper?.classList.remove('is-open');
-        backdrop.style.display = '';
-        backdrop.style.opacity = '';
-        backdrop.style.transition = '';
-        backdrop.style.pointerEvents = '';
-        menu.style.transform = '';
-        menu.style.transition = '';
         returnFromTeleport();
         isClosing = false;
         if (typeof options.onClose === 'function') {
@@ -476,17 +460,8 @@ export function setupDropdown(
       menu?.classList.remove('is-open');
       trigger?.classList.remove('is-open');
       wrapper?.classList.remove('is-open');
-      if (backdrop) {
-        backdrop.style.display = '';
-        backdrop.style.opacity = '';
-        backdrop.style.transition = '';
-      }
-      if (menu) {
-        menu.style.transform = '';
-        menu.style.transition = '';
-        if (!shouldMatchWidth) {
-          menu.style.width = '';
-        }
+      if (menu && !shouldMatchWidth) {
+        menu.style.width = '';
       }
       returnFromTeleport();
       if (typeof options.onClose === 'function') {

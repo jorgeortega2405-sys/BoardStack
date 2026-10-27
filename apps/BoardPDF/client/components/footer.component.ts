@@ -4,7 +4,7 @@ import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { switchLanguage } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
-import { setupDropdown } from '../utils/dom.util.js';
+import { setupDropdown, toggleElement } from '../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES, getLanguageName } from '../utils/languages.util.js';
 
 export function getFooterHtml(): string {
@@ -170,11 +170,11 @@ export function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): {
       const name = item.querySelector('.menu-item__text')?.textContent?.toLowerCase() || '';
       const code = (item.getAttribute('data-lang') || '').toLowerCase();
       const match = !cleanQuery || name.includes(cleanQuery) || code.includes(cleanQuery);
-      item.style.display = match ? 'flex' : 'none';
+      toggleElement(item, match);
       if (match) matchesCount++;
     });
     if (langEmptyEl) {
-      langEmptyEl.style.display = matchesCount === 0 ? 'block' : 'none';
+      toggleElement(langEmptyEl, matchesCount === 0);
     }
   };
 

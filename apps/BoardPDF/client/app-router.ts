@@ -7,6 +7,7 @@ import { setLanguageSwitchHandler, setNavigationHandler } from './services/navig
 import { hideTooltip } from './services/tooltip.service.js';
 import { consumeTransferFile } from './services/transfer.service.js';
 import { ViewController } from './types/common.types.js';
+import { hideElement, showElement } from './utils/dom.util.js';
 
 let activeViewElement: HTMLElement | null = null;
 let currentActiveRouteId = 'home';
@@ -119,7 +120,7 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   }
 
   const sidebar = await ensureSidebarMounted(layoutContent);
-  sidebar.style.display = '';
+  showElement(sidebar);
 
   const navId = ++currentNavigation;
   let nextViewElement: HTMLElement | null = null;
@@ -139,7 +140,7 @@ export async function render(rawPath = window.location.pathname, options?: Rende
       if (nextViewElement) {
         const errEl = document.createElement('div');
         errEl.setAttribute('data-ref', 'router-debug-error');
-        errEl.style.display = 'none';
+        hideElement(errEl);
         errEl.textContent = `ROUTE_NOT_MATCHED:${path}`;
         nextViewElement.appendChild(errEl);
       }
@@ -152,7 +153,7 @@ export async function render(rawPath = window.location.pathname, options?: Rende
     if (nextViewElement) {
       const errEl = document.createElement('div');
       errEl.setAttribute('data-ref', 'router-debug-error');
-      errEl.style.display = 'none';
+      hideElement(errEl);
       errEl.textContent = errMessage;
       nextViewElement.appendChild(errEl);
     }

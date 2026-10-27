@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { EditDrawingStroke, EditImageItem, EditPdfMode, EditPdfResponseData, EditPdfTool, EditShapeItem, EditShapeType, EditTextAddition, EditTextReplacement, EditorProperties, NativeTextItem } from './edit-pdf.types.js';
 
@@ -270,8 +270,8 @@ export class EditPdfController implements ViewController {
 
     if (btnAnnotate) btnAnnotate.classList.toggle('is-active', mode === 'annotate');
     if (btnEdit) btnEdit.classList.toggle('is-active', mode === 'edit');
-    if (groupAnnotate) groupAnnotate.style.display = mode === 'annotate' ? 'inline-flex' : 'none';
-    if (groupEdit) groupEdit.style.display = mode === 'edit' ? 'inline-flex' : 'none';
+    toggleElement(groupAnnotate, mode === 'annotate');
+    toggleElement(groupEdit, mode === 'edit');
 
     if (workspace) {
       workspace.classList.toggle('mode--annotate', mode === 'annotate');
@@ -347,14 +347,14 @@ export class EditPdfController implements ViewController {
       outputNameInput.value = `${baseName}_editado.pdf`;
     }
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (editorCard) editorCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(editorCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-    if (topControls) topControls.style.display = 'flex';
-    if (topActions) topActions.style.display = 'flex';
-    if (topHeader) topHeader.style.display = 'flex';
+    showElement(topControls);
+    showElement(topActions);
+    showElement(topHeader);
 
     if (pagesWrapper) {
       pagesWrapper.innerHTML = `
@@ -1322,17 +1322,17 @@ export class EditPdfController implements ViewController {
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (editorCard) editorCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(editorCard);
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (topControls) topControls.style.display = 'none';
-    if (topActions) topActions.style.display = 'none';
-    if (topHeader) topHeader.style.display = 'none';
+    hideElement(topControls);
+    hideElement(topActions);
+    hideElement(topHeader);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -1354,12 +1354,12 @@ export class EditPdfController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
 
     this.isProcessing = true;
-    if (editorCard) editorCard.style.display = 'none';
-    if (topControls) topControls.style.display = 'none';
-    if (topActions) topActions.style.display = 'none';
+    hideElement(editorCard);
+    hideElement(topControls);
+    hideElement(topActions);
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    if (topHeader) topHeader.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(topHeader);
+    hideElement(sidebar);
 
     this.statusManager?.showUploading(1, 1);
 
@@ -1452,13 +1452,13 @@ export class EditPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
 
     if (this.currentFile && this.pdfDocument) {
-      if (dropzoneCard) dropzoneCard.style.display = 'none';
-      if (editorCard) editorCard.style.display = 'flex';
-      if (sidebar) sidebar.style.display = 'flex';
-      if (topControls) topControls.style.display = 'flex';
-      if (topActions) topActions.style.display = 'flex';
+      hideElement(dropzoneCard);
+      showElement(editorCard);
+      showElement(sidebar);
+      showElement(topControls);
+      showElement(topActions);
       const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      if (topHeader) topHeader.style.display = 'flex';
+      showElement(topHeader);
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     } else {
       this.resetSelectedFile();
@@ -1469,12 +1469,12 @@ export class EditPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="edit-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     const dropzoneError = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-error"]');
     if (dropzoneError) {
       dropzoneError.textContent = message;
-      dropzoneError.style.display = '';
+      showElement(dropzoneError);
     }
     showToast(message, 'danger');
   }
@@ -1483,12 +1483,12 @@ export class EditPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="edit-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
     const dropzoneError = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-error"]');
     if (dropzoneError) {
       dropzoneError.textContent = '';
-      dropzoneError.style.display = 'none';
+      hideElement(dropzoneError);
     }
   }
 }

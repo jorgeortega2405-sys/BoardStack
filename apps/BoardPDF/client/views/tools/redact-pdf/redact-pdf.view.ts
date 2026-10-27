@@ -10,9 +10,9 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
-import { ClientRedactionBox, ClientRedactTool, RedactPdfResultData } from './redact-pdf.types.js';
+import { ClientRedactTool, ClientRedactionBox, RedactPdfResultData } from './redact-pdf.types.js';
 
 export class RedactPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -272,9 +272,9 @@ export class RedactPdfController implements ViewController {
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -285,9 +285,9 @@ export class RedactPdfController implements ViewController {
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-    if (topControls) topControls.style.display = 'flex';
-    if (topActions) topActions.style.display = 'flex';
-    if (topHeader) topHeader.style.display = 'flex';
+    showElement(topControls);
+    showElement(topActions);
+    showElement(topHeader);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
@@ -330,9 +330,9 @@ export class RedactPdfController implements ViewController {
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
 
     if (fileInput) fileInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
+    hideElement(sidebar);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -342,9 +342,9 @@ export class RedactPdfController implements ViewController {
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-    if (topControls) topControls.style.display = 'none';
-    if (topActions) topActions.style.display = 'none';
-    if (topHeader) topHeader.style.display = 'none';
+    hideElement(topControls);
+    hideElement(topActions);
+    hideElement(topHeader);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
   }
 
@@ -962,8 +962,8 @@ export class RedactPdfController implements ViewController {
     this.hideError();
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
-    if (workspaceCard) workspaceCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(workspaceCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     try {
@@ -1031,8 +1031,8 @@ export class RedactPdfController implements ViewController {
         throw new Error(result.error || result.message || 'Error al censurar el documento PDF.');
       }
     } catch (err: any) {
-      if (workspaceCard) workspaceCard.style.display = 'flex';
-      if (sidebar) sidebar.style.display = 'flex';
+      showElement(workspaceCard);
+      showElement(sidebar);
       const message = err?.message || 'Ha ocurrido un error inesperado al procesar el archivo PDF.';
       this.statusManager?.showError(message, () => {
         this.statusManager?.hide();
@@ -1047,7 +1047,7 @@ export class RedactPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="redact-global-error"]');
     if (errorEl) {
       errorEl.textContent = msg;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(msg, 'danger');
   }
@@ -1056,7 +1056,7 @@ export class RedactPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="redact-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

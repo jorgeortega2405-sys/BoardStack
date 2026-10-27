@@ -298,4 +298,78 @@ describe('BoardPDF - Frontend Views, Templates & Options Contract Verification',
       });
     }
   });
+
+  describe('Zero Static Inline Styles and AGENTS.md Compliance', () => {
+    test('verifies zero static style="..." attributes across all public HTML views', () => {
+      const publicViewsDir = path.resolve(appRootDir, 'public/views');
+      function getAllHtml(dir: string): string[] {
+        let results: string[] = [];
+        for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, item.name);
+          if (item.isDirectory()) results = results.concat(getAllHtml(full));
+          else if (item.name.endsWith('.html')) results.push(full);
+        }
+        return results;
+      }
+      const allHtml = getAllHtml(publicViewsDir);
+      assert.ok(allHtml.length >= 30, 'Expected at least 30 HTML templates');
+      for (const hf of allHtml) {
+        const content = fs.readFileSync(hf, 'utf-8');
+        const styleMatches = content.match(/\bstyle\s*=\s*["'][^"']+["']/gi);
+        assert.strictEqual(styleMatches, null, `Template ${path.relative(publicViewsDir, hf)} contains forbidden style attribute: ${styleMatches}`);
+      }
+    });
+
+    test('verifies zero static .style mutations in client TypeScript views', () => {
+      const clientDir = path.resolve(appRootDir, 'client');
+      function getAllTs(dir: string): string[] {
+        let results: string[] = [];
+        for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, item.name);
+          if (item.isDirectory()) {
+            if (!['node_modules', 'dist'].includes(item.name)) results = results.concat(getAllTs(full));
+          } else if (item.name.endsWith('.ts')) results.push(full);
+        }
+        return results;
+      }
+      const tsFiles = getAllTs(clientDir);
+      const isPermitted = (rel: string, prop: string, val: string, raw: string): boolean => {
+        if (prop === "setProperty('--layout-scroll-height')" || prop === "removeProperty('--layout-scroll-height')") return true;
+        if (rel.includes('tool-status') && prop === 'width') return true;
+        if (rel.includes('compare-pdf') && prop === 'opacity') return true;
+        if ((prop === 'width' || prop === 'height' || prop === 'minWidth') &&
+            (val.includes('viewport.') || val.includes('vp.') || raw.includes('canvas') || val.includes('displayWidth') || val.includes('displayHeight') || val.includes('Math.max') || val.includes('* scale') || val.includes('newW') || val.includes('newH') || val.includes('w'))) return true;
+        if (prop === 'transform' && val.includes('rotate')) return true;
+        if ((prop === 'transform' || prop.includes('transform')) && (val.includes('translateY') || val.includes('diff') || val === "''" || val === '""')) return true;
+        if (rel.includes('crop') && ['left', 'top', 'width', 'height'].includes(prop) && val.includes('%')) return true;
+        if ((rel.includes('redact') || rel.includes('edit-pdf') || rel.includes('compare-pdf')) &&
+            ['left', 'top', 'bottom', 'width', 'height'].includes(prop) &&
+            (val.includes('px') || val.includes('scale') || val.includes('initial') || val.includes('item') || val.includes('start') || val.includes('box.'))) return true;
+        if ((rel.includes('edit-pdf') || rel.includes('redact-pdf')) && ['color', 'fontSize', 'fontFamily'].includes(prop)) return true;
+        if (rel.includes('edit-pdf') && prop === 'visibility') return true;
+        if (rel.includes('redact-pdf') && prop === 'pointerEvents') return true;
+        if ((rel.includes('modal.component') || rel.includes('dom.util')) && (prop.includes('transition') || prop.includes('opacity') || prop === 'pointerEvents' || (prop === 'display' && (val === "''" || val === '""')))) return true;
+        if (rel.includes('dom.util') && (prop === 'width' || prop === 'minWidth')) return true;
+        return false;
+      };
+
+      const violations: string[] = [];
+      for (const file of tsFiles) {
+        const rel = path.relative(appRootDir, file).replace(/\\/g, '/');
+        const lines = fs.readFileSync(file, 'utf8').split('\n');
+        lines.forEach((line, idx) => {
+          let m;
+          const lineRegex = /(?:[\w\.\?]+)?\.style(?:\.([a-zA-Z0-9]+)|\[['"]([^'"]+)['"]\])\s*=\s*([^;\n]+)/g;
+          while ((m = lineRegex.exec(line)) !== null) {
+            const prop = m[1] || m[2];
+            const val = m[3].trim();
+            if (!isPermitted(rel, prop, val, line.trim())) {
+              violations.push(`${rel}:${idx + 1} [${prop} = ${val}]`);
+            }
+          }
+        });
+      }
+      assert.strictEqual(violations.length, 0, `Forbidden static .style mutations found: ${violations.join(', ')}`);
+    });
+  });
 });

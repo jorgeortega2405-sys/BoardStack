@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { TO_PDF_CONFIGS, ToPdfRouteConfig, ToPdfSourceType } from './to-pdf-converter.types.js';
 
@@ -48,11 +48,11 @@ export class ToPdfConverterController implements ViewController {
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
 
-          if (dropzoneCard) dropzoneCard.style.display = 'none';
-          if (selectedCard) selectedCard.style.display = 'flex';
-          if (sidebar) sidebar.style.display = 'flex';
+          hideElement(dropzoneCard);
+          showElement(selectedCard);
+          showElement(sidebar);
           if (settingsBtn) settingsBtn.classList.add('is-visible');
-          if (fabMore) fabMore.style.display = 'block';
+          showElement(fabMore);
           if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
         } else {
           this.resetSelectedFile();
@@ -99,7 +99,7 @@ export class ToPdfConverterController implements ViewController {
 
     const cloudBtns = this.container.querySelector<HTMLElement>('[data-ref="hero-cloud-btns"]');
     if (cloudBtns) {
-      cloudBtns.style.display = this.config.isUrlMode ? 'none' : 'flex';
+      toggleElement(cloudBtns, !this.config.isUrlMode);
     }
 
     const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
@@ -110,7 +110,7 @@ export class ToPdfConverterController implements ViewController {
 
     const fabOptions = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-options"]');
     if (fabOptions && this.config.isUrlMode) {
-      fabOptions.style.display = 'none';
+      hideElement(fabOptions);
     }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-title"]');
@@ -327,16 +327,16 @@ export class ToPdfConverterController implements ViewController {
 
     if (imgEl) {
       imgEl.removeAttribute('src');
-      imgEl.style.display = 'none';
+      hideElement(imgEl);
     }
-    if (iconEl) iconEl.style.display = 'flex';
+    showElement(iconEl);
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
   }
 
@@ -376,23 +376,23 @@ export class ToPdfConverterController implements ViewController {
       this.previewImageUrl = URL.createObjectURL(file);
       if (imgEl) {
         imgEl.src = this.previewImageUrl;
-        imgEl.style.display = 'block';
+        showElement(imgEl);
       }
-      if (iconEl) iconEl.style.display = 'none';
+      hideElement(iconEl);
     } else {
       if (imgEl) {
         imgEl.removeAttribute('src');
-        imgEl.style.display = 'none';
+        hideElement(imgEl);
       }
-      if (iconEl) iconEl.style.display = 'flex';
+      showElement(iconEl);
     }
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
   }
 
@@ -419,16 +419,16 @@ export class ToPdfConverterController implements ViewController {
 
     if (imgEl) {
       imgEl.removeAttribute('src');
-      imgEl.style.display = 'none';
+      hideElement(imgEl);
     }
-    if (iconEl) iconEl.style.display = 'flex';
+    showElement(iconEl);
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (selectedCard) selectedCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -445,12 +445,12 @@ export class ToPdfConverterController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(selectedCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -525,7 +525,7 @@ export class ToPdfConverterController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
     if (errorEl) {
       errorEl.textContent = msg;
-      errorEl.style.display = 'block';
+      showElement(errorEl);
     }
     showToast(msg, 'danger');
   }
@@ -534,7 +534,7 @@ export class ToPdfConverterController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

@@ -1,5 +1,6 @@
 import { UploadProgressInfo } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { hideElement, showElement } from '../utils/dom.util.js';
 
 export interface ToolStatusOptions {
   container: HTMLElement;
@@ -33,7 +34,7 @@ export class ToolStatusManager {
       uploadEl = document.createElement('div');
       uploadEl.className = 'tool-upload-screen';
       uploadEl.setAttribute('data-ref', 'tool-upload-screen');
-      uploadEl.style.display = 'none';
+      hideElement(uploadEl);
       uploadEl.innerHTML = `
         <div class="tool-upload-screen__content" data-ref="upload-screen-content">
           <h2 class="tool-upload-screen__title" data-ref="upload-screen-title">Subiendo tus archivos...</h2>
@@ -44,7 +45,7 @@ export class ToolStatusManager {
             <span data-ref="upload-screen-speed">Velocidad: -- MB/s</span>
           </div>
           <div class="tool-upload-screen__progress-wrapper" data-ref="upload-screen-progress">
-            <div class="tool-upload-screen__fill" data-ref="upload-screen-fill" style="width: 0%;"></div>
+            <div class="tool-upload-screen__fill" data-ref="upload-screen-fill"></div>
           </div>
           <div class="tool-upload-screen__percentage" data-ref="upload-screen-percent">0%</div>
           <span class="tool-upload-screen__badge" data-ref="upload-screen-badge">SUBIDO</span>
@@ -62,7 +63,7 @@ export class ToolStatusManager {
       errorEl = document.createElement('div');
       errorEl.className = 'tool-error-screen';
       errorEl.setAttribute('data-ref', 'tool-error-screen');
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
       errorEl.innerHTML = `
         <div class="tool-error-screen__body" data-ref="error-screen-body">
           <div class="tool-error-screen__content" data-ref="error-screen-content">
@@ -137,9 +138,9 @@ export class ToolStatusManager {
     this.currentTotalFiles = totalFiles;
     const uploadScreen = this.getOrCreateUploadScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) layoutEl.style.display = 'none';
-    if (this.errorScreen) this.errorScreen.style.display = 'none';
-    uploadScreen.style.display = 'flex';
+    if (layoutEl) hideElement(layoutEl);
+    if (this.errorScreen) hideElement(this.errorScreen);
+    showElement(uploadScreen);
     const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
     const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
     const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
@@ -223,9 +224,9 @@ export class ToolStatusManager {
   public showProcessing(title = 'Procesando documento...', subtitle = 'Por favor espera mientras finaliza la tarea'): void {
     const uploadScreen = this.getOrCreateUploadScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) layoutEl.style.display = 'none';
-    if (this.errorScreen) this.errorScreen.style.display = 'none';
-    uploadScreen.style.display = 'flex';
+    if (layoutEl) hideElement(layoutEl);
+    if (this.errorScreen) hideElement(this.errorScreen);
+    showElement(uploadScreen);
     const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
     const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
     const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
@@ -267,9 +268,9 @@ export class ToolStatusManager {
     const opt = typeof options === 'string' ? { desc: options } : options;
     const errorScreen = this.getOrCreateErrorScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) layoutEl.style.display = 'none';
-    if (this.uploadScreen) this.uploadScreen.style.display = 'none';
-    errorScreen.style.display = 'flex';
+    if (layoutEl) hideElement(layoutEl);
+    if (this.uploadScreen) hideElement(this.uploadScreen);
+    showElement(errorScreen);
     const titleEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-title"]');
     const descEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-desc"]');
     const boxTitleEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-title"]');
@@ -287,14 +288,14 @@ export class ToolStatusManager {
 
   public hide(): void {
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) layoutEl.style.display = '';
+    if (layoutEl) showElement(layoutEl);
     if (this.uploadScreen) {
-      this.uploadScreen.style.display = 'none';
+      hideElement(this.uploadScreen);
       this.uploadScreen.remove();
       this.uploadScreen = null;
     }
     if (this.errorScreen) {
-      this.errorScreen.style.display = 'none';
+      hideElement(this.errorScreen);
       this.errorScreen.remove();
       this.errorScreen = null;
     }
@@ -306,7 +307,7 @@ export class ToolStatusManager {
       this.abortController = null;
     }
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) layoutEl.style.display = '';
+    if (layoutEl) showElement(layoutEl);
     if (this.uploadScreen) {
       this.uploadScreen.remove();
       this.uploadScreen = null;

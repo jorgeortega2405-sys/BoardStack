@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ClientOcrLanguage, OcrResultData } from './ocr-pdf.types.js';
 
@@ -173,10 +173,10 @@ export class OcrPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-workspace"]');
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
@@ -241,10 +241,10 @@ export class OcrPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-workspace"]');
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (selectedCard) selectedCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
@@ -270,8 +270,8 @@ export class OcrPdfController implements ViewController {
     this.isProcessing = true;
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-sidebar"]');
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(selectedCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -319,8 +319,8 @@ export class OcrPdfController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (selectedCard) selectedCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(selectedCard);
+        showElement(sidebar);
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al aplicar OCR.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();
@@ -336,7 +336,7 @@ export class OcrPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="ocr-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -345,7 +345,7 @@ export class OcrPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="ocr-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

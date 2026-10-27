@@ -4,7 +4,7 @@
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept=".pdf,application/pdf" />
 
       <div class="tool-fab-container" data-ref="tool-fab-container">
-        <div class="tool-fab-more" data-ref="tool-fab-more" style="display: none;">
+        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
           <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             <span class="tool-fab-more__badge">1</span>
@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="pdf-items-view" data-ref="unlock-workspace-card" style="display: none;">
+      <div class="pdf-items-view is-hidden" data-ref="unlock-workspace-card">
         <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
             <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
@@ -65,7 +65,7 @@
             <div class="pdf-card__sheet-wrapper">
               <div class="pdf-card__sheet">
                 <canvas class="pdf-card__canvas" data-ref="unlock-doc-canvas"></canvas>
-                <div class="security-doc-card__locked-placeholder" data-ref="unlock-locked-placeholder" style="display: none;">
+                <div class="security-doc-card__locked-placeholder is-hidden" data-ref="unlock-locked-placeholder">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
                   <span class="security-doc-card__locked-text">Archivo protegido</span>
                 </div>
@@ -80,7 +80,7 @@
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
-    <aside class="tool-layout__sidebar" data-ref="unlock-pdf-sidebar" style="display: none;">
+    <aside class="tool-layout__sidebar is-hidden" data-ref="unlock-pdf-sidebar">
       <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
@@ -118,7 +118,7 @@
           <span>Desbloquear PDF</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="unlock-global-error" role="alert" style="display: none;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="unlock-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
 
@@ -248,11 +248,11 @@ export class TranslatePdfViewController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (processingCard) processingCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    hideElement(processingCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
@@ -308,10 +308,10 @@ export class TranslatePdfViewController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (selectedCard) selectedCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (translateBtn) translateBtn.disabled = true;
 
@@ -325,8 +325,8 @@ export class TranslatePdfViewController implements ViewController {
     this.isProcessing = true;
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
-    if (selectedCard) selectedCard.style.display = 'none';
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(selectedCard);
+    hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -370,8 +370,8 @@ export class TranslatePdfViewController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        if (selectedCard) selectedCard.style.display = 'flex';
-        if (sidebar) sidebar.style.display = 'flex';
+        showElement(selectedCard);
+        showElement(sidebar);
         const errorMessage = err instanceof Error ? err.message : 'Error al conectar con el servidor.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();
@@ -387,7 +387,7 @@ export class TranslatePdfViewController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="translate-error-banner"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = '';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -396,7 +396,7 @@ export class TranslatePdfViewController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="translate-error-banner"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

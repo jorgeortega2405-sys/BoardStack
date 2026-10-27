@@ -5,9 +5,9 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { deleteWorkflow, getWorkflows, MAX_WORKFLOWS_LIMIT, saveWorkflow } from '../services/workflow-storage.service.js';
+import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows, saveWorkflow } from '../services/workflow-storage.service.js';
 import { ToolDefinition, UserWorkflow, WorkflowStep } from '../types/workflow.types.js';
-import { setupDropdown } from '../utils/dom.util.js';
+import { hideElement, setupDropdown, showElement, toggleElement } from '../utils/dom.util.js';
 
 export class WorkflowsController {
   private abortController: AbortController | null = null;
@@ -56,8 +56,8 @@ export class WorkflowsController {
         </div>
         <h3 class="tool-card__title" data-ref="title-create-workflow">Crear flujo de trabajo</h3>
         <p class="tool-card__desc" data-ref="desc-create-workflow">Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.</p>
-        <div style="align-items: center; display: flex; gap: 8px; margin-top: 10px;">
-          <span class="component-badge component-badge--sm${isAtLimit ? ' component-badge--warning' : ''}" data-ref="badge-workflows-limit" style="font-size: 11px;">
+        <div class="tool-card__meta" data-ref="meta-create-workflow">
+          <span class="component-badge component-badge--sm${isAtLimit ? ' component-badge--warning' : ''}" data-ref="badge-workflows-limit">
             ${count} / ${MAX_WORKFLOWS_LIMIT} flujos guardados
           </span>
         </div>
@@ -75,20 +75,20 @@ export class WorkflowsController {
           <div class="tool-card__icon-box" data-ref="icon-box-workflow-${wf.id}">
             ${SVG_TOOL_WORKFLOW}
           </div>
-          <div class="tool-card__actions" data-ref="actions-workflow-${wf.id}" style="align-items: center; display: flex; gap: 6px; position: absolute; right: 20px; top: 20px;">
-            <span class="component-badge component-badge--sm" data-ref="badge-workflow-${wf.id}" style="font-size: 10.5px;">${wf.steps.length} pasos</span>
+          <div class="tool-card__actions" data-ref="actions-workflow-${wf.id}">
+            <span class="component-badge component-badge--sm" data-ref="badge-workflow-${wf.id}">${wf.steps.length} pasos</span>
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-edit-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Editar flujo" aria-label="Editar flujo">
-              <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
             </button>
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-delete-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Eliminar flujo" aria-label="Eliminar flujo">
-              <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
           <h3 class="tool-card__title" data-ref="title-workflow-${wf.id}">${this.escape(wf.name)}</h3>
           <p class="tool-card__desc" data-ref="desc-workflow-${wf.id}">${this.escape(stepNames || 'Sin pasos')}</p>
-          <div class="tool-card__footer" data-ref="footer-workflow-${wf.id}" style="align-items: center; display: flex; justify-content: space-between; margin-top: 14px;">
-            <span style="color: var(--text-tertiary); font-size: 11px;">Guardado localmente</span>
-            <span class="tool-card__action-link" style="color: var(--primary); font-size: 12px; font-weight: 600;">Ejecutar flujo →</span>
+          <div class="tool-card__footer" data-ref="footer-workflow-${wf.id}">
+            <span class="tool-card__footer-note">Guardado localmente</span>
+            <span class="tool-card__action-link">Ejecutar flujo →</span>
           </div>
         </div>
       `;
@@ -153,19 +153,19 @@ export class WorkflowsController {
     modalBody.setAttribute('data-ref', 'workflow-builder-modal');
 
     modalBody.innerHTML = `
-      <div class="workflow-modal-columns" data-ref="modal-columns" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+      <div class="workflow-modal-columns" data-ref="modal-columns">
         <div class="modal-col-left" data-ref="modal-col-left">
-          <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px;">Selección de herramienta</div>
+          <div class="workflow-modal-section-title">Selección de herramienta</div>
 
-          <label class="field" data-ref="field-workflow-name" style="margin-bottom: 14px;">
+          <label class="field" data-ref="field-workflow-name">
             <input class="field__input" data-ref="input-workflow-name" type="text" placeholder=" " autocomplete="off" value="${workflow ? this.escape(workflow.name) : ''}" />
             <span class="field__label" data-ref="label-workflow-name">Nombre del flujo de trabajo</span>
           </label>
 
-          <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-workflow-tool" style="margin-bottom: 14px;">
+          <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-workflow-tool">
             <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-workflow-tool" aria-label="Seleccionar herramienta">
               <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-tool">
-                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-selected-tool" aria-hidden="true" style="display: none;"><use href="/icons.svg#widgets"></use></svg>
+                <svg class="component-icon dropdown-trigger__icon is-hidden" data-ref="icon-selected-tool" aria-hidden="true"><use href="/icons.svg#widgets"></use></svg>
                 <span class="dropdown-trigger__text" data-ref="txt-selected-tool">Selecciona una herramienta...</span>
               </div>
               <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
@@ -180,25 +180,25 @@ export class WorkflowsController {
             </div>
           </div>
 
-          <div class="workflow-modal-tool-options" data-ref="workflow-modal-tool-options" style="margin-bottom: 16px; display: none;"></div>
+          <div class="workflow-modal-tool-options is-hidden" data-ref="workflow-modal-tool-options"></div>
 
-          <button type="button" class="component-button component-button--secondary component-button--h40" data-ref="btn-modal-add-step" style="width: 100%; justify-content: center; gap: 8px;">
+          <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-modal-add-step">
             <span>Añadir paso</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
           </button>
         </div>
 
-        <div class="modal-col-right" data-ref="modal-col-right" style="background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 18px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Secuencia del flujo</div>
-            <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-modal-clear-pipeline" style="font-size: 12px; padding: 2px 6px;">Borrar todo</button>
+        <div class="modal-col-right modal-col-right--workflow" data-ref="modal-col-right">
+          <div class="workflow-modal-header-row">
+            <div class="workflow-modal-section-title">Secuencia del flujo</div>
+            <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-modal-clear-pipeline">Borrar todo</button>
           </div>
 
-          <div class="workflow-modal-steps-list" data-ref="workflow-modal-steps-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 180px; max-height: 280px; overflow-y: auto;"></div>
+          <div class="workflow-modal-steps-list" data-ref="workflow-modal-steps-list"></div>
 
-          <div class="banner banner--danger modal-terminal-alert" data-ref="modal-terminal-alert" style="display: none; margin-top: 12px;">
-            <svg class="component-icon" aria-hidden="true" style="color: var(--danger, #ef4444); flex-shrink: 0;"><use href="/icons.svg#block"></use></svg>
-            <span style="font-size: 12px; font-weight: 500;">No es posible añadir herramientas después de una conversión terminal.</span>
+          <div class="banner banner--danger modal-terminal-alert is-hidden" data-ref="modal-terminal-alert">
+            <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+            <span class="banner__text">No es posible añadir herramientas después de una conversión terminal.</span>
           </div>
         </div>
       </div>
@@ -226,9 +226,9 @@ export class WorkflowsController {
       if (!stepsListEl) return;
       if (currentSteps.length === 0) {
         stepsListEl.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; color: var(--text-tertiary); text-align: center;">
-            <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5;"><use href="/icons.svg#account_tree"></use></svg>
-            <span style="font-size: 13px;">Añade herramientas a la secuencia desde el panel izquierdo.</span>
+          <div class="workflow-empty-state">
+            <svg class="component-icon workflow-empty-state__icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
+            <span class="workflow-empty-state__text">Añade herramientas a la secuencia desde el panel izquierdo.</span>
           </div>
         `;
       } else {
@@ -237,23 +237,21 @@ export class WorkflowsController {
           const toolName = tool ? tool.name : step.tool;
           const toolIcon = tool ? tool.icon : 'widgets';
           return `
-            <div class="pipeline-step-item" data-ref="modal-step-${step.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-hover); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">${idx + 1}</span>
-                <svg class="component-icon" aria-hidden="true" style="width: 18px; height: 18px; color: var(--text-primary);"><use href="/icons.svg#${toolIcon}"></use></svg>
-                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${this.escape(toolName)}</span>
+            <div class="pipeline-step-item" data-ref="modal-step-${step.id}">
+              <div class="pipeline-step-item__left">
+                <span class="pipeline-step-item__number">${idx + 1}</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${toolIcon}"></use></svg>
+                <span class="pipeline-step-item__title">${this.escape(toolName)}</span>
               </div>
               <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-modal-remove-step-${step.id}" data-id="${step.id}" data-tooltip="Quitar paso" aria-label="Quitar paso">
-                <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
           `;
         }).join('');
       }
 
-      if (terminalAlert) {
-        terminalAlert.style.display = isPipelineTerminal() ? 'flex' : 'none';
-      }
+      toggleElement(terminalAlert, isPipelineTerminal());
 
       if (triggerEl) {
         if (isPipelineTerminal()) {
@@ -270,11 +268,11 @@ export class WorkflowsController {
 
     const resetToolSelection = () => {
       selectedTool = null;
-      if (selectedIconEl) selectedIconEl.style.display = 'none';
+      hideElement(selectedIconEl);
       if (selectedTxtEl) selectedTxtEl.textContent = 'Selecciona una herramienta...';
       if (optionsContainer) {
         optionsContainer.innerHTML = '';
-        optionsContainer.style.display = 'none';
+        hideElement(optionsContainer);
       }
       activeSubDropdownCtrls.forEach((c) => c.destroy());
       activeSubDropdownCtrls = [];
@@ -287,9 +285,9 @@ export class WorkflowsController {
       optionsContainer.innerHTML = '';
 
       if (tool.id === 'compress-pdf') {
-        optionsContainer.style.display = 'block';
+        showElement(optionsContainer);
         optionsContainer.innerHTML = `
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Nivel de compresión</div>
+          <div class="workflow-option-label">Nivel de compresión</div>
           <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-compress-level">
             <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-compress-level">
               <span class="dropdown-trigger__text" data-ref="txt-selected-compress-level">Recomendada (Buena calidad y tamaño)</span>
@@ -317,7 +315,7 @@ export class WorkflowsController {
           activeSubDropdownCtrls.push(ctrl);
         }
       } else {
-        optionsContainer.style.display = 'none';
+        hideElement(optionsContainer);
       }
 
       renderIcons(optionsContainer);
@@ -328,7 +326,7 @@ export class WorkflowsController {
         <button type="button" class="menu-item" data-tool-id="${tool.id}">
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>
           <span class="menu-item__text">${this.escape(tool.name)}</span>
-          ${tool.isTerminal ? '<span class="component-badge component-badge--sm" style="font-size: 10px; margin-left: auto;">Terminal</span>' : ''}
+          ${tool.isTerminal ? '<span class="component-badge component-badge--sm">Terminal</span>' : ''}
         </button>
       `).join('');
     }
@@ -341,7 +339,7 @@ export class WorkflowsController {
           if (found) {
             selectedTool = found;
             if (selectedIconEl) {
-              selectedIconEl.style.display = 'block';
+              showElement(selectedIconEl);
               selectedIconEl.innerHTML = `<use href="/icons.svg#${found.icon}"></use>`;
             }
             if (selectedTxtEl) selectedTxtEl.textContent = found.name;

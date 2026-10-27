@@ -11,7 +11,7 @@ import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ProtectPdfResponseData } from './protect-pdf.types.js';
 
@@ -43,11 +43,11 @@ export class ProtectPdfController implements ViewController {
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="protect-pdf-workspace"]');
 
-          if (dropzoneCard) dropzoneCard.style.display = 'none';
-          if (workspaceCard) workspaceCard.style.display = 'flex';
-          if (sidebar) sidebar.style.display = 'flex';
+          hideElement(dropzoneCard);
+          showElement(workspaceCard);
+          showElement(sidebar);
           if (settingsBtn) settingsBtn.classList.add('is-visible');
-          if (fabMore) fabMore.style.display = 'block';
+          showElement(fabMore);
           if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
         } else {
           this.resetToInitial();
@@ -223,11 +223,11 @@ export class ProtectPdfController implements ViewController {
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(workspaceCard);
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (executeBtn) executeBtn.disabled = false;
@@ -283,12 +283,12 @@ export class ProtectPdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="protect-pdf-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(workspaceCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -384,12 +384,12 @@ export class ProtectPdfController implements ViewController {
     if (fileInput) fileInput.value = '';
     if (passwordInput) passwordInput.value = '';
     if (confirmInput) confirmInput.value = '';
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (workspaceCard) workspaceCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(workspaceCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -408,7 +408,7 @@ export class ProtectPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="protect-global-error"]');
     if (errorEl) {
       errorEl.textContent = message;
-      errorEl.style.display = 'block';
+      showElement(errorEl);
     }
     showToast(message, 'danger');
   }
@@ -417,7 +417,7 @@ export class ProtectPdfController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="protect-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

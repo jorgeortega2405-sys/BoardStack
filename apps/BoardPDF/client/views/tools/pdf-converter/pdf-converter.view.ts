@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { CONVERSION_CONFIGS, ConversionRouteConfig } from './pdf-converter.types.js';
 
@@ -46,11 +46,11 @@ export class PdfConverterController implements ViewController {
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
 
-          if (dropzoneCard) dropzoneCard.style.display = 'none';
-          if (selectedCard) selectedCard.style.display = 'flex';
-          if (sidebar) sidebar.style.display = 'flex';
+          hideElement(dropzoneCard);
+          showElement(selectedCard);
+          showElement(sidebar);
           if (settingsBtn) settingsBtn.classList.add('is-visible');
-          if (fabMore) fabMore.style.display = 'block';
+          showElement(fabMore);
           if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
         } else {
           this.resetSelectedFile();
@@ -216,12 +216,12 @@ export class PdfConverterController implements ViewController {
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (convertBtn) convertBtn.disabled = false;
 
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'flex';
+    hideElement(dropzoneCard);
+    showElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'flex';
+    showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (fabMore) fabMore.style.display = 'block';
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
@@ -274,12 +274,12 @@ export class PdfConverterController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
-    if (dropzoneCard) dropzoneCard.style.display = '';
-    if (selectedCard) selectedCard.style.display = 'none';
+    showElement(dropzoneCard);
+    hideElement(selectedCard);
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -303,12 +303,12 @@ export class PdfConverterController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
 
-    if (sidebar) sidebar.style.display = 'none';
+    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (fabMore) fabMore.style.display = 'none';
+    hideElement(fabMore);
     this.sidebarModal?.close();
-    if (dropzoneCard) dropzoneCard.style.display = 'none';
-    if (selectedCard) selectedCard.style.display = 'none';
+    hideElement(dropzoneCard);
+    hideElement(selectedCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
@@ -370,7 +370,7 @@ export class PdfConverterController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
     if (errorEl) {
       errorEl.textContent = msg;
-      errorEl.style.display = 'block';
+      showElement(errorEl);
     }
     showToast(msg, 'danger');
   }
@@ -379,7 +379,7 @@ export class PdfConverterController implements ViewController {
     const errorEl = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
     if (errorEl) {
       errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      hideElement(errorEl);
     }
   }
 }

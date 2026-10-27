@@ -180,9 +180,9 @@ export class HelpFaqController implements ViewController {
 
     if (filteredItems.length === 0) {
       itemsContainer.innerHTML = `
-        <div class="faq-group" data-ref="faq-empty-state" style="padding: 48px 24px; text-align: center;">
-          <h3 class="faq-group__title" data-ref="faq-empty-title" style="margin-bottom: 8px;">${t('help.faq.empty_title') || 'No se encontraron resultados'}</h3>
-          <p class="settings-subtitle" data-ref="faq-empty-desc" style="margin: 0;">${t('help.faq.empty_desc') || 'Intenta buscar con otras palabras o selecciona otra categoría.'}</p>
+        <div class="faq-group faq-group--empty" data-ref="faq-empty-state">
+          <h3 class="faq-group__title faq-group__title--empty" data-ref="faq-empty-title">${t('help.faq.empty_title') || 'No se encontraron resultados'}</h3>
+          <p class="settings-subtitle" data-ref="faq-empty-desc">${t('help.faq.empty_desc') || 'Intenta buscar con otras palabras o selecciona otra categoría.'}</p>
         </div>
       `;
       return;
@@ -235,7 +235,7 @@ export class HelpFaqController implements ViewController {
       { signal: this.abortController?.signal }
     );
 
-    const pills = this.container.querySelectorAll<HTMLButtonElement>('.faq-pill');
+    const pills = this.container.querySelectorAll<HTMLButtonElement>('.category-pill');
     pills.forEach((pill) => {
       pill.addEventListener(
         'click',
