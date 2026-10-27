@@ -239,11 +239,11 @@ export async function addWatermarkToPdf(
     size: finalBuffer.length,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
-    downloadUrl: `/api/tools/watermark-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename,
     fileSize: finalBuffer.length,
     totalPages,

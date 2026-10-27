@@ -312,7 +312,7 @@ export async function redactPdfDocument(params: RedactPdfParams): Promise<Redact
   const outFilename = sanitizePdfFilename(originalFilename);
   const fileId = `redact_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
 
-  await storeTempFile(fileId, {
+  const tokenResult = await storeTempFile(fileId, {
     buffer: finalBuffer,
     contentType: 'application/pdf',
     createdAt: Date.now(),
@@ -322,8 +322,8 @@ export async function redactPdfDocument(params: RedactPdfParams): Promise<Redact
   });
 
   return {
-    downloadUrl: `/api/tools/redact-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     fileSize: finalBuffer.length,
     filename: outFilename,
     redactedBoxesCount,

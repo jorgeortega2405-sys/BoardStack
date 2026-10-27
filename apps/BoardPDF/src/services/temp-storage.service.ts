@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { redis } from '../config/redis.config.js';
 import { ensureBucketExists, isS3Configured, S3_BUCKET_NAME, s3Client } from '../config/s3.config.js';
 import { markFileOperationDeleted, markFileOperationExpired, recordFileOperation } from './db-storage-log.service.js';
+import { type GeneratedTokenResult, generateDownloadToken, verifyDownloadToken } from './download-token.service.js';
 import { logger } from './logger.service.js';
 
 export interface StoredTempFile {
@@ -57,11 +58,22 @@ function buildS3Key(token: string): string {
   return `temp/${token}`;
 }
 
+function resolveTokenInternalId(rawToken: string): { expired: boolean; fileId: string } {
+  const verified = verifyDownloadToken(rawToken);
+  if (verified.valid) {
+    return { expired: false, fileId: verified.fileId };
+  }
+  if (verified.expired) {
+    return { expired: true, fileId: verified.fileId };
+  }
+  return { expired: false, fileId: rawToken };
+}
+
 export async function storeTempFile(
   token: string,
   file: StoredTempFile,
   ttlSeconds: number = DEFAULT_TTL_SECONDS
-): Promise<void> {
+): Promise<GeneratedTokenResult> {
   if (!file.createdAt) {
     file.createdAt = Date.now();
   }
@@ -118,7 +130,7 @@ export async function storeTempFile(
           ttlSeconds,
         });
 
-        return;
+        return generateDownloadToken(token, file.filename || 'documento.pdf', ttlSeconds);
       } catch (err) {
         logger.db.warn('Error al guardar archivo en AWS S3 / MinIO', err);
       }
@@ -126,25 +138,30 @@ export async function storeTempFile(
   }
 
   memoryStore.set(token, file);
+  return generateDownloadToken(token, file.filename || 'documento.pdf', ttlSeconds);
 }
 
 export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
   token: string
 ): Promise<T | null> {
-  const meta = await getTempFileMeta(token);
+  const resolved = resolveTokenInternalId(token);
+  if (resolved.expired) return null;
+  const storageToken = resolved.fileId;
+
+  const meta = await getTempFileMeta(storageToken);
   if (meta && meta.createdAt) {
     const now = Date.now();
     const ttlMs = (meta.ttlSeconds || DEFAULT_TTL_SECONDS) * 1000;
     if (now - meta.createdAt > ttlMs) {
-      await deleteTempFile(token);
-      await markFileOperationExpired(token);
+      await deleteTempFile(storageToken);
+      await markFileOperationExpired(storageToken);
       return null;
     }
   }
 
   if (isS3Configured()) {
     try {
-      const s3Key = buildS3Key(token);
+      const s3Key = buildS3Key(storageToken);
       const res = await s3Client.send(
         new GetObjectCommand({
           Bucket: S3_BUCKET_NAME,
@@ -176,25 +193,29 @@ export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
     }
   }
 
-  const local = memoryStore.get(token);
+  const local = memoryStore.get(storageToken);
   return (local as unknown as T) || null;
 }
 
 export async function getTempFileStream(token: string): Promise<TempFileStreamResult | null> {
-  const meta = await getTempFileMeta(token);
+  const resolved = resolveTokenInternalId(token);
+  if (resolved.expired) return null;
+  const storageToken = resolved.fileId;
+
+  const meta = await getTempFileMeta(storageToken);
   if (meta && meta.createdAt) {
     const now = Date.now();
     const ttlMs = (meta.ttlSeconds || DEFAULT_TTL_SECONDS) * 1000;
     if (now - meta.createdAt > ttlMs) {
-      await deleteTempFile(token);
-      await markFileOperationExpired(token);
+      await deleteTempFile(storageToken);
+      await markFileOperationExpired(storageToken);
       return null;
     }
   }
 
   if (isS3Configured()) {
     try {
-      const s3Key = buildS3Key(token);
+      const s3Key = buildS3Key(storageToken);
       const res = await s3Client.send(
         new GetObjectCommand({
           Bucket: S3_BUCKET_NAME,
@@ -223,7 +244,7 @@ export async function getTempFileStream(token: string): Promise<TempFileStreamRe
     }
   }
 
-  const fallbackFile = await getTempFile(token);
+  const fallbackFile = await getTempFile(storageToken);
   if (fallbackFile && fallbackFile.buffer) {
     const stream = Readable.from(fallbackFile.buffer);
     return {
@@ -238,9 +259,13 @@ export async function getTempFileStream(token: string): Promise<TempFileStreamRe
 }
 
 export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta | null> {
+  const resolved = resolveTokenInternalId(token);
+  if (resolved.expired) return null;
+  const storageToken = resolved.fileId;
+
   if (redis.status === 'ready') {
     try {
-      const metaKey = `${PREFIX_META}${token}`;
+      const metaKey = `${PREFIX_META}${storageToken}`;
       const rawMeta = await redis.get(metaKey);
       if (rawMeta) {
         return JSON.parse(rawMeta);
@@ -250,12 +275,12 @@ export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta
     }
   }
 
-  const memoryMeta = memoryMetaStore.get(token);
+  const memoryMeta = memoryMetaStore.get(storageToken);
   if (memoryMeta) {
     return memoryMeta;
   }
 
-  const local = memoryStore.get(token);
+  const local = memoryStore.get(storageToken);
   if (local) {
     const { buffer, ...meta } = local;
     return meta;
@@ -263,7 +288,7 @@ export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta
 
   if (isS3Configured()) {
     try {
-      const s3Key = buildS3Key(token);
+      const s3Key = buildS3Key(storageToken);
       const head = await s3Client.send(
         new HeadObjectCommand({
           Bucket: S3_BUCKET_NAME,
@@ -294,10 +319,14 @@ export async function getTempFilePresignedUrl(token: string, expiresInSeconds: n
     return null;
   }
 
+  const resolved = resolveTokenInternalId(token);
+  if (resolved.expired) return null;
+  const storageToken = resolved.fileId;
+
   try {
     const command = new GetObjectCommand({
       Bucket: S3_BUCKET_NAME,
-      Key: buildS3Key(token),
+      Key: buildS3Key(storageToken),
     });
     return await getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
   } catch (err) {
@@ -307,12 +336,15 @@ export async function getTempFilePresignedUrl(token: string, expiresInSeconds: n
 }
 
 export async function deleteTempFile(token: string): Promise<void> {
-  memoryStore.delete(token);
-  memoryMetaStore.delete(token);
+  const resolved = resolveTokenInternalId(token);
+  const storageToken = resolved.fileId;
+
+  memoryStore.delete(storageToken);
+  memoryMetaStore.delete(storageToken);
 
   if (isS3Configured()) {
     try {
-      const s3Key = buildS3Key(token);
+      const s3Key = buildS3Key(storageToken);
       await s3Client.send(
         new DeleteObjectCommand({
           Bucket: S3_BUCKET_NAME,
@@ -326,12 +358,14 @@ export async function deleteTempFile(token: string): Promise<void> {
 
   if (redis.status === 'ready') {
     try {
-      await redis.zrem(EXPIRATION_QUEUE_KEY, token);
-      await redis.del(`${PREFIX_META}${token}`);
+      await redis.zrem(EXPIRATION_QUEUE_KEY, storageToken);
+      await redis.del(`${PREFIX_META}${storageToken}`);
     } catch (err) {
       logger.db.warn('Error al eliminar metadatos de archivo temporal en Redis', err);
     }
   }
 
-  await markFileOperationDeleted(token);
+  await markFileOperationDeleted(storageToken);
 }
+
+export { type GeneratedTokenResult, generateDownloadToken, verifyDownloadToken };

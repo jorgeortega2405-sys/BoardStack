@@ -142,7 +142,7 @@ export async function translatePdf(params: TranslatePdfParams): Promise<Translat
   const langSuffix = targetLang.toLowerCase().replace(/[^a-z0-9]/g, '_');
   const finalFilename = `${baseName}_${langSuffix}.pdf`;
 
-  await storeTempFile(fileId, {
+  const tokenResult = await storeTempFile(fileId, {
     buffer: resultBuffer,
     contentType: 'application/pdf',
     createdAt: Date.now(),
@@ -155,8 +155,8 @@ export async function translatePdf(params: TranslatePdfParams): Promise<Translat
   });
 
   return {
-    downloadUrl: `/api/tools/translate-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename: finalFilename,
     format: 'application/pdf',
     originalname,

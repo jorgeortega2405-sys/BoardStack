@@ -347,6 +347,33 @@ describe('BoardPDF - Backend Tools & Options Automated Verification', () => {
       assert.strictEqual(result.pageCount, 3);
       assert.strictEqual(result.filename, 'annotated.pdf');
     });
+
+    test('adds text with spanish accents, special symbols and multiline text safely', async () => {
+      const result = await editPdfDocument(
+        samplePdf3Pages,
+        'sample.pdf',
+        {
+          drawings: [
+            { color: '#ef4444', id: 'd1', pageIndex: 0, points: [{ x: 10, y: 10 }, { x: 50, y: 50 }], width: 2 },
+          ],
+          replacements: [
+            { color: '#000000', fontFamily: 'Helvetica', fontSize: 14, height: 20, id: 'r1', newText: 'Texto modificado: Español áéíóú ñ ¿¡', originalText: 'Original', pageIndex: 0, width: 100, x: 50, y: 200 },
+          ],
+          shapes: [
+            { color: '#3b82f6', fillColor: '#dbeafe', height: 60, id: 's1', pageIndex: 0, strokeColor: '#3b82f6', strokeWidth: 2, type: 'rect', width: 100, x: 100, y: 100 },
+            { color: '#10b981', id: 's2', pageIndex: 0, strokeColor: '#10b981', strokeWidth: 2, type: 'circle', width: 50, x: 250, y: 100 },
+          ],
+          texts: [
+            { color: '#10b981', fontFamily: 'TimesRoman', fontSize: 16, id: 't1', pageIndex: 0, text: 'Línea con acentos áéíóú ñ Ñ € y símbolos ✨ ✓ 🚀', x: 50, y: 300 },
+          ],
+        },
+        [],
+        'editado_resiliente.pdf'
+      );
+      assert.strictEqual(result.pageCount, 3);
+      assert.strictEqual(result.filename, 'editado_resiliente.pdf');
+      assert.ok(result.fileSize > 0);
+    });
   });
 
   describe('protect-pdf and unlock-pdf roundtrip', () => {

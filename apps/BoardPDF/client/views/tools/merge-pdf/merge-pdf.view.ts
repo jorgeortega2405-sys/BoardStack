@@ -311,9 +311,9 @@ export class MergePdfController implements ViewController {
       const arrayBuffer = await item.file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({
         cMapPacked: true,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/cmaps/',
+        cMapUrl: '/vendor/pdfjs/cmaps/',
         data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/standard_fonts/',
+        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
       });
       pdfDoc = await loadingTask.promise;
       item.pageCount = pdfDoc.numPages || item.pageCount;

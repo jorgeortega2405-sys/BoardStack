@@ -258,7 +258,7 @@ Respeta la estructura, tablas GFM y formato semántico del documento sin preámb
   const fileId = `md_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
   const mdBuffer = Buffer.from(cleanedMarkdown, 'utf-8');
 
-  await storeTempFile(fileId, {
+  const tokenResult = await storeTempFile(fileId, {
     buffer: mdBuffer,
     contentType: 'text/markdown; charset=utf-8',
     createdAt: Date.now(),
@@ -275,8 +275,8 @@ Respeta la estructura, tablas GFM y formato semántico del documento sin preámb
 
   return {
     characterCount,
-    downloadUrl: `/api/tools/pdf-to-markdown/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename: outFilename,
     lineCount,
     markdown: cleanedMarkdown,

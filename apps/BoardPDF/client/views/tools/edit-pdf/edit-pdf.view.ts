@@ -394,8 +394,11 @@ export class EditPdfController implements ViewController {
       await this.renderThumbnails();
       await this.renderDocumentPages();
       this.setMode('annotate');
-    } catch {
-      this.showError('El archivo seleccionado no se pudo abrir porque estaba dañado o contiene errores en su estructura.');
+    } catch (err: unknown) {
+      const message = err instanceof Error && err.name === 'PasswordException'
+        ? 'El archivo está protegido con contraseña. Desbloquéalo antes de editarlo.'
+        : 'El archivo seleccionado no se pudo abrir porque estaba dañado o contiene errores en su estructura.';
+      this.showError(message);
       this.resetSelectedFile();
     }
   }
@@ -499,7 +502,9 @@ export class EditPdfController implements ViewController {
       if (ctx) {
         ctx.scale(dpr, dpr);
         const viewport = page.getViewport({ scale: displayScale });
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        try {
+          await page.render({ canvasContext: ctx, viewport }).promise;
+        } catch {}
       }
       pageCard.appendChild(canvas);
 
@@ -956,6 +961,25 @@ export class EditPdfController implements ViewController {
       reader.readAsDataURL(file);
     });
 
+    let finalFile = file;
+    try {
+      const imgObj = new Image();
+      imgObj.src = dataUrl;
+      await new Promise<void>((resolve, reject) => {
+        imgObj.onload = () => resolve();
+        imgObj.onerror = reject;
+      });
+      const cvs = document.createElement('canvas');
+      cvs.width = imgObj.naturalWidth || 200;
+      cvs.height = imgObj.naturalHeight || 200;
+      const ctx = cvs.getContext('2d');
+      ctx?.drawImage(imgObj, 0, 0);
+      const blob = await new Promise<Blob | null>((resolve) => cvs.toBlob(resolve, 'image/png'));
+      if (blob) {
+        finalFile = new File([blob], `${file.name.replace(/\.[^/.]+$/, '')}.png`, { type: 'image/png' });
+      }
+    } catch {}
+
     const scale = this.pageScales[pageIndex] || 1;
     const imgWrapper = document.createElement('div');
     imgWrapper.className = 'pdf-added-image is-selected';
@@ -976,7 +1000,7 @@ export class EditPdfController implements ViewController {
 
     const item: EditImageItem = {
       dataUrl,
-      file,
+      file: finalFile,
       height: 140 / scale,
       id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       pageIndex,

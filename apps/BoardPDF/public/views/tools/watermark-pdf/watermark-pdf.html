@@ -261,12 +261,32 @@
           <span class="tool-sidebar__section-title">Páginas:</span>
           <div class="pn-range-row">
             <span style="font-size: 12.5px; color: var(--text-secondary);">de la página</span>
-            <div class="field" data-ref="field-from-page" style="margin: 0; width: 70px;">
-              <input class="field__input field__input--h36" data-ref="input-from-page" type="number" min="1" value="1" style="text-align: center; font-size: 13px;" />
+            <div class="component-inline-control component-inline-control--compact component-inline-control--sm" data-ref="inline-ctrl-from-page">
+              <div class="component-inline-control__group" data-ref="group-wm-from-page-dec">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-wm-from-page-dec" data-step-change="-1" aria-label="Disminuir página inicial">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+              <input class="component-inline-control__input" data-ref="input-from-page" type="number" min="1" value="1" autocomplete="off" />
+              <div class="component-inline-control__group" data-ref="group-wm-from-page-inc">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-wm-from-page-inc" data-step-change="1" aria-label="Aumentar página inicial">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
             </div>
             <span style="font-size: 12.5px; color: var(--text-secondary);">a</span>
-            <div class="field" data-ref="field-to-page" style="margin: 0; width: 70px;">
-              <input class="field__input field__input--h36" data-ref="input-to-page" type="number" min="1" value="1" style="text-align: center; font-size: 13px;" />
+            <div class="component-inline-control component-inline-control--compact component-inline-control--sm" data-ref="inline-ctrl-to-page">
+              <div class="component-inline-control__group" data-ref="group-wm-to-page-dec">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-wm-to-page-dec" data-step-change="-1" aria-label="Disminuir página final">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+              <input class="component-inline-control__input" data-ref="input-to-page" type="number" min="1" value="1" autocomplete="off" />
+              <div class="component-inline-control__group" data-ref="group-wm-to-page-inc">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-wm-to-page-inc" data-step-change="1" aria-label="Aumentar página final">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

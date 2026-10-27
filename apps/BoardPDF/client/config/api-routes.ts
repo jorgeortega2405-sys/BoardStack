@@ -1,8 +1,8 @@
 export const API_ROUTES = {
   download: {
-    delete: (token: string) => `/api/download/${encodeURIComponent(token)}`,
-    file: (token: string) => `/api/download/${encodeURIComponent(token)}`,
-    info: (token: string) => `/api/download/${encodeURIComponent(token)}/info`,
+    delete: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
+    file: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
+    info: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}/info`,
   },
   health: '/api/health',
   tools: {

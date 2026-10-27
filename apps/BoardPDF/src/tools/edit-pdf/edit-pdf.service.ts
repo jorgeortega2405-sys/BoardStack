@@ -3,6 +3,7 @@ import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
 import { storeTempFile } from '../../services/temp-storage.service.js';
+import { repairPdfBuffer } from '../repair-pdf/repair-pdf.service.js';
 import { EditPdfModifications, EditPdfResult } from './edit-pdf.types.js';
 
 function sanitizePdfFilename(rawName?: string, defaultName = 'documento_editado.pdf'): string {
@@ -36,21 +37,27 @@ function parseHexColor(hex?: string): { b: number; g: number; r: number } {
   return { b: 0, g: 0, r: 0 };
 }
 
-function cleanTextForPdf(input: string): string {
-  const str = input.replace(/\uFFFD/g, '');
+function encodeSafeTextForFont(font: any, input?: string): string {
+  if (!input || typeof input !== 'string') return '';
   let result = '';
-  for (const char of str) {
-    const code = char.charCodeAt(0);
-    if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)) {
+  for (const char of input) {
+    if (char === '\n' || char === '\r' || char === '\t') {
       result += char;
-    } else {
+      continue;
+    }
+    try {
+      font.encodeText(char);
+      result += char;
+    } catch {
       const decomposed = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      let decSafe = '';
       for (const d of decomposed) {
-        const dCode = d.charCodeAt(0);
-        if (dCode >= 0x20 && dCode <= 0x7e) {
-          result += d;
-        }
+        try {
+          font.encodeText(d);
+          decSafe += d;
+        } catch {}
       }
+      result += decSafe;
     }
   }
   return result;
@@ -63,7 +70,29 @@ export async function editPdfDocument(
   imageBuffers: Buffer[] = [],
   customFilename?: string
 ): Promise<EditPdfResult> {
-  const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+  let pdfDoc: PDFDocument;
+  try {
+    pdfDoc = await PDFDocument.load(pdfBuffer, {
+      capNumbers: true,
+      ignoreEncryption: true,
+      throwOnInvalidObject: false,
+      updateMetadata: false,
+    });
+  } catch (initialErr) {
+    logger.app.warn('Carga directa con pdf-lib falló en editPdfDocument, intentando reparación automática', initialErr);
+    try {
+      const { buffer: repairedBuffer } = await repairPdfBuffer(pdfBuffer);
+      pdfDoc = await PDFDocument.load(repairedBuffer, {
+        capNumbers: true,
+        ignoreEncryption: true,
+        throwOnInvalidObject: false,
+        updateMetadata: false,
+      });
+    } catch {
+      throw new Error('El archivo PDF no se pudo abrir ni reparar.');
+    }
+  }
+
   const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontCourier = await pdfDoc.embedFont(StandardFonts.Courier);
@@ -82,9 +111,17 @@ export async function editPdfDocument(
       if (imgBuf[0] === 0x89 && imgBuf[1] === 0x50) {
         const embedded = await pdfDoc.embedPng(imgBuf);
         embeddedImages.push(embedded);
-      } else {
+      } else if (imgBuf[0] === 0xff && imgBuf[1] === 0xd8) {
         const embedded = await pdfDoc.embedJpg(imgBuf);
         embeddedImages.push(embedded);
+      } else {
+        try {
+          const embedded = await pdfDoc.embedJpg(imgBuf);
+          embeddedImages.push(embedded);
+        } catch {
+          const embedded = await pdfDoc.embedPng(imgBuf);
+          embeddedImages.push(embedded);
+        }
       }
     } catch (err) {
       logger.app.warn('Error al incrustar imagen en PDF', err);
@@ -127,16 +164,18 @@ export async function editPdfDocument(
 
       const font = resolveFont(rep.fontFamily);
       const colorRgb = parseHexColor(rep.color || '#000000');
-      const safeText = cleanTextForPdf(rep.newText);
+      const safeText = encodeSafeTextForFont(font, rep.newText);
       const fontSize = Math.max(6, rep.fontSize || 12);
 
-      page.drawText(safeText, {
-        color: rgb(colorRgb.r, colorRgb.g, colorRgb.b),
-        font,
-        size: fontSize,
-        x: rep.x,
-        y: pageHeight - rep.y - rep.height * 0.82,
-      });
+      if (safeText) {
+        page.drawText(safeText, {
+          color: rgb(colorRgb.r, colorRgb.g, colorRgb.b),
+          font,
+          size: fontSize,
+          x: rep.x,
+          y: pageHeight - rep.y - rep.height * 0.82,
+        });
+      }
     }
   }
 
@@ -220,16 +259,18 @@ export async function editPdfDocument(
       const pageHeight = page.getHeight();
       const font = resolveFont(item.fontFamily);
       const colorRgb = parseHexColor(item.color || '#000000');
-      const safeText = cleanTextForPdf(item.text);
+      const safeText = encodeSafeTextForFont(font, item.text);
       const fontSize = Math.max(8, item.fontSize || 14);
 
-      page.drawText(safeText, {
-        color: rgb(colorRgb.r, colorRgb.g, colorRgb.b),
-        font,
-        size: fontSize,
-        x: item.x || 50,
-        y: pageHeight - (item.y || 50) - fontSize * 0.85,
-      });
+      if (safeText) {
+        page.drawText(safeText, {
+          color: rgb(colorRgb.r, colorRgb.g, colorRgb.b),
+          font,
+          size: fontSize,
+          x: item.x || 50,
+          y: pageHeight - (item.y || 50) - fontSize * 0.85,
+        });
+      }
     }
   }
 
@@ -258,7 +299,7 @@ export async function editPdfDocument(
   const finalFilename = sanitizePdfFilename(customFilename || `${baseName}_editado.pdf`);
   const token = crypto.randomUUID();
 
-  await storeTempFile(token, {
+  const tokenResult = await storeTempFile(token, {
     buffer: outputBuffer,
     contentType: 'application/pdf',
     createdAt: Date.now(),
@@ -266,8 +307,8 @@ export async function editPdfDocument(
   });
 
   return {
-    downloadUrl: `/api/download/${token}`,
-    fileId: token,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename: finalFilename,
     fileSize: outputBuffer.length,
     pageCount,

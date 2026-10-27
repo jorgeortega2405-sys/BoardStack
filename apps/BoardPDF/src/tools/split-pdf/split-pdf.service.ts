@@ -253,11 +253,11 @@ export async function splitPdfFile(
     totalPages,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
-    downloadUrl: `/api/tools/split-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename: finalFilename,
     fileSize: finalBuffer.length,
     isZip,

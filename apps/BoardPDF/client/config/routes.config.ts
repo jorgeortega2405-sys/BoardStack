@@ -308,10 +308,10 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
     id: 'download-ready',
     match: (path) => {
-      const downloadMatch = path.match(/^\/download\/([a-zA-Z0-9_-]+)$/);
-      if (downloadMatch) return { token: downloadMatch[1] };
-      const readyMatch = path.match(/^\/download-ready\/([a-zA-Z0-9_-]+)$/);
-      if (readyMatch) return { token: readyMatch[1] };
+      const downloadMatch = path.match(/^\/download\/([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?$/);
+      if (downloadMatch) return { token: downloadMatch[2] ? `${downloadMatch[1]}/${downloadMatch[2]}` : downloadMatch[1] };
+      const readyMatch = path.match(/^\/download-ready\/([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?$/);
+      if (readyMatch) return { token: readyMatch[2] ? `${readyMatch[1]}/${readyMatch[2]}` : readyMatch[1] };
       if (path === '/download-ready' || path === '/download') return { token: '' };
       return false;
     },

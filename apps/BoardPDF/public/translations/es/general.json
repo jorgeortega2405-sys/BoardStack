@@ -259,7 +259,7 @@
     "remove_pdf_pages_summary_title": "Resumen",
     "remove_pdf_pages_title": "Eliminar páginas",
     "remove_pdf_pages_to_remove": "Páginas para quitar:",
-    "remove_pdf_pages_to_remove_placeholder": "ejemplo: 1, 5-8",
+    "remove_pdf_pages_to_remove_placeholder": "1, 5-8",
     "remove_pdf_pages_total_pages": "Páginas totales",
     "split_pdf_add_range": "Añadir Rango",
     "split_pdf_btn_download": "Descargar PDF(s) Dividido(s)",

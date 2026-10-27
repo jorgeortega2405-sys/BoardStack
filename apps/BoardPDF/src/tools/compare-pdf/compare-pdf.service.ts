@@ -326,7 +326,7 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
       const fileId = `comp_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
       const outFilename = sanitizePdfFilename(filename1);
 
-      await storeTempFile(fileId, {
+      const tokenResult = await storeTempFile(fileId, {
         buffer: finalReportBuffer,
         contentType: 'application/pdf',
         createdAt: Date.now(),
@@ -338,8 +338,8 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
       return {
         additionsCount,
         deletionsCount,
-        downloadUrl: `/api/tools/compare-pdf/download/${fileId}`,
-        fileId,
+        downloadUrl: tokenResult.downloadUrl,
+        fileId: tokenResult.fullToken,
         fileSize: finalReportBuffer.length,
         filename: outFilename,
         pageComparisons: pageComps,
@@ -402,7 +402,7 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
   const fileId = `comp_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
   const outFilename = sanitizePdfFilename(filename1);
 
-  await storeTempFile(fileId, {
+  const tokenResult = await storeTempFile(fileId, {
     buffer: reportBuffer,
     contentType: 'application/pdf',
     createdAt: Date.now(),
@@ -414,8 +414,8 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
   return {
     additionsCount,
     deletionsCount,
-    downloadUrl: `/api/tools/compare-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     fileSize: reportBuffer.length,
     filename: outFilename,
     pageComparisons,

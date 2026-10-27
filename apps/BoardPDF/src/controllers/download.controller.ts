@@ -1,19 +1,38 @@
 import { Request, Response } from 'express';
+import { verifyDownloadToken } from '../services/download-token.service.js';
 import { logger } from '../services/logger.service.js';
 import { DEFAULT_TTL_SECONDS, deleteTempFile, getTempFile, getTempFileMeta, getTempFilePresignedUrl, getTempFileStream } from '../services/temp-storage.service.js';
 
+function extractRawToken(req: Request): string {
+  const token = req.params.token ? String(req.params.token).trim() : '';
+  const shard = req.params.shard ? String(req.params.shard).trim() : '';
+  return shard ? `${token}/${shard}` : token;
+}
+
 export async function handleDownloadFile(req: Request, res: Response): Promise<void> {
   try {
-    const { token } = req.params;
-    if (!token) {
+    const rawToken = extractRawToken(req);
+    if (!rawToken) {
       res.status(400).json({ error: 'Token de descarga inválido.', success: false });
       return;
     }
 
-    const streamResult = await getTempFileStream(token);
+    const verified = verifyDownloadToken(rawToken);
+    if (!verified.valid && !verified.isLegacy) {
+      if (verified.expired) {
+        res.status(410).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
+        return;
+      }
+      res.status(403).json({ error: 'Token de descarga inválido o alterado.', success: false });
+      return;
+    }
+
+    const storageToken = verified.valid ? verified.fileId : rawToken;
+    const streamResult = await getTempFileStream(storageToken);
     if (streamResult) {
+      const downloadFilename = verified.filename || streamResult.filename;
       res.setHeader('Content-Type', streamResult.contentType || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(streamResult.filename)}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
       if (streamResult.fileSize > 0) {
         res.setHeader('Content-Length', streamResult.fileSize);
       }
@@ -30,14 +49,15 @@ export async function handleDownloadFile(req: Request, res: Response): Promise<v
       return;
     }
 
-    const item = await getTempFile(token);
+    const item = await getTempFile(storageToken);
     if (!item) {
       res.status(404).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
       return;
     }
 
+    const downloadFilename = verified.filename || item.filename;
     res.setHeader('Content-Type', item.contentType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(item.filename)}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
     res.setHeader('Content-Length', item.buffer.length);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(item.buffer);
@@ -49,13 +69,24 @@ export async function handleDownloadFile(req: Request, res: Response): Promise<v
 
 export async function handleDownloadInfo(req: Request, res: Response): Promise<void> {
   try {
-    const { token } = req.params;
-    if (!token) {
+    const rawToken = extractRawToken(req);
+    if (!rawToken) {
       res.status(400).json({ error: 'Token de descarga inválido.', success: false });
       return;
     }
 
-    const meta = await getTempFileMeta(token);
+    const verified = verifyDownloadToken(rawToken);
+    if (!verified.valid && !verified.isLegacy) {
+      if (verified.expired) {
+        res.status(410).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
+        return;
+      }
+      res.status(403).json({ error: 'Token de descarga inválido o alterado.', success: false });
+      return;
+    }
+
+    const storageToken = verified.valid ? verified.fileId : rawToken;
+    const meta = await getTempFileMeta(storageToken);
     if (!meta) {
       res.status(404).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
       return;
@@ -63,19 +94,19 @@ export async function handleDownloadInfo(req: Request, res: Response): Promise<v
 
     const fileSize = meta.fileSize || meta.size || 0;
     const createdAt = meta.createdAt || Date.now();
-    const expiresAt = createdAt + DEFAULT_TTL_SECONDS * 1000;
-    const presignedUrl = await getTempFilePresignedUrl(token);
+    const expiresAt = verified.valid && verified.exp ? verified.exp : (createdAt + DEFAULT_TTL_SECONDS * 1000);
+    const presignedUrl = await getTempFilePresignedUrl(storageToken);
 
     res.status(200).json({
       data: {
         contentType: meta.contentType || 'application/pdf',
         createdAt,
-        downloadUrl: `/api/download/${encodeURIComponent(token)}`,
+        downloadUrl: `/api/download/${rawToken}`,
         expiresAt,
         fileSize,
-        filename: meta.filename,
+        filename: verified.filename || meta.filename,
         presignedUrl,
-        token,
+        token: rawToken,
       },
       success: true,
     });
@@ -87,13 +118,20 @@ export async function handleDownloadInfo(req: Request, res: Response): Promise<v
 
 export async function handleDeleteDownloadFile(req: Request, res: Response): Promise<void> {
   try {
-    const { token } = req.params;
-    if (!token) {
+    const rawToken = extractRawToken(req);
+    if (!rawToken) {
       res.status(400).json({ error: 'Token de descarga inválido.', success: false });
       return;
     }
 
-    await deleteTempFile(token);
+    const verified = verifyDownloadToken(rawToken);
+    if (!verified.valid && !verified.isLegacy) {
+      res.status(403).json({ error: 'Token de descarga inválido o alterado.', success: false });
+      return;
+    }
+
+    const storageToken = verified.valid ? verified.fileId : rawToken;
+    await deleteTempFile(storageToken);
     res.status(200).json({
       message: 'Archivo eliminado correctamente.',
       success: true,

@@ -941,3 +941,54 @@ export function animateTypewriter(
     }, speed);
   });
 }
+
+export function bindInlineControls(container: HTMLElement | Document, signal?: AbortSignal): void {
+  const inlineBtns = container.querySelectorAll<HTMLButtonElement>('.component-inline-control__btn[data-step-change]');
+  inlineBtns.forEach((btn) => {
+    if ((btn as any)._hasInlineBound) return;
+    (btn as any)._hasInlineBound = true;
+
+    btn.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        const stepChange = Number(btn.dataset.stepChange) || 0;
+        const control = btn.closest('.component-inline-control');
+        const input = control?.querySelector<HTMLInputElement>('.component-inline-control__input');
+        if (!input || input.disabled) return;
+
+        const currentVal = Number(input.value) || 0;
+        const min = input.min !== '' ? Number(input.min) : -Infinity;
+        const max = input.max !== '' ? Number(input.max) : Infinity;
+
+        let newVal = currentVal + stepChange;
+        if (newVal < min) newVal = min;
+        if (newVal > max) newVal = max;
+
+        input.value = String(newVal);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      signal ? { signal } : undefined
+    );
+  });
+
+  const numInputs = container.querySelectorAll<HTMLInputElement>('.component-inline-control__input');
+  numInputs.forEach((input) => {
+    if ((input as any)._hasInlineBound) return;
+    (input as any)._hasInlineBound = true;
+
+    input.addEventListener(
+      'change',
+      () => {
+        const val = Number(input.value);
+        if (isNaN(val)) return;
+        const min = input.min !== '' ? Number(input.min) : -Infinity;
+        const max = input.max !== '' ? Number(input.max) : Infinity;
+        if (val < min) input.value = String(min);
+        if (val > max) input.value = String(max);
+      },
+      signal ? { signal } : undefined
+    );
+  });
+}

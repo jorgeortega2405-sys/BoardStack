@@ -183,12 +183,12 @@ export async function compressPdfFile(params: CompressPdfParams): Promise<Compre
     size: compressedSize,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
     compressedSize,
-    downloadUrl: `/api/tools/compress-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename,
     originalSize,
     pageCount,

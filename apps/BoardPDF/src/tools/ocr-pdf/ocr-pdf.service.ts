@@ -148,11 +148,11 @@ export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfRespons
     size: processedSize,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
-    downloadUrl: `/api/tools/ocr-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename,
     language: resolvedLang,
     originalSize,

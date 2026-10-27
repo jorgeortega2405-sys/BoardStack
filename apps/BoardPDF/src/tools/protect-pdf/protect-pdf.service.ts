@@ -67,11 +67,11 @@ with pikepdf.open(input_path) as pdf:
       size: encryptedBuffer.length,
     };
 
-    await storeTempFile(fileId, storedItem);
+    const tokenResult = await storeTempFile(fileId, storedItem);
 
     return {
-      downloadUrl: `/api/tools/protect-pdf/download/${fileId}`,
-      fileId,
+      downloadUrl: tokenResult.downloadUrl,
+      fileId: tokenResult.fullToken,
       filename,
       fileSize: encryptedBuffer.length,
       totalPages,

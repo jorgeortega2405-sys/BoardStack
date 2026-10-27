@@ -107,9 +107,7 @@ async function runQpdfLinearize(inputPath: string, outputPath: string): Promise<
   return false;
 }
 
-export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfResponse> {
-  const { buffer, filename: customFilename, originalname } = params;
-  const originalSize = buffer.length;
+export async function repairPdfBuffer(buffer: Buffer): Promise<{ buffer: Buffer; pageCount: number }> {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_repair_'));
   const inputTempPath = path.join(tempDir, 'broken.pdf');
   const pyOutTempPath = path.join(tempDir, 'repaired_py.pdf');
@@ -174,6 +172,13 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
     throw new Error('No se pudo reconstruir la estructura del archivo PDF dañado.');
   }
 
+  return { buffer: finalBuffer, pageCount };
+}
+
+export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfResponse> {
+  const { buffer, filename: customFilename, originalname } = params;
+  const originalSize = buffer.length;
+  const { buffer: finalBuffer, pageCount } = await repairPdfBuffer(buffer);
   const repairedSize = finalBuffer.length;
   const fileId = crypto.randomUUID();
   const filename = sanitizePdfFilename(customFilename || originalname);
@@ -189,11 +194,11 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
     size: repairedSize,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
-    downloadUrl: `/api/tools/repair-pdf/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename,
     originalSize,
     pageCount,

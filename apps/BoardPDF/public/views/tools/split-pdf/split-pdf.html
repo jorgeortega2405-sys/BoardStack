@@ -87,9 +87,6 @@
           </button>
           <button type="button" class="component-button component-button--rounded-pill" data-ref="tab-size" data-mode="size">
             <span data-i18n="tools.split_pdf_tab_size">Tamaño</span>
-            <span class="split-tab-pro-badge" data-ref="badge-split-pro" title="Pro" aria-label="Pro">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            </span>
           </button>
         </div>
 
@@ -114,10 +111,19 @@
           <div class="split-submode-view" data-ref="section-range-fixed" style="display: none;">
             <div class="tool-sidebar__section">
               <span class="tool-sidebar__section-title">Páginas por archivo dividido:</span>
-              <label class="field" data-ref="field-fixed-pages">
-                <input class="field__input" data-ref="input-fixed-pages" type="number" min="1" max="999" value="1" />
-                <span class="field__label">Dividir en bloques de N páginas</span>
-              </label>
+              <div class="component-inline-control component-inline-control--full" data-ref="inline-ctrl-fixed-pages">
+                <div class="component-inline-control__group" data-ref="group-fixed-pages-dec">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-fixed-pages-dec" data-step-change="-1" aria-label="Disminuir páginas por archivo">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                </div>
+                <input class="component-inline-control__input" data-ref="input-fixed-pages" type="number" min="1" max="999" value="1" autocomplete="off" />
+                <div class="component-inline-control__group" data-ref="group-fixed-pages-inc">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-fixed-pages-inc" data-step-change="1" aria-label="Aumentar páginas por archivo">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
             </div>
             <div class="tool-sidebar-notice split-info-notice" data-ref="fixed-info-notice">
               <svg class="component-icon tool-sidebar-notice__icon split-info-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
@@ -151,7 +157,7 @@
               <span class="tool-sidebar__section-title" data-i18n="tools.split_pdf_pages_to_extract">Páginas para extraer:</span>
               <label class="field" data-ref="field-pages-selection">
                 <input class="field__input" data-ref="input-pages-selection" type="text" placeholder=" " value="" autocomplete="off" />
-                <span class="field__label">ejemplo: 1, 3-5, 8</span>
+                <span class="field__label">1, 3-5, 8</span>
               </label>
               <span class="split-field-hint">También puedes hacer clic directamente en las tarjetas de página a la izquierda.</span>
             </div>
@@ -177,10 +183,19 @@
           <div class="tool-sidebar__section">
             <span class="tool-sidebar__section-title" data-i18n="tools.split_pdf_max_size">Tamaño máximo por archivo:</span>
             <div class="split-size-input-row">
-              <label class="field split-size-input-field" data-ref="field-max-size">
-                <input class="field__input" data-ref="input-max-size" type="number" min="10" max="99999" value="200" />
-                <span class="field__label">Límite por parte</span>
-              </label>
+              <div class="component-inline-control" data-ref="inline-ctrl-max-size" style="flex: 1;">
+                <div class="component-inline-control__group" data-ref="group-max-size-dec">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-max-size-dec" data-step-change="-10" aria-label="Disminuir tamaño máximo">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                </div>
+                <input class="component-inline-control__input" data-ref="input-max-size" type="number" min="10" max="99999" value="200" autocomplete="off" />
+                <div class="component-inline-control__group" data-ref="group-max-size-inc">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-max-size-inc" data-step-change="10" aria-label="Aumentar tamaño máximo">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
               <div class="split-unit-selector" data-ref="split-unit-selector">
                 <button type="button" class="split-unit-btn is-active" data-ref="btn-unit-kb" data-unit="KB">KB</button>
                 <button type="button" class="split-unit-btn" data-ref="btn-unit-mb" data-unit="MB">MB</button>

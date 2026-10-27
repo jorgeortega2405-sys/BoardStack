@@ -10,7 +10,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { bindFileDropzone, bindInlineControls, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
 
 export class PageNumbersController implements ViewController {
@@ -236,6 +236,8 @@ export class PageNumbersController implements ViewController {
         void this.handleExecutePageNumbers(executeBtn);
       }
     }, { signal });
+
+    bindInlineControls(this.container, signal);
   }
 
   private async handleFileSelected(file: File): Promise<void> {

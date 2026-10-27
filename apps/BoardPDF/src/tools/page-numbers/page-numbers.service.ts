@@ -195,11 +195,11 @@ export async function addPageNumbers(
     size: finalBuffer.length,
   };
 
-  await storeTempFile(fileId, storedItem);
+  const tokenResult = await storeTempFile(fileId, storedItem);
 
   return {
-    downloadUrl: `/api/tools/page-numbers/download/${fileId}`,
-    fileId,
+    downloadUrl: tokenResult.downloadUrl,
+    fileId: tokenResult.fullToken,
     filename,
     fileSize: finalBuffer.length,
     totalPages,

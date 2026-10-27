@@ -736,6 +736,43 @@
   font-weight: 600;
 }
 
+.component-inline-control--compact {
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+}
+
+.component-inline-control--compact .component-inline-control__input {
+  width: 40px;
+  min-width: 40px;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.component-inline-control--sm {
+  height: 36px;
+  border-radius: 10px;
+}
+
+.component-inline-control--sm .component-inline-control__btn {
+  height: 28px;
+  width: 28px;
+  border-radius: 6px;
+}
+
+.component-inline-control--sm .component-inline-control__btn .component-icon,
+.component-inline-control--sm .component-inline-control__btn .material-symbols-rounded {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.component-inline-control--sm .component-inline-control__input {
+  height: 28px;
+  font-size: 12px;
+}
+
 .component-inline-control--full {
   width: 100%;
 }

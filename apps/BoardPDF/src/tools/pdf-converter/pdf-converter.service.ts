@@ -48,7 +48,7 @@ export async function convertPdfFile(
       await fs.promises.unlink(result.outputPath);
     } catch {}
 
-    await storeTempFile(token, {
+    const tokenResult = await storeTempFile(token, {
       buffer,
       contentType: result.mimeType,
       createdAt: Date.now(),
@@ -59,8 +59,8 @@ export async function convertPdfFile(
     });
 
     return {
-      downloadToken: token,
-      downloadUrl: `/api/tools/pdf-converter/download/${token}`,
+      downloadToken: tokenResult.fullToken,
+      downloadUrl: tokenResult.downloadUrl,
       fileSize,
       filename: result.filename,
       isZip: result.isZip,

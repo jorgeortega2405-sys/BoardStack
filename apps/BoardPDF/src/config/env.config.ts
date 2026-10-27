@@ -27,6 +27,7 @@ export const config = {
   deepl: {
     apiKey: process.env.DEEPL_API_KEY || '',
   },
+  downloadSecret: process.env.DOWNLOAD_TOKEN_SECRET || process.env.SESSION_SECRET || 'boardpdf_secure_cryptographic_download_token_master_secret_2026',
   dropbox: {
     appKey: process.env.DROPBOX_APP_KEY || '',
     appSecret: process.env.DROPBOX_APP_SECRET || '',

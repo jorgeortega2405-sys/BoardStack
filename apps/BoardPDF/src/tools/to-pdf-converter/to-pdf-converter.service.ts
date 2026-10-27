@@ -271,7 +271,7 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
 
     const token = `pdf_url_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
 
-    await storeTempFile(token, {
+    const tokenResult = await storeTempFile(token, {
       buffer,
       contentType: 'application/pdf',
       createdAt: Date.now(),
@@ -281,8 +281,8 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
     });
 
     return {
-      downloadToken: token,
-      downloadUrl: `/api/tools/to-pdf/download/${token}`,
+      downloadToken: tokenResult.fullToken,
+      downloadUrl: tokenResult.downloadUrl,
       fileSize,
       filename: targetPdfName,
       originalSize: fileSize,
@@ -445,7 +445,7 @@ im.save(output_file, 'PDF', resolution=100.0)
 
     const token = `pdf_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
 
-    await storeTempFile(token, {
+    const tokenResult = await storeTempFile(token, {
       buffer,
       contentType: 'application/pdf',
       createdAt: Date.now(),
@@ -455,8 +455,8 @@ im.save(output_file, 'PDF', resolution=100.0)
     });
 
     return {
-      downloadToken: token,
-      downloadUrl: `/api/tools/to-pdf/download/${token}`,
+      downloadToken: tokenResult.fullToken,
+      downloadUrl: tokenResult.downloadUrl,
       fileSize,
       filename: targetPdfName,
       originalSize,

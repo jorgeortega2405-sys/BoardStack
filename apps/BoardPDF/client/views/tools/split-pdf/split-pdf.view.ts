@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { bindFileDropzone, bindInlineControls, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
 import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
 
 function formatBytes(bytes: number): string {
@@ -408,6 +408,8 @@ export class SplitPdfController implements ViewController {
         this.updateSummary();
       }
     }, { signal });
+
+    bindInlineControls(this.container, signal);
   }
 
   public async handleFileSelected(file: File): Promise<void> {
@@ -434,9 +436,9 @@ export class SplitPdfController implements ViewController {
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({
         cMapPacked: true,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/cmaps/',
+        cMapUrl: '/vendor/pdfjs/cmaps/',
         data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/standard_fonts/',
+        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
       });
       this.pdfDocument = await loadingTask.promise;
       const count = this.pdfDocument.numPages || 1;
@@ -628,29 +630,54 @@ export class SplitPdfController implements ViewController {
       const canDelete = this.ranges.length > 1;
       return `
         <div class="split-range-card" data-ref="range-card-${range.id}" data-id="${range.id}">
-          <div class="split-range-card__header">
-            <span class="split-range-card__title">Rango ${index + 1}</span>
+          <div class="tool-sidebar__section-header split-range-card__header">
+            <span class="tool-sidebar__section-title split-range-card__title">Rango ${index + 1}:</span>
             ${canDelete ? `
-              <button type="button" class="split-range-card__btn-delete" data-ref="btn-delete-range" data-id="${range.id}" title="Eliminar rango">
+              <button type="button" class="split-range-card__btn-delete" data-ref="btn-delete-range" data-id="${range.id}" title="Eliminar rango" aria-label="Eliminar rango">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             ` : ''}
           </div>
           <div class="split-range-card__inputs">
-            <label class="field" data-ref="field-range-from-${range.id}">
-              <input class="field__input" data-ref="input-range-from" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.from}" />
-              <span class="field__label">Desde pág.</span>
-            </label>
-            <label class="field" data-ref="field-range-to-${range.id}">
-              <input class="field__input" data-ref="input-range-to" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.to}" />
-              <span class="field__label">Hasta pág.</span>
-            </label>
+            <div class="split-range-input-wrap" data-ref="wrap-range-from-${range.id}">
+              <span class="split-range-input-label">Desde pág.</span>
+              <div class="component-inline-control component-inline-control--full component-inline-control--sm" data-ref="control-range-from-${range.id}">
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-range-from-dec" data-id="${range.id}" data-step-change="-1" aria-label="Disminuir página inicial">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                </div>
+                <input class="component-inline-control__input" data-ref="input-range-from" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.from}" autocomplete="off" />
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-range-from-inc" data-id="${range.id}" data-step-change="1" aria-label="Aumentar página inicial">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="split-range-input-wrap" data-ref="wrap-range-to-${range.id}">
+              <span class="split-range-input-label">Hasta pág.</span>
+              <div class="component-inline-control component-inline-control--full component-inline-control--sm" data-ref="control-range-to-${range.id}">
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-range-to-dec" data-id="${range.id}" data-step-change="-1" aria-label="Disminuir página final">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                </div>
+                <input class="component-inline-control__input" data-ref="input-range-to" data-id="${range.id}" type="number" min="1" max="${total}" value="${range.to}" autocomplete="off" />
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-ref="btn-range-to-inc" data-id="${range.id}" data-step-change="1" aria-label="Aumentar página final">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       `;
     }).join('');
 
     renderIcons(container);
+    bindInlineControls(container);
 
     container.querySelectorAll<HTMLButtonElement>('[data-ref="btn-delete-range"]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -784,7 +811,6 @@ export class SplitPdfController implements ViewController {
 
     return `
       <div class="pdf-card split-page-card ${selectedClass} ${dimmedClass}" data-ref="card-page-${page.num}" data-page="${page.num}">
-        <div class="split-page-card__order-badge">#${page.num}</div>
         <div class="split-page-card__check-badge">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
         </div>
