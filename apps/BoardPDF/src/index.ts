@@ -12,7 +12,6 @@ import { injectHtmlSeo, isSupportedLanguage, normalizeLanguageCode } from './con
 import { csrfProtection } from './middlewares/csrf.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import { originProtection, securityHeaders } from './middlewares/security-headers.middleware.js';
-import aiRoutes from './routes/ai.routes.js';
 import downloadRoutes from './routes/download.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
@@ -228,7 +227,6 @@ async function startServer(): Promise<void> {
     });
   });
 
-  app.use('/api', aiRoutes);
   app.use('/api', downloadRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);

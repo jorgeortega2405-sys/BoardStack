@@ -1,7 +1,5 @@
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import fs from 'fs';
-import path from 'path';
 import { Readable } from 'stream';
 import { redis } from '../config/redis.config.js';
 import { ensureBucketExists, isS3Configured, S3_BUCKET_NAME, s3Client } from '../config/s3.config.js';
@@ -38,14 +36,7 @@ const PREFIX_META = 'tempfile:meta:';
 const EXPIRATION_QUEUE_KEY = 's3:expiration_queue';
 export const DEFAULT_TTL_SECONDS = 60 * 60;
 
-const TEMP_STORAGE_DIR = path.resolve(process.cwd(), 'temp_storage');
-if (!fs.existsSync(TEMP_STORAGE_DIR)) {
-  try {
-    fs.mkdirSync(TEMP_STORAGE_DIR, { recursive: true });
-  } catch {}
-}
-
-setInterval(async () => {
+setInterval(() => {
   const now = Date.now();
   const maxAgeMs = DEFAULT_TTL_SECONDS * 1000;
 
@@ -60,31 +51,10 @@ setInterval(async () => {
       memoryMetaStore.delete(key);
     }
   }
-
-  try {
-    const files = await fs.promises.readdir(TEMP_STORAGE_DIR);
-    for (const file of files) {
-      const fullPath = path.join(TEMP_STORAGE_DIR, file);
-      try {
-        const stats = await fs.promises.stat(fullPath);
-        if (now - stats.mtimeMs > maxAgeMs) {
-          await fs.promises.unlink(fullPath);
-        }
-      } catch {}
-    }
-  } catch {}
 }, 5 * 60 * 1000).unref();
 
 function buildS3Key(token: string): string {
   return `temp/${token}`;
-}
-
-function getLocalBinPath(token: string): string {
-  return path.join(TEMP_STORAGE_DIR, `${token}.bin`);
-}
-
-function getLocalMetaPath(token: string): string {
-  return path.join(TEMP_STORAGE_DIR, `${token}.meta.json`);
 }
 
 export async function storeTempFile(
@@ -155,16 +125,7 @@ export async function storeTempFile(
     }
   }
 
-  try {
-    const binPath = getLocalBinPath(token);
-    const metaPath = getLocalMetaPath(token);
-    await fs.promises.writeFile(binPath, buffer);
-    await fs.promises.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
-    return;
-  } catch (diskErr) {
-    logger.db.warn('Error al escribir archivo temporal en disco local, usando memoria volátil', diskErr);
-    memoryStore.set(token, file);
-  }
+  memoryStore.set(token, file);
 }
 
 export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
@@ -210,29 +171,8 @@ export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
     } catch (err: any) {
       const isNotFound = err?.$metadata?.httpStatusCode === 404 || err?.name === 'NoSuchKey';
       if (!isNotFound) {
-        logger.db.warn('Error al recuperar archivo temporal de S3, verificando almacenamiento local', err);
+        logger.db.warn('Error al recuperar archivo temporal de S3', err);
       }
-    }
-  }
-
-  const binPath = getLocalBinPath(token);
-  try {
-    const buffer = await fs.promises.readFile(binPath);
-    const resolvedMeta = meta || {
-      contentType: 'application/pdf',
-      createdAt: Date.now(),
-      filename: 'documento.pdf',
-    };
-
-    return {
-      ...resolvedMeta,
-      buffer,
-      fileSize: buffer.length,
-      size: buffer.length,
-    } as unknown as T;
-  } catch (err: any) {
-    if (err?.code !== 'ENOENT') {
-      logger.db.warn('Error al leer archivo temporal desde disco local', err);
     }
   }
 
@@ -283,25 +223,6 @@ export async function getTempFileStream(token: string): Promise<TempFileStreamRe
     }
   }
 
-  const binPath = getLocalBinPath(token);
-  try {
-    const stats = await fs.promises.stat(binPath);
-    const stream = fs.createReadStream(binPath);
-    const resolvedFilename = meta?.filename || 'documento.pdf';
-    const resolvedContentType = meta?.contentType || 'application/pdf';
-
-    return {
-      contentType: resolvedContentType,
-      fileSize: stats.size,
-      filename: resolvedFilename,
-      stream,
-    };
-  } catch (err: any) {
-    if (err?.code !== 'ENOENT') {
-      logger.db.warn('Error al crear stream de lectura desde disco local', err);
-    }
-  }
-
   const fallbackFile = await getTempFile(token);
   if (fallbackFile && fallbackFile.buffer) {
     const stream = Readable.from(fallbackFile.buffer);
@@ -333,12 +254,6 @@ export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta
   if (memoryMeta) {
     return memoryMeta;
   }
-
-  const metaPath = getLocalMetaPath(token);
-  try {
-    const raw = await fs.promises.readFile(metaPath, 'utf-8');
-    return JSON.parse(raw);
-  } catch {}
 
   const local = memoryStore.get(token);
   if (local) {
@@ -408,13 +323,6 @@ export async function deleteTempFile(token: string): Promise<void> {
       logger.db.warn('Error al eliminar archivo temporal en S3', err);
     }
   }
-
-  const binPath = getLocalBinPath(token);
-  const metaPath = getLocalMetaPath(token);
-  await Promise.allSettled([
-    fs.promises.unlink(binPath),
-    fs.promises.unlink(metaPath),
-  ]);
 
   if (redis.status === 'ready') {
     try {

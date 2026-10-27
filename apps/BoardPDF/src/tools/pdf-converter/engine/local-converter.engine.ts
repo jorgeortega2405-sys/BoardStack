@@ -2,17 +2,9 @@ import { ZipArchive } from 'archiver';
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { logger } from '../../../services/logger.service.js';
+import { findPythonWorkerScript, getPythonCommand } from '../../../utils/process.util.js';
 import { EngineConversionParams, EngineConversionResult, IConverterEngine } from './converter-engine.interface.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const candidatePaths = [
-  path.resolve(__dirname, '../scripts/converter_worker.py'),
-  path.resolve(__dirname, '../../../../src/tools/pdf-converter/scripts/converter_worker.py'),
-];
-const WORKER_SCRIPT_PATH = candidatePaths.find((p) => fs.existsSync(p)) || candidatePaths[0];
 
 export class LocalConverterEngine implements IConverterEngine {
   public async convert(params: EngineConversionParams): Promise<EngineConversionResult> {
@@ -109,7 +101,9 @@ export class LocalConverterEngine implements IConverterEngine {
     mimeType: string
   ): Promise<EngineConversionResult> {
     const outputPath = path.join(outputDir, filename);
-    await this.execProcess('python3', [WORKER_SCRIPT_PATH, format, inputPath, outputPath]);
+    const workerScript = findPythonWorkerScript('converter_worker.py', 'pdf-converter');
+    const pythonCmd = await getPythonCommand();
+    await this.execProcess(pythonCmd, [workerScript, format, inputPath, outputPath]);
 
     if (!fs.existsSync(outputPath)) {
       throw new Error(`Falló la generación del archivo ${format.toUpperCase()}.`);

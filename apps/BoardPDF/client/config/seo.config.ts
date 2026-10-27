@@ -1,4 +1,4 @@
-import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, normalizeLanguageCode } from '../utils/languages.util.js';
+﻿import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, normalizeLanguageCode } from '../utils/languages.util.js';
 
 export interface RouteSeoInfo {
   category?: string;
@@ -764,7 +764,7 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
   'help-privacy': {
     descriptions: {
       en: 'BoardPDF Privacy Policy. 100% ephemeral document processing, max 2-hour retention, zero AI training, and full GDPR & CCPA/CPRA compliance.',
-      es: 'Política de Privacidad de BoardPDF. Procesamiento 100% efímero, borrado en < 2 horas, cero entrenamiento de IA y cumplimiento GDPR y CCPA/CPRA.',
+      es: 'Política de Privacidad de BoardPDF. Procesamiento 100% efímero, borrado en < 1 hora, cero entrenamiento de IA y cumplimiento GDPR y CCPA/CPRA.',
     },
     routeId: 'help-privacy',
     slugs: {

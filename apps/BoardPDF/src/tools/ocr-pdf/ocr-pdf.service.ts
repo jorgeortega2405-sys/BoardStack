@@ -5,7 +5,7 @@ import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout } from '../../utils/process.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
 import { OcrLanguage, OcrPdfParams, OcrPdfResponse, StoredOcrPdf } from './ocr-pdf.types.js';
 
 function sanitizePdfFilename(rawName?: string): string {
@@ -25,19 +25,43 @@ function resolveTesseractLang(lang?: OcrLanguage): string {
   return 'spa';
 }
 
-async function runOcrmypdf(inputPath: string, outputPath: string, language: string, deskew: boolean): Promise<boolean> {
-  const args = [
-    '-l',
-    language,
-    '--skip-text',
-    '--output-type',
-    'pdf',
-  ];
+async function runPythonOcrWorker(
+  inputPath: string,
+  outputPath: string,
+  language: string,
+  deskew: boolean
+): Promise<{ ok: boolean; pageCount?: number }> {
+  try {
+    const pythonCmd = await getPythonCommand();
+    const scriptPath = findPythonWorkerScript('ocr_worker.py', 'ocr-pdf');
+    const result = await executeProcessWithTimeout(
+      pythonCmd,
+      [scriptPath, inputPath, outputPath, language, deskew ? '1' : '0'],
+      { timeoutMs: 90000 }
+    );
 
+    if (result.code === 0 && fs.existsSync(outputPath)) {
+      const stats = await fs.promises.stat(outputPath);
+      if (stats.size > 0) {
+        try {
+          const parsed = JSON.parse(result.stdout.trim().split('\n').pop() || '{}');
+          return { ok: true, pageCount: parsed.pageCount };
+        } catch {
+          return { ok: true };
+        }
+      }
+    }
+  } catch (err) {
+    logger.app.warn('Fallo ejecutando ocr_worker.py', { err });
+  }
+  return { ok: false };
+}
+
+async function runOcrmypdf(inputPath: string, outputPath: string, language: string, deskew: boolean): Promise<boolean> {
+  const args = ['-l', language, '--skip-text', '--output-type', 'pdf'];
   if (deskew) {
     args.push('--deskew');
   }
-
   args.push(inputPath, outputPath);
 
   const result = await executeProcessWithTimeout('ocrmypdf', args, { timeoutMs: 90000 });
@@ -53,72 +77,7 @@ async function runOcrmypdf(inputPath: string, outputPath: string, language: stri
     } catch {}
   }
 
-  try {
-    const stats = await fs.promises.stat(outputPath);
-    if (stats.size > 0) return true;
-  } catch {}
-
-  logger.app.warn(`ocrmypdf finalizó con código ${result.code}`, { stderr: result.stderr });
   return false;
-}
-
-async function runTesseractFallback(
-  inputPath: string,
-  outputPath: string,
-  tempDir: string,
-  language: string
-): Promise<boolean> {
-  const pagePrefix = path.join(tempDir, 'page');
-  const ppmResult = await executeProcessWithTimeout('pdftoppm', ['-png', '-r', '150', inputPath, pagePrefix], { timeoutMs: 45000 });
-  if (ppmResult.code !== 0) return false;
-
-  let imageFiles: string[] = [];
-  try {
-    const entries = await fs.promises.readdir(tempDir);
-    imageFiles = entries
-      .filter((f) => f.startsWith('page') && f.endsWith('.png'))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-      .map((f) => path.join(tempDir, f));
-  } catch {
-    return false;
-  }
-
-  if (imageFiles.length === 0) return false;
-
-  const pagePdfPaths: string[] = [];
-
-  for (let i = 0; i < imageFiles.length; i++) {
-    const imgPath = imageFiles[i];
-    const outBase = path.join(tempDir, `ocr_page_${i + 1}`);
-    const ocrResult = await executeProcessWithTimeout('tesseract', [imgPath, outBase, '-l', language, 'pdf'], { timeoutMs: 30000 });
-    const singlePdf = `${outBase}.pdf`;
-    if (ocrResult.code === 0) {
-      try {
-        const stats = await fs.promises.stat(singlePdf);
-        if (stats.size > 0) pagePdfPaths.push(singlePdf);
-      } catch {}
-    }
-  }
-
-  if (pagePdfPaths.length === 0) return false;
-
-  try {
-    const mergedDoc = await PDFDocument.create();
-    for (const pagePdfPath of pagePdfPaths) {
-      const pageBytes = await fs.promises.readFile(pagePdfPath);
-      const pageDoc = await PDFDocument.load(pageBytes);
-      const copiedPages = await mergedDoc.copyPages(pageDoc, pageDoc.getPageIndices());
-      for (const p of copiedPages) {
-        mergedDoc.addPage(p);
-      }
-    }
-    const finalBytes = await mergedDoc.save();
-    await fs.promises.writeFile(outputPath, Buffer.from(finalBytes));
-    return true;
-  } catch (err) {
-    logger.app.error('Error uniendo páginas OCR con pdf-lib', err);
-    return false;
-  }
 }
 
 export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfResponse> {
@@ -142,16 +101,17 @@ export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfRespons
   }
 
   try {
-    const ocrmypdfOk = await runOcrmypdf(inputTempPath, outputTempPath, resolvedLang, deskew);
-    if (ocrmypdfOk) {
+    const pyResult = await runPythonOcrWorker(inputTempPath, outputTempPath, resolvedLang, deskew);
+    if (pyResult.ok) {
       try {
         finalBuffer = await fs.promises.readFile(outputTempPath);
+        if (pyResult.pageCount) pageCount = pyResult.pageCount;
       } catch {}
     }
 
     if (!finalBuffer) {
-      const tesseractOk = await runTesseractFallback(inputTempPath, outputTempPath, tempDir, resolvedLang);
-      if (tesseractOk) {
+      const ocrmypdfOk = await runOcrmypdf(inputTempPath, outputTempPath, resolvedLang, deskew);
+      if (ocrmypdfOk) {
         try {
           finalBuffer = await fs.promises.readFile(outputTempPath);
         } catch {}

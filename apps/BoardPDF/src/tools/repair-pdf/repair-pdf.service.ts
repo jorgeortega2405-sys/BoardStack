@@ -6,7 +6,7 @@ import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout } from '../../utils/process.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
 import { RepairPdfParams, RepairPdfResponse, StoredRepairedPdf } from './repair-pdf.types.js';
 
 let resolvedGsCommand: string | null = null;
@@ -42,6 +42,31 @@ function sanitizePdfFilename(rawName?: string): string {
   return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
 }
 
+async function runPythonRepairWorker(
+  inputPath: string,
+  outputPath: string
+): Promise<{ ok: boolean; pageCount?: number }> {
+  try {
+    const pythonCmd = await getPythonCommand();
+    const scriptPath = findPythonWorkerScript('repair_worker.py', 'repair-pdf');
+    const result = await executeProcessWithTimeout(pythonCmd, [scriptPath, inputPath, outputPath], { timeoutMs: 60000 });
+    if (result.code === 0 && fs.existsSync(outputPath)) {
+      const stats = await fs.promises.stat(outputPath);
+      if (stats.size > 0) {
+        try {
+          const parsed = JSON.parse(result.stdout.trim().split('\n').pop() || '{}');
+          return { ok: true, pageCount: parsed.pageCount };
+        } catch {
+          return { ok: true };
+        }
+      }
+    }
+  } catch (err) {
+    logger.app.warn('Fallo ejecutando repair_worker.py local', { error: err });
+  }
+  return { ok: false };
+}
+
 async function runGhostscriptRepair(inputPath: string, outputPath: string): Promise<boolean> {
   const gsCmd = getGhostscriptCommand();
   const args = [
@@ -68,12 +93,6 @@ async function runGhostscriptRepair(inputPath: string, outputPath: string): Prom
     } catch {}
   }
 
-  try {
-    const stats = await fs.promises.stat(outputPath);
-    if (stats.size > 0) return true;
-  } catch {}
-
-  logger.app.warn(`Ghostscript finalizó con código ${result.code} al reparar PDF`, { stderr: result.stderr });
   return false;
 }
 
@@ -93,6 +112,7 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
   const originalSize = buffer.length;
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_repair_'));
   const inputTempPath = path.join(tempDir, 'broken.pdf');
+  const pyOutTempPath = path.join(tempDir, 'repaired_py.pdf');
   const gsOutTempPath = path.join(tempDir, 'repaired_gs.pdf');
   const qpdfOutTempPath = path.join(tempDir, 'repaired_qpdf.pdf');
 
@@ -102,18 +122,28 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
   let pageCount = 1;
 
   try {
-    const gsSuccess = await runGhostscriptRepair(inputTempPath, gsOutTempPath);
-    if (gsSuccess) {
-      const qpdfSuccess = await runQpdfLinearize(gsOutTempPath, qpdfOutTempPath);
-      if (qpdfSuccess) {
-        try {
-          finalBuffer = await fs.promises.readFile(qpdfOutTempPath);
-        } catch {}
-      }
-      if (!finalBuffer) {
-        try {
-          finalBuffer = await fs.promises.readFile(gsOutTempPath);
-        } catch {}
+    const pyRes = await runPythonRepairWorker(inputTempPath, pyOutTempPath);
+    if (pyRes.ok) {
+      try {
+        finalBuffer = await fs.promises.readFile(pyOutTempPath);
+        if (pyRes.pageCount) pageCount = pyRes.pageCount;
+      } catch {}
+    }
+
+    if (!finalBuffer) {
+      const gsSuccess = await runGhostscriptRepair(inputTempPath, gsOutTempPath);
+      if (gsSuccess) {
+        const qpdfSuccess = await runQpdfLinearize(gsOutTempPath, qpdfOutTempPath);
+        if (qpdfSuccess) {
+          try {
+            finalBuffer = await fs.promises.readFile(qpdfOutTempPath);
+          } catch {}
+        }
+        if (!finalBuffer) {
+          try {
+            finalBuffer = await fs.promises.readFile(gsOutTempPath);
+          } catch {}
+        }
       }
     }
 
@@ -135,12 +165,9 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
       } catch {}
     }
   } finally {
-    await Promise.allSettled([
-      fs.promises.unlink(inputTempPath),
-      fs.promises.unlink(gsOutTempPath),
-      fs.promises.unlink(qpdfOutTempPath),
-      fs.promises.rm(tempDir, { force: true, recursive: true }),
-    ]);
+    try {
+      await fs.promises.rm(tempDir, { force: true, recursive: true });
+    } catch {}
   }
 
   if (!finalBuffer || finalBuffer.length === 0) {

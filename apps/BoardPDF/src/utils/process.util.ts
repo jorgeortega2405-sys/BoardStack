@@ -1,4 +1,7 @@
 import { spawn, SpawnOptions } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from '../services/logger.service.js';
 
 export interface ProcessExecutionOptions extends SpawnOptions {
@@ -14,6 +17,9 @@ export interface ProcessExecutionResult {
 
 let resolvedPythonCmd: string | null = null;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export async function getPythonCommand(): Promise<string> {
   if (resolvedPythonCmd) {
     return resolvedPythonCmd;
@@ -23,6 +29,11 @@ export async function getPythonCommand(): Promise<string> {
     return resolvedPythonCmd;
   }
   if (process.platform === 'win32') {
+    const localPython = path.join(process.env.LOCALAPPDATA || '', 'Python', 'bin', 'python.exe');
+    if (fs.existsSync(localPython)) {
+      resolvedPythonCmd = localPython;
+      return resolvedPythonCmd;
+    }
     const pyCheck = await executeProcessWithTimeout('py', ['-c', 'import sys; print(1)'], { timeoutMs: 3000 });
     if (pyCheck.code === 0) {
       resolvedPythonCmd = 'py';
@@ -33,6 +44,26 @@ export async function getPythonCommand(): Promise<string> {
   }
   resolvedPythonCmd = 'python3';
   return 'python3';
+}
+
+export function findPythonWorkerScript(scriptName: string, subfolder?: string): string {
+  const candidatePaths = [
+    path.resolve(process.cwd(), 'scripts', scriptName),
+    path.resolve(process.cwd(), 'apps/BoardPDF/scripts', scriptName),
+    subfolder ? path.resolve(process.cwd(), `apps/BoardPDF/src/tools/${subfolder}/scripts`, scriptName) : '',
+    path.resolve(__dirname, '../../scripts', scriptName),
+    path.resolve(__dirname, '../../../scripts', scriptName),
+    path.resolve(__dirname, '../../../../scripts', scriptName),
+    subfolder ? path.resolve(__dirname, `../${subfolder}/scripts`, scriptName) : '',
+    subfolder ? path.resolve(__dirname, `../../${subfolder}/scripts`, scriptName) : '',
+  ].filter(Boolean);
+
+  for (const candidate of candidatePaths) {
+    if (candidate && fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return candidatePaths[0];
 }
 
 export function executeProcessWithTimeout(

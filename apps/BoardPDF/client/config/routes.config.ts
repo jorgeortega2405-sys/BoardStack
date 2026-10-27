@@ -302,7 +302,6 @@ export const APP_ROUTES: RouteDefinition[] = [
       await Promise.all([
         loadStylesheet('/css/components/component-views.css'),
         loadStylesheet('/css/tools/tool-base.css'),
-        loadStylesheet('/css/tools/download-ready.css'),
       ]);
       const { createDownloadReadyView } = await import('../views/download-ready/download-ready.view.js');
       return await createDownloadReadyView(params.token);
@@ -316,15 +315,6 @@ export const APP_ROUTES: RouteDefinition[] = [
       if (path === '/download-ready' || path === '/download') return { token: '' };
       return false;
     },
-  },
-  {
-    handler: async () => {
-      await loadStylesheet('/css/components/component-ai.css');
-      const { createAiView } = await import('../views/ai.view.js');
-      return await createAiView();
-    },
-    id: 'ai',
-    match: (path) => path === '/ai' || path.startsWith('/ai'),
   },
   {
     handler: async () => {

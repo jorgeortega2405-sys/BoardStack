@@ -44,10 +44,6 @@ export const config = {
     enforceCloudflare: process.env.ENFORCE_CLOUDFLARE_ORIGIN === 'true',
     secret: process.env.CLOUDFLARE_ORIGIN_SECRET || '',
   },
-  photoroom: {
-    apiKey: process.env.PHOTOROOM_API_KEY || '',
-    endpoint: process.env.PHOTOROOM_ENDPOINT || 'https://sdk.photoroom.com/v1/segment',
-  },
   port: parseInt(process.env.PORT || '3000', 10),
   redis: {
     host: process.env.REDIS_HOST || '127.0.0.1',
@@ -63,14 +59,6 @@ export const config = {
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY || '',
   },
   sessionSecret: process.env.SESSION_SECRET || 'boardpdf_session_secret_key_2026',
-  smtp: {
-    fromEmail: process.env.SMTP_FROM_EMAIL || '',
-    fromName: process.env.SMTP_FROM_NAME || 'BoardPDF',
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    pass: process.env.SMTP_PASS || '',
-    port: parseInt(process.env.SMTP_PORT || '465', 10),
-    user: process.env.SMTP_USER || '',
-  },
   turnstile: {
     enabled: process.env.TURNSTILE_ENABLED === 'true' || Boolean(process.env.TURNSTILE_SECRET_KEY),
     secretKey: process.env.TURNSTILE_SECRET_KEY || '',

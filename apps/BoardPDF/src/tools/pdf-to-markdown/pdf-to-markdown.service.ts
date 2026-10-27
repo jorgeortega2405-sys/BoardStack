@@ -1,9 +1,12 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { config } from '../../config/env.config.js';
 import { logger } from '../../services/logger.service.js';
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
 import { MarkdownConversionMode, PdfToMarkdownParams, PdfToMarkdownResponse, StoredMarkdownFile } from './pdf-to-markdown.types.js';
-import { randomUUID } from 'node:crypto';
-import path from 'node:path';
 
 const MODE_INSTRUCTIONS: Record<MarkdownConversionMode, string> = {
   academic: `Enfócate en la conversión de documentos técnicos, científicos o académicos.
@@ -47,6 +50,31 @@ function stripMarkdownCodeFences(text: string): string {
   return cleaned;
 }
 
+async function runPythonMarkdownWorker(
+  inputPdfPath: string,
+  outputMdPath: string,
+  mode: MarkdownConversionMode
+): Promise<string | null> {
+  try {
+    const pythonCmd = await getPythonCommand();
+    const scriptPath = findPythonWorkerScript('markdown_worker.py', 'pdf-to-markdown');
+    const result = await executeProcessWithTimeout(
+      pythonCmd,
+      [scriptPath, inputPdfPath, outputMdPath, mode],
+      { timeoutMs: 60000 }
+    );
+    if (result.code === 0 && fs.existsSync(outputMdPath)) {
+      const content = await fs.promises.readFile(outputMdPath, 'utf-8');
+      if (content && content.trim().length > 0) {
+        return content;
+      }
+    }
+  } catch (err) {
+    logger.app.warn('Error al invocar markdown_worker.py local', { error: err });
+  }
+  return null;
+}
+
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -80,7 +108,6 @@ async function callGeminiApi(
   apiKey: string
 ): Promise<string> {
   const parts: any[] = [];
-
   const canUseMultimodal = pdfBuffer && pdfBuffer.length > 0 && pdfBuffer.length <= 18 * 1024 * 1024;
 
   if (canUseMultimodal) {
@@ -159,110 +186,71 @@ export async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise
     removeHeadersFooters = true,
   } = params;
 
-  const apiKey = config.gemini.apiKey;
-  if (!apiKey) {
-    throw new Error('CONFIG_GEMINI_KEY_MISSING');
-  }
-
   if (!buffer || buffer.length === 0) {
     throw new Error('EMPTY_PDF_BUFFER');
   }
 
-  let rawExtractedText = '';
-  const isMultimodalEligible = buffer.length <= 18 * 1024 * 1024;
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_md_'));
+  const inputPdfPath = path.join(tempDir, 'document.pdf');
+  const outputMdPath = path.join(tempDir, 'output.md');
 
-  if (!isMultimodalEligible) {
-    rawExtractedText = await extractTextFromPdf(buffer);
-    if (!rawExtractedText || rawExtractedText.trim().length < 10) {
-      throw new Error('EMPTY_PDF_TEXT');
-    }
-  }
-
-  const systemInstruction = `Eres un motor experto de conversión de documentos PDF a Markdown de alta fidelidad, similar a las herramientas profesionales de conversión como iLovePDF, Marker y MinerU.
-Tu objetivo primordial es transformar el documento PDF proporcionado en código Markdown (GitHub Flavored Markdown) impecable, semántico y completamente fiel al contenido original.
-
-Reglas obligatorias:
-1. Respeta la estructura y semántica del texto original. Usa encabezados Markdown (#, ##, ###) para jerarquía de títulos.
-2. Devuelve únicamente el contenido Markdown puro. No agregues preámbulos, no agregues explicaciones, no saludes ni agregues despedidas (nada como "Aquí tienes tu markdown:").
-3. Si el documento contiene tablas, transfórmalas a tablas Markdown GFM completas con separadores de columnas y cabeceras.
-4. Preserva listas, negritas, cursivas y citas en bloque (>).
-5. Mantén los enlaces URL legibles en formato [Texto](url) si existen.
-6. Si hay código fuente, identifícalo con bloques de acentos graves triples.`;
-
-  const modeInstruction = MODE_INSTRUCTIONS[mode] || MODE_INSTRUCTIONS.structured;
-
-  const additionalDirectives: string[] = [];
-  if (includeMathLatex) {
-    additionalDirectives.push('- Transcribe todas las expresiones matemáticas y ecuaciones en formato LaTeX ($...$ para fórmulas dentro de texto y $$...$$ para bloques de ecuaciones).');
-  }
-  if (removeHeadersFooters) {
-    additionalDirectives.push('- Omite números de página repetitivos, pies de página recurrentes y encabezados repetidos entre páginas.');
-  }
-  if (preserveTables) {
-    additionalDirectives.push('- Formatea cualquier estructura de datos tabulares como tabla Markdown estándar con cabecera y separador (| --- |).');
-  }
-  if (customPrompt && customPrompt.trim().length > 0) {
-    additionalDirectives.push(`- Instrucción personalizada del usuario: ${customPrompt.trim()}`);
-  }
-
-  const userPrompt = `Convierte este documento PDF completo a formato Markdown (.md) siguiendo estas instrucciones específicas:
-${modeInstruction}
-
-Directivas adicionales:
-${additionalDirectives.join('\n')}
-
-Recuerda: Devuelve únicamente el Markdown generado sin bloques que lo envuelvan ni comentarios meta.`;
-
-  const primaryModel = config.gemini.model || 'gemini-3.5-flash';
-  const fallbackModels = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.5-flash'];
+  await fs.promises.writeFile(inputPdfPath, buffer);
 
   let markdownResult = '';
-  let usedModel = primaryModel;
+  let usedModel = 'local-structural-extractor';
 
   try {
-    markdownResult = await callGeminiApi(
-      systemInstruction,
-      userPrompt,
-      isMultimodalEligible ? buffer : null,
-      rawExtractedText,
-      primaryModel,
-      apiKey
-    );
-  } catch (primaryErr) {
-    logger.app.warn('Error con modelo primario de Gemini en conversión PDF a Markdown, usando modelo alternativo', {
-      error: primaryErr,
-      model: primaryModel,
-    });
-
-    if (isMultimodalEligible && !rawExtractedText) {
-      rawExtractedText = await extractTextFromPdf(buffer);
+    const localResult = await runPythonMarkdownWorker(inputPdfPath, outputMdPath, mode);
+    if (localResult) {
+      markdownResult = localResult;
     }
+  } finally {
+    try {
+      await fs.promises.rm(tempDir, { force: true, recursive: true });
+    } catch {}
+  }
 
-    let succeeded = false;
-    for (const fallbackModel of fallbackModels) {
+  if (!markdownResult) {
+    const apiKey = config.gemini?.apiKey;
+    if (apiKey) {
+      let rawExtractedText = '';
+      const isMultimodalEligible = buffer.length <= 18 * 1024 * 1024;
+      if (!isMultimodalEligible) {
+        rawExtractedText = await extractTextFromPdf(buffer);
+      }
+
+      const systemInstruction = `Eres un motor experto de conversión de documentos PDF a Markdown de alta fidelidad.
+Respeta la estructura, tablas GFM y formato semántico del documento sin preámbulos.`;
+      const modeInstruction = MODE_INSTRUCTIONS[mode] || MODE_INSTRUCTIONS.structured;
+      const additionalDirectives: string[] = [];
+      if (includeMathLatex) additionalDirectives.push('- Transcribe expresiones matemáticas en formato LaTeX ($...$ o $$...$$).');
+      if (removeHeadersFooters) additionalDirectives.push('- Omite encabezados y pies de página recurrentes.');
+      if (preserveTables) additionalDirectives.push('- Formatea cualquier tabla como tabla Markdown estándar.');
+      if (customPrompt?.trim()) additionalDirectives.push(`- Instrucción del usuario: ${customPrompt.trim()}`);
+
+      const userPrompt = `Convierte este documento PDF completo a formato Markdown (.md):\n${modeInstruction}\n${additionalDirectives.join('\n')}`;
+      const primaryModel = config.gemini.model || 'gemini-3.5-flash';
+
       try {
         markdownResult = await callGeminiApi(
           systemInstruction,
           userPrompt,
           isMultimodalEligible ? buffer : null,
           rawExtractedText,
-          fallbackModel,
+          primaryModel,
           apiKey
         );
-        usedModel = fallbackModel;
-        succeeded = true;
-        break;
-      } catch (fallbackErr) {
-        logger.app.warn('Fallo en modelo alternativo de Gemini para conversión a Markdown', {
-          error: fallbackErr,
-          model: fallbackModel,
-        });
+        usedModel = primaryModel;
+      } catch (err) {
+        logger.app.warn('Error con Gemini API fallback en PDF a Markdown', { error: err });
       }
     }
+  }
 
-    if (!succeeded) {
-      throw new Error('GEMINI_UNAVAILABLE');
-    }
+  if (!markdownResult) {
+    const fallbackText = await extractTextFromPdf(buffer);
+    markdownResult = fallbackText || '# Documento\n\nNo se detectó contenido de texto en el documento.';
+    usedModel = 'fallback-text-extractor';
   }
 
   const cleanedMarkdown = stripMarkdownCodeFences(markdownResult);
