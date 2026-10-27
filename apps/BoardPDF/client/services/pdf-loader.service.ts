@@ -11,3 +11,16 @@ export async function loadPdfJs(): Promise<any> {
   }
   return pdfjsPromise;
 }
+
+export async function loadPdfDocument(source: ArrayBuffer | Uint8Array, options: Record<string, any> = {}): Promise<any> {
+  const pdfjs = await loadPdfJs();
+  const data = source instanceof Uint8Array ? source : new Uint8Array(source);
+  const loadingTask = pdfjs.getDocument({
+    cMapPacked: true,
+    cMapUrl: '/vendor/pdfjs/cmaps/',
+    data,
+    standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+    ...options,
+  });
+  return loadingTask.promise;
+}

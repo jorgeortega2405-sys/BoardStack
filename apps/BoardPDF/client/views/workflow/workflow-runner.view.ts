@@ -929,10 +929,6 @@ export class WorkflowRunnerController {
       fileInput?.click();
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
     fileInput?.addEventListener('change', () => {
       const file = fileInput.files?.[0];
       if (file) void this.handleFileSelected(file);

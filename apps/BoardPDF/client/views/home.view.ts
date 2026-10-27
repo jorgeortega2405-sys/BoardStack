@@ -1,4 +1,5 @@
 import { mountSiteFooter } from '../components/footer.component.js';
+import { setupLayoutScrollSync } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
 import { isToolNew, TOOLS_REGISTRY } from '../config/tools.registry.js';
@@ -183,6 +184,11 @@ export class HomeController {
 
           const category = pill.getAttribute('data-category') || 'all';
           this.filterCards(category);
+          const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+          const scrollableBody = this.container.querySelector<HTMLElement>('[data-ref="home-scrollable"]');
+          if (layoutContent) layoutContent.scrollTop = 0;
+          if (scrollableBody) scrollableBody.scrollTop = 0;
+          setupLayoutScrollSync();
         },
         { signal: this.abortController?.signal }
       );

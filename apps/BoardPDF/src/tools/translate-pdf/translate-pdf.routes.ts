@@ -5,7 +5,16 @@ import { downloadTranslatedPdfHandler, translatePdfHandler, uploadPdf } from './
 
 const router = Router();
 
-router.post('/tools/translate-pdf/translate', optionalAuth, translatePdfLimiter, uploadPdf.single('file'), translatePdfHandler);
+router.post(
+  '/tools/translate-pdf/translate',
+  optionalAuth,
+  translatePdfLimiter,
+  uploadPdf.fields([
+    { maxCount: 1, name: 'file' },
+    { maxCount: 1, name: 'pdf' },
+  ]),
+  translatePdfHandler
+);
 router.get('/tools/translate-pdf/download/:fileId', downloadTranslatedPdfHandler);
 
 export default router;

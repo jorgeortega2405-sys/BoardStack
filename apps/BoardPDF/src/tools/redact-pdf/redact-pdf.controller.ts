@@ -23,7 +23,10 @@ const upload = multer({
     files: 1,
   },
   storage: multer.memoryStorage(),
-}).single('pdf');
+}).fields([
+  { maxCount: 1, name: 'pdf' },
+  { maxCount: 1, name: 'file' },
+]);
 
 export function handlePdfUploadMiddleware(req: Request, res: Response, next: NextFunction): void {
   upload(req, res, (err) => {
@@ -56,6 +59,11 @@ export function handlePdfUploadMiddleware(req: Request, res: Response, next: Nex
         success: false,
       });
       return;
+    }
+
+    if (req.files) {
+      const filesMap = req.files as { [fieldname: string]: Express.Multer.File[] };
+      req.file = filesMap['pdf']?.[0] || filesMap['file']?.[0] || req.file;
     }
 
     next();

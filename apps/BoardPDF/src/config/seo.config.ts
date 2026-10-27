@@ -607,18 +607,6 @@ export const SERVER_SEO_ROUTES: Record<string, ServerRouteSeoInfo> = {
       es: 'PDF a Markdown - Extrae texto limpio con formato | BoardPDF',
     },
   },
-  'help-documentation': {
-    descriptions: {
-      en: 'Comprehensive user guides and tutorials to make the most of every tool on BoardPDF.',
-      es: 'Guías completas y tutoriales paso a paso para utilizar cada una de las herramientas de BoardPDF.',
-    },
-    routeId: 'help-documentation',
-    slugs: { en: 'documentation', es: 'herramientas' },
-    titles: {
-      en: 'Tools Documentation & Guides - BoardPDF',
-      es: 'Centro de Herramientas y Documentación - BoardPDF',
-    },
-  },
   'help-faq': {
     descriptions: {
       en: 'Find clear answers to common questions about security, limits, privacy, and plans on BoardPDF.',
@@ -703,6 +691,7 @@ export const SERVER_SEO_ROUTES: Record<string, ServerRouteSeoInfo> = {
       es: 'Contacto | BoardPDF',
     },
   },
+
 };
 
 const SERVER_SLUG_MAP = new Map<string, string>();
@@ -718,8 +707,6 @@ SERVER_SLUG_MAP.set('numerar-pdf', 'page-numbers');
 SERVER_SLUG_MAP.set('add-watermark', 'watermark-pdf');
 SERVER_SLUG_MAP.set('marca-de-agua-pdf', 'watermark-pdf');
 SERVER_SLUG_MAP.set('redactar-pdf', 'redact-pdf');
-SERVER_SLUG_MAP.set('documentation', 'help-documentation');
-SERVER_SLUG_MAP.set('herramientas', 'help-documentation');
 SERVER_SLUG_MAP.set('faq', 'help-faq');
 SERVER_SLUG_MAP.set('preguntas-frecuentes', 'help-faq');
 SERVER_SLUG_MAP.set('security-policy', 'help-security');

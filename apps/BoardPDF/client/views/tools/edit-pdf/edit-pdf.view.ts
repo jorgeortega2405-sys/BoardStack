@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -142,10 +142,6 @@ export class EditPdfController implements ViewController {
       if (files && files.length > 0) {
         void this.handleFileSelected(files[0]);
       }
-    }, { signal });
-
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
     }, { signal });
 
     fileInput?.addEventListener('change', () => {
@@ -348,6 +344,9 @@ export class EditPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
+    const thumbnailsContainer = this.container.querySelector<HTMLElement>('[data-ref="thumbnails-container"]');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -355,10 +354,30 @@ export class EditPdfController implements ViewController {
       outputNameInput.value = `${baseName}_editado.pdf`;
     }
 
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (editorCard) editorCard.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'flex';
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+    if (topControls) topControls.style.display = 'flex';
+    if (topActions) topActions.style.display = 'flex';
+    if (topHeader) topHeader.style.display = 'flex';
+
+    if (pagesWrapper) {
+      pagesWrapper.innerHTML = `
+        <div class="pdf-viewer-loading" data-ref="editor-loading-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--text-secondary, #666);">
+          <div class="component-spinner component-spinner--lg"></div>
+          <span>Cargando páginas del documento...</span>
+        </div>
+      `;
+    }
+    if (thumbnailsContainer) {
+      thumbnailsContainer.innerHTML = '';
+    }
+
     try {
-      const pdfjs = await loadPdfJs();
       const arrayBuffer = await file.arrayBuffer();
-      this.pdfDocument = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      this.pdfDocument = await loadPdfDocument(arrayBuffer);
       const numPages = this.pdfDocument.numPages;
 
       const pagesCountBadge = this.container.querySelector<HTMLElement>('[data-ref="pages-count-badge"]');
@@ -375,23 +394,9 @@ export class EditPdfController implements ViewController {
       await this.renderThumbnails();
       await this.renderDocumentPages();
       this.setMode('annotate');
-
-      if (dropzoneCard) dropzoneCard.style.display = 'none';
-      if (editorCard) editorCard.style.display = 'flex';
-      if (sidebar) sidebar.style.display = 'flex';
-      if (settingsBtn) settingsBtn.classList.add('is-visible');
-      if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-      if (topControls) topControls.style.display = 'flex';
-      if (topActions) topActions.style.display = 'flex';
-      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      if (topHeader) topHeader.style.display = 'flex';
     } catch {
       this.showError('El archivo seleccionado no se pudo abrir porque estaba dañado o contiene errores en su estructura.');
-      if (dropzoneCard) dropzoneCard.style.display = '';
-      if (editorCard) editorCard.style.display = 'none';
-      if (sidebar) sidebar.style.display = 'none';
-      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      if (topHeader) topHeader.style.display = 'none';
+      this.resetSelectedFile();
     }
   }
 
@@ -547,11 +552,17 @@ export class EditPdfController implements ViewController {
     pageIndex: number
   ): void {
     const viewport = page.getViewport({ scale });
+    const pageDim = this.pageDimensions[pageIndex];
+    const pageHeight = pageDim ? pageDim.height : (viewport.height / scale);
 
     items.forEach((item: any, itemIndex: number) => {
+      if (!item || typeof item.str !== 'string' || !item.str.trim() || !Array.isArray(item.transform) || item.transform.length < 6) {
+        return;
+      }
+
       const tx = (window as any).pdfjsLib?.Util?.transform
         ? (window as any).pdfjsLib.Util.transform(viewport.transform, item.transform)
-        : [scale, 0, 0, scale, item.transform[4] * scale, (this.pageDimensions[pageIndex].height - item.transform[5]) * scale];
+        : [scale, 0, 0, scale, item.transform[4] * scale, (pageHeight - item.transform[5]) * scale];
 
       const itemX = tx[4];
       const itemY = tx[5] - (item.height * scale || 14);
@@ -1446,6 +1457,12 @@ export class EditPdfController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = '';
     }
+    const dropzoneError = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-error"]');
+    if (dropzoneError) {
+      dropzoneError.textContent = message;
+      dropzoneError.style.display = '';
+    }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {
@@ -1453,6 +1470,11 @@ export class EditPdfController implements ViewController {
     if (errorEl) {
       errorEl.textContent = '';
       errorEl.style.display = 'none';
+    }
+    const dropzoneError = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-error"]');
+    if (dropzoneError) {
+      dropzoneError.textContent = '';
+      dropzoneError.style.display = 'none';
     }
   }
 }

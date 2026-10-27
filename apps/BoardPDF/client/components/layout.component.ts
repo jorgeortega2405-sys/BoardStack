@@ -11,17 +11,15 @@ import { isSupportedLanguage } from '../utils/languages.util.js';
 export let isDrawerOpen = false;
 export let currentDrawerMode: 'apps' | 'help' | 'workflows' = 'workflows';
 let activeResizeObserver: ResizeObserver | null = null;
+let activeMutationObserver: MutationObserver | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 let sidebarInitPromise: Promise<HTMLElement> | null = null;
 let sidebarInstance: HTMLElement | null = null;
 
-function getActiveHelpSection(raw: string): 'documentation' | 'faq' | 'security' | 'privacy' | 'terms' | 'cookies' | null {
+function getActiveHelpSection(raw: string): 'faq' | 'security' | 'privacy' | 'terms' | 'cookies' | null {
   const clean = (raw || '').split('?')[0].split('#')[0].toLowerCase().replace(/^\/[a-z]{2,3}(?:-[a-z]{2,4})?(?=\/|$)/i, '').replace(/^\/+|\/+$/g, '');
   if (!clean) return null;
 
-  if (clean === 'help-documentation' || clean === 'help/documentation' || clean === 'documentation' || clean === 'documentacion' || clean === 'herramientas') {
-    return 'documentation';
-  }
   if (clean === 'help-faq' || clean === 'help/faq' || clean === 'faq' || clean === 'preguntas-frecuentes') {
     return 'faq';
   }
@@ -40,7 +38,6 @@ function getActiveHelpSection(raw: string): 'documentation' | 'faq' | 'security'
 
   const resolved = resolveRouteFromSlug(clean);
   if (resolved) {
-    if (resolved.routeId === 'help-documentation') return 'documentation';
     if (resolved.routeId === 'help-faq') return 'faq';
     if (resolved.routeId === 'help-security' || resolved.routeId === 'help') return 'security';
     if (resolved.routeId === 'help-privacy') return 'privacy';
@@ -176,7 +173,7 @@ export async function populateDrawerContent(drawer: HTMLElement, activePath?: st
   }
 
   if (currentDrawerMode === 'help') {
-    renderHelpDrawerContent(drawerBody, activePath);
+    renderHelpDrawerContent(drawerBody, drawerFooter, activePath);
   } else if (currentDrawerMode === 'apps') {
     renderAppsDrawerContent(drawerBody);
   } else {
@@ -253,7 +250,7 @@ function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTM
   translateElement(drawerBody);
 }
 
-function renderHelpDrawerContent(drawerBody: HTMLElement, activePath?: string): void {
+function renderHelpDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElement | null, activePath?: string): void {
   const currentLang = getCurrentLanguage();
   const currentPath = activePath || window.location.pathname;
 
@@ -271,14 +268,6 @@ function renderHelpDrawerContent(drawerBody: HTMLElement, activePath?: string): 
     <div class="drawer-section__header" data-ref="drawer-help-header" style="padding: 8px 8px 4px 8px;">
       <span class="drawer-section__title" data-ref="drawer-help-title" data-i18n="nav.help" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${t('nav.help', 'Ayuda')}</span>
     </div>
-    <button type="button" class="menu-item" data-ref="btn-nav-help-documentation" data-nav="documentation">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-      <span class="menu-item__text" data-i18n="help.nav_documentation">${t('help.nav_documentation', t('nav.documentation', 'Documentación'))}</span>
-    </button>
-    <button type="button" class="menu-item" data-ref="btn-nav-help-faq" data-nav="faq">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
-      <span class="menu-item__text" data-i18n="help.nav_faq">${t('help.nav_faq', t('nav.faq', 'Preguntas frecuentes'))}</span>
-    </button>
     <button type="button" class="menu-item" data-ref="btn-nav-help-security">
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
       <span class="menu-item__text" data-i18n="help.nav_security">${t('help.nav_security', 'Política de seguridad')}</span>
@@ -299,8 +288,6 @@ function renderHelpDrawerContent(drawerBody: HTMLElement, activePath?: string): 
 
   translateElement(drawerBody);
 
-  const btnDocs = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-documentation"]');
-  const btnFaq = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-faq"]');
   const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-security"]');
   const btnPrivacy = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-privacy"]');
   const btnTerms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-terms"]');
@@ -308,19 +295,28 @@ function renderHelpDrawerContent(drawerBody: HTMLElement, activePath?: string): 
 
   const activeSection = getActiveHelpSection(currentPath);
 
-  btnDocs?.classList.toggle('is-active', activeSection === 'documentation');
-  btnFaq?.classList.toggle('is-active', activeSection === 'faq');
   btnSecurity?.classList.toggle('is-active', activeSection === 'security');
   btnPrivacy?.classList.toggle('is-active', activeSection === 'privacy');
   btnTerms?.classList.toggle('is-active', activeSection === 'terms');
   btnCookies?.classList.toggle('is-active', activeSection === 'cookies');
 
-  bindNavLink(btnDocs, 'help-documentation', '/help/documentation');
-  bindNavLink(btnFaq, 'help-faq', '/help/faq');
   bindNavLink(btnSecurity, 'help-security', '/help/security');
   bindNavLink(btnPrivacy, 'help-privacy', '/help/privacy');
   bindNavLink(btnTerms, 'help-terms', '/help/terms');
   bindNavLink(btnCookies, 'help-cookies', '/help/cookies');
+
+  if (drawerFooter) {
+    drawerFooter.innerHTML = `
+      <button type="button" class="menu-item ${activeSection === 'faq' ? 'is-active' : ''}" data-ref="btn-nav-help-faq" data-nav="faq">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+        <span class="menu-item__text" data-i18n="help.nav_faq">${t('help.nav_faq', t('nav.faq', 'Preguntas frecuentes'))}</span>
+      </button>
+    `;
+    drawerFooter.style.display = 'flex';
+    translateElement(drawerFooter);
+    bindNavLink(drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-help-faq"]'), 'help-faq', '/help/faq');
+    renderIcons(drawerFooter);
+  }
 }
 
 function renderAppsDrawerContent(drawerBody: HTMLElement): void {
@@ -528,6 +524,10 @@ export function setupLayoutScrollSync(): void {
     activeResizeObserver.disconnect();
     activeResizeObserver = null;
   }
+  if (activeMutationObserver) {
+    activeMutationObserver.disconnect();
+    activeMutationObserver = null;
+  }
   if (!layoutContent) return;
 
   const scrollableBody = layoutContent.querySelector<HTMLElement>(
@@ -540,7 +540,7 @@ export function setupLayoutScrollSync(): void {
 
   const updateScrollHeight = () => {
     const maxScroll = Math.max(0, Math.ceil(scrollableBody.scrollHeight - scrollableBody.clientHeight));
-    if (maxScroll === 0) {
+    if (maxScroll <= 0) {
       layoutContent.style.removeProperty('--layout-scroll-height');
       return;
     }
@@ -559,4 +559,14 @@ export function setupLayoutScrollSync(): void {
   for (const child of scrollableBody.children) {
     activeResizeObserver.observe(child);
   }
+
+  activeMutationObserver = new MutationObserver(() => {
+    updateScrollHeight();
+  });
+  activeMutationObserver.observe(scrollableBody, {
+    attributeFilter: ['class', 'style', 'hidden'],
+    attributes: true,
+    childList: true,
+    subtree: true,
+  });
 }

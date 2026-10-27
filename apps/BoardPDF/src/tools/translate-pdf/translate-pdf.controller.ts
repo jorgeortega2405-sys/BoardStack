@@ -23,7 +23,8 @@ export const uploadPdf = multer({
 
 export async function translatePdfHandler(req: Request, res: Response): Promise<void> {
   try {
-    const file = req.file;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const file = req.file || files?.file?.[0] || files?.pdf?.[0];
     if (!file) {
       res.status(400).json({
         error: 'Por favor selecciona un archivo PDF válido.',

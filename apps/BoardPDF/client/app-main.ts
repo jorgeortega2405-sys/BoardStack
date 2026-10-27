@@ -17,20 +17,11 @@ function handleScrollEvent(e: Event): void {
         '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable'
       );
       if (scrollableBody) {
-        const maxScrollLayout = target.scrollHeight - target.clientHeight;
-        const maxScrollBody = scrollableBody.scrollHeight - scrollableBody.clientHeight;
-
-        if (maxScrollLayout > 0 && maxScrollBody > 0) {
-          const ratio = Math.max(0, Math.min(1, target.scrollTop / maxScrollLayout));
-          const targetOffset = ratio * maxScrollBody;
-          if (Math.abs(scrollableBody.scrollTop - targetOffset) > 0.25) {
-            isSyncing = true;
-            scrollableBody.scrollTop = targetOffset;
-            isSyncing = false;
-          }
-        } else {
+        const maxScrollBody = Math.max(0, scrollableBody.scrollHeight - scrollableBody.clientHeight);
+        const targetScroll = Math.max(0, Math.min(target.scrollTop, maxScrollBody));
+        if (Math.abs(scrollableBody.scrollTop - targetScroll) > 0.25) {
           isSyncing = true;
-          scrollableBody.scrollTop = target.scrollTop;
+          scrollableBody.scrollTop = targetScroll;
           isSyncing = false;
         }
       }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 140" fill="none">
+  <g transform="translate(60, 10)">
+    <path d="M4 5a5 5 0 0 1 5-5h17l11 11v28a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V5z" fill="#E11D48"/>
+    <path d="M4 5v34a5 5 0 0 0 5 5h8L4 22z" fill="#9F1239"/>
+    <path d="M26 0v11h11z" fill="#FFFFFF"/>
+    <path d="M26 11l11-11-11 11z" fill="#CBD5E1"/>
+    <path d="M10 20h20l-4 5H10z" fill="#FFFFFF" fill-opacity="0.95"/>
+    <rect x="10" y="30" width="13" height="3.5" rx="1.75" fill="#FFFFFF" fill-opacity="0.9"/>
+  </g>
+  <text x="80" y="94" font-family="'Inter', -apple-system, sans-serif" font-size="24" font-weight="700" fill="currentColor" text-anchor="middle" letter-spacing="-0.5">Board<tspan fill="#E11D48" font-weight="900">PDF</tspan></text>
+  <text x="80" y="114" font-family="'Inter', sans-serif" font-size="10" font-weight="600" fill="#64748B" text-anchor="middle" letter-spacing="2">DOCUMENT PLATFORM</text>
+</svg>

@@ -153,16 +153,6 @@ html, body {
   box-sizing: border-box;
 }
 
-.layout-content.is-auth-mode {
-  padding: 0 !important;
-  margin: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow-y: auto !important;
-}
-
 .layout-content.is-embedded-canvas {
   padding: 0 !important;
   margin: 0 !important;

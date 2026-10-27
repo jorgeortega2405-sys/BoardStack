@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -148,11 +148,6 @@ export class WatermarkPdfController implements ViewController {
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="wm-dropzone-card"]');
 
-    dropzone?.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      fileInput?.click();
-    }, { signal });
-
     fileInput?.addEventListener('change', () => {
       const file = fileInput.files?.[0];
       if (file) {
@@ -292,17 +287,28 @@ export class WatermarkPdfController implements ViewController {
 
     this.currentFile = file;
 
-    try {
-      const pdfjsLib = await loadPdfJs();
-      const arrayBuffer = await file.arrayBuffer();
-      const task = pdfjsLib.getDocument({
-        cMapPacked: true,
-        cMapUrl: '/vendor/pdfjs/cmaps/',
-        data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
-      });
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="wm-dropzone-card"]');
+    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="wm-workspace-card"]');
+    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-watermark"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-      this.pdfDocument = await task.promise;
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (workspaceCard) workspaceCard.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'flex';
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+
+    if (outputNameInput) {
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      outputNameInput.value = `${base}_marca_de_agua.pdf`;
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      this.pdfDocument = await loadPdfDocument(arrayBuffer);
       const count = this.pdfDocument.numPages || 1;
 
       this.pages = Array.from({ length: count }, (_, i) => ({
@@ -311,11 +317,7 @@ export class WatermarkPdfController implements ViewController {
         pageNum: i + 1,
       }));
 
-      const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="wm-dropzone-card"]');
-      const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="wm-workspace-card"]');
-      const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-watermark"]');
       const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
-
       if (toPageInput) {
         toPageInput.value = String(count);
         toPageInput.max = String(count);
@@ -326,25 +328,10 @@ export class WatermarkPdfController implements ViewController {
         fromPageInput.max = String(count);
       }
 
-      if (dropzoneCard) dropzoneCard.style.display = 'none';
-      if (workspaceCard) workspaceCard.style.display = 'flex';
       if (executeBtn) executeBtn.disabled = false;
 
       const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
       if (countBadge) countBadge.textContent = String(count);
-
-      const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
-      const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-      const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
-      if (sidebar) sidebar.style.display = 'flex';
-      if (settingsBtn) settingsBtn.classList.add('is-visible');
-      if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-
-      const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-      if (outputNameInput) {
-        const base = file.name.replace(/\.[^/.]+$/, '');
-        outputNameInput.value = `${base}_marca_de_agua.pdf`;
-      }
 
       this.renderPagesGrid();
     } catch {
@@ -528,7 +515,6 @@ export class WatermarkPdfController implements ViewController {
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_marca_de_agua.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
-    this.hideError();
   }
 
   private showError(message: string): void {
@@ -537,6 +523,7 @@ export class WatermarkPdfController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = '';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

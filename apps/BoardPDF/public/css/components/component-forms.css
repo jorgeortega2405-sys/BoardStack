@@ -2,39 +2,6 @@
    6. FORMULARIOS GENÉRICOS, CAMPOS Y TARJETAS
    ========================================================================== */
 
-.login-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  box-sizing: border-box;
-}
-
-.login-header-logo {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.login-header-logo:hover {
-  opacity: 0.8;
-}
-
-.login-logo-img {
-  height: 38px;
-  width: auto;
-  display: block;
-}
-
 /* Tarjeta Genérica */
 .card {
   box-sizing: border-box;
@@ -44,21 +11,7 @@
   width: 100%;
 }
 
-.card--w-400 {
-  max-width: 400px;
-}
-
-.login-card {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  max-width: 400px;
-  width: 100%;
-}
-
-.card__header,
-.login-header {
+.card__header {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -66,8 +19,7 @@
   text-align: left;
 }
 
-.card__title,
-.login-title {
+.card__title {
   font-size: 26px;
   font-weight: 700;
   color: var(--text-primary);
@@ -75,8 +27,7 @@
   margin: 0;
 }
 
-.card__subtitle,
-.login-subtitle {
+.card__subtitle {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0;

@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -413,9 +413,8 @@ export class ComparePdfController implements ViewController {
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
-      const pdfjsLib = await loadPdfJs();
       const buffer = await file.arrayBuffer();
-      this.pdfDocument1 = await pdfjsLib.getDocument({ data: buffer }).promise;
+      this.pdfDocument1 = await loadPdfDocument(buffer);
 
       this.pageDimensions1 = [];
       this.pageScales1 = [];
@@ -466,9 +465,8 @@ export class ComparePdfController implements ViewController {
     if (removeBtn2) removeBtn2.style.display = 'inline-flex';
 
     try {
-      const pdfjsLib = await loadPdfJs();
       const buffer = await file.arrayBuffer();
-      this.pdfDocument2 = await pdfjsLib.getDocument({ data: buffer }).promise;
+      this.pdfDocument2 = await loadPdfDocument(buffer);
 
       this.pageDimensions2 = [];
       this.pageScales2 = [];
@@ -873,6 +871,7 @@ export class ComparePdfController implements ViewController {
       errorEl.textContent = msg;
       errorEl.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

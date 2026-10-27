@@ -15,14 +15,28 @@ export function getFooterHtml(): string {
     <footer class="home-feature-section" data-ref="footer-section">
       <div class="site-footer" data-ref="site-footer">
         <div class="site-footer__grid" data-ref="site-footer-grid">
+          <div class="footer-col footer-col--brand" data-ref="footer-col-brand">
+            <a class="footer-brand" data-ref="footer-brand-logo" href="${getLocalizedPath('home', currentLang)}" aria-label="BoardPDF">
+              <svg class="footer-brand__logo" data-ref="footer-brand-svg" viewBox="0 0 210 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(2, 3)">
+                  <path d="M4 4a4 4 0 0 1 4-4h14l9 9v23a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V4z" fill="#E11D48"/>
+                  <path d="M4 4v28a4 4 0 0 0 4 4h7L4 18z" fill="#9F1239"/>
+                  <path d="M22 0v9h9z" fill="#FFFFFF"/>
+                  <path d="M22 9l9-9-9 9z" fill="#CBD5E1"/>
+                  <path d="M9 16h16l-3 4H9z" fill="#FFFFFF" fill-opacity="0.95"/>
+                  <rect x="9" y="24" width="11" height="3" rx="1.5" fill="#FFFFFF" fill-opacity="0.9"/>
+                </g>
+                <text x="50" y="30" font-family="'Inter', -apple-system, sans-serif" font-size="25" font-weight="700" fill="currentColor" letter-spacing="-0.5">Board<tspan fill="#E11D48" font-weight="900">PDF</tspan></text>
+              </svg>
+            </a>
+            <p class="footer-col__desc" data-ref="footer-brand-desc">${t('footer.tagline') || 'Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.'}</p>
+          </div>
+
           <div class="footer-col" data-ref="footer-col-producto">
             <h4 class="footer-col__title" data-ref="footer-title-producto">${t('footer.col_product') || 'Producto'}</h4>
             <ul class="footer-col__list" data-ref="footer-list-producto">
               <li class="footer-col__item" data-ref="footer-item-inicio">
                 <a class="footer-col__link" data-ref="footer-link-inicio" href="${getLocalizedPath('home', currentLang)}">${t('footer.link_home') || 'Inicio'}</a>
-              </li>
-              <li class="footer-col__item" data-ref="footer-item-herramientas">
-                <a class="footer-col__link" data-ref="footer-link-herramientas" href="${getLocalizedPath('help-documentation', currentLang)}">${t('footer.link_tools') || 'Herramientas'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-faq">
                 <a class="footer-col__link" data-ref="footer-link-faq" href="${getLocalizedPath('help-faq', currentLang)}">${t('footer.link_faq') || 'Preguntas frecuentes'}</a>

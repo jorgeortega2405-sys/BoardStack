@@ -340,15 +340,6 @@ export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
       await loadStylesheet('/css/components/component-views.css');
-      const { createHelpDocumentationView } = await import('../views/help.view.js');
-      return await createHelpDocumentationView();
-    },
-    id: 'help-documentation',
-    match: (path) => path === '/help/documentation' || path === '/help-documentation' || path === '/documentation' || path === '/documentacion' || path === '/herramientas',
-  },
-  {
-    handler: async () => {
-      await loadStylesheet('/css/components/component-views.css');
       const { createHelpFaqView } = await import('../views/help.view.js');
       return await createHelpFaqView();
     },
@@ -412,15 +403,9 @@ export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async ({ path }) => {
       await loadStylesheet('/css/components/component-views.css');
-      const { createHelpCookiesView, createHelpDocumentationView, createHelpFaqView, createHelpPrivacyView, createHelpSecurityView, createHelpTermsView } = await import('../views/help.view.js');
+      const { createHelpCookiesView, createHelpFaqView, createHelpPrivacyView, createHelpSecurityView, createHelpTermsView } = await import('../views/help.view.js');
 
       switch (path) {
-        case '/help/documentation':
-        case '/help-documentation':
-        case '/documentation':
-        case '/documentacion':
-        case '/herramientas':
-          return await createHelpDocumentationView();
         case '/help/faq':
         case '/help-faq':
         case '/faq':

@@ -711,6 +711,7 @@ export class MergePdfController implements ViewController {
       banner.textContent = msg;
       banner.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

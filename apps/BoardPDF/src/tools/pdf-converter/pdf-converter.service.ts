@@ -24,7 +24,12 @@ export async function convertPdfFile(
   file: Express.Multer.File,
   targetType: ConversionType
 ): Promise<ConvertJobResult> {
-  const inputPath = file.path;
+  let inputPath = file.path;
+  if (!inputPath && file.buffer) {
+    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+    inputPath = path.join(UPLOADS_DIR, `temp_convert_${Date.now()}_${path.basename(file.originalname)}`);
+    await fs.promises.writeFile(inputPath, file.buffer);
+  }
   const originalFilename = file.originalname;
 
   try {

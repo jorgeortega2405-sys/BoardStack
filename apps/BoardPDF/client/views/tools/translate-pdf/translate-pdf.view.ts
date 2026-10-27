@@ -112,10 +112,6 @@ export class TranslatePdfViewController implements ViewController {
       }
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
@@ -276,6 +272,7 @@ export class TranslatePdfViewController implements ViewController {
     await withButtonLoading(button, async () => {
       try {
         const formData = new FormData();
+        formData.append('file', this.currentFile as Blob, this.currentFile?.name);
         formData.append('pdf', this.currentFile as Blob, this.currentFile?.name);
         formData.append('targetLang', this.targetLang);
         if (this.sourceLang) {
@@ -334,6 +331,7 @@ export class TranslatePdfViewController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = '';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

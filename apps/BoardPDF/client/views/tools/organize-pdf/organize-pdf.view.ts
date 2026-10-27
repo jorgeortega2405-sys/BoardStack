@@ -177,11 +177,6 @@ export class OrganizePdfController implements ViewController {
           void this.handleFileSelected(file);
         }
       }, { signal });
-
-      dropzone.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('button')) return;
-        fileInput?.click();
-      }, { signal });
     }
 
     rotateAllBtn?.addEventListener('click', () => {
@@ -695,6 +690,7 @@ export class OrganizePdfController implements ViewController {
       banner.textContent = msg;
       banner.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

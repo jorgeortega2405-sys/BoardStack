@@ -227,11 +227,6 @@ export class RemovePdfPagesController implements ViewController {
       signal,
     });
 
-    dropzone?.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      fileInput?.click();
-    }, { signal });
-
     inputPagesToRemove?.addEventListener('input', () => {
       if (this.pages.length === 0) return;
       const parsed = parsePageNumbers(inputPagesToRemove.value, this.pages.length);
@@ -668,6 +663,7 @@ export class RemovePdfPagesController implements ViewController {
       banner.textContent = msg;
       banner.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

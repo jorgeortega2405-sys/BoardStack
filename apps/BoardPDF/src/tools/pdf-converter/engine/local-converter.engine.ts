@@ -29,7 +29,20 @@ export class LocalConverterEngine implements IConverterEngine {
 
   private async convertPdfToJpg(inputPath: string, outputDir: string, baseName: string): Promise<EngineConversionResult> {
     const tempPrefix = path.join(outputDir, `page_${Date.now()}`);
-    await this.execProcess('pdftoppm', ['-jpeg', '-r', '150', inputPath, tempPrefix]);
+    let converted = false;
+    try {
+      await this.execProcess('pdftoppm', ['-jpeg', '-r', '150', inputPath, tempPrefix]);
+      converted = true;
+    } catch {
+      try {
+        const pyCmd = await getPythonCommand();
+        const scriptPath = findPythonWorkerScript('converter_worker.py', 'pdf-converter');
+        await this.execProcess(pyCmd, [scriptPath, 'jpg', inputPath, tempPrefix]);
+        converted = true;
+      } catch (pyErr) {
+        logger.app.error('Error al convertir PDF a JPG con Python PyMuPDF', pyErr);
+      }
+    }
 
     const generatedFiles = fs.readdirSync(outputDir)
       .filter((f) => f.startsWith(path.basename(tempPrefix)) && f.endsWith('.jpg'))

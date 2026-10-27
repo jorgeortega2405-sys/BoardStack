@@ -184,6 +184,16 @@ def convert_to_xlsx(input_pdf, output_file):
 
     wb.save(output_file)
 
+def convert_to_jpg(input_pdf, output_pattern):
+    import pymupdf
+    pdf = pymupdf.open(input_pdf)
+    total_pages = len(pdf)
+    for p_idx, page in enumerate(pdf, start=1):
+        pix = page.get_pixmap(dpi=150)
+        out_name = f"{output_pattern}-{p_idx:02d}.jpg" if total_pages > 1 else f"{output_pattern}.jpg"
+        pix.save(out_name)
+    pdf.close()
+
 def main():
     if len(sys.argv) < 4:
         print(json.dumps({'error': 'Uso: python converter_worker.py <format> <input> <output>', 'success': False}))
@@ -204,6 +214,8 @@ def main():
             convert_to_pptx(input_pdf, output_file)
         elif target_format == 'xlsx':
             convert_to_xlsx(input_pdf, output_file)
+        elif target_format == 'jpg' or target_format == 'jpeg':
+            convert_to_jpg(input_pdf, output_file)
         else:
             print(json.dumps({'error': f'Formato no soportado: {target_format}', 'success': False}))
             sys.exit(1)

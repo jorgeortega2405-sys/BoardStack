@@ -30,7 +30,7 @@ export async function convertToPdfHandler(req: Request, res: Response): Promise<
     if (sourceType === 'html-to-pdf' && rawUrl) {
       if (!isValidPublicUrl(rawUrl)) {
         res.status(400).json({
-          error: 'La URL proporcionada no es válida o apunta a una dirección restringida.',
+          error: 'La dirección URL ingresada no es válida o apunta a una red restringida (ej. localhost o intranet privada). Ingresa una URL web pública como https://ejemplo.com.',
           success: false,
         });
         return;

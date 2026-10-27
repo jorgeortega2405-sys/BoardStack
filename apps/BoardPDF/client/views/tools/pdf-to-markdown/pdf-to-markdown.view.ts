@@ -111,10 +111,6 @@ export class PdfToMarkdownController implements ViewController {
       }
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
@@ -361,6 +357,7 @@ export class PdfToMarkdownController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = '';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

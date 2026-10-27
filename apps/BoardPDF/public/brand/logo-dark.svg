@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 44" fill="none">
+  <g transform="translate(2, 3)">
+    <path d="M4 4a4 4 0 0 1 4-4h14l9 9v23a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V4z" fill="#E11D48"/>
+    <path d="M4 4v28a4 4 0 0 0 4 4h7L4 18z" fill="#9F1239"/>
+    <path d="M22 0v9h9z" fill="#FFFFFF"/>
+    <path d="M22 9l9-9-9 9z" fill="#CBD5E1"/>
+    <path d="M9 16h16l-3 4H9z" fill="#FFFFFF" fill-opacity="0.95"/>
+    <rect x="9" y="24" width="11" height="3" rx="1.5" fill="#FFFFFF" fill-opacity="0.9"/>
+  </g>
+  <text x="50" y="30" font-family="'Inter', -apple-system, sans-serif" font-size="25" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">Board<tspan fill="#F43F5E" font-weight="900">PDF</tspan></text>
+</svg>

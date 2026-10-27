@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "name": "BoardPDF",
     "tagline": "Sistema SPA Modular",
@@ -584,6 +584,7 @@
     "col_company": "Empresa",
     "link_about": "Sobre nosotros",
     "link_contact": "Contacto",
+    "tagline": "Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.",
     "copyright": "© BoardPDF 2026 ® - Tu editor de PDF",
     "search_language": "Buscar idioma...",
     "no_languages_found": "No se encontraron idiomas"

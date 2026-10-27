@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -171,10 +171,6 @@ export class SummarizePdfController implements ViewController {
       fileInput?.click();
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
     heroDriveBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -282,10 +278,8 @@ export class SummarizePdfController implements ViewController {
     this.currentFile = file;
 
     try {
-      const pdfjsLib = await loadPdfJs();
       const buffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: buffer });
-      this.pdfDocument = await loadingTask.promise;
+      this.pdfDocument = await loadPdfDocument(buffer);
 
       this.renderViewerState(file);
       await this.renderThumbnails();
@@ -594,6 +588,7 @@ export class SummarizePdfController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = 'block';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

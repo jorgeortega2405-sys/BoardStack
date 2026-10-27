@@ -155,10 +155,6 @@ export class CompressPdfController implements ViewController {
       }
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
@@ -423,6 +419,7 @@ export class CompressPdfController implements ViewController {
       errorEl.textContent = msg;
       errorEl.style.display = 'block';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

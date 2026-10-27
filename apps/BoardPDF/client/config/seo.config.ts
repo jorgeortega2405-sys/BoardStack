@@ -689,25 +689,7 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
       es: 'Contacto | BoardPDF',
     },
   },
-  'help-documentation': {
-    descriptions: {
-      en: 'Complete documentation and user guides for all BoardPDF PDF tools, security features, and workflows.',
-      es: 'Guía detallada y documentación completa de todas las herramientas PDF, seguridad y flujos de trabajo en BoardPDF.',
-    },
-    routeId: 'help-documentation',
-    slugs: {
-      de: 'dokumentation',
-      en: 'documentation',
-      es: 'herramientas',
-      fr: 'outils',
-      it: 'strumenti',
-      pt: 'ferramentas',
-    },
-    titles: {
-      en: 'Tools Documentation | BoardPDF',
-      es: 'Documentación de Herramientas | BoardPDF',
-    },
-  },
+
   'help-faq': {
     descriptions: {
       en: 'Find answers to common questions about BoardPDF PDF tools, security, privacy, pricing, and document lifecycle.',
@@ -820,11 +802,6 @@ SLUG_TO_ROUTE_MAP.set('numerar-pdf', 'page-numbers');
 SLUG_TO_ROUTE_MAP.set('add-watermark', 'watermark-pdf');
 SLUG_TO_ROUTE_MAP.set('marca-de-agua-pdf', 'watermark-pdf');
 SLUG_TO_ROUTE_MAP.set('redactar-pdf', 'redact-pdf');
-SLUG_TO_ROUTE_MAP.set('documentation', 'help-documentation');
-SLUG_TO_ROUTE_MAP.set('documentacion', 'help-documentation');
-SLUG_TO_ROUTE_MAP.set('herramientas', 'help-documentation');
-SLUG_TO_ROUTE_MAP.set('help/documentation', 'help-documentation');
-SLUG_TO_ROUTE_MAP.set('help-documentation', 'help-documentation');
 SLUG_TO_ROUTE_MAP.set('faq', 'help-faq');
 SLUG_TO_ROUTE_MAP.set('preguntas-frecuentes', 'help-faq');
 SLUG_TO_ROUTE_MAP.set('help/faq', 'help-faq');

@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -298,9 +298,8 @@ export class RedactPdfController implements ViewController {
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
-      const pdfjsLib = await loadPdfJs();
       const buffer = await file.arrayBuffer();
-      this.pdfDocument = await pdfjsLib.getDocument({ data: buffer }).promise;
+      this.pdfDocument = await loadPdfDocument(buffer);
 
       this.pageDimensions = [];
       this.pageScales = [];
@@ -542,7 +541,7 @@ export class RedactPdfController implements ViewController {
 
       if (textContent.items && textContent.items.length > 0) {
         textContent.items.forEach((item: any) => {
-          if (!item.str || item.str.trim().length === 0) return;
+          if (!item || typeof item.str !== 'string' || !item.str.trim() || !Array.isArray(item.transform) || item.transform.length < 6) return;
 
           const tx = (window as any).pdfjsLib?.Util?.transform
             ? (window as any).pdfjsLib.Util.transform(viewport.transform, item.transform)
@@ -998,6 +997,7 @@ export class RedactPdfController implements ViewController {
       }
 
       const formData = new FormData();
+      formData.append('pdf', this.currentFile);
       formData.append('file', this.currentFile);
       formData.append('redactions', JSON.stringify(pageRedactions));
       formData.append('sanitizeMetadata', 'true');
@@ -1059,6 +1059,7 @@ export class RedactPdfController implements ViewController {
       errorEl.textContent = msg;
       errorEl.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

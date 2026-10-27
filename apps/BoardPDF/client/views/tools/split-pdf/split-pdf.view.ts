@@ -1098,6 +1098,7 @@ export class SplitPdfController implements ViewController {
       banner.textContent = msg;
       banner.style.display = '';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {

@@ -6,7 +6,7 @@ import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
@@ -127,11 +127,6 @@ export class CropPdfController implements ViewController {
     }, { signal });
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="crop-dropzone-card"]');
-
-    dropzone?.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      fileInput?.click();
-    }, { signal });
 
     fileInput?.addEventListener('change', () => {
       const file = fileInput.files?.[0];
@@ -338,42 +333,33 @@ export class CropPdfController implements ViewController {
     this.currentPage = 1;
     this.cropPercent = { height: 90, width: 90, x: 5, y: 5 };
 
+    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="crop-dropzone-card"]');
+    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="crop-workspace-card"]');
+    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
+    const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+
+    if (dropzoneCard) dropzoneCard.style.display = 'none';
+    if (workspaceCard) workspaceCard.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'flex';
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+    if (pageNav) pageNav.style.display = 'flex';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    if (topHeader) topHeader.style.display = 'flex';
+    if (filenameInput) {
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      filenameInput.value = `${base}_recortado.pdf`;
+    }
+
     try {
-      const pdfjsLib = await loadPdfJs();
       const arrayBuffer = await file.arrayBuffer();
-      const task = pdfjsLib.getDocument({
-        cMapPacked: true,
-        cMapUrl: '/vendor/pdfjs/cmaps/',
-        data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
-      });
-
-      this.pdfDocument = await task.promise;
+      this.pdfDocument = await loadPdfDocument(arrayBuffer);
       this.totalPages = this.pdfDocument.numPages || 1;
-
-      const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="crop-dropzone-card"]');
-      const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="crop-workspace-card"]');
-      const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
-
-      if (dropzoneCard) dropzoneCard.style.display = 'none';
-      if (workspaceCard) workspaceCard.style.display = 'flex';
       if (executeBtn) executeBtn.disabled = false;
-
-      const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
-      const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
-      const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
-      const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
-      const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-      if (sidebar) sidebar.style.display = 'flex';
-      if (settingsBtn) settingsBtn.classList.add('is-visible');
-      if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-      if (pageNav) pageNav.style.display = 'flex';
-      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      if (topHeader) topHeader.style.display = 'flex';
-      if (filenameInput) {
-        const base = file.name.replace(/\.[^/.]+$/, '');
-        filenameInput.value = `${base}_recortado.pdf`;
-      }
 
       await this.renderCurrentPage();
       this.updateCropDisplay();
@@ -513,7 +499,6 @@ export class CropPdfController implements ViewController {
     if (topHeader) topHeader.style.display = 'none';
     if (filenameInput) filenameInput.value = 'documento_recortado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
-    this.hideError();
   }
 
   private showError(message: string): void {
@@ -522,6 +507,7 @@ export class CropPdfController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = '';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

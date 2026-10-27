@@ -1,5 +1,7 @@
+import { spawn } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
@@ -91,6 +93,133 @@ export function isValidPublicUrl(rawUrl: string): boolean {
   }
 }
 
+async function renderWithBrowser(targetUrl: string, outputPath: string): Promise<boolean> {
+  const browserCmd = getBrowserCommand();
+  if (!browserCmd) {
+    return false;
+  }
+
+  const tempProfile = path.join(os.tmpdir(), `bp_chrome_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
+  try {
+    await fs.promises.mkdir(tempProfile, { recursive: true });
+  } catch {}
+
+  const args = [
+    '--headless=new',
+    '--disable-gpu',
+    '--no-sandbox',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-extensions',
+    '--disable-crash-reporter',
+    '--run-all-compositor-stages-before-draw',
+    `--crash-dumps-dir=${tempProfile}`,
+    `--user-data-dir=${tempProfile}`,
+    `--print-to-pdf=${outputPath}`,
+    targetUrl,
+  ];
+
+  let child;
+  try {
+    child = spawn(browserCmd, args, {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+  } catch (err) {
+    logger.app.warn('Error al iniciar navegador headless para PDF:', err);
+    await fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
+    return false;
+  }
+
+  let generated = false;
+  for (let i = 0; i < 35; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      if (fs.existsSync(outputPath)) {
+        const stats = await fs.promises.stat(outputPath);
+        if (stats.size > 0) {
+          generated = true;
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  try {
+    if (child.pid) {
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore' });
+      } else {
+        child.kill('SIGKILL');
+      }
+    }
+  } catch {}
+
+  setTimeout(() => {
+    fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
+  }, 2000).unref();
+
+  return generated;
+}
+
+async function createFallbackPdfFromHtml(html: string, titleOrUrl: string, outputPath: string): Promise<void> {
+  const pdfDoc = await PDFDocument.create();
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const pageTitle = titleMatch ? titleMatch[1].trim() : titleOrUrl;
+
+  const cleanText = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  let currentPage = pdfDoc.addPage([595, 842]);
+  let y = 790;
+
+  currentPage.drawText(pageTitle.substring(0, 50), { color: rgb(0.1, 0.1, 0.1), font: fontBold, size: 16, x: 50, y });
+  y -= 25;
+  currentPage.drawText(titleOrUrl.substring(0, 75), { color: rgb(0.4, 0.4, 0.4), font: fontRegular, size: 9, x: 50, y });
+  y -= 30;
+
+  const words = cleanText.split(' ');
+  let currentLine = '';
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (testLine.length > 80) {
+      if (y < 60) {
+        currentPage = pdfDoc.addPage([595, 842]);
+        y = 790;
+      }
+      currentPage.drawText(currentLine, { color: rgb(0.2, 0.2, 0.2), font: fontRegular, size: 10, x: 50, y });
+      y -= 16;
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+
+  if (currentLine) {
+    if (y < 60) {
+      currentPage = pdfDoc.addPage([595, 842]);
+      y = 790;
+    }
+    currentPage.drawText(currentLine, { color: rgb(0.2, 0.2, 0.2), font: fontRegular, size: 10, x: 50, y });
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  await fs.promises.writeFile(outputPath, pdfBytes);
+}
+
 export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionResult> {
   const parsed = new URL(rawUrl);
   let baseHostname = parsed.hostname.replace(/[^a-zA-Z0-9.-]/g, '_') || 'pagina-web';
@@ -102,76 +231,20 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
   const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
 
   try {
-    const browserCmd = getBrowserCommand();
-    let browserSucceeded = false;
-
-    if (browserCmd) {
-      const procResult = await executeProcessWithTimeout(browserCmd, [
-        '--headless',
-        '--disable-gpu',
-        '--no-pdf-header-footer',
-        '--run-all-compositor-stages-before-draw',
-        '--virtual-time-budget=6000',
-        `--print-to-pdf=${destinationPath}`,
-        rawUrl,
-      ], { timeoutMs: 45000 });
-
-      if (!procResult.timedOut && procResult.code === 0 && fs.existsSync(destinationPath)) {
-        const stats = await fs.promises.stat(destinationPath);
-        if (stats.size > 0) {
-          browserSucceeded = true;
-        }
-      }
-    }
+    let browserSucceeded = await renderWithBrowser(rawUrl, destinationPath);
 
     if (!browserSucceeded) {
-      const tempHtmlFile = path.join(OUTPUT_DIR, `${uniquePrefix}_temp.html`);
       try {
         const fetchRes = await fetch(rawUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(10000),
         });
         const htmlText = await fetchRes.text();
-        await fs.promises.writeFile(tempHtmlFile, htmlText, 'utf-8');
-
-        const tempOutDir = path.join(OUTPUT_DIR, `${uniquePrefix}_lo`);
-        await fs.promises.mkdir(tempOutDir, { recursive: true });
-
-        const loCmd = process.platform === 'win32' ? 'soffice' : 'libreoffice';
-        let loResult = await executeProcessWithTimeout(loCmd, [
-          '--headless',
-          '--convert-to',
-          'pdf',
-          '--outdir',
-          tempOutDir,
-          tempHtmlFile,
-        ], { timeoutMs: 30000 });
-
-        if (loResult.code !== 0 && loCmd === 'soffice') {
-          loResult = await executeProcessWithTimeout('libreoffice', [
-            '--headless',
-            '--convert-to',
-            'pdf',
-            '--outdir',
-            tempOutDir,
-            tempHtmlFile,
-          ], { timeoutMs: 30000 });
-        }
-
-        if (!loResult.timedOut && loResult.code === 0) {
-          const entries = await fs.promises.readdir(tempOutDir);
-          const pdfs = entries.filter((f) => f.toLowerCase().endsWith('.pdf'));
-          if (pdfs.length > 0) {
-            await fs.promises.copyFile(path.join(tempOutDir, pdfs[0]), destinationPath);
-            browserSucceeded = true;
-          }
-        }
-        await fs.promises.rm(tempOutDir, { force: true, recursive: true }).catch(() => {});
-      } catch {} finally {
-        await fs.promises.unlink(tempHtmlFile).catch(() => {});
-      }
+        await createFallbackPdfFromHtml(htmlText, rawUrl, destinationPath);
+        browserSucceeded = true;
+      } catch {}
     }
 
     if (!browserSucceeded) {
@@ -226,15 +299,27 @@ export async function convertToPdf(
   file: Express.Multer.File,
   sourceType: ToPdfSourceType
 ): Promise<ToPdfConversionResult> {
-  const inputPath = file.path;
+  let inputPath = file.path;
+  if (!inputPath && file.buffer) {
+    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+    inputPath = path.join(UPLOADS_DIR, `temp_input_${Date.now()}_${path.basename(file.originalname)}`);
+    await fs.promises.writeFile(inputPath, file.buffer);
+  }
   const originalFilename = file.originalname;
-  const originalSize = file.size;
+  const originalSize = file.size || file.buffer?.length || 0;
   const targetPdfName = getBasePdfName(originalFilename);
   const uniquePrefix = `topdf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
 
   try {
-    if (sourceType === 'jpg-to-pdf') {
+    if (sourceType === 'html-to-pdf') {
+      const fileUrl = `file:///${path.resolve(inputPath).replace(/\\/g, '/')}`;
+      const rendered = await renderWithBrowser(fileUrl, destinationPath);
+      if (!rendered) {
+        const rawContent = await fs.promises.readFile(inputPath, 'utf-8');
+        await createFallbackPdfFromHtml(rawContent, originalFilename, destinationPath);
+      }
+    } else if (sourceType === 'jpg-to-pdf') {
       let imageConverted = false;
       try {
         const imageBytes = await fs.promises.readFile(inputPath);

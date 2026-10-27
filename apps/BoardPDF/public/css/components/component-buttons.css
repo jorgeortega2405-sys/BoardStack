@@ -634,8 +634,7 @@
   white-space: nowrap;
 }
 
-.card__body,
-.login-form {
+.card__body {
   display: flex;
   flex-direction: column;
   gap: 8px;

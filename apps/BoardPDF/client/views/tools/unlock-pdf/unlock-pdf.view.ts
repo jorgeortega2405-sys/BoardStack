@@ -149,11 +149,6 @@ export class UnlockPdfController implements ViewController {
       }
     }, { signal });
 
-    dropzone?.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      fileInput?.click();
-    }, { signal });
-
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetToInitial();
@@ -403,6 +398,7 @@ export class UnlockPdfController implements ViewController {
       errorEl.textContent = message;
       errorEl.style.display = 'block';
     }
+    showToast(message, 'danger');
   }
 
   private hideError(): void {

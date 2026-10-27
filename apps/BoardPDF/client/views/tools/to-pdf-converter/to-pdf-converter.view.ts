@@ -222,14 +222,6 @@ export class ToPdfConverterController implements ViewController {
       }
     }, { signal });
 
-    dropzone?.addEventListener('click', () => {
-      if (this.config.isUrlMode) {
-        this.openUrlModal();
-      } else {
-        fileInput?.click();
-      }
-    }, { signal });
-
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
@@ -524,11 +516,12 @@ export class ToPdfConverterController implements ViewController {
 
         showToast('Documento convertido exitosamente', 'success');
         navigate(`/download/${data.downloadToken}`);
-      } catch {
+      } catch (err: unknown) {
+        const errorDetail = err instanceof Error ? err.message : '';
         this.statusManager?.showError({
-          boxText: this.currentUrl
+          boxText: errorDetail || (this.currentUrl
             ? 'Comprueba que la dirección URL sea accesible públicamente y no requiera inicio de sesión. Si el problema continúa, contacta a soporte.'
-            : 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.',
+            : 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.'),
           boxTitle: 'Error en la conversión a PDF',
           desc: 'Ha ocurrido un error inesperado al procesar la conversión. Por favor intenta más tarde.',
           retryText: 'Reintentar Conversión',
@@ -546,6 +539,7 @@ export class ToPdfConverterController implements ViewController {
       errorEl.textContent = msg;
       errorEl.style.display = 'block';
     }
+    showToast(msg, 'danger');
   }
 
   private hideError(): void {
