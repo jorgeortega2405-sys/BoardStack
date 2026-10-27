@@ -659,21 +659,6 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
       es: 'PDF a Markdown - Extrae texto limpio con formato | BoardPDF',
     },
   },
-  ai: {
-    descriptions: {
-      en: 'AI Assistant for intelligent document processing and natural language workflows.',
-      es: 'Asistente de IA para procesamiento inteligente de documentos y flujos de trabajo.',
-    },
-    routeId: 'ai',
-    slugs: {
-      en: 'ai',
-      es: 'ai',
-    },
-    titles: {
-      en: 'AI Assistant - BoardPDF',
-      es: 'Asistente IA - BoardPDF',
-    },
-  },
   about: {
     descriptions: {
       en: 'Learn about the story, mission, and core values driving BoardPDF.',

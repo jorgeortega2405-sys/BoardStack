@@ -371,6 +371,11 @@
   color: #ef4444;
 }
 
+.tool-card__icon-box--crimson {
+  background-color: #ffe4e6;
+  color: #e11d48;
+}
+
 .tool-card__icon-box--orange {
   background-color: #ffedd5;
   color: #f97316;

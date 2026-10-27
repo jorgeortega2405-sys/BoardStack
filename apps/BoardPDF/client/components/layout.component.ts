@@ -60,8 +60,7 @@ export function updateSidebarAuthState(_sidebar?: HTMLElement): void {}
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
   const cleanPath = (path || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
-  const isAi = cleanPath === '/ai' || cleanPath.startsWith('/ai/') || /^\/[a-z]{2,3}\/ai(\/.*)?$/i.test(cleanPath);
-  const isHome = !isAi && (cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1))));
+  const isHome = cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1)));
   const isHelp = getActiveHelpSection(cleanPath) !== null;
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
 
@@ -70,8 +69,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const itemApps = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
-  const railItemAi = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ai"]');
-  const btnRailAi = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ai"]');
   const railItemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
 
@@ -80,8 +77,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   itemApps?.classList.toggle('is-active', isDrawerOpen && currentDrawerMode === 'apps');
   btnApps?.classList.toggle('is-active', isDrawerOpen && currentDrawerMode === 'apps');
   btnToggle?.classList.toggle('is-active', (isDrawerOpen && currentDrawerMode === 'workflows') || (!isDrawerOpen && isWorkflows));
-  railItemAi?.classList.toggle('is-active', isAi && !isDrawerOpen);
-  btnRailAi?.classList.toggle('is-active', isAi && !isDrawerOpen);
   railItemHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
   btnRailHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
 
@@ -100,8 +95,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
   const itemApps = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
-  const itemAi = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ai"]');
-  const btnRailAi = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ai"]');
   const itemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
 
@@ -133,21 +126,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemApps?.addEventListener('click', (e) => {
     if (e.target !== btnApps && !btnApps?.contains(e.target as Node)) {
       toggleApps(e);
-    }
-  });
-
-  const goAi = (e: Event) => {
-    e.preventDefault();
-    if (isDrawerOpen) {
-      toggleDrawer(false);
-    }
-    navigate('/ai');
-  };
-
-  btnRailAi?.addEventListener('click', goAi);
-  itemAi?.addEventListener('click', (e) => {
-    if (e.target !== btnRailAi && !btnRailAi?.contains(e.target as Node)) {
-      goAi(e);
     }
   });
 
