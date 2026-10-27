@@ -537,9 +537,7 @@
    8. MODO ALTO CONTRASTE (HIGH CONTRAST / ACCESSIBILITY)
    ========================================================================== */
 
-[data-contrast="high"],
-html.high-contrast,
-.high-contrast {
+[data-contrast="high"] {
   --border-color: #000000;
   --border-color-hover: #000000;
   --divider-color: #000000;
@@ -552,8 +550,7 @@ html.high-contrast,
    11. MOVIMIENTO REDUCIDO (ACCESSIBILITY / REDUCE MOTION)
    ========================================================================== */
 
-[data-reduce-motion="true"],
-html.reduce-motion {
+[data-reduce-motion="true"] {
   *,
   *::before,
   *::after {
