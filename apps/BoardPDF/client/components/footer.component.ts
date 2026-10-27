@@ -48,7 +48,7 @@ export function getFooterHtml(): string {
             <h4 class="footer-col__title" data-ref="footer-title-legal">${t('footer.col_legal') || 'Legal'}</h4>
             <ul class="footer-col__list" data-ref="footer-list-legal">
               <li class="footer-col__item" data-ref="footer-item-seguridad">
-                <a class="footer-col__link" data-ref="footer-link-seguridad" href="${getLocalizedPath('help-security', currentLang)}">${t('footer.link_security') || 'Seguridad'}</a>
+                <a class="footer-col__link" data-ref="footer-link-seguridad" href="${getLocalizedPath('help-security', currentLang)}">${t('footer.link_security') || 'Política de seguridad'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-privacidad">
                 <a class="footer-col__link" data-ref="footer-link-privacidad" href="${getLocalizedPath('help-privacy', currentLang)}">${t('footer.link_privacy') || 'Política de Privacidad'}</a>
@@ -57,7 +57,7 @@ export function getFooterHtml(): string {
                 <a class="footer-col__link" data-ref="footer-link-terminos" href="${getLocalizedPath('help-terms', currentLang)}">${t('footer.link_terms') || 'Términos y Condiciones'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-cookies">
-                <a class="footer-col__link" data-ref="footer-link-cookies" href="${getLocalizedPath('help-cookies', currentLang)}">${t('footer.link_cookies') || 'Cookies'}</a>
+                <a class="footer-col__link" data-ref="footer-link-cookies" href="${getLocalizedPath('help-cookies', currentLang)}">${t('footer.link_cookies') || 'Política de cookies'}</a>
               </li>
             </ul>
           </div>

@@ -96,6 +96,11 @@ export class ContactController implements ViewController {
           if (subjectText && item) {
             const text = item.querySelector('.menu-item__text')?.textContent || '';
             subjectText.textContent = text;
+            const itemIconHref = item.querySelector('.component-icon use')?.getAttribute('href');
+            const triggerIconUse = subjectDropdown.querySelector('[data-ref="icon-contact-subject"] use');
+            if (itemIconHref && triggerIconUse) {
+              triggerIconUse.setAttribute('href', itemIconHref);
+            }
           }
         },
       });
@@ -156,7 +161,11 @@ export class ContactController implements ViewController {
         await withButtonLoading(submitBtn, 'Enviando mensaje...', async () => {
           form.reset();
           if (subjectInput) subjectInput.value = '';
-          if (subjectText) subjectText.textContent = 'Selecciona un asunto...';
+          if (subjectText) subjectText.textContent = 'Selecciona un asunto';
+          const triggerIconUse = subjectDropdown?.querySelector('[data-ref="icon-contact-subject"] use');
+          if (triggerIconUse) {
+            triggerIconUse.setAttribute('href', '/icons.svg#help');
+          }
           showSuccess('¡Tu mensaje ha sido enviado correctamente! Te responderemos a la brevedad posible.');
           showToast('Mensaje enviado con éxito', 'success');
         });

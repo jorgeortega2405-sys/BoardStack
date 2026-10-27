@@ -53,7 +53,7 @@ export class HomeController {
     const standardToolsHtml = TOOLS_REGISTRY.map((tool) => {
       const isNew = isToolNew(tool);
       const newBadgeHtml = isNew
-        ? `<span class="component-badge component-badge--sm tool-card__badge tool-card__badge--new" data-ref="badge-tool-new-${tool.id}" data-i18n="home.badge_new">${t('home.badge_new', 'Nueva')}</span>`
+        ? `<span class="component-badge component-badge--sm tool-card__badge tool-card__badge--new" data-ref="badge-tool-new-${tool.id}" data-i18n="home.badge_new">${t('home.badge_new', 'Nuevo')}</span>`
         : '';
 
       return `

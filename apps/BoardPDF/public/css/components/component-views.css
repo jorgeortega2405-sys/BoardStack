@@ -333,9 +333,9 @@
 }
 
 .tool-card__badge--new {
-  background-color: rgba(24, 24, 27, 0.9);
+  background-color: transparent;
   border: 1px solid #000000;
-  color: #ffffff;
+  color: #000000;
 }
 
 .tool-card__icon-box {
@@ -2749,26 +2749,6 @@ flex-shrink: 0;
   width: 100%;
 }
 
-.about-hero .component-badge,
-.about-hero__badge {
-  align-items: center;
-  background: var(--bg-hover, #f1f5f9);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: var(--sl-border-radius-pill, 9999px);
-  color: var(--text-secondary, #64748b);
-  display: inline-flex;
-  font-size: 13px;
-  font-weight: 600;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 6px 16px;
-}
-
-.about-hero__badge-icon {
-  height: 16px;
-  width: 16px;
-}
-
 .about-hero__title {
   color: var(--text-primary, #0f172a);
   font-size: clamp(30px, 4.5vw, 48px);
@@ -2835,10 +2815,10 @@ flex-shrink: 0;
 }
 
 .about-pillars-grid {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(3, 1fr);
-  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
   width: 100%;
 }
 
@@ -2917,12 +2897,6 @@ flex-shrink: 0;
 .features-cta-banner__actions {
   display: flex;
   gap: 12px;
-}
-
-@media (max-width: 860px) {
-  .about-pillars-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ==========================================================================

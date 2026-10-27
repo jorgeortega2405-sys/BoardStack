@@ -30,7 +30,8 @@
             <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-contact-subject">
               <button type="button" class="dropdown-trigger" data-ref="btn-trigger-contact-subject" aria-label="Asunto de la consulta">
                 <div class="dropdown-trigger__left">
-                  <span class="dropdown-trigger__text" data-ref="contact-subject-selected-text">Selecciona un asunto...</span>
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="icon-contact-subject" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="contact-subject-selected-text">Selecciona un asunto</span>
                 </div>
                 <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
@@ -41,15 +42,19 @@
                   </div>
                   <div class="menu-panel__list" data-ref="list-contact-subject">
                     <button type="button" class="menu-item" data-ref="option-subject-general" data-value="general">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
                       <span class="menu-item__text">Consultas generales</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="option-subject-technical" data-value="technical">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#build"></use></svg>
                       <span class="menu-item__text">Soporte técnico y problemas con herramientas</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="option-subject-security" data-value="security">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
                       <span class="menu-item__text">Seguridad y Privacidad (GDPR)</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="option-subject-suggestion" data-value="suggestion">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
                       <span class="menu-item__text">Sugerencia de nueva función</span>
                     </button>
                   </div>
