@@ -44,26 +44,26 @@
       </div>
 
       <div class="pdf-items-view" data-ref="converter-selected-card" style="display: none;">
-        <div class="tool-workspace__toolbar" data-ref="pdf-workspace-toolbar">
+        <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (<span data-ref="pdf-count-badge">1</span>)</h2>
+            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
           </div>
         </div>
 
-        <div class="pdf-reorder-hint" data-ref="pdf-reorder-hint">
+        <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
           <span data-ref="txt-converter-hint">Tu archivo se convertirá a formato PDF manteniendo el diseño original, tipografías e imágenes.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
-          <div class="pdf-card" data-ref="selected-file-card">
+          <div class="pdf-card">
             <div class="pdf-card__actions">
               <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" aria-label="Eliminar archivo">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
-            <div class="pdf-card__sheet-wrapper" data-ref="sheet-wrapper">
-              <div class="pdf-card__sheet" data-ref="sheet">
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
                 <img class="pdf-card__preview-img" data-ref="doc-preview-img" style="display: none;" alt="Vista previa" />
                 <div class="pdf-card__placeholder" data-ref="doc-preview-icon">
                   <svg class="component-icon pdf-card__placeholder-icon" data-ref="selected-file-symbol" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
@@ -85,7 +85,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar" data-ref="to-pdf-converter-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="tool-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -99,8 +99,8 @@
         <p class="tool-sidebar__subtitle" data-ref="converter-sidebar-subtitle">Transforma tu documento en un archivo PDF listo para visualizar o descargar.</p>
       </div>
 
-      <div class="tool-sidebar__body" data-ref="converter-sidebar-body">
-        <div class="tool-sidebar-notice" data-ref="converter-info-notice">
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
           <div class="tool-sidebar-notice__text" data-ref="txt-converter-info-notice">El archivo se convertirá a documento PDF de alta fidelidad, listo para imprimir, compartir o archivar.</div>
         </div>
@@ -112,7 +112,7 @@
           <span data-ref="txt-convert-action">Convertir a PDF</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger" data-ref="converter-global-error" style="display: none; margin-top: 6px;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="converter-global-error" role="alert" style="display: none;"></div>
       </div>
     </aside>
   </div>

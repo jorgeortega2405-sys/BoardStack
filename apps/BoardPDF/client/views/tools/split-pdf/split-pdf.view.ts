@@ -12,63 +12,8 @@ import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, bindInlineControls, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function parsePageNumbers(raw: string, maxPages: number): number[] {
-  const result = new Set<number>();
-  const parts = raw.split(',');
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    if (trimmed.includes('-')) {
-      const [startStr, endStr] = trimmed.split('-');
-      const start = parseInt(startStr, 10);
-      const end = parseInt(endStr, 10);
-      if (!isNaN(start) && !isNaN(end)) {
-        const from = Math.max(1, Math.min(start, end));
-        const to = Math.min(maxPages, Math.max(start, end));
-        for (let i = from; i <= to; i++) {
-          result.add(i);
-        }
-      }
-    } else {
-      const page = parseInt(trimmed, 10);
-      if (!isNaN(page) && page >= 1 && page <= maxPages) {
-        result.add(page);
-      }
-    }
-  }
-  return Array.from(result).sort((a, b) => a - b);
-}
-
-function formatPageNumbers(pages: number[]): string {
-  if (pages.length === 0) return '';
-  const sorted = Array.from(new Set(pages)).sort((a, b) => a - b);
-  const ranges: string[] = [];
-  let start = sorted[0];
-  let prev = sorted[0];
-
-  for (let i = 1; i < sorted.length; i++) {
-    const curr = sorted[i];
-    if (curr === prev + 1) {
-      prev = curr;
-    } else {
-      ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-      start = curr;
-      prev = curr;
-    }
-  }
-  ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-  return ranges.join(', ');
-}
 
 export class SplitPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -797,10 +742,10 @@ export class SplitPdfController implements ViewController {
 
   private renderPageCardHtml(page: PageItem, isSelected: boolean, isDimmed = false, rangeLabel = ''): string {
     const sheetContent = page.thumbnailDataUrl
-      ? `<img class="split-page-card__preview-img" data-ref="img-page-${page.num}" src="${page.thumbnailDataUrl}" alt="Página ${page.num}" />`
+      ? `<img class="pdf-card__preview-img" data-ref="img-page-${page.num}" src="${page.thumbnailDataUrl}" alt="Página ${page.num}" />`
       : `
-        <div class="split-page-card__placeholder">
-          <svg class="component-icon split-page-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+        <div class="pdf-card__placeholder">
+          <svg class="component-icon pdf-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
           <span style="font-size: 0.75rem; color: var(--text-tertiary);">${page.num}</span>
         </div>
       `;
@@ -814,12 +759,12 @@ export class SplitPdfController implements ViewController {
         <div class="split-page-card__check-badge">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
         </div>
-        <div class="split-page-card__sheet-wrapper">
-          <div class="split-page-card__sheet" data-ref="sheet-page-${page.num}">
+        <div class="pdf-card__sheet-wrapper">
+          <div class="pdf-card__sheet" data-ref="sheet-page-${page.num}">
             ${sheetContent}
           </div>
         </div>
-        <span class="split-page-card__page-num">${pageLabel}</span>
+        <span class="pdf-card__title">${pageLabel}</span>
       </div>
     `;
   }

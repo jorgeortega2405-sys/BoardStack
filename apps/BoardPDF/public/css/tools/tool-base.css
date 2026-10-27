@@ -1087,9 +1087,12 @@
 }
 
 .pdf-items-grid,
+.organize-pages-grid,
+.workflow-organize-grid,
 .rotate-pages-grid,
 .pn-pages-grid:not(.pn-pages-grid--double),
 .wm-pages-grid,
+.split-pages-grid,
 .remove-pages-grid {
   box-sizing: border-box;
   display: grid;
@@ -1100,7 +1103,17 @@
 }
 
 .pdf-items-grid .pdf-card:hover,
-.pdf-items-grid > *:hover {
+.pdf-items-grid > *:hover,
+.organize-pages-grid .pdf-card:hover,
+.organize-pages-grid > *:hover,
+.workflow-organize-grid .pdf-card:hover,
+.workflow-organize-grid > *:hover,
+.rotate-pages-grid .pdf-card:hover,
+.rotate-pages-grid > *:hover,
+.split-pages-grid .pdf-card:hover,
+.split-pages-grid > *:hover,
+.remove-pages-grid .pdf-card:hover,
+.remove-pages-grid > *:hover {
   transform: none !important;
 }
 
@@ -1181,6 +1194,8 @@
   opacity: 1;
 }
 
+.pdf-card__action-btn,
+.pdf-card__btn-rotate,
 .pdf-card__btn-remove {
   align-items: center;
   background-color: transparent;
@@ -1196,11 +1211,15 @@
   width: 28px;
 }
 
+.pdf-card__action-btn:hover,
+.pdf-card__btn-rotate:hover,
 .pdf-card__btn-remove:hover {
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.06));
   color: var(--text-primary);
 }
 
+.pdf-card__action-btn .component-icon,
+.pdf-card__btn-rotate .component-icon,
 .pdf-card__btn-remove .component-icon {
   height: 16px;
   width: 16px;
@@ -1273,7 +1292,18 @@
   display: block;
   height: 100%;
   object-fit: contain;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
+}
+
+.pdf-card__spinner {
+  animation: pdf-spin 0.8s linear infinite;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  border-top-color: var(--text-tertiary);
+  box-sizing: border-box;
+  height: 22px;
+  width: 22px;
 }
 
 .pdf-card__placeholder {
@@ -1336,6 +1366,47 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+}
+
+.pdf-card__footer {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 8px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.pdf-card__title,
+.pdf-card__page-title {
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-card__sub,
+.pdf-card__orig-sub {
+  color: var(--text-tertiary);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.pdf-card__badge,
+.pdf-card__rotation-badge {
+  background-color: var(--bg-hover);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  margin-top: 2px;
+  padding: 1px 6px;
 }
 
 .tool-fab-container {
@@ -3033,4 +3104,244 @@
     width: 100%;
   }
 }
+
+.tool-sidebar__actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-sidebar__section--stack16 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tool-hero-dropzone__icon-circle {
+  align-items: center;
+  background: var(--bg-hover);
+  border-radius: 50%;
+  display: inline-flex;
+  height: 56px;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 56px;
+}
+
+.tool-hero-dropzone__icon-circle .component-icon {
+  height: 28px;
+  width: 28px;
+}
+
+.workflow-sidebar-title-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.workflow-sidebar-title {
+  font-size: 17px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-stepper-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-sidebar__row-between {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.tool-sidebar__hint-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.tool-sidebar__hint-text--compact {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.tool-sidebar__hint-text--block {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.tool-sidebar__hint-text--sm-block {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.tool-sidebar__field-group--flex-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tool-sidebar__field-group--mb4 {
+  margin-bottom: 4px;
+}
+
+.tool-sidebar__field-group--mb6 {
+  margin-bottom: 6px;
+}
+
+.tool-sidebar__field-group--mb8 {
+  margin-bottom: 8px;
+}
+
+.tool-sidebar__field-group--mb12 {
+  margin-bottom: 12px;
+}
+
+.tool-sidebar__dropdown--nomargin {
+  margin: 0;
+}
+
+.tool-sidebar__dropdown--w90 {
+  margin: 0;
+  min-width: 90px;
+  width: 90px;
+}
+
+.tool-sidebar__dropdown--w85 {
+  margin: 0;
+  min-width: 85px;
+  width: 85px;
+}
+
+.tool-sidebar__flex-1 {
+  flex: 1;
+}
+
+.tool-sidebar__footer--auto {
+  margin-top: auto;
+}
+
+.tool-sidebar__error-banner--auto {
+  margin-top: 6px;
+}
+
+.tool-sidebar__error-banner--lg {
+  margin-top: 16px;
+}
+
+.menu-panel__list--max-h240 {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.crop-reset-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.crop-mode-radios {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crop-radio-label {
+  align-items: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13.5px;
+  gap: 8px;
+  user-select: none;
+}
+
+.crop-radio-input {
+  accent-color: var(--color-primary, #000);
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
+.wm-checkbox-label {
+  align-items: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13.5px;
+  gap: 8px;
+  user-select: none;
+}
+
+.wm-checkbox-input {
+  accent-color: var(--color-primary, #000);
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
+.wm-range-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.wm-pos-and-mosaic {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.wm-mosaic-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 22px;
+}
+
+.wm-grid-options {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.wm-column-gap4 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wm-column-gap6 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pn-pos-and-margin__col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pn-pos-and-margin__col--flex {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 6px;
+}
+
 

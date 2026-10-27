@@ -1,4 +1,3 @@
-import Sortable from 'sortablejs';
 import { ToolStatusManager } from '../../components/tool-status.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { WORKFLOW_TOOLS } from '../../config/workflow-tools.config.js';
@@ -10,15 +9,8 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { getWorkflow } from '../../services/workflow-storage.service.js';
 import { OrganizePageItem, ToolDefinition, UserWorkflow, WorkflowStep } from '../../types/workflow.types.js';
-import { withButtonLoading } from '../../utils/dom.util.js';
-
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
+import { setupSortableGrid, SortableGridController, withButtonLoading } from '../../utils/dom.util.js';
+import { formatBytes } from '../../utils/format.util.js';
 
 export class WorkflowRunnerController {
   private abortController: AbortController | null = null;
@@ -32,7 +24,7 @@ export class WorkflowRunnerController {
   private organizeOriginalPages: OrganizePageItem[] = [];
   private organizePages: OrganizePageItem[] = [];
   private pdfDocument: any = null;
-  private sortableInstance: Sortable | null = null;
+  private sortableInstance: SortableGridController | null = null;
   private splitPages: OrganizePageItem[] = [];
   private splitSelectedPages: Set<number> = new Set();
   private statusManager: ToolStatusManager | null = null;
@@ -285,31 +277,29 @@ export class WorkflowRunnerController {
       const isRotated = p.rotation !== 0;
 
       return `
-        <div class="organize-page-card" data-page-id="${p.id}" data-page-index="${index}" data-ref="card-${p.id}">
-          <div class="organize-page-card__header-actions">
-            <span class="organize-page-card__order-badge" data-ref="order-badge-${p.id}">${index + 1}</span>
-            <div class="organize-page-card__btns-group">
-              <button type="button" class="organize-page-card__btn-action" data-ref="btn-rotate-card" title="Girar 90°" aria-label="Girar 90°">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-              </button>
-              <button type="button" class="organize-page-card__btn-action organize-page-card__btn-action--remove" data-ref="btn-remove-card" title="Quitar página" aria-label="Quitar página">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-              </button>
-            </div>
+        <div class="pdf-card" data-ref="card-${p.id}" data-id="${p.id}" data-page-id="${p.id}" data-page-index="${index}">
+          <span class="pdf-card__order-badge" data-ref="order-badge-${p.id}">${index + 1}</span>
+          <div class="pdf-card__actions">
+            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-card" title="Girar 90°" aria-label="Girar 90°">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            </button>
+            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-card" title="Quitar página" aria-label="Quitar página">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
           </div>
-          <div class="organize-page-card__sheet-wrapper">
-            <div class="organize-page-card__sheet" data-ref="sheet-${p.id}">
+          <div class="pdf-card__sheet-wrapper">
+            <div class="pdf-card__sheet" data-ref="sheet-${p.id}">
               ${
                 p.thumbnailDataUrl
-                  ? `<img class="organize-page-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="Página ${p.pageNum}" style="${isRotated ? `transform: rotate(${p.rotation}deg);` : ''}" />`
-                  : `<div class="organize-page-card__spinner"></div>`
+                  ? `<img class="pdf-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="Página ${p.pageNum}" style="${isRotated ? `transform: rotate(${p.rotation}deg);` : ''}" />`
+                  : `<div class="pdf-card__spinner"></div>`
               }
             </div>
           </div>
-          <div class="organize-page-card__footer">
-            <span class="organize-page-card__page-title">Página ${index + 1}</span>
-            ${isMoved ? `<span class="organize-page-card__orig-sub">(orig. ${p.originalIndex + 1})</span>` : ''}
-            ${isRotated ? `<span class="organize-page-card__rotation-badge" data-ref="rot-badge-${p.id}">+${p.rotation}°</span>` : ''}
+          <div class="pdf-card__footer">
+            <span class="pdf-card__title">Página ${index + 1}</span>
+            ${isMoved ? `<span class="pdf-card__sub">(orig. ${p.originalIndex + 1})</span>` : ''}
+            ${isRotated ? `<span class="pdf-card__badge" data-ref="rot-badge-${p.id}">+${p.rotation}°</span>` : ''}
           </div>
         </div>
       `;
@@ -337,7 +327,7 @@ export class WorkflowRunnerController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
         if (sheet) {
-          sheet.innerHTML = `<img class="organize-page-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${item.rotation !== 0 ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${item.rotation !== 0 ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
         }
       }
     } catch {}
@@ -349,21 +339,23 @@ export class WorkflowRunnerController {
 
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
+      this.sortableInstance = null;
     }
 
-    this.sortableInstance = new Sortable(grid, {
-      animation: 160,
-      chosenClass: 'sortable-chosen',
-      ghostClass: 'sortable-ghost',
-      onEnd: (evt) => {
-        if (typeof evt.oldIndex === 'number' && typeof evt.newIndex === 'number' && evt.oldIndex !== evt.newIndex) {
-          const [movedItem] = this.organizePages.splice(evt.oldIndex, 1);
-          if (movedItem) {
-            this.organizePages.splice(evt.newIndex, 0, movedItem);
+    this.sortableInstance = setupSortableGrid(grid, {
+      onEnd: () => {
+        const cards = Array.from(grid.querySelectorAll<HTMLElement>('.pdf-card[data-page-id]'));
+        const newOrderedPages: OrganizePageItem[] = [];
+        cards.forEach((card) => {
+          const id = card.getAttribute('data-page-id');
+          const found = this.organizePages.find((p) => p.id === id);
+          if (found) {
+            newOrderedPages.push(found);
           }
-          this.refreshOrganizeCardBadges();
-          this.renderOrganizeSidebarOptions();
-        }
+        });
+        this.organizePages = newOrderedPages;
+        this.refreshOrganizeCardBadges();
+        this.renderOrganizeSidebarOptions();
       },
     });
   }
@@ -377,16 +369,16 @@ export class WorkflowRunnerController {
       const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${p.id}"]`);
       if (card) {
         card.setAttribute('data-page-index', `${index}`);
-        const pageTitle = card.querySelector<HTMLElement>('.organize-page-card__page-title');
+        const pageTitle = card.querySelector<HTMLElement>('.pdf-card__title');
         if (pageTitle) {
           pageTitle.textContent = `Página ${index + 1}`;
         }
-        let origSub = card.querySelector<HTMLElement>('.organize-page-card__orig-sub');
+        let origSub = card.querySelector<HTMLElement>('.pdf-card__sub');
         if (p.originalIndex !== index) {
           if (!origSub) {
             origSub = document.createElement('span');
-            origSub.className = 'organize-page-card__orig-sub';
-            card.querySelector('.organize-page-card__footer')?.appendChild(origSub);
+            origSub.className = 'pdf-card__sub';
+            card.querySelector('.pdf-card__footer')?.appendChild(origSub);
           }
           origSub.textContent = `(orig. ${p.originalIndex + 1})`;
         } else if (origSub) {
@@ -413,9 +405,9 @@ export class WorkflowRunnerController {
       if (item.rotation !== 0) {
         if (!rotBadge) {
           rotBadge = document.createElement('span');
-          rotBadge.className = 'organize-page-card__rotation-badge';
+          rotBadge.className = 'pdf-card__badge';
           rotBadge.setAttribute('data-ref', `rot-badge-${item.id}`);
-          card.querySelector('.organize-page-card__footer')?.appendChild(rotBadge);
+          card.querySelector('.pdf-card__footer')?.appendChild(rotBadge);
         }
         rotBadge.textContent = `+${item.rotation}°`;
       } else if (rotBadge) {

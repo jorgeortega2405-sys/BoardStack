@@ -292,16 +292,18 @@ export class RotatePdfController implements ViewController {
     if (!grid) return;
 
     grid.innerHTML = this.pages.map((p) => `
-      <div class="rotate-page-card" data-ref="card-page-${p.id}" data-page-id="${p.id}">
-        <div class="rotate-page-card__preview">
-          <span class="rotate-page-card__badge">${p.pageNum}</span>
-          <canvas class="rotate-page-card__canvas" data-ref="canvas-${p.id}" style="transform: rotate(${p.rotation}deg);"></canvas>
+      <div class="pdf-card rotate-page-card" data-ref="card-page-${p.id}" data-page-id="${p.id}">
+        <span class="pdf-card__order-badge">${p.pageNum}</span>
+        <div class="pdf-card__sheet-wrapper">
+          <div class="pdf-card__sheet">
+            <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}" style="transform: rotate(${p.rotation}deg);"></canvas>
+          </div>
         </div>
         <div class="rotate-page-card__actions">
-          <button type="button" class="rotate-card-btn" data-ref="btn-card-rotate-left" title="Girar 90° a la izquierda">
+          <button type="button" class="component-button rotate-card-btn" data-ref="btn-card-rotate-left" title="Girar 90° a la izquierda">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_left"></use></svg>
           </button>
-          <button type="button" class="rotate-card-btn" data-ref="btn-card-rotate-right" title="Girar 90° a la derecha">
+          <button type="button" class="component-button rotate-card-btn" data-ref="btn-card-rotate-right" title="Girar 90° a la derecha">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
           </button>
         </div>

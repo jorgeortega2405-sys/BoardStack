@@ -1,4 +1,3 @@
-import Sortable from 'sortablejs';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
@@ -12,16 +11,9 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { bindFileDropzone, setupSortableGrid, setupToolSidebarModal, SortableGridController, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { formatBytes } from '../../../utils/format.util.js';
 import { MergePdfResponseData, SelectedPdfItem } from './merge-pdf.types.js';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
 
 async function estimatePdfPages(file: File): Promise<number> {
   try {
@@ -50,7 +42,7 @@ export class MergePdfController implements ViewController {
   private isProcessing = false;
   private selectedFiles: SelectedPdfItem[] = [];
   private sidebarModal: ToolSidebarModalController | null = null;
-  private sortable: Sortable | null = null;
+  private sortable: SortableGridController | null = null;
   private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
@@ -441,15 +433,10 @@ export class MergePdfController implements ViewController {
     const itemsGrid = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-grid"]');
     if (!itemsGrid) return;
 
-    this.sortable = new Sortable(itemsGrid, {
-      animation: 200,
-      chosenClass: 'pdf-card--chosen',
-      filter: 'button, .pdf-card__btn-remove, .pdf-card__actions',
-      ghostClass: 'pdf-card--ghost',
+    this.sortable = setupSortableGrid(itemsGrid, {
       onEnd: () => {
         this.syncOrderFromDom();
       },
-      preventOnFilter: false,
     });
   }
 

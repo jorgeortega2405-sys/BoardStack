@@ -12,63 +12,8 @@ import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function parsePageNumbers(raw: string, maxPages: number): number[] {
-  const result = new Set<number>();
-  const parts = raw.split(',');
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    if (trimmed.includes('-')) {
-      const [startStr, endStr] = trimmed.split('-');
-      const start = parseInt(startStr, 10);
-      const end = parseInt(endStr, 10);
-      if (!isNaN(start) && !isNaN(end)) {
-        const from = Math.max(1, Math.min(start, end));
-        const to = Math.min(maxPages, Math.max(start, end));
-        for (let i = from; i <= to; i++) {
-          result.add(i);
-        }
-      }
-    } else {
-      const page = parseInt(trimmed, 10);
-      if (!isNaN(page) && page >= 1 && page <= maxPages) {
-        result.add(page);
-      }
-    }
-  }
-  return Array.from(result).sort((a, b) => a - b);
-}
-
-function formatPageNumbers(pages: number[]): string {
-  if (pages.length === 0) return '';
-  const sorted = Array.from(new Set(pages)).sort((a, b) => a - b);
-  const ranges: string[] = [];
-  let start = sorted[0];
-  let prev = sorted[0];
-
-  for (let i = 1; i < sorted.length; i++) {
-    const curr = sorted[i];
-    if (curr === prev + 1) {
-      prev = curr;
-    } else {
-      ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-      start = curr;
-      prev = curr;
-    }
-  }
-  ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-  return ranges.join(', ');
-}
 
 export class RemovePdfPagesController implements ViewController {
   private abortController: AbortController | null = null;
@@ -376,7 +321,7 @@ export class RemovePdfPagesController implements ViewController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-page-${item.num}"]`);
         if (sheet) {
-          sheet.innerHTML = `<img class="remove-page-card__canvas" data-ref="img-page-${item.num}" src="${item.thumbnailDataUrl}" alt="Página ${item.num}" />`;
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-page-${item.num}" src="${item.thumbnailDataUrl}" alt="Página ${item.num}" />`;
         }
       }
     } catch {}
@@ -420,7 +365,7 @@ export class RemovePdfPagesController implements ViewController {
     grid.innerHTML = this.pages.map((p, index) => {
       const isRemoved = this.removedPages.has(p.num);
       return `
-        <div class="remove-page-card ${isRemoved ? 'is-marked-remove' : ''}" data-ref="page-card-${p.num}" data-page-index="${index}" data-page-num="${p.num}">
+        <div class="pdf-card remove-page-card ${isRemoved ? 'is-marked-remove' : ''}" data-ref="page-card-${p.num}" data-page-index="${index}" data-page-num="${p.num}">
           <div class="pdf-card__actions">
             <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-toggle-${p.num}" title="Eliminar página" aria-label="Eliminar página">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
@@ -431,17 +376,17 @@ export class RemovePdfPagesController implements ViewController {
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_sweep"></use></svg>
             </div>
           </div>
-          <div class="remove-page-card__sheet-wrapper">
-            <div class="remove-page-card__sheet" data-ref="sheet-page-${p.num}">
+          <div class="pdf-card__sheet-wrapper">
+            <div class="pdf-card__sheet" data-ref="sheet-page-${p.num}">
               ${
                 p.thumbnailDataUrl
-                  ? `<img class="remove-page-card__canvas" data-ref="img-page-${p.num}" src="${p.thumbnailDataUrl}" alt="Página ${p.num}" />`
-                  : `<div class="remove-page-card__spinner"></div>`
+                  ? `<img class="pdf-card__canvas" data-ref="img-page-${p.num}" src="${p.thumbnailDataUrl}" alt="Página ${p.num}" />`
+                  : `<div class="pdf-card__spinner"></div>`
               }
             </div>
           </div>
-          <div class="remove-page-card__footer">
-            <span class="remove-page-card__page-num">${t('tools.remove_pdf_pages_page') || 'Página'} ${p.num}</span>
+          <div class="pdf-card__footer">
+            <span class="pdf-card__title">${t('tools.remove_pdf_pages_page') || 'Página'} ${p.num}</span>
           </div>
         </div>
       `;

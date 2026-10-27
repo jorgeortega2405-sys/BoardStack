@@ -317,14 +317,16 @@ export class PageNumbersController implements ViewController {
     if (!grid) return;
 
     if (this.mode === 'single') {
-      grid.className = 'pn-pages-grid';
+      grid.className = 'pdf-items-grid pn-pages-grid';
       grid.innerHTML = this.pages.map((p) => `
-        <div class="pn-page-card" data-ref="card-page-${p.id}" data-page-num="${p.pageNum}">
-          <div class="pn-page-card__preview">
-            <span class="pn-page-card__badge">${p.pageNum}</span>
-            <span class="pn-page-card__cover-badge" data-ref="cover-badge-${p.id}" style="${this.firstPageIsCover && p.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
-            <div class="pn-indicator-dot ${this.resolveDotClass(p.pageNum)}" data-ref="dot-${p.id}"></div>
-            <canvas class="pn-page-card__canvas" data-ref="canvas-${p.id}"></canvas>
+        <div class="pdf-card pn-page-card" data-ref="card-page-${p.id}" data-page-num="${p.pageNum}">
+          <span class="pdf-card__order-badge">${p.pageNum}</span>
+          <div class="pdf-card__sheet-wrapper">
+            <div class="pdf-card__sheet">
+              <span class="pn-page-card__cover-badge" data-ref="cover-badge-${p.id}" style="${this.firstPageIsCover && p.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
+              <div class="pn-indicator-dot ${this.resolveDotClass(p.pageNum)}" data-ref="dot-${p.id}"></div>
+              <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
+            </div>
           </div>
         </div>
       `).join('');
@@ -339,24 +341,28 @@ export class PageNumbersController implements ViewController {
         html += `<div class="pn-spread-pair">`;
 
         html += `
-          <div class="pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}" style="width: 170px;">
-            <div class="pn-page-card__preview">
-              <span class="pn-page-card__badge">${leftPage.pageNum}</span>
-              <span class="pn-page-card__cover-badge" data-ref="cover-badge-${leftPage.id}" style="${this.firstPageIsCover && leftPage.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
-              <div class="pn-indicator-dot ${this.resolveDotClass(leftPage.pageNum)}" data-ref="dot-${leftPage.id}"></div>
-              <canvas class="pn-page-card__canvas" data-ref="canvas-${leftPage.id}"></canvas>
+          <div class="pdf-card pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}" style="width: 170px;">
+            <span class="pdf-card__order-badge">${leftPage.pageNum}</span>
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
+                <span class="pn-page-card__cover-badge" data-ref="cover-badge-${leftPage.id}" style="${this.firstPageIsCover && leftPage.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
+                <div class="pn-indicator-dot ${this.resolveDotClass(leftPage.pageNum)}" data-ref="dot-${leftPage.id}"></div>
+                <canvas class="pdf-card__canvas" data-ref="canvas-${leftPage.id}"></canvas>
+              </div>
             </div>
           </div>
         `;
 
         if (rightPage) {
           html += `
-            <div class="pn-page-card" data-ref="card-page-${rightPage.id}" data-page-num="${rightPage.pageNum}" style="width: 170px;">
-              <div class="pn-page-card__preview">
-                <span class="pn-page-card__badge">${rightPage.pageNum}</span>
-                <span class="pn-page-card__cover-badge" data-ref="cover-badge-${rightPage.id}" style="display: none;">Portada</span>
-                <div class="pn-indicator-dot ${this.resolveDotClass(rightPage.pageNum)}" data-ref="dot-${rightPage.id}"></div>
-                <canvas class="pn-page-card__canvas" data-ref="canvas-${rightPage.id}"></canvas>
+            <div class="pdf-card pn-page-card" data-ref="card-page-${rightPage.id}" data-page-num="${rightPage.pageNum}" style="width: 170px;">
+              <span class="pdf-card__order-badge">${rightPage.pageNum}</span>
+              <div class="pdf-card__sheet-wrapper">
+                <div class="pdf-card__sheet">
+                  <span class="pn-page-card__cover-badge" data-ref="cover-badge-${rightPage.id}" style="display: none;">Portada</span>
+                  <div class="pn-indicator-dot ${this.resolveDotClass(rightPage.pageNum)}" data-ref="dot-${rightPage.id}"></div>
+                  <canvas class="pdf-card__canvas" data-ref="canvas-${rightPage.id}"></canvas>
+                </div>
               </div>
             </div>
           `;

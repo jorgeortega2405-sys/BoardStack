@@ -1,10 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="compare-pdf-wrapper">
   <header class="component-top tool-top" data-ref="component-top" style="display: none;">
     <div class="tool-top__left" data-ref="tool-top-left">
-      <div class="compare-top-controls" data-ref="compare-top-controls" style="display: none; align-items: center; gap: 8px;">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only is-active" data-ref="btn-pan-tool" data-tooltip="Herramienta de desplazamiento" aria-label="Desplazamiento">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pan_tool"></use></svg>
-        </button>
+      <div class="compare-top-controls pdf-top-controls" data-ref="compare-top-controls" style="display: none;">
         <button type="button" class="component-button component-button--h40 component-button--icon-only compare-sync-btn is-active" data-ref="btn-sync-scroll" data-tooltip="Sincronizar desplazamiento" aria-label="Sincronizar desplazamiento">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sync_alt"></use></svg>
         </button>
@@ -16,7 +13,7 @@
       </div>
     </div>
 
-    <div class="component-top-right tool-top__right" data-ref="component-top-right"></div>
+    <div class="component-top-right tool-top__right"></div>
   </header>
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="compare-pdf-layout">
@@ -26,12 +23,12 @@
 
       <div class="tool-workspace__canvas" data-ref="compare-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="compare-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="compare-dropzone-title">Comparar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="compare-dropzone-desc">Compara dos archivos PDF uno al lado del otro, detecta cambios de texto semántico y visualiza diferencias con facilidad.</p>
+          <h1 class="tool-hero-dropzone__title">Comparar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Compara dos archivos PDF uno al lado del otro, detecta cambios de texto semántico y visualiza diferencias con facilidad.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file1">
-              <span data-ref="txt-browse-file">Seleccionar Primer PDF</span>
+              <span>Seleccionar Primer PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive1" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -143,9 +140,9 @@
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="compare-info-notice" style="display: flex;">
+        <div class="tool-sidebar-notice" data-ref="compare-info-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-compare-info-notice">Compara los cambios y diferencias semánticas y visuales entre ambos archivos PDF.</div>
+          <div class="tool-sidebar-notice__text">Compara los cambios y diferencias semánticas y visuales entre ambos archivos PDF.</div>
         </div>
 
         <div class="tool-sidebar__section compare-overlay-controls" data-ref="section-overlay-controls" style="display: none;">
@@ -166,7 +163,7 @@
         <div class="tool-sidebar__section" data-ref="section-summary">
           <span class="tool-sidebar__section-title">Informe de cambios (<span data-ref="val-total-changes">0</span>)</span>
           <div class="compare-changes-list" data-ref="changes-list-container">
-            <p class="compare-changes-list__empty" data-ref="changes-empty-msg">Sube el segundo documento para analizar y visualizar las diferencias.</p>
+            <p class="compare-changes-list__empty">Sube el segundo documento para analizar y visualizar las diferencias.</p>
           </div>
         </div>
       </div>

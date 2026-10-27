@@ -7,9 +7,9 @@
         <div class="tool-fab-more" data-ref="tool-fab-more" style="display: none;">
           <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
+            <span class="tool-fab-more__badge">1</span>
           </button>
-          <div class="tool-fab-more__options" data-ref="tool-fab-options">
+          <div class="tool-fab-more__options">
             <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
               <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
             </button>
@@ -22,8 +22,8 @@
 
       <div class="tool-workspace__canvas" data-ref="rotate-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="rotate-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="rotate-dropzone-title">Rotar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="rotate-dropzone-desc">Gira tus páginas PDF permanentemente a 90, 180 o 270 grados en segundos.</p>
+          <h1 class="tool-hero-dropzone__title">Rotar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Gira tus páginas PDF permanentemente a 90, 180 o 270 grados en segundos.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-pdf">
@@ -44,15 +44,15 @@
       </div>
 
       <div class="pdf-items-view" data-ref="rotate-workspace-card" style="display: none;">
-        <div class="tool-workspace__toolbar" data-ref="rotate-toolbar">
+        <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
             <h2 class="tool-workspace__toolbar-title">Páginas seleccionadas (<span data-ref="pdf-count-badge">0</span>)</h2>
           </div>
         </div>
 
-        <div class="pdf-reorder-hint" data-ref="pdf-reorder-hint">
+        <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-          <span data-ref="txt-rotate-hint">Pasa el cursor por encima de una página para rotarla individualmente, o usa los botones del panel para rotar todas a la vez.</span>
+          <span>Pasa el cursor por encima de una página para rotarla individualmente, o usa los botones del panel para rotar todas a la vez.</span>
         </div>
 
         <div class="pdf-items-grid rotate-pages-grid" data-ref="rotate-pages-grid"></div>
@@ -62,7 +62,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar" data-ref="rotate-pdf-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="tool-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -72,19 +72,19 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title" data-ref="rotate-sidebar-title">Rotar PDF</h1>
-        <p class="tool-sidebar__subtitle" data-ref="rotate-sidebar-subtitle">Gira tus páginas PDF permanentemente a 90, 180 o 270 grados en segundos.</p>
+        <h1 class="tool-sidebar__title">Rotar PDF</h1>
+        <p class="tool-sidebar__subtitle">Gira tus páginas PDF permanentemente a 90, 180 o 270 grados en segundos.</p>
       </div>
 
-      <div class="tool-sidebar__body" data-ref="rotate-sidebar-body">
-        <div class="tool-sidebar-notice" data-ref="rotate-info-notice">
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-rotate-info-notice">Pasa el cursor por encima de una página para rotarla individualmente, o usa los botones para rotar todas a la vez.</div>
+          <div class="tool-sidebar-notice__text">Pasa el cursor por encima de una página para rotarla individualmente, o usa los botones para rotar todas a la vez.</div>
         </div>
 
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Acciones Rápidas</span>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="tool-sidebar__actions-stack">
             <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-sidebar-rotate-right">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
               <span>Girar todas +90°</span>
@@ -100,10 +100,10 @@
       <div class="tool-sidebar__footer">
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-execute-rotate" disabled>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-          <span data-ref="txt-execute-rotate">Rotar PDF</span>
+          <span>Rotar PDF</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger" data-ref="rotate-global-error" style="display: none; margin-top: 6px;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="rotate-global-error" role="alert" style="display: none;"></div>
       </div>
     </aside>
   </div>

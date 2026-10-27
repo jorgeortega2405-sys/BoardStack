@@ -1,17 +1,17 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper download-ready-wrapper" data-ref="download-ready-wrapper">
   <div class="tool-layout download-layout" data-ref="ready-success-screen">
-    <main class="tool-layout__workspace download-workspace" data-ref="download-ready-workspace">
-      <div class="tool-workspace__canvas download-canvas" data-ref="download-ready-canvas">
-        <div class="download-card" data-ref="download-card">
+    <main class="tool-layout__workspace download-workspace">
+      <div class="tool-workspace__canvas download-canvas">
+        <div class="download-card">
           <h1 class="tool-hero-dropzone__title download-card__title" data-ref="ready-title">¡Tu archivo está listo para descargar!</h1>
           <p class="tool-hero-dropzone__desc download-card__desc" data-ref="ready-subtitle">El proceso se ha completado con éxito y tu documento está listo para descargar.</p>
 
-          <div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready download-card__actions" data-ref="ready-actions-group">
+          <div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready download-card__actions">
             <a class="component-button component-button--black tool-hero-dropzone__btn-select tool-hero-dropzone__btn-download" data-ref="btn-download-file" href="#" download>
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
               <span data-ref="ready-btn-text">Descargar PDF</span>
             </a>
-            <div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready" data-ref="ready-action-btns">
+            <div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-drive" data-tooltip="Google Drive" aria-label="Google Drive">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
               </button>
@@ -27,7 +27,7 @@
             </div>
           </div>
 
-          <div class="banner banner--danger" data-ref="ready-error" style="display: none; margin-top: 16px;"></div>
+          <div class="banner banner--danger tool-sidebar__error-banner--lg" data-ref="ready-error" role="alert" style="display: none;"></div>
 
           <div class="tool-continue-panel" data-ref="continue-workflow-section">
             <div class="tool-continue-panel__header">
@@ -36,11 +36,11 @@
             <div class="tool-continue-panel__menu" data-ref="continue-workflow-grid"></div>
           </div>
 
-          <div class="tool-thankyou-card" data-ref="thankyou-card">
+          <div class="tool-thankyou-card">
             <div class="tool-thankyou-card__content">
               <h3 class="tool-thankyou-card__title">¿Cómo nos puedes dar las gracias? ¡Haz correr la voz!</h3>
               <p class="tool-thankyou-card__desc">Por favor, comparte la herramienta para inspirar a más personas productivas.</p>
-              <div class="tool-thankyou-card__badges" data-ref="thankyou-badges">
+              <div class="tool-thankyou-card__badges">
                 <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--trustpilot" data-ref="badge-trustpilot" aria-label="Trustpilot">
                   <svg class="component-badge__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M12 2l2.9 8.9h9.3l-7.5 5.5 2.9 8.9L12 19.8l-7.6 5.5 2.9-8.9L-.2 10.9h9.3L12 2z" fill="#00B67A"/>
@@ -75,14 +75,14 @@
   </div>
 
   <div class="download-expired-screen" data-ref="ready-expired-screen" style="display: none;">
-    <div class="download-expired-card" data-ref="download-expired-card">
-      <div class="download-expired-card__icon-wrap" data-ref="expired-icon-wrap">
-        <svg class="component-icon download-expired-card__icon" data-ref="expired-icon" aria-hidden="true"><use href="/icons.svg#link_off"></use></svg>
+    <div class="download-expired-card">
+      <div class="download-expired-card__icon-wrap">
+        <svg class="component-icon download-expired-card__icon" aria-hidden="true"><use href="/icons.svg#link_off"></use></svg>
       </div>
-      <span class="component-badge component-badge--danger component-badge--sm download-expired-card__badge" data-ref="expired-badge">Enlace caducado</span>
-      <h1 class="download-expired-card__title" data-ref="expired-title">Enlace no disponible o caducado</h1>
-      <p class="download-expired-card__desc" data-ref="expired-desc">El archivo ya no está disponible en nuestro servidor o el enlace ha caducado. Por razones de seguridad y privacidad, los archivos temporales se conservan únicamente durante 1 hora.</p>
-      <div class="download-expired-card__actions" data-ref="expired-actions">
+      <span class="component-badge component-badge--danger component-badge--sm download-expired-card__badge">Enlace caducado</span>
+      <h1 class="download-expired-card__title">Enlace no disponible o caducado</h1>
+      <p class="download-expired-card__desc">El archivo ya no está disponible en nuestro servidor o el enlace ha caducado. Por razones de seguridad y privacidad, los archivos temporales se conservan únicamente durante 1 hora.</p>
+      <div class="download-expired-card__actions">
         <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-expired-home">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           <span>Volver al inicio</span>

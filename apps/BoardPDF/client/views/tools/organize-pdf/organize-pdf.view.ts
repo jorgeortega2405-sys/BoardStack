@@ -1,4 +1,3 @@
-import Sortable from 'sortablejs';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
@@ -12,16 +11,9 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { setupToolSidebarModal, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { setupSortableGrid, setupToolSidebarModal, SortableGridController, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { formatBytes } from '../../../utils/format.util.js';
 import { OrganizePageItem, OrganizePdfResponseData } from './organize-pdf.types.js';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
 
 export class OrganizePdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -33,7 +25,7 @@ export class OrganizePdfController implements ViewController {
   private pages: OrganizePageItem[] = [];
   private pdfDocument: any = null;
   private sidebarModal: ToolSidebarModalController | null = null;
-  private sortableInstance: Sortable | null = null;
+  private sortableInstance: SortableGridController | null = null;
   private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
@@ -301,7 +293,7 @@ export class OrganizePdfController implements ViewController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
         if (sheet) {
-          sheet.innerHTML = `<img class="organize-page-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${item.rotation !== 0 ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${item.rotation !== 0 ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
         }
       }
     } catch {}
@@ -351,28 +343,28 @@ export class OrganizePdfController implements ViewController {
       const isRotated = p.rotation !== 0;
 
       return `
-        <div class="organize-page-card" data-ref="card-${p.id}" data-page-id="${p.id}" data-page-index="${index}">
-          <div class="organize-page-card__actions">
-            <button type="button" class="component-button organize-page-card__btn-rotate" data-ref="btn-rotate-card" title="Girar 90°" aria-label="Girar 90°">
+        <div class="pdf-card" data-ref="card-${p.id}" data-id="${p.id}" data-page-id="${p.id}" data-page-index="${index}">
+          <div class="pdf-card__actions">
+            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-card" title="Girar 90°" aria-label="Girar 90°">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
             </button>
-            <button type="button" class="component-button organize-page-card__btn-remove" data-ref="btn-remove-card" title="Quitar página" aria-label="Quitar página">
+            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-card" title="Quitar página" aria-label="Quitar página">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
-          <div class="organize-page-card__sheet-wrapper">
-            <div class="organize-page-card__sheet" data-ref="sheet-${p.id}">
+          <div class="pdf-card__sheet-wrapper">
+            <div class="pdf-card__sheet" data-ref="sheet-${p.id}">
               ${
                 p.thumbnailDataUrl
-                  ? `<img class="organize-page-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="Página ${p.pageNum}" style="${isRotated ? `transform: rotate(${p.rotation}deg);` : ''}" />`
-                  : `<div class="organize-page-card__spinner"></div>`
+                  ? `<img class="pdf-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="Página ${p.pageNum}" style="${isRotated ? `transform: rotate(${p.rotation}deg);` : ''}" />`
+                  : `<div class="pdf-card__spinner"></div>`
               }
             </div>
           </div>
-          <div class="organize-page-card__footer">
-            <span class="organize-page-card__page-title">${t('tools.organize_pdf_page') || 'Página'} ${index + 1}</span>
-            ${isMoved ? `<span class="organize-page-card__orig-sub">(orig. ${p.originalIndex + 1})</span>` : ''}
-            ${isRotated ? `<span class="organize-page-card__rotation-badge" data-ref="rot-badge-${p.id}">+${p.rotation}°</span>` : ''}
+          <div class="pdf-card__footer">
+            <span class="pdf-card__title">${t('tools.organize_pdf_page') || 'Página'} ${index + 1}</span>
+            ${isMoved ? `<span class="pdf-card__sub">(orig. ${p.originalIndex + 1})</span>` : ''}
+            ${isRotated ? `<span class="pdf-card__badge" data-ref="rot-badge-${p.id}">+${p.rotation}°</span>` : ''}
           </div>
         </div>
       `;
@@ -387,21 +379,23 @@ export class OrganizePdfController implements ViewController {
 
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
+      this.sortableInstance = null;
     }
 
-    this.sortableInstance = new Sortable(grid, {
-      animation: 160,
-      chosenClass: 'sortable-chosen',
-      ghostClass: 'sortable-ghost',
-      onEnd: (evt) => {
-        if (typeof evt.oldIndex === 'number' && typeof evt.newIndex === 'number' && evt.oldIndex !== evt.newIndex) {
-          const [moved] = this.pages.splice(evt.oldIndex, 1);
-          if (moved) {
-            this.pages.splice(evt.newIndex, 0, moved);
+    this.sortableInstance = setupSortableGrid(grid, {
+      onEnd: () => {
+        const cards = Array.from(grid.querySelectorAll<HTMLElement>('.pdf-card[data-page-id]'));
+        const newOrderedPages: OrganizePageItem[] = [];
+        cards.forEach((card) => {
+          const id = card.getAttribute('data-page-id');
+          const found = this.pages.find((p) => p.id === id);
+          if (found) {
+            newOrderedPages.push(found);
           }
-          this.refreshCardBadges();
-          this.updateSummary();
-        }
+        });
+        this.pages = newOrderedPages;
+        this.refreshCardBadges();
+        this.updateSummary();
       },
     });
   }
@@ -411,16 +405,16 @@ export class OrganizePdfController implements ViewController {
       const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${p.id}"]`);
       if (card) {
         card.setAttribute('data-page-index', `${index}`);
-        const pageTitle = card.querySelector<HTMLElement>('.organize-page-card__page-title');
+        const pageTitle = card.querySelector<HTMLElement>('.pdf-card__title');
         if (pageTitle) {
           pageTitle.textContent = `${t('tools.organize_pdf_page') || 'Página'} ${index + 1}`;
         }
-        let origSub = card.querySelector<HTMLElement>('.organize-page-card__orig-sub');
+        let origSub = card.querySelector<HTMLElement>('.pdf-card__sub');
         if (p.originalIndex !== index) {
           if (!origSub) {
             origSub = document.createElement('span');
-            origSub.className = 'organize-page-card__orig-sub';
-            card.querySelector('.organize-page-card__footer')?.appendChild(origSub);
+            origSub.className = 'pdf-card__sub';
+            card.querySelector('.pdf-card__footer')?.appendChild(origSub);
           }
           origSub.textContent = `(orig. ${p.originalIndex + 1})`;
         } else if (origSub) {
@@ -447,9 +441,9 @@ export class OrganizePdfController implements ViewController {
       if (item.rotation !== 0) {
         if (!rotBadge) {
           rotBadge = document.createElement('span');
-          rotBadge.className = 'organize-page-card__rotation-badge';
+          rotBadge.className = 'pdf-card__badge';
           rotBadge.setAttribute('data-ref', `rot-badge-${item.id}`);
-          card.querySelector('.organize-page-card__footer')?.appendChild(rotBadge);
+          card.querySelector('.pdf-card__footer')?.appendChild(rotBadge);
         }
         rotBadge.textContent = `+${item.rotation}°`;
       } else if (rotBadge) {

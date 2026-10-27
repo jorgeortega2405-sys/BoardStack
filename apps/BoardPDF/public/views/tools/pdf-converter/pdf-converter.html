@@ -7,9 +7,9 @@
         <div class="tool-fab-more" data-ref="tool-fab-more" style="display: none;">
           <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
+            <span class="tool-fab-more__badge">1</span>
           </button>
-          <div class="tool-fab-more__options" data-ref="tool-fab-options">
+          <div class="tool-fab-more__options">
             <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
               <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
             </button>
@@ -27,7 +27,7 @@
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
-              <span data-ref="txt-browse-file">Seleccionar PDF</span>
+              <span>Seleccionar PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -44,26 +44,26 @@
       </div>
 
       <div class="pdf-items-view" data-ref="converter-selected-card" style="display: none;">
-        <div class="tool-workspace__toolbar" data-ref="pdf-workspace-toolbar">
+        <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (<span data-ref="pdf-count-badge">1</span>)</h2>
+            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
           </div>
         </div>
 
-        <div class="pdf-reorder-hint" data-ref="pdf-reorder-hint">
+        <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
-          <span data-ref="txt-converter-hint">Tu documento PDF se convertirá con máxima fidelidad y formato editable.</span>
+          <span>Tu documento PDF se convertirá con máxima fidelidad y formato editable.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
-          <div class="pdf-card" data-ref="selected-file-card">
+          <div class="pdf-card">
             <div class="pdf-card__actions">
               <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" aria-label="Eliminar archivo">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
-            <div class="pdf-card__sheet-wrapper" data-ref="sheet-wrapper">
-              <div class="pdf-card__sheet" data-ref="sheet">
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
                 <canvas class="pdf-card__canvas" data-ref="doc-preview-canvas"></canvas>
               </div>
             </div>
@@ -77,7 +77,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar" data-ref="pdf-converter-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="tool-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -91,10 +91,10 @@
         <p class="tool-sidebar__subtitle" data-ref="converter-sidebar-subtitle">Convierte documentos PDF a archivos editables manteniendo formato y tablas.</p>
       </div>
 
-      <div class="tool-sidebar__body" data-ref="converter-sidebar-body">
-        <div class="tool-sidebar-notice" data-ref="converter-info-notice">
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-converter-info-notice">El archivo se convertirá extrayendo el contenido, tablas e imágenes con la mayor precisión.</div>
+          <div class="tool-sidebar-notice__text">El archivo se convertirá extrayendo el contenido, tablas e imágenes con la mayor precisión.</div>
         </div>
       </div>
 
@@ -104,7 +104,7 @@
           <span data-ref="txt-convert-action">Convertir Documento</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
-        <div class="banner banner--danger" data-ref="converter-global-error" style="display: none; margin-top: 6px;"></div>
+        <div class="banner banner--danger tool-sidebar__error-banner" data-ref="converter-global-error" role="alert" style="display: none;"></div>
       </div>
     </aside>
   </div>

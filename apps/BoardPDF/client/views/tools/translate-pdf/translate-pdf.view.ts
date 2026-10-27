@@ -11,15 +11,45 @@ import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { bindFileDropzone, setupDropdown, setupToolSidebarModal, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { formatBytes } from '../../../utils/format.util.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
 
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
+const SOURCE_LANGUAGES = [
+  { code: '', label: 'Detección automática (Recomendado)' },
+  { code: 'EN', label: 'Inglés' },
+  { code: 'ES', label: 'Español' },
+  { code: 'FR', label: 'Francés' },
+  { code: 'DE', label: 'Alemán' },
+  { code: 'IT', label: 'Italiano' },
+  { code: 'PT', label: 'Portugués' },
+  { code: 'ZH', label: 'Chino' },
+  { code: 'JA', label: 'Japonés' },
+  { code: 'RU', label: 'Ruso' },
+  { code: 'NL', label: 'Neerlandés' },
+  { code: 'PL', label: 'Polaco' },
+];
+
+const TARGET_LANGUAGES = [
+  { code: 'ES', label: 'Español (ES)' },
+  { code: 'EN-US', label: 'Inglés Americano (EN-US)' },
+  { code: 'EN-GB', label: 'Inglés Británico (EN-GB)' },
+  { code: 'FR', label: 'Francés (FR)' },
+  { code: 'DE', label: 'Alemán (DE)' },
+  { code: 'IT', label: 'Italiano (IT)' },
+  { code: 'PT-BR', label: 'Portugués Brasileño (PT-BR)' },
+  { code: 'PT-PT', label: 'Portugués Europeo (PT-PT)' },
+  { code: 'ZH', label: 'Chino Simplificado (ZH)' },
+  { code: 'JA', label: 'Japonés (JA)' },
+  { code: 'RU', label: 'Ruso (RU)' },
+  { code: 'NL', label: 'Neerlandés (NL)' },
+  { code: 'PL', label: 'Polaco (PL)' },
+  { code: 'KO', label: 'Coreano (KO)' },
+  { code: 'SV', label: 'Sueco (SV)' },
+  { code: 'DA', label: 'Danés (DA)' },
+  { code: 'FI', label: 'Finés (FI)' },
+  { code: 'TR', label: 'Turco (TR)' },
+  { code: 'UK', label: 'Ucraniano (UK)' },
+];
 
 export class TranslatePdfViewController implements ViewController {
   private abortController: AbortController | null = null;
@@ -132,6 +162,36 @@ export class TranslatePdfViewController implements ViewController {
         },
         signal,
         visualTarget: dropzoneCard,
+      });
+    }
+
+    const listSource = this.container.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
+    if (listSource && listSource.children.length === 0) {
+      SOURCE_LANGUAGES.forEach((lang, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `menu-item${idx === 0 ? ' is-active' : ''}`;
+        btn.setAttribute('data-value', lang.code);
+        const span = document.createElement('span');
+        span.className = 'menu-item__text';
+        span.textContent = lang.label;
+        btn.appendChild(span);
+        listSource.appendChild(btn);
+      });
+    }
+
+    const listTarget = this.container.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
+    if (listTarget && listTarget.children.length === 0) {
+      TARGET_LANGUAGES.forEach((lang, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `menu-item${idx === 0 ? ' is-active' : ''}`;
+        btn.setAttribute('data-value', lang.code);
+        const span = document.createElement('span');
+        span.className = 'menu-item__text';
+        span.textContent = lang.label;
+        btn.appendChild(span);
+        listTarget.appendChild(btn);
       });
     }
 

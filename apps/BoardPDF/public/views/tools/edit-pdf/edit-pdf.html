@@ -1,21 +1,21 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="edit-pdf-wrapper">
   <header class="component-top tool-top" data-ref="component-top" style="display: none;">
-    <div class="tool-top__left" data-ref="tool-top-left">
-      <div class="pdf-editor-top-controls" data-ref="editor-top-controls" style="display: none; align-items: center; gap: 8px;">
+    <div class="tool-top__left">
+      <div class="pdf-editor-top-controls pdf-top-controls" data-ref="editor-top-controls" style="display: none;">
         <div class="pdf-editor-mode-switcher" data-ref="mode-switcher">
           <button type="button" class="pdf-editor-mode-btn is-active" data-ref="btn-mode-annotate" data-mode="annotate">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-            <span>Anotar</span>
+            <span class="pdf-editor-mode-btn__text">Anotar</span>
           </button>
           <button type="button" class="pdf-editor-mode-btn" data-ref="btn-mode-edit" data-mode="edit">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_text"></use></svg>
-            <span>Editar</span>
+            <span class="pdf-editor-mode-btn__text">Editar</span>
           </button>
         </div>
 
         <div class="tool-top__divider"></div>
 
-        <div class="pdf-editor-tools-group" data-ref="tools-group-annotate" style="display: flex; align-items: center; gap: 4px;">
+        <div class="pdf-editor-tools-group pdf-top-controls--gap4" data-ref="tools-group-annotate">
           <button type="button" class="component-button component-button--h40 component-button--icon-only is-active" data-ref="tool-select" data-tool="select" data-tooltip="Seleccionar elemento" aria-label="Seleccionar">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
           </button>
@@ -42,14 +42,14 @@
         <div class="pdf-editor-tools-group" data-ref="tools-group-edit" style="display: none;">
           <div class="pdf-editor-status-pill pdf-editor-status-pill--success" data-ref="edit-status-pill">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-            <span data-ref="txt-edit-status">Texto editable: haz clic en cualquier línea para modificarla</span>
+            <span class="pdf-editor-status-pill__text" data-ref="txt-edit-status">Texto editable: haz clic en cualquier línea para modificarla</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="component-top-right tool-top__right" data-ref="component-top-right">
-      <div class="pdf-editor-top-actions" data-ref="editor-top-actions" style="display: none;">
+    <div class="component-top-right tool-top__right">
+      <div class="pdf-editor-top-actions pdf-top-controls" data-ref="editor-top-actions" style="display: none;">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-undo" data-tooltip="Deshacer" aria-label="Deshacer" disabled>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
         </button>
@@ -77,12 +77,12 @@
 
       <div class="tool-workspace__canvas" data-ref="edit-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="edit-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="edit-dropzone-title">Editar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="edit-dropzone-desc">Añade texto, imágenes, formas y dibujos, o edita texto existente en tu documento PDF con total libertad.</p>
+          <h1 class="tool-hero-dropzone__title">Editar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Añade texto, imágenes, formas y dibujos, o edita texto existente en tu documento PDF con total libertad.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
-              <span data-ref="txt-browse-file">Seleccionar Archivo PDF</span>
+              <span class="component-button__text" data-ref="txt-browse-file">Seleccionar Archivo PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -95,7 +95,7 @@
           </div>
 
           <p class="tool-hero-dropzone__hint">o arrastra y suelta el PDF aquí</p>
-          <div class="banner banner--danger" data-ref="edit-dropzone-error" role="alert" style="display: none; margin-top: 16px;"></div>
+          <div class="banner banner--danger tool-sidebar__error-banner--lg" data-ref="edit-dropzone-error" role="alert" style="display: none;"></div>
         </div>
       </div>
 
@@ -115,7 +115,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar pdf-editor-properties-sidebar" data-ref="edit-pdf-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="edit-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="edit-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -125,36 +125,36 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title" data-ref="edit-sidebar-title">Propiedades</h1>
-        <p class="tool-sidebar__subtitle" data-ref="edit-sidebar-subtitle">Personaliza los colores, fuentes y atributos del elemento seleccionado.</p>
+        <h1 class="tool-sidebar__title">Propiedades</h1>
+        <p class="tool-sidebar__subtitle">Personaliza los colores, fuentes y atributos del elemento seleccionado.</p>
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="edit-info-notice" style="display: flex;">
+        <div class="tool-sidebar-notice" data-ref="edit-info-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-edit-info-notice">Haz clic en los elementos agregados en el documento para ajustar sus propiedades de color y trazo.</div>
+          <div class="tool-sidebar-notice__text">Haz clic en los elementos agregados en el documento para ajustar sus propiedades de color y trazo.</div>
         </div>
         <div class="tool-sidebar__section" data-ref="section-color">
           <span class="tool-sidebar__section-title">Color de Trazo / Texto</span>
           <div class="pdf-color-swatches" data-ref="color-swatches-stroke">
-            <button type="button" class="pdf-color-swatch is-active" data-ref="swatch-black" data-color="#000000" style="background-color: #000000;" aria-label="Negro"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-red" data-color="#ef4444" style="background-color: #ef4444;" aria-label="Rojo"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-blue" data-color="#3b82f6" style="background-color: #3b82f6;" aria-label="Azul"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-green" data-color="#10b981" style="background-color: #10b981;" aria-label="Verde"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-yellow" data-color="#f59e0b" style="background-color: #f59e0b;" aria-label="Amarillo"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-purple" data-color="#8b5cf6" style="background-color: #8b5cf6;" aria-label="Púrpura"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="swatch-white" data-color="#ffffff" style="background-color: #ffffff; border: 1px solid var(--border-color);" aria-label="Blanco"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--black is-active" data-ref="swatch-black" data-color="#000000" aria-label="Negro"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--red" data-ref="swatch-red" data-color="#ef4444" aria-label="Rojo"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--blue" data-ref="swatch-blue" data-color="#3b82f6" aria-label="Azul"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--green" data-ref="swatch-green" data-color="#10b981" aria-label="Verde"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--yellow" data-ref="swatch-yellow" data-color="#f59e0b" aria-label="Amarillo"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--purple" data-ref="swatch-purple" data-color="#8b5cf6" aria-label="Púrpura"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--white" data-ref="swatch-white" data-color="#ffffff" aria-label="Blanco"></button>
           </div>
         </div>
 
         <div class="tool-sidebar__section" data-ref="section-fill">
           <span class="tool-sidebar__section-title">Color de Relleno (Formas)</span>
           <div class="pdf-color-swatches" data-ref="color-swatches-fill">
-            <button type="button" class="pdf-color-swatch is-active" data-ref="fill-transparent" data-color="transparent" style="background: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%); background-size: 8px 8px; border: 1px solid var(--border-color);" aria-label="Transparente"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="fill-white" data-color="#ffffff" style="background-color: #ffffff; border: 1px solid var(--border-color);" aria-label="Blanco"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="fill-yellow" data-color="#fef3c7" style="background-color: #fef3c7;" aria-label="Amarillo claro"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="fill-blue" data-color="#dbeafe" style="background-color: #dbeafe;" aria-label="Azul claro"></button>
-            <button type="button" class="pdf-color-swatch" data-ref="fill-red" data-color="#fee2e2" style="background-color: #fee2e2;" aria-label="Rojo claro"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-transparent is-active" data-ref="fill-transparent" data-color="transparent" aria-label="Transparente"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-white" data-ref="fill-white" data-color="#ffffff" aria-label="Blanco"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-yellow" data-ref="fill-yellow" data-color="#fef3c7" aria-label="Amarillo claro"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-blue" data-ref="fill-blue" data-color="#dbeafe" aria-label="Azul claro"></button>
+            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-red" data-ref="fill-red" data-color="#fee2e2" aria-label="Rojo claro"></button>
           </div>
         </div>
 
@@ -162,16 +162,16 @@
           <span class="tool-sidebar__section-title">Grosor de Línea</span>
           <div class="pdf-stroke-options" data-ref="stroke-options">
             <button type="button" class="pdf-stroke-btn" data-ref="stroke-1" data-width="1" aria-label="1 píxel">
-              <span class="pdf-stroke-btn__line" style="height: 1px;"></span>
+              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--1"></span>
             </button>
             <button type="button" class="pdf-stroke-btn is-active" data-ref="stroke-2" data-width="2" aria-label="2 píxeles">
-              <span class="pdf-stroke-btn__line" style="height: 2px;"></span>
+              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--2"></span>
             </button>
             <button type="button" class="pdf-stroke-btn" data-ref="stroke-4" data-width="4" aria-label="4 píxeles">
-              <span class="pdf-stroke-btn__line" style="height: 4px;"></span>
+              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--4"></span>
             </button>
             <button type="button" class="pdf-stroke-btn" data-ref="stroke-8" data-width="8" aria-label="8 píxeles">
-              <span class="pdf-stroke-btn__line" style="height: 6px;"></span>
+              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--8"></span>
             </button>
           </div>
         </div>
@@ -193,7 +193,7 @@
       <div class="tool-sidebar__footer">
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-sidebar-save-pdf">
           <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-          <span>Descargar PDF Editado</span>
+          <span class="component-button__text">Descargar PDF Editado</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
         <div class="banner banner--danger tool-sidebar__error-banner" data-ref="edit-global-error" role="alert" style="display: none;"></div>

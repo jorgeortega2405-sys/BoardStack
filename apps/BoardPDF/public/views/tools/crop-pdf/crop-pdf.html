@@ -1,7 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="crop-pdf-wrapper">
   <header class="component-top tool-top" data-ref="component-top" style="display: none;">
-    <div class="tool-top__left" data-ref="tool-top-left">
-      <div class="crop-page-nav" data-ref="crop-page-nav" style="display: none; align-items: center; gap: 8px;">
+    <div class="tool-top__left">
+      <div class="crop-page-nav pdf-top-controls" data-ref="crop-page-nav" style="display: none;">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-prev-page" data-tooltip="Página anterior" aria-label="Página anterior">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
         </button>
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <div class="component-top-right tool-top__right" data-ref="component-top-right"></div>
+    <div class="component-top-right tool-top__right"></div>
   </header>
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="crop-pdf-layout">
@@ -21,12 +21,12 @@
 
       <div class="tool-workspace__canvas" data-ref="crop-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="crop-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="crop-dropzone-title">Recortar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="crop-dropzone-desc">Recorta las páginas de tu documento PDF de forma interactiva y ajusta los márgenes a tu medida.</p>
+          <h1 class="tool-hero-dropzone__title">Recortar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Recorta las páginas de tu documento PDF de forma interactiva y ajusta los márgenes a tu medida.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-pdf">
-              <span>Seleccionar PDF</span>
+              <span class="component-button__text">Seleccionar PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -71,7 +71,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar" data-ref="crop-pdf-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="crop-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="crop-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -81,30 +81,30 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title" data-ref="crop-sidebar-title">Recortar PDF</h1>
+        <h1 class="tool-sidebar__title">Recortar PDF</h1>
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="crop-info-notice" style="display: flex;">
+        <div class="tool-sidebar-notice" data-ref="crop-info-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-crop-info-notice">Haz clic y arrastra sobre el documento para crear el área de recorte. Podrás redimensionarla si lo necesitas.</div>
+          <div class="tool-sidebar-notice__text">Haz clic y arrastra sobre el documento para crear el área de recorte. Podrás redimensionarla si lo necesitas.</div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+        <div class="crop-reset-row">
           <button type="button" class="component-button component-button--ghost component-button--danger component-button--h32" data-ref="btn-reset-crop">
-            <span>Restablecer</span>
+            <span class="component-button__text">Restablecer</span>
           </button>
         </div>
 
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Páginas:</span>
-          <div class="pn-mode-radios" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-            <label class="pn-radio-label" data-ref="label-all-pages">
-              <input class="pn-radio-input" data-ref="radio-all-pages" type="radio" name="crop-pages-mode" value="all" checked />
+          <div class="crop-mode-radios">
+            <label class="crop-radio-label">
+              <input class="crop-radio-input" data-ref="radio-all-pages" type="radio" name="crop-pages-mode" value="all" checked />
               <span>Todas las páginas</span>
             </label>
-            <label class="pn-radio-label" data-ref="label-current-page">
-              <input class="pn-radio-input" data-ref="radio-current-page" type="radio" name="crop-pages-mode" value="current" />
+            <label class="crop-radio-label">
+              <input class="crop-radio-input" data-ref="radio-current-page" type="radio" name="crop-pages-mode" value="current" />
               <span>Página actual</span>
             </label>
           </div>
@@ -114,7 +114,7 @@
       <div class="tool-sidebar__footer">
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-execute-crop" disabled>
           <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
-          <span data-ref="txt-execute-crop">Recortar PDF</span>
+          <span class="component-button__text" data-ref="txt-execute-crop">Recortar PDF</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
         <div class="banner banner--danger tool-sidebar__error-banner" data-ref="crop-global-error" role="alert" style="display: none;"></div>

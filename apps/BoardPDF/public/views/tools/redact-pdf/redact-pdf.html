@@ -1,8 +1,8 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="redact-pdf-wrapper">
   <header class="component-top tool-top" data-ref="component-top" style="display: none;">
-    <div class="tool-top__left" data-ref="tool-top-left">
-      <div class="redact-top-controls" data-ref="redact-top-controls" style="display: none; align-items: center; gap: 8px;">
-        <div class="redact-mode-switcher" data-ref="tool-switcher" style="display: flex; align-items: center; gap: 4px;">
+    <div class="tool-top__left">
+      <div class="redact-top-controls pdf-top-controls" data-ref="redact-top-controls" style="display: none;">
+        <div class="redact-mode-switcher pdf-top-controls--gap4">
           <button type="button" class="component-button component-button--h40 component-button--icon-only is-active" data-ref="btn-tool-select" data-tool="select" data-tooltip="Seleccionar texto" aria-label="Seleccionar texto">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_text"></use></svg>
           </button>
@@ -13,8 +13,8 @@
       </div>
     </div>
 
-    <div class="component-top-right tool-top__right" data-ref="component-top-right">
-      <div class="redact-top-actions" data-ref="redact-top-actions" style="display: none; align-items: center; gap: 8px;">
+    <div class="component-top-right tool-top__right">
+      <div class="redact-top-actions pdf-top-controls" data-ref="redact-top-actions" style="display: none;">
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
         </button>
@@ -36,12 +36,12 @@
 
       <div class="tool-workspace__canvas" data-ref="redact-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="redact-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="redact-dropzone-title">Censurar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="redact-dropzone-desc">Oculta y elimina de forma irreversible información confidencial, texto o páginas completas de tu PDF.</p>
+          <h1 class="tool-hero-dropzone__title">Censurar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Oculta y elimina de forma irreversible información confidencial, texto o páginas completas de tu PDF.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
-              <span data-ref="txt-browse-file">Seleccionar Archivo PDF</span>
+              <span>Seleccionar Archivo PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -58,12 +58,12 @@
       </div>
 
       <div class="pdf-viewer-workspace pdf-editor-workspace redact-editor-workspace" data-ref="redact-workspace-card" style="display: none;">
-        <div class="pdf-viewer-main-layout pdf-editor-main-layout" data-ref="editor-main-layout">
-          <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar redact-pages-sidebar" data-ref="pages-sidebar">
+        <div class="pdf-viewer-main-layout pdf-editor-main-layout">
+          <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar redact-pages-sidebar">
             <div class="pdf-viewer-thumbnails-scroll pdf-editor-thumbnails-scroll" data-ref="thumbnails-container"></div>
           </aside>
 
-          <div class="pdf-viewer-canvas-container pdf-editor-canvas-container redact-canvas-container" data-ref="editor-scroll-container">
+          <div class="pdf-viewer-canvas-container pdf-editor-canvas-container redact-canvas-container">
             <div class="pdf-viewer-pages-wrapper pdf-editor-pages-wrapper" data-ref="pages-wrapper"></div>
           </div>
         </div>
@@ -73,7 +73,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar pdf-editor-properties-sidebar redact-sidebar" data-ref="redact-pdf-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="redact-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="redact-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -83,20 +83,20 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title" data-ref="redact-sidebar-title">Censurar PDF</h1>
-        <p class="tool-sidebar__subtitle" data-ref="redact-sidebar-subtitle">Selecciona texto con el ratón, dibuja áreas o censura páginas completas.</p>
+        <h1 class="tool-sidebar__title">Censurar PDF</h1>
+        <p class="tool-sidebar__subtitle">Selecciona texto con el ratón, dibuja áreas o censura páginas completas.</p>
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="redact-info-notice" style="display: flex;">
+        <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-redact-info-notice">El texto censurado se eliminará internamente del documento PDF para garantizar que sea imposible de extraer o copiar.</div>
+          <div class="tool-sidebar-notice__text">El texto censurado se eliminará internamente del documento PDF para garantizar que sea imposible de extraer o copiar.</div>
         </div>
 
-        <div class="tool-sidebar__section" data-ref="section-search-redact">
+        <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Buscar y censurar texto</span>
-          <div class="redact-search-box" data-ref="redact-search-box">
-            <label class="field" data-ref="field-search-phrase">
+          <div class="redact-search-box">
+            <label class="field">
               <input class="field__input" data-ref="input-search-phrase" type="text" placeholder=" " />
               <span class="field__label">Palabra o frase confidencial</span>
             </label>
@@ -107,12 +107,10 @@
           </div>
         </div>
 
-
-
-        <div class="tool-sidebar__section" data-ref="section-list">
+        <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Elementos a censurar</span>
           <div class="redact-items-list" data-ref="redactions-list-container">
-            <p class="redact-items-list__empty" data-ref="redactions-empty-msg">No has añadido ninguna censura todavía. Selecciona texto en el documento o dibuja un área.</p>
+            <p class="redact-items-list__empty">No has añadido ninguna censura todavía. Selecciona texto en el documento o dibuja un área.</p>
           </div>
         </div>
       </div>

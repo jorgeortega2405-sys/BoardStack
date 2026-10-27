@@ -5,12 +5,12 @@
 
       <div class="tool-workspace__canvas" data-ref="repair-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="repair-dropzone">
-          <h1 class="tool-hero-dropzone__title" data-ref="repair-dropzone-title">Reparar PDF</h1>
-          <p class="tool-hero-dropzone__desc" data-ref="repair-dropzone-desc">Recupera y repara datos de documentos PDF dañados o corruptos de forma rápida y segura.</p>
+          <h1 class="tool-hero-dropzone__title">Reparar PDF</h1>
+          <p class="tool-hero-dropzone__desc">Recupera y repara datos de documentos PDF dañados o corruptos de forma rápida y segura.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
-              <span data-ref="txt-browse-file">Seleccionar PDF</span>
+              <span>Seleccionar PDF</span>
             </button>
             <div class="tool-hero-dropzone__cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
@@ -27,25 +27,25 @@
       </div>
 
       <div class="pdf-items-view" data-ref="repair-selected-card" style="display: none;">
-        <div class="tool-workspace__toolbar" data-ref="pdf-workspace-toolbar">
+        <div class="tool-workspace__toolbar">
           <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (<span data-ref="pdf-count-badge">1</span>)</h2>
+            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
           </div>
         </div>
 
-        <div class="pdf-reorder-hint" data-ref="repair-reorder-hint">
+        <div class="pdf-reorder-hint">
           <span>El motor reconstruirá los flujos y referencias cruzadas corruptas de tu archivo.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
-          <div class="pdf-card" data-ref="selected-file-card">
+          <div class="pdf-card">
             <div class="pdf-card__actions">
               <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" aria-label="Eliminar archivo">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
-            <div class="pdf-card__sheet-wrapper" data-ref="sheet-wrapper">
-              <div class="pdf-card__sheet" data-ref="sheet">
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
                 <canvas class="pdf-card__canvas" data-ref="doc-preview-canvas"></canvas>
               </div>
             </div>
@@ -54,7 +54,7 @@
           </div>
         </div>
 
-        <div class="tool-fab-container" data-ref="repair-fab-container">
+        <div class="tool-fab-container">
           <button type="button" class="tool-fab-btn" data-ref="btn-repair-fab-add" data-tooltip="Cambiar archivo" aria-label="Cambiar archivo">
             <svg class="component-icon tool-fab-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           </button>
@@ -65,7 +65,7 @@
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
 
     <aside class="tool-layout__sidebar" data-ref="repair-pdf-sidebar" style="display: none;">
-      <div class="tool-sidebar__mobile-bar" data-ref="repair-sidebar-mobile-bar">
+      <div class="tool-sidebar__mobile-bar">
         <div class="modal-card__drag-zone" data-ref="repair-sidebar-drag-zone">
           <div class="modal-card__drag-handle"></div>
         </div>
@@ -75,19 +75,19 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title" data-ref="repair-sidebar-title">Reparar PDF</h1>
-        <p class="tool-sidebar__subtitle" data-ref="repair-sidebar-subtitle">Recupera y repara datos de documentos PDF dañados o corruptos.</p>
+        <h1 class="tool-sidebar__title">Reparar PDF</h1>
+        <p class="tool-sidebar__subtitle">Recupera y repara datos de documentos PDF dañados o corruptos.</p>
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="repair-info-notice" style="display: flex;">
+        <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text" data-ref="txt-repair-info-notice">El archivo será analizado y reparado manteniendo el contenido recuperable intacto.</div>
+          <div class="tool-sidebar-notice__text">El archivo será analizado y reparado manteniendo el contenido recuperable intacto.</div>
         </div>
 
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Diagnóstico y Reparación</span>
-          <div class="pdf-repair-info-box" data-ref="repair-diagnostics-box">
+          <div class="pdf-repair-info-box">
             <div class="pdf-repair-info-box__item">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
               <span>Reconstrucción de índices y xrefs dañados</span>
@@ -107,7 +107,7 @@
       <div class="tool-sidebar__footer">
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-repair-action" disabled>
           <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#build"></use></svg>
-          <span data-ref="txt-repair-action">Reparar PDF</span>
+          <span>Reparar PDF</span>
           <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
         <div class="banner banner--danger tool-sidebar__error-banner" data-ref="repair-global-error" role="alert" style="display: none;"></div>

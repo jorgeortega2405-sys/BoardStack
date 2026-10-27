@@ -347,16 +347,18 @@ export class WatermarkPdfController implements ViewController {
     if (!grid) return;
 
     grid.innerHTML = this.pages.map((p) => `
-      <div class="wm-page-card" data-ref="card-page-${p.id}">
-        <div class="wm-page-card__preview">
-          <span class="wm-page-card__badge">${p.pageNum}</span>
-          ${this.isMosaic
-            ? `<div class="wm-mosaic-overlay" data-ref="mosaic-${p.id}">
-                 ${Array.from({ length: 9 }).map(() => '<div class="wm-mosaic-dot"></div>').join('')}
-               </div>`
-            : `<div class="wm-indicator-dot is-pos-${this.position}" data-ref="dot-${p.id}"></div>`
-          }
-          <canvas class="wm-page-card__canvas" data-ref="canvas-${p.id}"></canvas>
+      <div class="pdf-card wm-page-card" data-ref="card-page-${p.id}">
+        <span class="pdf-card__order-badge">${p.pageNum}</span>
+        <div class="pdf-card__sheet-wrapper">
+          <div class="pdf-card__sheet">
+            ${this.isMosaic
+              ? `<div class="wm-mosaic-overlay" data-ref="mosaic-${p.id}">
+                   ${Array.from({ length: 9 }).map(() => '<div class="wm-mosaic-dot"></div>').join('')}
+                 </div>`
+              : `<div class="wm-indicator-dot is-pos-${this.position}" data-ref="dot-${p.id}"></div>`
+            }
+            <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
+          </div>
         </div>
       </div>
     `).join('');

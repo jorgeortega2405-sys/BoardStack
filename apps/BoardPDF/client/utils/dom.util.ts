@@ -1,4 +1,5 @@
 import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
+import Sortable from 'sortablejs';
 import { setupSheetDragToDismiss } from '../components/modal.component.js';
 
 export interface BannerManager {
@@ -991,4 +992,57 @@ export function bindInlineControls(container: HTMLElement | Document, signal?: A
       signal ? { signal } : undefined
     );
   });
+}
+
+export interface SortableGridOptions {
+  animation?: number;
+  chosenClass?: string;
+  easing?: string;
+  filter?: string;
+  ghostClass?: string;
+  onEnd?: (evt: any) => void;
+  onOrderChanged?: (orderedIds: string[]) => void;
+  preventOnFilter?: boolean;
+}
+
+export interface SortableGridController {
+  destroy: () => void;
+  sortable: Sortable;
+}
+
+export function setupSortableGrid(
+  container: HTMLElement,
+  options: SortableGridOptions = {}
+): SortableGridController {
+  const sortable = new Sortable(container, {
+    animation: options.animation !== undefined ? options.animation : 200,
+    chosenClass: options.chosenClass || 'pdf-card--chosen',
+    easing: options.easing || 'cubic-bezier(0.2, 0, 0, 1)',
+    filter:
+      options.filter ||
+      'button, .pdf-card__btn-remove, .pdf-card__actions, .organize-page-card__btn-rotate, .organize-page-card__btn-remove, .organize-page-card__actions',
+    ghostClass: options.ghostClass || 'pdf-card--ghost',
+    onEnd: (evt) => {
+      if (options.onEnd) {
+        options.onEnd(evt);
+      }
+      if (options.onOrderChanged) {
+        const itemEls = Array.from(container.children) as HTMLElement[];
+        const ids = itemEls
+          .map((el) => el.getAttribute('data-id') || el.getAttribute('data-page-id') || '')
+          .filter(Boolean);
+        options.onOrderChanged(ids);
+      }
+    },
+    preventOnFilter: options.preventOnFilter !== undefined ? options.preventOnFilter : false,
+  });
+
+  return {
+    destroy: () => {
+      try {
+        sortable.destroy();
+      } catch {}
+    },
+    sortable,
+  };
 }
