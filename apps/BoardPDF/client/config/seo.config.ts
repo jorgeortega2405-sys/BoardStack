@@ -689,6 +689,25 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
       es: 'Contacto | BoardPDF',
     },
   },
+  pricing: {
+    descriptions: {
+      en: 'Explore BoardPDF subscription plans and pricing for professionals, teams, and enterprises.',
+      es: 'Descubre los planes y precios de suscripción de BoardPDF para profesionales, equipos y empresas.',
+    },
+    routeId: 'pricing',
+    slugs: {
+      de: 'preise',
+      en: 'pricing',
+      es: 'precios',
+      fr: 'tarifs',
+      it: 'prezzi',
+      pt: 'precos',
+    },
+    titles: {
+      en: 'Pricing & Plans | BoardPDF',
+      es: 'Planes y Precios | BoardPDF',
+    },
+  },
 
   'help-faq': {
     descriptions: {
@@ -829,6 +848,15 @@ SLUG_TO_ROUTE_MAP.set('about', 'about');
 SLUG_TO_ROUTE_MAP.set('sobre-nosotros', 'about');
 SLUG_TO_ROUTE_MAP.set('contact', 'contact');
 SLUG_TO_ROUTE_MAP.set('contacto', 'contact');
+SLUG_TO_ROUTE_MAP.set('pricing', 'pricing');
+SLUG_TO_ROUTE_MAP.set('precios', 'pricing');
+SLUG_TO_ROUTE_MAP.set('precio', 'pricing');
+SLUG_TO_ROUTE_MAP.set('planes', 'pricing');
+SLUG_TO_ROUTE_MAP.set('plans', 'pricing');
+SLUG_TO_ROUTE_MAP.set('preise', 'pricing');
+SLUG_TO_ROUTE_MAP.set('tarifs', 'pricing');
+SLUG_TO_ROUTE_MAP.set('prezzi', 'pricing');
+SLUG_TO_ROUTE_MAP.set('precos', 'pricing');
 
 export function getCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): string {
   const cleanLang = (lang || '').trim().toLowerCase();

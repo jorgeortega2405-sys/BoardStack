@@ -1,4 +1,4 @@
-import { mountSiteFooter } from '../components/footer.component.js';
+import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { setupLayoutScrollSync } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
@@ -29,6 +29,7 @@ export class HomeController {
     this.loadWorkflows();
     this.renderTools();
     this.bindEvents();
+    this.renderFooter();
   }
 
   destroy(): void {
@@ -203,11 +204,15 @@ export class HomeController {
       { signal: this.abortController?.signal }
     );
 
+  }
+
+  private renderFooter(): void {
     const footerEl = this.container.querySelector<HTMLElement>('[data-ref="home-footer-section"]');
-    if (footerEl) {
-      const footerCtrl = mountSiteFooter(footerEl, this.abortController?.signal);
-      this.dropdownControllers.push(footerCtrl);
-    }
+    if (!footerEl) return;
+
+    footerEl.innerHTML = getFooterHtml();
+    const footerCtrl = mountSiteFooter(footerEl, this.abortController?.signal);
+    this.dropdownControllers.push(footerCtrl);
   }
 
   private filterCards(category: string = this.currentCategory): void {

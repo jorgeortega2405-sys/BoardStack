@@ -446,7 +446,8 @@
     "your_account": "Tu cuenta",
     "rail_workflows": "Flujos",
     "rail_ai": "IA",
-    "rail_tools": "Herramientas"
+    "rail_tools": "Herramientas",
+    "pricing": "Precios"
   },
   "tech_support_panel": {
     "title": "Soporte técnico",
@@ -539,6 +540,13 @@
     "tagline": "Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.",
     "copyright": "© BoardPDF 2026 ® - Tu editor de PDF",
     "search_language": "Buscar idioma...",
-    "no_languages_found": "No se encontraron idiomas"
+    "no_languages_found": "No se encontraron idiomas",
+    "link_pricing": "Precios"
+  },
+  "pricing": {
+    "title": "Planes y precios",
+    "subtitle": "Elige el plan ideal para optimizar tu productividad y desbloquear el máximo poder documental de BoardPDF",
+    "billing_monthly": "Mensual",
+    "billing_yearly": "Anual"
   }
 }

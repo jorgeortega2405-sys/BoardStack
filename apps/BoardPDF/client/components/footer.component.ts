@@ -38,6 +38,9 @@ export function getFooterHtml(): string {
               <li class="footer-col__item" data-ref="footer-item-inicio">
                 <a class="footer-col__link" data-ref="footer-link-inicio" href="${getLocalizedPath('home', currentLang)}">${t('footer.link_home') || 'Inicio'}</a>
               </li>
+              <li class="footer-col__item" data-ref="footer-item-pricing">
+                <a class="footer-col__link" data-ref="footer-link-pricing" href="${getLocalizedPath('pricing', currentLang)}">${t('footer.link_pricing') || 'Precios'}</a>
+              </li>
               <li class="footer-col__item" data-ref="footer-item-faq">
                 <a class="footer-col__link" data-ref="footer-link-faq" href="${getLocalizedPath('help-faq', currentLang)}">${t('footer.link_faq') || 'Preguntas frecuentes'}</a>
               </li>

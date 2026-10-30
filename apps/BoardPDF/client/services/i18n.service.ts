@@ -135,11 +135,21 @@ const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
     login: 'Acceder',
     logout: 'Cerrar sesión',
     logout_all: 'Cerrar todas las sesiones',
+    pricing: 'Precios',
     profile: 'Perfil',
     settings: 'Configuración',
     toggle_theme: 'Cambiar tema',
     upcoming: 'Próximamente',
     upgrade: 'Actualizar plan',
+  },
+  footer: {
+    link_pricing: 'Precios',
+  },
+  pricing: {
+    billing_monthly: 'Mensual',
+    billing_yearly: 'Anual',
+    subtitle: 'Elige el plan ideal para optimizar tu productividad y desbloquear el máximo poder documental de BoardPDF',
+    title: 'Planes y precios',
   },
   upcoming: {
     back_home: 'Ir a Inicio',

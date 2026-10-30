@@ -401,6 +401,15 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/contact' || path === '/contacto' || path === '/help/contact' || path.startsWith('/contact'),
   },
   {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-pricing.css');
+      const { createPricingView } = await import('../views/pricing.view.js');
+      return await createPricingView();
+    },
+    id: 'pricing',
+    match: (path) => path === '/pricing' || path === '/precios' || path === '/precio' || path.startsWith('/pricing') || path.startsWith('/precios') || path.startsWith('/precio'),
+  },
+  {
     handler: async ({ path }) => {
       await loadStylesheet('/css/components/component-views.css');
       const { createHelpCookiesView, createHelpFaqView, createHelpPrivacyView, createHelpSecurityView, createHelpTermsView } = await import('../views/help.view.js');
