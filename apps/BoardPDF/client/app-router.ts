@@ -119,7 +119,10 @@ export async function render(rawPath = window.location.pathname, options?: Rende
     }
   }
 
+  const isAuthView = path.startsWith('/login') || path.startsWith('/register') || path === '/forgot-password' || path === '/reset-password';
+
   const sidebar = await ensureSidebarMounted(layoutContent);
+  sidebar.style.display = '';
   showElement(sidebar);
 
   const navId = ++currentNavigation;
@@ -189,9 +192,10 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   const internalPath = matched ? matched.internalPath : path;
   const currentSidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
   if (currentSidebar) {
+    currentSidebar.style.display = '';
     updateSidebarActiveState(currentSidebar, internalPath);
     translateElement(currentSidebar);
-    if (hasDesignatedMenuItems(internalPath)) {
+    if (!isAuthView && hasDesignatedMenuItems(internalPath)) {
       if (window.innerWidth > 768) {
         const drawerMode = internalPath.includes('/workflows') || internalPath.includes('/workflow/') ? 'workflows' : 'help';
         toggleDrawer(true, drawerMode);
@@ -218,7 +222,11 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   if (scrollable) {
     scrollable.scrollTop = 0;
   }
-  setupLayoutScrollSync();
+  if (!isAuthView) {
+    setupLayoutScrollSync();
+  } else {
+    layoutContent.style.removeProperty('--layout-scroll-height');
+  }
   previousPath = path;
 }
 

@@ -1,46 +1,14 @@
-import { spawnSync } from 'child_process';
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { getGhostscriptCommand, sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
+import { RepairPdfParams, RepairPdfResponse, StoredRepairedPdf } from './repair-pdf.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { RepairPdfParams, RepairPdfResponse, StoredRepairedPdf } from './repair-pdf.types.js';
 
-let resolvedGsCommand: string | null = null;
-
-function getGhostscriptCommand(): string {
-  if (resolvedGsCommand) return resolvedGsCommand;
-  const candidates = process.platform === 'win32'
-    ? ['gswin64c', 'gswin32c', 'gs']
-    : ['gs'];
-  for (const cmd of candidates) {
-    try {
-      const res = spawnSync(cmd, ['-version']);
-      if (!res.error) {
-        resolvedGsCommand = cmd;
-        return cmd;
-      }
-    } catch {
-      continue;
-    }
-  }
-  resolvedGsCommand = 'gs';
-  return resolvedGsCommand;
-}
-
-function sanitizePdfFilename(rawName?: string): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return 'documento_reparado.pdf';
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return 'documento_reparado.pdf';
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 async function runPythonRepairWorker(
   inputPath: string,
@@ -207,6 +175,3 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
   };
 }
 
-export async function getRepairedPdf(fileId: string): Promise<StoredRepairedPdf | null> {
-  return getTempFile<StoredRepairedPdf>(fileId);
-}

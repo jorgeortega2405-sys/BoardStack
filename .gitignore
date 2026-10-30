@@ -37,6 +37,10 @@ public/vendor/pdfjs/cmaps/
 # Resultados de pruebas y benchmarks
 tests/benchmark-*.json
 coverage/
+**/test/**/*.md
+**/test/*.md
+**/tests/**/*.md
+**/tests/*.md
 
 # Archivos del sistema operativo y editores
 .DS_Store

@@ -1,10 +1,10 @@
-import { ZipArchive } from 'archiver';
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { createZipBuffer } from '../../utils/archive.util.js';
+import { SplitPdfOptions, SplitPdfResponse, StoredSplitResult } from './split-pdf.types.js';
 import crypto from 'crypto';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { SplitPdfOptions, SplitPdfResponse, StoredSplitResult } from './split-pdf.types.js';
 
 function sanitizeBaseFilename(rawName?: string, defaultName = 'documento_dividido'): string {
   if (!rawName || typeof rawName !== 'string') {
@@ -12,23 +12,6 @@ function sanitizeBaseFilename(rawName?: string, defaultName = 'documento_dividid
   }
   const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_').replace(/\.pdf$/i, '').replace(/\.zip$/i, '');
   return clean || defaultName;
-}
-
-function createZipBuffer(files: Array<{ buffer: Buffer; name: string }>): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const archive = new ZipArchive({ zlib: { level: 9 } });
-    const chunks: Buffer[] = [];
-
-    archive.on('data', (chunk: Buffer) => chunks.push(chunk));
-    archive.on('end', () => resolve(Buffer.concat(chunks)));
-    archive.on('error', (err: unknown) => reject(err));
-
-    for (const f of files) {
-      archive.append(f.buffer, { name: f.name });
-    }
-
-    void archive.finalize();
-  });
 }
 
 export async function splitPdfFile(
@@ -264,8 +247,4 @@ export async function splitPdfFile(
     partsCount: generatedPdfs.length,
     totalPages,
   };
-}
-
-export async function getSplitResult(fileId: string): Promise<StoredSplitResult | null> {
-  return getTempFile<StoredSplitResult>(fileId);
 }

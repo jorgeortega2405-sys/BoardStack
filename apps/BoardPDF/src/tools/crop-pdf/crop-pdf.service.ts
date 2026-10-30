@@ -1,20 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { PDFDocument, PDFPage } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { CropBoxPercent, CropPdfOptions, CropPdfResponse, StoredCropPdfResult } from './crop-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_recortado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
+import crypto from 'crypto';
+import { PDFDocument, PDFPage } from 'pdf-lib';
 
 function applyCropToPage(page: PDFPage, box: CropBoxPercent): void {
   const mediaBox = page.getMediaBox();
@@ -41,7 +30,7 @@ function applyCropToPage(page: PDFPage, box: CropBoxPercent): void {
     page.setMediaBox(pdfX, pdfY, pdfWidth, pdfHeight);
   } else if (rot === 180) {
     const pdfX = mediaBox.x + ((100 - (clampX + clampW)) / 100) * mediaBox.width;
-    const pdfWidth = (clampW / 100) * mediaBox.width;
+    const pdfWidth = (clampH / 100) * mediaBox.width;
     const pdfY = mediaBox.y + (clampY / 100) * mediaBox.height;
     const pdfHeight = (clampH / 100) * mediaBox.height;
     page.setCropBox(pdfX, pdfY, pdfWidth, pdfHeight);
@@ -116,8 +105,4 @@ export async function cropPdf(
     fileSize: finalBuffer.length,
     totalPages,
   };
-}
-
-export async function getCropPdfResult(fileId: string): Promise<StoredCropPdfResult | null> {
-  return getTempFile<StoredCropPdfResult>(fileId);
 }

@@ -1,11 +1,12 @@
-import { ZipArchive } from 'archiver';
-import { spawn } from 'child_process';
-import fs from 'fs';
-import path from 'path';
 import { logger } from '../../../services/logger.service.js';
+import { createZipBuffer } from '../../../utils/archive.util.js';
+import { getGhostscriptCommand } from '../../../utils/pdf.util.js';
 import { findPythonWorkerScript, getPythonCommand } from '../../../utils/process.util.js';
 import { PdfConversionOptions } from '../pdf-converter.types.js';
 import { EngineConversionParams, EngineConversionResult, IConverterEngine } from './converter-engine.interface.js';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 export class LocalConverterEngine implements IConverterEngine {
   public async convert(params: EngineConversionParams): Promise<EngineConversionResult> {
@@ -103,7 +104,8 @@ export class LocalConverterEngine implements IConverterEngine {
 
     let gsSuccess = false;
     try {
-      await this.execProcess('gs', [
+      const gsCmd = getGhostscriptCommand();
+      await this.execProcess(gsCmd, [
         `-dPDFA=${pdfaPart}`,
         '-sColorConversionStrategy=UseDeviceIndependentColor',
         `-dPDFACompatibilityPolicy=${compatibilityPolicy}`,
@@ -116,6 +118,7 @@ export class LocalConverterEngine implements IConverterEngine {
         gsSuccess = true;
       }
     } catch {}
+
 
     if (!gsSuccess) {
       await fs.promises.copyFile(inputPath, outputPath);
@@ -185,19 +188,15 @@ export class LocalConverterEngine implements IConverterEngine {
     });
   }
 
-  private zipFiles(files: string[], zipPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const output = fs.createWriteStream(zipPath);
-      const archive = new ZipArchive({ zlib: { level: 9 } });
-
-      output.on('close', () => resolve());
-      archive.on('error', (err: unknown) => reject(err));
-
-      archive.pipe(output);
-      files.forEach((file, idx) => {
-        archive.file(file, { name: `pagina_${idx + 1}.jpg` });
-      });
-      void archive.finalize();
-    });
+  private async zipFiles(files: string[], zipPath: string): Promise<void> {
+    const entries = await Promise.all(
+      files.map(async (file, idx) => ({
+        buffer: await fs.promises.readFile(file),
+        name: `pagina_${idx + 1}.jpg`,
+      }))
+    );
+    const zipBuf = await createZipBuffer(entries);
+    await fs.promises.writeFile(zipPath, zipBuf);
   }
 }
+

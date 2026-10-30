@@ -458,6 +458,42 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      await loadStylesheet('/css/components/component-auth.css');
+      const { createLoginView } = await import('../views/auth.view.js');
+      return await createLoginView();
+    },
+    id: 'login',
+    match: (path) => path === '/login' || path.startsWith('/login'),
+  },
+  {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-auth.css');
+      const { createRegisterView } = await import('../views/auth.view.js');
+      return await createRegisterView();
+    },
+    id: 'register',
+    match: (path) => path === '/register' || path.startsWith('/register'),
+  },
+  {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-auth.css');
+      const { createForgotPasswordView } = await import('../views/auth.view.js');
+      return await createForgotPasswordView();
+    },
+    id: 'forgot-password',
+    match: (path) => path === '/forgot-password',
+  },
+  {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-auth.css');
+      const { createResetPasswordView } = await import('../views/auth.view.js');
+      return await createResetPasswordView();
+    },
+    id: 'reset-password',
+    match: (path) => path === '/reset-password',
+  },
+  {
+    handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();
     },

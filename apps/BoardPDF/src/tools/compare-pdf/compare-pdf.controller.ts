@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { comparePdfDocuments, getStoredComparisonReport } from './compare-pdf.service.js';
+import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { comparePdfDocuments } from './compare-pdf.service.js';
+import { Request, Response } from 'express';
 
 export async function handleComparePdf(req: Request, res: Response): Promise<Response> {
   try {
@@ -26,10 +27,7 @@ export async function handleComparePdf(req: Request, res: Response): Promise<Res
       });
     }
 
-    if (
-      (!file1.mimetype.includes('pdf') && !file1.originalname.toLowerCase().endsWith('.pdf')) ||
-      (!file2.mimetype.includes('pdf') && !file2.originalname.toLowerCase().endsWith('.pdf'))
-    ) {
+    if (!isPdfBuffer(file1.buffer) || !isPdfBuffer(file2.buffer)) {
       return res.status(400).json({
         error: 'Ambos archivos deben tener un formato PDF válido.',
         success: false,
@@ -59,37 +57,3 @@ export async function handleComparePdf(req: Request, res: Response): Promise<Res
   }
 }
 
-export async function handleDownloadComparisonReport(req: Request, res: Response): Promise<void> {
-  try {
-    const { fileId } = req.params;
-
-    if (!fileId || typeof fileId !== 'string') {
-      res.status(400).json({
-        error: 'Identificador de archivo inválido.',
-        success: false,
-      });
-      return;
-    }
-
-    const stored = await getStoredComparisonReport(fileId);
-
-    if (!stored || !stored.buffer) {
-      res.status(404).json({
-        error: 'El informe solicitado ha expirado o no existe.',
-        success: false,
-      });
-      return;
-    }
-
-    res.setHeader('Content-Type', stored.contentType || 'application/pdf');
-    res.setHeader('Content-Length', stored.fileSize || stored.buffer.length);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(stored.filename)}"`);
-    res.send(stored.buffer);
-  } catch (err: any) {
-    logger.app.error('Error al descargar informe de comparación PDF', { error: err });
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al descargar el informe.',
-      success: false,
-    });
-  }
-}

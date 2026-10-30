@@ -915,3 +915,24 @@ html, body {
   background-color: transparent;
   padding-bottom: 40px;
 }
+
+.rail-item-container {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .rail-floating-panel {
+    bottom: 20px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+    left: 74px !important;
+    position: fixed !important;
+    right: auto !important;
+    top: auto !important;
+    z-index: 150 !important;
+  }
+}

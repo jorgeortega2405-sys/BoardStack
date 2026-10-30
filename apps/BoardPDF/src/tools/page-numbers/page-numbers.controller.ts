@@ -1,13 +1,19 @@
-import { Request, Response } from 'express';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { addPageNumbers, getPageNumberResult } from './page-numbers.service.js';
+import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { addPageNumbers } from './page-numbers.service.js';
 import { PageNumberOptions } from './page-numbers.types.js';
+import { Request, Response } from 'express';
 
 export async function addPageNumbersHandler(req: Request, res: Response): Promise<void> {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'Debes seleccionar un archivo PDF.', success: false });
+      return;
+    }
+
+    if (!isPdfBuffer(req.file.buffer)) {
+      res.status(400).json({ error: 'El archivo enviado no corresponde a un documento PDF válido.', success: false });
       return;
     }
 
@@ -37,32 +43,6 @@ export async function addPageNumbersHandler(req: Request, res: Response): Promis
     logger.app.error('Fallo en endpoint addPageNumbersHandler', err);
     res.status(500).json({
       error: 'Ha ocurrido un error al insertar números de página en el PDF. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-
-export async function downloadPageNumberHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { fileId } = req.params;
-    if (!fileId) {
-      res.status(400).json({ error: 'Identificador de archivo no proporcionado.', success: false });
-      return;
-    }
-
-    const item = await getPageNumberResult(fileId);
-    if (!item) {
-      res.status(404).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
-      return;
-    }
-
-    res.setHeader('Content-Type', item.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(item.filename)}"`);
-    res.send(item.buffer);
-  } catch (err: unknown) {
-    logger.app.error('Fallo al descargar PDF numerado', err);
-    res.status(500).json({
-      error: 'Error al descargar el archivo PDF con números de página.',
       success: false,
     });
   }

@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { captureUrlScreenshot, convertToPdf, convertUrlToPdf, getStoredToPdfFile, isValidPublicUrl } from './to-pdf-converter.service.js';
+import { captureUrlScreenshot, convertToPdf, convertUrlToPdf, isValidPublicUrl } from './to-pdf-converter.service.js';
 import { ToPdfSourceType } from './to-pdf-converter.types.js';
+import { Request, Response } from 'express';
+
 
 const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
   'excel-to-pdf',
@@ -126,29 +127,3 @@ export async function previewUrlHandler(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function downloadConvertedPdfHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { token } = req.params;
-    if (!token) {
-      res.status(400).json({ error: 'Token de descarga no proporcionado.', success: false });
-      return;
-    }
-
-    const file = await getStoredToPdfFile(token);
-    if (!file || !file.buffer) {
-      res.status(404).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
-      return;
-    }
-
-    res.setHeader('Content-Type', file.contentType || file.mimeType || 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
-    res.setHeader('Content-Length', file.buffer.length);
-    res.send(file.buffer);
-  } catch (err: unknown) {
-    logger.app.error('Fallo al descargar archivo convertido a PDF', err);
-    res.status(500).json({
-      error: 'Error al descargar el archivo convertido.',
-      success: false,
-    });
-  }
-}

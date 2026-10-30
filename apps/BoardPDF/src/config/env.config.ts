@@ -77,6 +77,14 @@ export const config = {
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY || '',
   },
   sessionSecret: process.env.SESSION_SECRET || 'boardpdf_session_secret_key_2026',
+  smtp: {
+    fromEmail: process.env.SMTP_FROM_EMAIL || 'no-reply@boardpdf.com',
+    fromName: process.env.SMTP_FROM_NAME || 'BoardPDF',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    pass: process.env.SMTP_PASS || '',
+    port: parseInt(process.env.SMTP_PORT || '465', 10),
+    user: process.env.SMTP_USER || '',
+  },
   turnstile: {
     enabled: process.env.TURNSTILE_ENABLED === 'true' || Boolean(process.env.TURNSTILE_SECRET_KEY),
     secretKey: process.env.TURNSTILE_SECRET_KEY || '',

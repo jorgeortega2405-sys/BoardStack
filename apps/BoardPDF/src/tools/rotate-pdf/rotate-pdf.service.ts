@@ -1,20 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { degrees, PDFDocument } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { RotatePdfOptions, RotatePdfResponse, StoredRotatePdfResult } from './rotate-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_rotado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
+import crypto from 'crypto';
+import { degrees, PDFDocument } from 'pdf-lib';
 
 export async function rotatePdf(
   fileBuffer: Buffer,
@@ -80,8 +69,4 @@ export async function rotatePdf(
     fileSize: finalBuffer.length,
     totalPages,
   };
-}
-
-export async function getRotatePdfResult(fileId: string): Promise<StoredRotatePdfResult | null> {
-  return getTempFile<StoredRotatePdfResult>(fileId);
 }

@@ -1,13 +1,12 @@
+export interface ToolLimitConfig {
+  maxFiles: number;
+  maxFileSizeMB: number;
+  maxTotalSizeMB: number;
+}
+
 export interface ToolLimitDefinition {
-  free: {
-    maxFiles: number;
-    maxFileSizeMB: number;
-    maxTotalSizeMB: number;
-  };
-  premium: {
-    maxFiles: number;
-    maxFileSizeMB: number;
-    maxTotalSizeMB: number;
+  free: ToolLimitConfig;
+  premium: ToolLimitConfig & {
     requiredPermission?: string;
   };
 }
@@ -99,16 +98,22 @@ export const TOOLS_LIMITS: Record<string, ToolLimitDefinition> = {
   },
 };
 
-export function getToolLimits(toolId: string, _permissions: string[] = []): { maxFiles: number; maxFileSizeMB: number; maxTotalSizeMB: number } {
+export function getToolLimits(toolId: string, permissions: string[] = []): ToolLimitConfig {
   const config = TOOLS_LIMITS[toolId];
   if (!config) {
-    return { maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 2000 };
+    return { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 };
   }
 
+  const hasPermission = Boolean(
+    config.premium.requiredPermission &&
+    (permissions ?? []).includes(config.premium.requiredPermission)
+  );
+
+  const limits = hasPermission ? config.premium : config.free;
   return {
-    maxFiles: config.premium.maxFiles,
-    maxFileSizeMB: config.premium.maxFileSizeMB,
-    maxTotalSizeMB: config.premium.maxTotalSizeMB,
+    maxFiles: limits.maxFiles,
+    maxFileSizeMB: limits.maxFileSizeMB,
+    maxTotalSizeMB: limits.maxTotalSizeMB,
   };
 }
 

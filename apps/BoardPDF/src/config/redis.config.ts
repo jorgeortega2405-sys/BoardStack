@@ -3,7 +3,6 @@ import { logger } from '../services/logger.service.js';
 import { config } from './env.config.js';
 
 export const redis = new Redis({
-  enableOfflineQueue: false,
   host: config.redis.host,
   lazyConnect: true,
   maxRetriesPerRequest: 1,

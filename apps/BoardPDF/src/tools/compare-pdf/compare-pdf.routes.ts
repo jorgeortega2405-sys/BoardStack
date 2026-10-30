@@ -1,8 +1,9 @@
-import { Router } from 'express';
-import multer from 'multer';
+import { handleToolDownload } from '../../controllers/download.controller.js';
 import { optionalAuth } from '../../middlewares/auth.middleware.js';
 import { comparePdfLimiter } from '../../middlewares/rate-limit.middleware.js';
-import { handleComparePdf, handleDownloadComparisonReport } from './compare-pdf.controller.js';
+import { handleComparePdf } from './compare-pdf.controller.js';
+import { Router } from 'express';
+import multer from 'multer';
 
 const upload = multer({
   limits: {
@@ -24,6 +25,7 @@ router.post(
   handleComparePdf
 );
 
-router.get('/tools/compare-pdf/download/:fileId', handleDownloadComparisonReport);
+router.get('/tools/compare-pdf/download/:fileId', handleToolDownload);
 
 export default router;
+

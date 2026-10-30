@@ -1,23 +1,14 @@
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
+import { OcrLanguage, OcrPdfParams, OcrPdfResponse, StoredOcrPdf } from './ocr-pdf.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { OcrLanguage, OcrPdfParams, OcrPdfResponse, StoredOcrPdf } from './ocr-pdf.types.js';
 
-function sanitizePdfFilename(rawName?: string): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return 'documento_ocr.pdf';
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return 'documento_ocr.pdf';
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 function resolveTesseractLang(lang?: OcrLanguage): string {
   if (!lang || typeof lang !== 'string') return 'spa';
@@ -165,6 +156,3 @@ export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfRespons
   };
 }
 
-export async function getOcrPdf(fileId: string): Promise<StoredOcrPdf | null> {
-  return getTempFile<StoredOcrPdf>(fileId);
-}

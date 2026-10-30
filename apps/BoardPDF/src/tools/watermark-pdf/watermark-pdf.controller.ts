@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { addWatermarkToPdf, getWatermarkPdfResult } from './watermark-pdf.service.js';
+import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { addWatermarkToPdf } from './watermark-pdf.service.js';
 import { WatermarkOptions } from './watermark-pdf.types.js';
+import { Request, Response } from 'express';
 
 export async function addWatermarkHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -11,6 +12,11 @@ export async function addWatermarkHandler(req: Request, res: Response): Promise<
 
     if (!pdfFile) {
       res.status(400).json({ error: 'Debes seleccionar un archivo PDF.', success: false });
+      return;
+    }
+
+    if (!isPdfBuffer(pdfFile.buffer)) {
+      res.status(400).json({ error: 'El archivo enviado no corresponde a un documento PDF válido.', success: false });
       return;
     }
 
@@ -48,32 +54,6 @@ export async function addWatermarkHandler(req: Request, res: Response): Promise<
     logger.app.error('Fallo en endpoint addWatermarkHandler', err);
     res.status(500).json({
       error: 'Ha ocurrido un error al insertar la marca de agua en el PDF. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-
-export async function downloadWatermarkPdfHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { fileId } = req.params;
-    if (!fileId) {
-      res.status(400).json({ error: 'Identificador de archivo no proporcionado.', success: false });
-      return;
-    }
-
-    const item = await getWatermarkPdfResult(fileId);
-    if (!item) {
-      res.status(404).json({ error: 'El archivo solicitado ha expirado o no existe.', success: false });
-      return;
-    }
-
-    res.setHeader('Content-Type', item.contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(item.filename)}"`);
-    res.send(item.buffer);
-  } catch (err: unknown) {
-    logger.app.error('Fallo al descargar PDF con marca de agua', err);
-    res.status(500).json({
-      error: 'Error al descargar el archivo PDF con marca de agua.',
       success: false,
     });
   }

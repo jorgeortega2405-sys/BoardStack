@@ -1,52 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { cleanTextForWinAnsi, parseHexColor, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { StoredWatermarkPdfResult, WatermarkOptions, WatermarkPdfResponse, WatermarkPosition } from './watermark-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_marca_de_agua.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
-
-function cleanTextForWinAnsi(input: string): string {
-  const str = input.replace(/\uFFFD/g, '');
-  let result = '';
-  for (const char of str) {
-    const code = char.charCodeAt(0);
-    if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)) {
-      result += char;
-    } else {
-      const decomposed = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      for (const d of decomposed) {
-        const dCode = d.charCodeAt(0);
-        if (dCode >= 0x20 && dCode <= 0x7e) {
-          result += d;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-function parseHexColor(hex?: string): { b: number; g: number; r: number } {
-  if (!hex || typeof hex !== 'string') return { b: 0.6, g: 0.6, r: 0.6 };
-  const clean = hex.replace('#', '');
-  if (clean.length === 6) {
-    const r = parseInt(clean.substring(0, 2), 16) / 255;
-    const g = parseInt(clean.substring(2, 4), 16) / 255;
-    const b = parseInt(clean.substring(4, 6), 16) / 255;
-    return { b, g, r };
-  }
-  return { b: 0.6, g: 0.6, r: 0.6 };
-}
+import crypto from 'crypto';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 function calculateCoords(
   pos: WatermarkPosition,
@@ -248,8 +205,4 @@ export async function addWatermarkToPdf(
     fileSize: finalBuffer.length,
     totalPages,
   };
-}
-
-export async function getWatermarkPdfResult(fileId: string): Promise<StoredWatermarkPdfResult | null> {
-  return getTempFile<StoredWatermarkPdfResult>(fileId);
 }

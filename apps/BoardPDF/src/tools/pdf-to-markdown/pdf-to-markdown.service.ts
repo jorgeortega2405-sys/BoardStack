@@ -1,8 +1,9 @@
 import { config } from '../../config/env.config.js';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { extractPdfText } from '../../utils/pdf.util.js';
 import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { MarkdownConversionMode, PdfToMarkdownParams, PdfToMarkdownResponse, StoredMarkdownFile } from './pdf-to-markdown.types.js';
+import { MarkdownConversionMode, PdfToMarkdownParams, PdfToMarkdownResponse } from './pdf-to-markdown.types.js';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -75,29 +76,6 @@ async function runPythonMarkdownWorker(
   return null;
 }
 
-async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  try {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    const pagesText: string[] = [];
-
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-      const page = await doc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageStrings = textContent.items
-        .map((item: any) => ('str' in item ? item.str : ''))
-        .filter(Boolean);
-      if (pageStrings.length > 0) {
-        pagesText.push(pageStrings.join(' '));
-      }
-    }
-
-    return pagesText.join('\n\n');
-  } catch (err) {
-    logger.app.warn('No se pudo extraer texto con pdfjs en backend', { error: err });
-    return '';
-  }
-}
 
 async function callGeminiApi(
   systemInstruction: string,
@@ -174,10 +152,6 @@ async function callGeminiApi(
   return stripMarkdownCodeFences(candidateText);
 }
 
-export async function getStoredMarkdown(fileId: string): Promise<StoredMarkdownFile | null> {
-  return getTempFile<StoredMarkdownFile>(fileId);
-}
-
 export async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise<PdfToMarkdownResponse> {
   const startTime = Date.now();
   const {
@@ -199,7 +173,8 @@ export async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise
 
   const apiKey = config.gemini?.apiKey;
   if (apiKey) {
-    let rawExtractedText = await extractTextFromPdf(buffer);
+    const extracted = await extractPdfText(buffer);
+    const rawExtractedText = extracted?.fullText || '';
     const isMultimodalEligible = buffer.length <= 18 * 1024 * 1024;
 
     const systemInstruction = `Eres un motor experto de conversión de documentos PDF a Markdown de alta fidelidad.
@@ -255,7 +230,7 @@ Respeta la estructura, tablas GFM y formato semántico del documento sin preámb
   }
 
   if (!markdownResult) {
-    const fallbackText = await extractTextFromPdf(buffer);
+    const { fullText: fallbackText } = await extractPdfText(buffer);
     markdownResult = fallbackText || '# Documento\n\nNo se detectó contenido de texto en el documento.';
     usedModel = 'fallback-text-extractor';
   }

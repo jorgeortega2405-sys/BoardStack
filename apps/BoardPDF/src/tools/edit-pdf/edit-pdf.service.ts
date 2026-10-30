@@ -1,67 +1,10 @@
-import crypto from 'crypto';
-import path from 'path';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
 import { storeTempFile } from '../../services/temp-storage.service.js';
+import { cleanTextForWinAnsi, parseHexColor, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { repairPdfBuffer } from '../repair-pdf/repair-pdf.service.js';
 import { EditPdfModifications, EditPdfResult } from './edit-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_editado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
-
-function parseHexColor(hex?: string): { b: number; g: number; r: number } {
-  if (!hex || typeof hex !== 'string' || hex === 'transparent' || hex === 'none') {
-    return { b: 0, g: 0, r: 0 };
-  }
-  const clean = hex.replace('#', '').trim();
-  if (clean.length === 6) {
-    const r = parseInt(clean.substring(0, 2), 16) / 255;
-    const g = parseInt(clean.substring(2, 4), 16) / 255;
-    const b = parseInt(clean.substring(4, 6), 16) / 255;
-    return { b, g, r };
-  }
-  if (clean.length === 3) {
-    const r = parseInt(clean[0] + clean[0], 16) / 255;
-    const g = parseInt(clean[1] + clean[1], 16) / 255;
-    const b = parseInt(clean[2] + clean[2], 16) / 255;
-    return { b, g, r };
-  }
-  return { b: 0, g: 0, r: 0 };
-}
-
-function encodeSafeTextForFont(font: any, input?: string): string {
-  if (!input || typeof input !== 'string') return '';
-  let result = '';
-  for (const char of input) {
-    if (char === '\n' || char === '\r' || char === '\t') {
-      result += char;
-      continue;
-    }
-    try {
-      font.encodeText(char);
-      result += char;
-    } catch {
-      const decomposed = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      let decSafe = '';
-      for (const d of decomposed) {
-        try {
-          font.encodeText(d);
-          decSafe += d;
-        } catch {}
-      }
-      result += decSafe;
-    }
-  }
-  return result;
-}
+import crypto from 'crypto';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 export async function editPdfDocument(
   pdfBuffer: Buffer,
@@ -164,7 +107,7 @@ export async function editPdfDocument(
 
       const font = resolveFont(rep.fontFamily);
       const colorRgb = parseHexColor(rep.color || '#000000');
-      const safeText = encodeSafeTextForFont(font, rep.newText);
+      const safeText = cleanTextForWinAnsi(rep.newText);
       const fontSize = Math.max(6, rep.fontSize || 12);
 
       if (safeText) {
@@ -259,7 +202,7 @@ export async function editPdfDocument(
       const pageHeight = page.getHeight();
       const font = resolveFont(item.fontFamily);
       const colorRgb = parseHexColor(item.color || '#000000');
-      const safeText = encodeSafeTextForFont(font, item.text);
+      const safeText = cleanTextForWinAnsi(item.text);
       const fontSize = Math.max(8, item.fontSize || 14);
 
       if (safeText) {

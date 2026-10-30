@@ -1,7 +1,7 @@
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
 import { IConverterEngine } from './engine/converter-engine.interface.js';
 import { LocalConverterEngine } from './engine/local-converter.engine.js';
-import { ConversionType, ConvertJobResult, PdfConversionOptions, StoredConversionFile } from './pdf-converter.types.js';
+import { ConversionType, ConvertJobResult, PdfConversionOptions } from './pdf-converter.types.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -78,6 +78,3 @@ export async function convertPdfFile(
   }
 }
 
-export async function getStoredConversionFile(token: string): Promise<StoredConversionFile | null> {
-  return getTempFile<StoredConversionFile>(token);
-}

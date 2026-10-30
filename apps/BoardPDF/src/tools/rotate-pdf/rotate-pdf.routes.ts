@@ -1,17 +1,17 @@
-import { Router } from 'express';
-import multer from 'multer';
+import { handleToolDownload } from '../../controllers/download.controller.js';
 import { optionalAuth } from '../../middlewares/auth.middleware.js';
-import { downloadRotatePdfHandler, rotatePdfHandler } from './rotate-pdf.controller.js';
+import { createPdfUploadMiddleware } from '../../utils/upload.util.js';
+import { rotatePdfHandler } from './rotate-pdf.controller.js';
+import { Router } from 'express';
 
 const router = Router();
-const upload = multer({
-  limits: {
-    fileSize: 1000 * 1024 * 1024,
-  },
-  storage: multer.memoryStorage(),
+const uploadMiddleware = createPdfUploadMiddleware({
+  fieldName: 'file',
+  maxFileSizeMB: 1000,
+  maxFiles: 1,
 });
 
-router.post('/tools/rotate-pdf/process', optionalAuth, upload.single('file'), rotatePdfHandler);
-router.get('/tools/rotate-pdf/download/:fileId', downloadRotatePdfHandler);
+router.post('/tools/rotate-pdf/process', optionalAuth, uploadMiddleware, rotatePdfHandler);
+router.get('/tools/rotate-pdf/download/:fileId', handleToolDownload);
 
 export default router;

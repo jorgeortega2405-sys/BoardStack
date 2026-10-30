@@ -1,22 +1,12 @@
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, getPythonCommand } from '../../utils/process.util.js';
+import { StoredUnlockPdfResult, UnlockPdfOptions, UnlockPdfResponse } from './unlock-pdf.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, getPythonCommand } from '../../utils/process.util.js';
-import { StoredUnlockPdfResult, UnlockPdfOptions, UnlockPdfResponse } from './unlock-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_desbloqueado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 export async function unlockPdf(
   fileBuffer: Buffer,
@@ -91,8 +81,4 @@ except pikepdf.PasswordError:
       fs.promises.unlink(tempOutput),
     ]);
   }
-}
-
-export async function getUnlockPdfResult(fileId: string): Promise<StoredUnlockPdfResult | null> {
-  return getTempFile<StoredUnlockPdfResult>(fileId);
 }

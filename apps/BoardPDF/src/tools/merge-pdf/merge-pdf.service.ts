@@ -1,20 +1,9 @@
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { MergePdfResponse, StoredMergedPdf } from './merge-pdf.types.js';
 import crypto from 'crypto';
-import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-
-function sanitizePdfFilename(rawName?: string): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return 'documento_unido.pdf';
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return 'documento_unido.pdf';
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 export async function mergePdfFiles(
   files: Array<{ buffer: Buffer; originalname: string }>,
@@ -41,7 +30,7 @@ export async function mergePdfFiles(
   const mergedBytes = await mergedDoc.save();
   const fileBuffer = Buffer.from(mergedBytes);
   const fileId = crypto.randomUUID();
-  const filename = sanitizePdfFilename(customFilename);
+  const filename = sanitizePdfFilename(customFilename, 'documento_unido.pdf');
 
   const storedItem: StoredMergedPdf = {
     buffer: fileBuffer,
@@ -62,8 +51,4 @@ export async function mergePdfFiles(
     fileSize: fileBuffer.length,
     pageCount: totalPages,
   };
-}
-
-export async function getMergedPdf(fileId: string): Promise<StoredMergedPdf | null> {
-  return getTempFile<StoredMergedPdf>(fileId);
 }

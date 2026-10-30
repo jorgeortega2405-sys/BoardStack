@@ -1,6 +1,8 @@
 import { logger } from '../../services/logger.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { Request, Response } from 'express';
 import { URL } from 'url';
+
 
 const ALLOWED_HOST_SUFFIXES = [
   'dl.dropboxusercontent.com',
@@ -80,8 +82,7 @@ export async function handleFetchCloudFile(req: Request, res: Response): Promise
         return;
       }
 
-      const safeName = (typeof filename === 'string' && filename.trim() ? filename.trim() : 'documento.pdf')
-        .replace(/[^a-zA-Z0-9._-]/g, '_');
+      const safeName = sanitizePdfFilename(filename, 'documento.pdf');
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);

@@ -1,13 +1,14 @@
 import { config } from '../../config/env.config.js';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { extractPdfText, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { StoredTranslatedPdf, TranslatePdfParams, TranslatePdfResponse } from './translate-pdf.types.js';
+import { TranslatePdfParams, TranslatePdfResponse } from './translate-pdf.types.js';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   AF: 'Afrikaans',
@@ -76,34 +77,16 @@ const LANGUAGE_NAMES: Record<string, string> = {
   ZHO: 'Simplified Chinese',
 };
 
-export async function getTranslatedPdf(fileId: string): Promise<StoredTranslatedPdf | null> {
-  return getTempFile<StoredTranslatedPdf>(fileId);
-}
-
 async function extractPagesText(buffer: Buffer): Promise<Array<{ pageIndex: number; text: string }>> {
   try {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    const pages: Array<{ pageIndex: number; text: string }> = [];
-
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-      const page = await doc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageStrings = textContent.items
-        .map((item: any) => ('str' in item ? item.str : ''))
-        .filter(Boolean);
-      pages.push({
-        pageIndex: pageNum - 1,
-        text: pageStrings.join(' ').trim(),
-      });
-    }
-
-    return pages;
+    const { pages } = await extractPdfText(buffer);
+    return pages.map((text, pageIndex) => ({ pageIndex, text }));
   } catch (err) {
     logger.app.warn('Error al extraer texto por páginas con pdfjs en translate-pdf', { error: err });
     return [];
   }
 }
+
 
 async function callGeminiTranslate(
   text: string,
@@ -420,7 +403,7 @@ export async function translatePdf(params: TranslatePdfParams): Promise<Translat
   const fileId = randomUUID();
   const baseName = originalname.replace(/\.[^/.]+$/, '');
   const langSuffix = targetLang.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  const finalFilename = `${baseName}_${langSuffix}.pdf`;
+  const finalFilename = sanitizePdfFilename(`${baseName}_${langSuffix}.pdf`);
 
   const tokenResult = await storeTempFile(fileId, {
     buffer: resultBuffer,

@@ -1,7 +1,8 @@
+import { handleToolDownload } from '../../controllers/download.controller.js';
+import { optionalAuth } from '../../middlewares/auth.middleware.js';
+import { editPdfHandler } from './edit-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
-import { optionalAuth } from '../../middlewares/auth.middleware.js';
-import { downloadEditedPdfHandler, editPdfHandler } from './edit-pdf.controller.js';
 
 const router = Router();
 const upload = multer({
@@ -21,6 +22,7 @@ router.post(
   editPdfHandler
 );
 
-router.get('/tools/edit-pdf/download/:fileId', downloadEditedPdfHandler);
+router.get('/tools/edit-pdf/download/:fileId', handleToolDownload);
 
 export default router;
+

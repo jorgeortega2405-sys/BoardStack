@@ -1,46 +1,13 @@
-import { spawnSync } from 'child_process';
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { getGhostscriptCommand, sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout } from '../../utils/process.util.js';
+import { CompressPdfParams, CompressPdfResponse, PdfCompressLevel, StoredCompressedPdf } from './compress-pdf.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout } from '../../utils/process.util.js';
-import { CompressPdfParams, CompressPdfResponse, PdfCompressLevel, StoredCompressedPdf } from './compress-pdf.types.js';
-
-let resolvedGsCommand: string | null = null;
-
-function getGhostscriptCommand(): string {
-  if (resolvedGsCommand) return resolvedGsCommand;
-  const candidates = process.platform === 'win32'
-    ? ['gswin64c', 'gswin32c', 'gs']
-    : ['gs'];
-  for (const cmd of candidates) {
-    try {
-      const res = spawnSync(cmd, ['-version']);
-      if (!res.error) {
-        resolvedGsCommand = cmd;
-        return cmd;
-      }
-    } catch {
-      continue;
-    }
-  }
-  resolvedGsCommand = 'gs';
-  return resolvedGsCommand;
-}
-
-function sanitizePdfFilename(rawName?: string): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return 'documento_comprimido.pdf';
-  }
-  const clean = path.basename(rawName).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
-  if (!clean) {
-    return 'documento_comprimido.pdf';
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 function getGhostscriptSetting(level: PdfCompressLevel): string {
   switch (level) {
@@ -168,7 +135,7 @@ export async function compressPdfFile(params: CompressPdfParams): Promise<Compre
     : 0;
 
   const fileId = crypto.randomUUID();
-  const filename = sanitizePdfFilename(customFilename || originalname);
+  const filename = sanitizePdfFilename(customFilename || originalname, 'documento_comprimido.pdf');
 
   const storedItem: StoredCompressedPdf = {
     buffer: finalBuffer,
@@ -195,8 +162,4 @@ export async function compressPdfFile(params: CompressPdfParams): Promise<Compre
     savingsBytes,
     savingsPercent,
   };
-}
-
-export async function getCompressedPdf(fileId: string): Promise<StoredCompressedPdf | null> {
-  return getTempFile<StoredCompressedPdf>(fileId);
 }

@@ -1,25 +1,15 @@
+import { logger } from '../../services/logger.service.js';
+import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
+import { PageRedaction, RedactPdfParams, RedactPdfResponse, StoredRedactedPdf } from './redact-pdf.types.js';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import zlib from 'node:zlib';
 import { PDFArray, PDFDocument, PDFName, PDFRawStream, PDFStream, rgb } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { PageRedaction, RedactPdfParams, RedactPdfResponse, StoredRedactedPdf } from './redact-pdf.types.js';
 
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_censurado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  const base = clean.replace(/\.pdf$/i, '');
-  return base.endsWith('_censurado') ? `${base}.pdf` : `${base}_censurado.pdf`;
-}
 
 async function runPythonRedactWorker(
   inputPath: string,
@@ -309,7 +299,7 @@ export async function redactPdfDocument(params: RedactPdfParams): Promise<Redact
     finalBuffer = Buffer.from(outputBytes);
   }
 
-  const outFilename = sanitizePdfFilename(originalFilename);
+  const outFilename = sanitizePdfFilename(originalFilename ? `${originalFilename.replace(/\.pdf$/i, '')}_censurado.pdf` : undefined, 'documento_censurado.pdf');
   const fileId = `redact_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
 
   const tokenResult = await storeTempFile(fileId, {

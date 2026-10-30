@@ -1,18 +1,13 @@
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { extractPdfText, sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
+import { ComparePdfParams, ComparePdfResponse, DiffChangeItem, PageComparison } from './compare-pdf.types.js';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
-import { ComparePdfParams, ComparePdfResponse, DiffChangeItem, PageComparison, StoredComparisonReport } from './compare-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'informe_comparacion.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') return defaultName;
-  const base = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_').replace(/\.pdf$/i, '');
-  return `${base}_comparacion.pdf`;
-}
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 async function runPythonCompareWorker(
   pdf1Path: string,
@@ -44,29 +39,6 @@ async function runPythonCompareWorker(
   return null;
 }
 
-async function extractPagesText(buffer: Buffer): Promise<string[]> {
-  try {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    const pages: string[] = [];
-
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-      const page = await doc.getPage(pageNum);
-      const content = await page.getTextContent();
-      const text = content.items
-        .map((it: any) => ('str' in it ? it.str : ''))
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      pages.push(text);
-    }
-
-    return pages;
-  } catch (err) {
-    logger.app.warn('Error al extraer texto con pdfjs-dist en compare-pdf', { error: err });
-    return [];
-  }
-}
 
 function computeLineDiff(text1: string, text2: string, pageIndex: number): DiffChangeItem[] {
   const changes: DiffChangeItem[] = [];
@@ -263,10 +235,6 @@ async function generateReportPdf(
   return Buffer.from(pdfBytes);
 }
 
-export async function getComparisonReport(fileId: string): Promise<StoredComparisonReport | null> {
-  return getTempFile<StoredComparisonReport>(fileId);
-}
-
 export async function comparePdfDocuments(params: ComparePdfParams): Promise<ComparePdfResponse> {
   const { buffer1, buffer2, filename1 = 'documento_1.pdf', filename2 = 'documento_2.pdf' } = params;
 
@@ -324,7 +292,7 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
       }
 
       const fileId = `comp_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
-      const outFilename = sanitizePdfFilename(filename1);
+      const outFilename = sanitizePdfFilename(filename1 ? `${filename1.replace(/\.pdf$/i, '')}_comparacion.pdf` : undefined, 'informe_comparacion.pdf');
 
       const tokenResult = await storeTempFile(fileId, {
         buffer: finalReportBuffer,
@@ -354,10 +322,13 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
     } catch {}
   }
 
-  const [pagesText1, pagesText2] = await Promise.all([
-    extractPagesText(buffer1),
-    extractPagesText(buffer2),
+  const [res1, res2] = await Promise.all([
+    extractPdfText(buffer1),
+    extractPdfText(buffer2),
   ]);
+  const pagesText1 = res1.pages;
+  const pagesText2 = res2.pages;
+
 
   const maxPages = Math.max(pagesText1.length, pagesText2.length);
   const pageComparisons: PageComparison[] = [];
@@ -400,7 +371,7 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
   );
 
   const fileId = `comp_${Date.now()}_${randomUUID().replace(/[^a-zA-Z0-9]/g, '').slice(0, 8)}`;
-  const outFilename = sanitizePdfFilename(filename1);
+  const outFilename = sanitizePdfFilename(filename1 ? `${filename1.replace(/\.pdf$/i, '')}_comparacion.pdf` : undefined, 'informe_comparacion.pdf');
 
   const tokenResult = await storeTempFile(fileId, {
     buffer: reportBuffer,
@@ -425,4 +396,5 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
   };
 }
 
-export { comparePdfDocuments as comparePdfs, getComparisonReport as getStoredComparisonReport };
+export { comparePdfDocuments as comparePdfs };
+

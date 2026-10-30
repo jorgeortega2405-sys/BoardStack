@@ -1,10 +1,10 @@
+import { getToolLimits } from '../../config/tools-limits.config.js';
+import { logger } from '../../services/logger.service.js';
+import { convertPdfFile, UPLOADS_DIR } from './pdf-converter.service.js';
+import { ConversionType } from './pdf-converter.types.js';
 import { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { getToolLimits } from '../../config/tools-limits.config.js';
-import { logger } from '../../services/logger.service.js';
-import { convertPdfFile, getStoredConversionFile, UPLOADS_DIR } from './pdf-converter.service.js';
-import { ConversionType } from './pdf-converter.types.js';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -87,29 +87,3 @@ export async function handleConvertPdf(req: Request, res: Response): Promise<voi
   }
 }
 
-export async function handleDownloadConvertedFile(req: Request, res: Response): Promise<void> {
-  try {
-    const { token } = req.params;
-    if (!token) {
-      res.status(400).json({ error: 'Token de descarga no proporcionado.', success: false });
-      return;
-    }
-
-    const stored = await getStoredConversionFile(token);
-    if (!stored || !stored.buffer) {
-      res.status(404).json({ error: 'El archivo ha expirado o no fue encontrado.', success: false });
-      return;
-    }
-
-    res.setHeader('Content-Type', stored.contentType || stored.mimeType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(stored.filename)}"`);
-    res.setHeader('Content-Length', stored.buffer.length);
-    res.send(stored.buffer);
-  } catch (error) {
-    logger.app.error('Error al descargar archivo convertido', error);
-    res.status(500).json({
-      error: 'Error inesperado al descargar el archivo.',
-      success: false,
-    });
-  }
-}

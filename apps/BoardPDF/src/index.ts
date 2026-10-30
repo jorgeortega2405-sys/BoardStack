@@ -1,9 +1,3 @@
-import compression from 'compression';
-import cookieParser from 'cookie-parser';
-import express, { NextFunction, Request, Response } from 'express';
-import fs from 'fs';
-import http from 'http';
-import path from 'path';
 import { checkDatabaseConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
@@ -12,10 +6,17 @@ import { injectHtmlSeo, isSupportedLanguage, normalizeLanguageCode } from './con
 import { csrfProtection } from './middlewares/csrf.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import { originProtection, securityHeaders } from './middlewares/security-headers.middleware.js';
+import authRoutes from './routes/auth.routes.js';
 import downloadRoutes from './routes/download.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import express, { NextFunction, Request, Response } from 'express';
+import fs from 'fs';
+import http from 'http';
+import path from 'path';
 
 process.on('SIGINT', () => {
   process.exit(0);
@@ -228,6 +229,7 @@ async function startServer(): Promise<void> {
     });
   });
 
+  app.use('/api', authRoutes);
   app.use('/api', downloadRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);

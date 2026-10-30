@@ -259,6 +259,60 @@
   border-color: transparent;
 }
 
+.component-button--avatar {
+  align-items: center;
+  background: var(--bg-surface, #ffffff);
+  border: none !important;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bg-surface, #ffffff) !important;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  min-height: 36px;
+  min-width: 36px;
+  overflow: visible !important;
+  padding: 0;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  width: 36px;
+}
+
+.component-button--avatar:hover {
+  transform: scale(1.05);
+}
+
+.component-button--avatar:active {
+  transform: scale(0.96);
+}
+
+.component-button--avatar img,
+.component-button--avatar .avatar-img {
+  border-radius: 50%;
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+.component-button--avatar::before {
+  background: var(--avatar-tier-bg, #9ca3af);
+  border-radius: 50%;
+  content: "";
+  inset: -3px;
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 2px;
+  pointer-events: none;
+  position: absolute;
+  transition: filter 0.15s ease;
+  z-index: 1;
+}
+
 .component-icon {
   display: inline-flex;
   align-items: center;

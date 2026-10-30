@@ -1,5 +1,6 @@
 import { config } from '../../config/env.config.js';
 import { logger } from '../../services/logger.service.js';
+import { extractPdfText } from '../../utils/pdf.util.js';
 import { SummarizePdfParams, SummarizePdfResponse, SummaryMode } from './summarize-pdf.types.js';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -38,26 +39,14 @@ Estructura la respuesta de la siguiente forma con formato Markdown limpio:
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   try {
-    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-    const pagesText: string[] = [];
-
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-      const page = await doc.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageStrings = textContent.items
-        .map((item: any) => ('str' in item ? item.str : ''))
-        .filter(Boolean);
-      pagesText.push(pageStrings.join(' '));
-    }
-
-    const fullText = pagesText.join('\n\n').trim();
+    const { fullText } = await extractPdfText(buffer);
     if (fullText.length > 0) {
       return fullText;
     }
   } catch (err) {
     logger.app.warn('Fallo al extraer texto con pdfjs-dist en summarize-pdf', { error: err });
   }
+
 
   const tempId = randomUUID();
   const tempPath = path.join(os.tmpdir(), `boardpdf_sum_${tempId}.pdf`);

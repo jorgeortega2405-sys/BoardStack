@@ -8,6 +8,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { getWorkflows } from '../services/workflow-storage.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
 import { isSupportedLanguage } from '../utils/languages.util.js';
+import { setupUserMenu } from './layout-user-menu.component.js';
 
 export let isDrawerOpen = false;
 export let currentDrawerMode: 'apps' | 'help' | 'workflows' = 'workflows';
@@ -61,6 +62,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isHome = cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1)));
   const isHelp = getActiveHelpSection(cleanPath) !== null;
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
+  const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
@@ -69,6 +71,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const railItemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
+  const itemLogin = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-login"]');
+  const btnRailLogin = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-login"]');
 
   itemHome?.classList.toggle('is-active', isHome && !isDrawerOpen);
   btnHome?.classList.toggle('is-active', isHome && !isDrawerOpen);
@@ -77,6 +81,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnToggle?.classList.toggle('is-active', (isDrawerOpen && currentDrawerMode === 'workflows') || (!isDrawerOpen && isWorkflows));
   railItemHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
   btnRailHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
+  itemLogin?.classList.toggle('is-active', isAuth && !isDrawerOpen);
+  btnRailLogin?.classList.toggle('is-active', isAuth && !isDrawerOpen);
 
   if (isDrawerOpen) {
     if (isHelp && currentDrawerMode !== 'help') {
@@ -95,6 +101,8 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
   const itemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
+  const itemLogin = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-login"]');
+  const btnRailLogin = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-login"]');
 
   const goHome = (e: Event) => {
     e.preventDefault();
@@ -140,6 +148,21 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemHelp?.addEventListener('click', (e) => {
     if (e.target !== btnRailHelp && !btnRailHelp?.contains(e.target as Node)) {
       toggleHelp(e);
+    }
+  });
+
+  const goLogin = (e: Event) => {
+    e.preventDefault();
+    if (isDrawerOpen) {
+      toggleDrawer(false);
+    }
+    navigate('/login');
+  };
+
+  btnRailLogin?.addEventListener('click', goLogin);
+  itemLogin?.addEventListener('click', (e) => {
+    if (e.target !== btnRailLogin && !btnRailLogin?.contains(e.target as Node)) {
+      goLogin(e);
     }
   });
 }
@@ -495,6 +518,7 @@ export async function createSidebar(): Promise<HTMLElement> {
     translateElement(sidebar);
     setupRailNavigation(sidebar);
     setupDrawerContent(sidebar);
+    setupUserMenu(sidebar);
     updateSidebarActiveState(sidebar, window.location.pathname);
     renderIcons(sidebar);
     sidebarInstance = sidebar;

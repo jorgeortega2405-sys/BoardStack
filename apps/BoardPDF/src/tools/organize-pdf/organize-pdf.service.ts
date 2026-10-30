@@ -1,20 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { degrees, PDFDocument } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { OrganizePdfOptions, OrganizePdfResponse, StoredOrganizePdfResult } from './organize-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_organizado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
+import crypto from 'crypto';
+import { degrees, PDFDocument } from 'pdf-lib';
 
 export async function organizePdf(
   fileBuffer: Buffer,
@@ -88,8 +77,4 @@ export async function organizePdf(
     fileSize: finalBuffer.length,
     totalPages,
   };
-}
-
-export async function getOrganizePdfResult(fileId: string): Promise<StoredOrganizePdfResult | null> {
-  return getTempFile<StoredOrganizePdfResult>(fileId);
 }

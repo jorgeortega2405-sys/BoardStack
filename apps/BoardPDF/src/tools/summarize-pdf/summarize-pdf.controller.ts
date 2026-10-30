@@ -1,66 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
-import multer from 'multer';
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
+import { isPdfBuffer } from '../../utils/pdf.util.js';
 import { summarizePdf } from './summarize-pdf.service.js';
 import { SummaryMode } from './summarize-pdf.types.js';
-
-const MAX_FILE_SIZE = 200 * 1024 * 1024;
-
-const upload = multer({
-  fileFilter: (_req, file, cb) => {
-    const isAllowedExt = /\.pdf$/i.test(file.originalname);
-    const isAllowedMime = file.mimetype === 'application/pdf';
-
-    if (isAllowedExt || isAllowedMime) {
-      cb(null, true);
-    } else {
-      cb(new Error('INVALID_FORMAT'));
-    }
-  },
-  limits: {
-    fileSize: MAX_FILE_SIZE,
-    files: 1,
-  },
-  storage: multer.memoryStorage(),
-}).single('pdf');
-
-export function handlePdfUploadMiddleware(req: Request, res: Response, next: NextFunction): void {
-  upload(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        res.status(400).json({
-          error: 'El archivo PDF seleccionado supera el límite permitido de 200 MB.',
-          success: false,
-        });
-        return;
-      }
-      res.status(400).json({
-        error: 'Error al subir el archivo para generar resumen.',
-        success: false,
-      });
-      return;
-    }
-
-    if (err) {
-      if (err.message === 'INVALID_FORMAT') {
-        res.status(400).json({
-          error: 'Formato no compatible. Solo se permiten documentos en formato PDF.',
-          success: false,
-        });
-        return;
-      }
-      logger.app.error('Error inesperado al cargar archivo PDF para resumen', err);
-      res.status(500).json({
-        error: 'Ha ocurrido un error inesperado al procesar el archivo.',
-        success: false,
-      });
-      return;
-    }
-
-    next();
-  });
-}
+import { Request, Response } from 'express';
 
 export async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
   const file = req.file;
@@ -73,7 +16,16 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     return;
   }
 
-  const limits = getToolLimits('summarize-pdf');
+  if (!isPdfBuffer(file.buffer)) {
+    res.status(400).json({
+      error: 'El archivo seleccionado no es un PDF válido.',
+      success: false,
+    });
+    return;
+  }
+
+  const userPerms = ((req as any).user?.permissions as string[]) || [];
+  const limits = getToolLimits('summarize-pdf', userPerms);
   const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
 
   if (file.buffer.length > maxBytes) {
@@ -124,3 +76,4 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     });
   }
 }
+

@@ -2,8 +2,11 @@ export interface User {
   avatar_url?: string | null;
   created_at?: string;
   email: string;
-  id: string;
+  id: number | string;
   language?: string;
+  role?: string;
+  roles?: string[];
+  subscription_tier?: string;
   username: string;
 }
 

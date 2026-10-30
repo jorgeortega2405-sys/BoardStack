@@ -217,20 +217,55 @@ export function escapeHtml(str: string): string {
 }
 
 export async function checkAuthSession(): Promise<User | null> {
+  try {
+    const res = await getApi('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.user) {
+        setAuthState(data.user, data.accounts || []);
+        return data.user;
+      }
+    }
+  } catch {}
   setAuthState(null, []);
   return null;
 }
 
-export async function switchAccountApi(_userId: string): Promise<{ accounts?: User[]; error?: string; success: boolean; user?: User }> {
-  return { success: false };
+export async function switchAccountApi(userId: number | string): Promise<{ accounts?: User[]; error?: string; success: boolean; user?: User }> {
+  try {
+    const res = await postApi('/api/auth/switch-account', { userId });
+    const data = await res.json();
+    if (res.ok && data.success && data.user) {
+      setAuthState(data.user, data.accounts || []);
+      return { accounts: data.accounts, success: true, user: data.user };
+    }
+    return { error: data.error || 'No se pudo cambiar de cuenta', success: false };
+  } catch {
+    return { error: 'Error de red al cambiar de cuenta', success: false };
+  }
 }
 
-export async function logoutApi(): Promise<{ accounts?: User[]; success: boolean; switched?: boolean; user?: User | null }> {
+export async function logoutApi(userId?: number | string): Promise<{ accounts?: User[]; success: boolean; switched?: boolean; user?: User | null }> {
+  try {
+    const res = await postApi('/api/auth/logout', userId ? { userId } : {});
+    if (res.ok) {
+      const data = await res.json();
+      if (data.switched && data.user) {
+        setAuthState(data.user, data.accounts || []);
+        return { accounts: data.accounts, success: true, switched: true, user: data.user };
+      }
+      setAuthState(null, []);
+      return { accounts: [], success: true, switched: false, user: null };
+    }
+  } catch {}
   setAuthState(null, []);
   return { accounts: [], success: true, switched: false, user: null };
 }
 
 export async function logoutAllApi(): Promise<boolean> {
+  try {
+    await postApi('/api/auth/logout-all');
+  } catch {}
   setAuthState(null, []);
   return true;
 }

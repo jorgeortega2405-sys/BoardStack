@@ -1,20 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { PDFDocument } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { RemovePagesOptions, RemovePagesResponse, StoredRemovePagesResult } from './remove-pdf-pages.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_editado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
+import crypto from 'crypto';
+import { PDFDocument } from 'pdf-lib';
 
 export async function removePdfPages(
   fileBuffer: Buffer,
@@ -87,8 +76,4 @@ export async function removePdfPages(
     remainingPages: remainingIndices.length,
     removedPages: toRemoveSet.size,
   };
-}
-
-export async function getRemovePagesResult(fileId: string): Promise<StoredRemovePagesResult | null> {
-  return getTempFile<StoredRemovePagesResult>(fileId);
 }

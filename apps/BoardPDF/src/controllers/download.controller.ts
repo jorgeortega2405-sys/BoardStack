@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { verifyDownloadToken } from '../services/download-token.service.js';
 import { logger } from '../services/logger.service.js';
 import { DEFAULT_TTL_SECONDS, deleteTempFile, getTempFile, getTempFileMeta, getTempFilePresignedUrl, getTempFileStream } from '../services/temp-storage.service.js';
+import { Request, Response } from 'express';
 
 function extractRawToken(req: Request): string {
   const token = req.params.token ? String(req.params.token).trim() : '';
@@ -139,5 +139,40 @@ export async function handleDeleteDownloadFile(req: Request, res: Response): Pro
   } catch (err) {
     logger.app.error('Error al eliminar archivo temporal', err);
     res.status(500).json({ error: 'Ha ocurrido un error inesperado al eliminar el archivo.', success: false });
+  }
+}
+
+export async function handleToolDownload(req: Request, res: Response): Promise<void> {
+  try {
+    const fileId = req.params.fileId || req.params.token;
+    if (!fileId) {
+      res.status(404).json({
+        error: 'El archivo solicitado ha expirado o no existe.',
+        success: false,
+      });
+      return;
+    }
+
+    const item = await getTempFile(fileId);
+    if (!item) {
+      res.status(404).json({
+        error: 'El archivo solicitado ha expirado o no existe.',
+        success: false,
+      });
+      return;
+    }
+
+    const downloadFilename = item.filename || 'document.pdf';
+    res.setHeader('Content-Type', item.contentType || 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+    res.setHeader('Content-Length', item.buffer.length);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(item.buffer);
+  } catch (err) {
+    logger.app.error('Error al descargar archivo temporal de herramienta', err);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la descarga.',
+      success: false,
+    });
   }
 }

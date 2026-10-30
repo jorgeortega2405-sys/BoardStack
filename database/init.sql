@@ -21,3 +21,55 @@ CREATE TABLE IF NOT EXISTS file_operations (
   INDEX idx_expires_status (expires_at, status),
   INDEX idx_file_token (file_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  uuid VARCHAR(36) NULL UNIQUE,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NULL,
+  avatar_url VARCHAR(512) NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'USER',
+  subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
+  two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  two_factor_secret VARCHAR(255) NULL,
+  two_factor_recovery_codes TEXT NULL,
+  registration_ip VARCHAR(45) NULL,
+  registration_country_code VARCHAR(10) NULL,
+  registration_country_name VARCHAR(100) NULL,
+  registration_region VARCHAR(100) NULL,
+  registration_city VARCHAR(100) NULL,
+  registration_asn VARCHAR(50) NULL,
+  registration_isp VARCHAR(255) NULL,
+  last_login_ip VARCHAR(45) NULL,
+  last_login_country VARCHAR(100) NULL,
+  last_login_city VARCHAR(100) NULL,
+  last_login_asn VARCHAR(50) NULL,
+  last_login_isp VARCHAR(255) NULL,
+  last_login_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_user_email (email),
+  INDEX idx_user_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id INT PRIMARY KEY,
+  theme VARCHAR(20) NOT NULL DEFAULT 'system',
+  language VARCHAR(50) NOT NULL DEFAULT 'es',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_audit_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  action VARCHAR(50) NOT NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  ip_address VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_audit_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

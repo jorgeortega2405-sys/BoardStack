@@ -40,15 +40,27 @@ export function setupPasswordToggle(
 }
 
 export function showElement(el: HTMLElement | null): void {
-  el?.classList.remove('is-hidden');
+  if (el) {
+    el.classList.remove('is-hidden');
+    if (el.style.display === 'none') {
+      el.style.display = '';
+    }
+  }
 }
 
 export function hideElement(el: HTMLElement | null): void {
-  el?.classList.add('is-hidden');
+  if (el) {
+    el.classList.add('is-hidden');
+    el.style.display = 'none';
+  }
 }
 
 export function toggleElement(el: HTMLElement | null, show: boolean): void {
-  el?.classList.toggle('is-hidden', !show);
+  if (show) {
+    showElement(el);
+  } else {
+    hideElement(el);
+  }
 }
 
 export function createBannerManager(

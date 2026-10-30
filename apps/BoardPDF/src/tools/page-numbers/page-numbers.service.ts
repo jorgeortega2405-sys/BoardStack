@@ -1,20 +1,9 @@
-import crypto from 'crypto';
-import path from 'path';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { cleanTextForWinAnsi, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { PageNumberOptions, PageNumberPosition, PageNumberResponse, StoredPageNumberResult } from './page-numbers.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_numerado.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[^a-zA-Z0-9_\-\. ]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
+import crypto from 'crypto';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 function resolveMargin(margin?: string): number {
   if (margin === 'small') return 18;
@@ -44,26 +33,6 @@ function resolvePositionForPage(
     if (basePosition.startsWith('top')) return 'top-right';
     return 'bottom-right';
   }
-}
-
-function cleanTextForWinAnsi(input: string): string {
-  const str = input.replace(/\uFFFD/g, '');
-  let result = '';
-  for (const char of str) {
-    const code = char.charCodeAt(0);
-    if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)) {
-      result += char;
-    } else {
-      const decomposed = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      for (const d of decomposed) {
-        const dCode = d.charCodeAt(0);
-        if (dCode >= 0x20 && dCode <= 0x7e) {
-          result += d;
-        }
-      }
-    }
-  }
-  return result;
 }
 
 export async function addPageNumbers(
@@ -204,8 +173,4 @@ export async function addPageNumbers(
     fileSize: finalBuffer.length,
     totalPages,
   };
-}
-
-export async function getPageNumberResult(fileId: string): Promise<StoredPageNumberResult | null> {
-  return getTempFile<StoredPageNumberResult>(fileId);
 }

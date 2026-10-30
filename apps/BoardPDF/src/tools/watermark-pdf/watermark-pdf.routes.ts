@@ -1,7 +1,8 @@
+import { handleToolDownload } from '../../controllers/download.controller.js';
+import { optionalAuth } from '../../middlewares/auth.middleware.js';
+import { addWatermarkHandler } from './watermark-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
-import { optionalAuth } from '../../middlewares/auth.middleware.js';
-import { addWatermarkHandler, downloadWatermarkPdfHandler } from './watermark-pdf.controller.js';
 
 const router = Router();
 const upload = multer({
@@ -21,6 +22,6 @@ router.post(
   addWatermarkHandler
 );
 
-router.get('/tools/watermark-pdf/download/:fileId', downloadWatermarkPdfHandler);
+router.get('/tools/watermark-pdf/download/:fileId', handleToolDownload);
 
 export default router;

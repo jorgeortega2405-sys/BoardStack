@@ -1,22 +1,12 @@
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { executeProcessWithTimeout, getPythonCommand } from '../../utils/process.util.js';
+import { ProtectPdfOptions, ProtectPdfResponse, StoredProtectPdfResult } from './protect-pdf.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout, getPythonCommand } from '../../utils/process.util.js';
-import { ProtectPdfOptions, ProtectPdfResponse, StoredProtectPdfResult } from './protect-pdf.types.js';
-
-function sanitizePdfFilename(rawName?: string, defaultName = 'documento_protegido.pdf'): string {
-  if (!rawName || typeof rawName !== 'string') {
-    return defaultName;
-  }
-  const clean = path.basename(rawName).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
-  if (!clean) {
-    return defaultName;
-  }
-  return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
 
 export async function protectPdf(
   fileBuffer: Buffer,
@@ -85,8 +75,4 @@ with pikepdf.open(input_path) as pdf:
       fs.promises.unlink(tempOutput),
     ]);
   }
-}
-
-export async function getProtectPdfResult(fileId: string): Promise<StoredProtectPdfResult | null> {
-  return getTempFile<StoredProtectPdfResult>(fileId);
 }

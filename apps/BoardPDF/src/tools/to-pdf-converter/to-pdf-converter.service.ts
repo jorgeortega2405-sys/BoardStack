@@ -1,13 +1,14 @@
+import { logger } from '../../services/logger.service.js';
+import { storeTempFile } from '../../services/temp-storage.service.js';
+import { executeProcessWithTimeout } from '../../utils/process.util.js';
+import { HtmlToPdfOptions, JpgToPdfOptions, StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType } from './to-pdf-converter.types.js';
 import { spawn } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { logger } from '../../services/logger.service.js';
-import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
-import { executeProcessWithTimeout } from '../../utils/process.util.js';
-import { HtmlToPdfOptions, JpgToPdfOptions, StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType } from './to-pdf-converter.types.js';
+
 
 const TO_PDF_DIR = path.resolve(process.cwd(), 'data/to-pdf');
 const UPLOADS_DIR = path.join(TO_PDF_DIR, 'uploads');
@@ -540,10 +541,6 @@ export async function convertToPdf(
       }
     }
   }
-}
-
-export async function getStoredToPdfFile(token: string): Promise<StoredToPdfFile | null> {
-  return getTempFile<StoredToPdfFile>(token);
 }
 
 export async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<string | null> {

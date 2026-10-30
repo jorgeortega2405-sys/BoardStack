@@ -1,17 +1,17 @@
-import { Router } from 'express';
-import multer from 'multer';
+import { handleToolDownload } from '../../controllers/download.controller.js';
 import { optionalAuth } from '../../middlewares/auth.middleware.js';
-import { addPageNumbersHandler, downloadPageNumberHandler } from './page-numbers.controller.js';
+import { createPdfUploadMiddleware } from '../../utils/upload.util.js';
+import { addPageNumbersHandler } from './page-numbers.controller.js';
+import { Router } from 'express';
 
 const router = Router();
-const upload = multer({
-  limits: {
-    fileSize: 1000 * 1024 * 1024,
-  },
-  storage: multer.memoryStorage(),
+const uploadMiddleware = createPdfUploadMiddleware({
+  fieldName: 'file',
+  maxFileSizeMB: 1000,
+  maxFiles: 1,
 });
 
-router.post('/tools/page-numbers/process', optionalAuth, upload.single('file'), addPageNumbersHandler);
-router.get('/tools/page-numbers/download/:fileId', downloadPageNumberHandler);
+router.post('/tools/page-numbers/process', optionalAuth, uploadMiddleware, addPageNumbersHandler);
+router.get('/tools/page-numbers/download/:fileId', handleToolDownload);
 
 export default router;
