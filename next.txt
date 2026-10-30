@@ -1,0 +1,13 @@
+Ahora vamos a implementar lo que es las secciones de settings, para empezar en el menu de perfil agrega un menu item de configuracion al clickarlo nos mandara a un nuevo conjunto de paginas settings, la primera es la de tu cuenta, donde vendran items para cambiar tu foto de perfil, correo, nombre, el idioma, en la segunda pagina seguridad, vendran items para cambiar contraseña, activar 2fa, eliminar cuenta, por ahora solo esas 2 paginas, y por ahora sin funcion, ojo debes copiar el mismo diseño y clases que hay en spriteboard, escritorio > nueva carpeta 2, spriteboard ahi tenemos paginas settings y asi, para que copies el css y asi. ya en proximas etapas implementamos el funcionamiento. (ojo, el item de cambio de tema no lo implementes) y ojo deben ser las mismas clases y estilos, asi igual que en spriteboard settings.
+
+Ahora vamos a implementar lo que es la funcionalidad de las paginas settings, para cambiar la foto de perfil pues implementalo, el nombre igual, para el correo pues primero se envia un codigo de verificacion luego ya te deja editar. primero solo esa pagina luego seguimos con las demas.
+
+Ahora vamos con la pagina de seguridad, lo de cambio de contraseña te pedira tu contraseña actual, luego la nueva contraseña. para el 2fa utilizaremos pues bueno tu solo revisa spriteboard y ahi veras como hacer todo.
+
+
+
+
+
+Ahora vamos a crear una nueva tool que como tal no entraria a ninguna categoria de las que ya tenemos seria una tool de pdf colaborativo o crear pdf algo asi (ya que mi plan a futuro es que tu compartas el link y se puedan unir a ayudarte pero por ahora solo tu)
+y en esa tool al crear un pdf te mandaria a la tool y seria como las de visualizador de pdf, y tu podras agregar textos, figuras etc y guardar y que se guarde en el servidor, y ahi en inicio de mi web al clickar la cards de la tool de mis pdf, nos mande a una pagina asi como esta http://localhost:3000/workflows y que ahi esten tus cards de pdf y al clickar cualquiera puedas seguir editando y asi.
+por ahora asi de basico, ya en el futuro seguimos mejorando.
