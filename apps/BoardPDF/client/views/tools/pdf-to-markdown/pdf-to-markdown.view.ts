@@ -275,11 +275,11 @@ export class PdfToMarkdownController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        showElement(selectedCard);
-        showElement(sidebar);
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al convertir el PDF.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();
+          showElement(selectedCard);
+          showElement(sidebar);
         });
         this.showError(errorMessage);
       } finally {

@@ -2,12 +2,15 @@
   <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left">
       <div class="redact-top-controls pdf-top-controls is-hidden" data-ref="redact-top-controls">
-        <div class="redact-mode-switcher pdf-top-controls--gap4">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only is-active" data-ref="btn-tool-select" data-tool="select" data-tooltip="Seleccionar texto" aria-label="Seleccionar texto">
+        <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-redact-tool" data-active="0">
+          <div class="component-toggle-pill-glider"></div>
+          <button type="button" class="component-button component-button--pill is-active" data-ref="btn-tool-select" data-tool="select">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_text"></use></svg>
+            <span>Seleccionar texto</span>
           </button>
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-tool-draw" data-tool="draw" data-tooltip="Dibujar área" aria-label="Dibujar área">
+          <button type="button" class="component-button component-button--pill" data-ref="btn-tool-draw" data-tool="draw">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+            <span>Dibujar área</span>
           </button>
         </div>
       </div>
@@ -15,17 +18,19 @@
 
     <div class="component-top-right tool-top__right">
       <div class="redact-top-actions pdf-top-controls is-hidden" data-ref="redact-top-actions">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-        </button>
-        <span class="pdf-editor-status-pill" data-ref="val-zoom-level">100%</span>
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        </button>
-
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-clear-redactions" data-tooltip="Limpiar todas las censuras" aria-label="Limpiar todas las censuras">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-        </button>
+        <div class="component-inline-control component-inline-control--sm" data-ref="control-zoom">
+          <div class="component-inline-control__group">
+            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-out" data-step-change="-1" aria-label="Disminuir zoom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+          </div>
+          <input class="component-inline-control__input" data-ref="val-zoom-level" type="text" value="100%" readonly autocomplete="off" />
+          <div class="component-inline-control__group">
+            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-in" data-step-change="1" aria-label="Aumentar zoom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -97,13 +102,12 @@
           <span class="tool-sidebar__section-title">Buscar y censurar texto</span>
           <div class="redact-search-box">
             <label class="field">
-              <input class="field__input" data-ref="input-search-phrase" type="text" placeholder=" " />
+              <input class="field__input field__input--has-action" data-ref="input-search-phrase" type="text" placeholder=" " autocomplete="off" />
               <span class="field__label">Palabra o frase confidencial</span>
+              <button type="button" class="field__action" data-ref="btn-search-redact" data-tooltip="Buscar y censurar" aria-label="Buscar y censurar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              </button>
             </label>
-            <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-search-redact">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <span>Censurar coincidencias</span>
-            </button>
           </div>
         </div>
 

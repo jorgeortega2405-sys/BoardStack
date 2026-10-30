@@ -1,7 +1,7 @@
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
 import { IConverterEngine } from './engine/converter-engine.interface.js';
 import { LocalConverterEngine } from './engine/local-converter.engine.js';
-import { ConversionType, ConvertJobResult, StoredConversionFile } from './pdf-converter.types.js';
+import { ConversionType, ConvertJobResult, PdfConversionOptions, StoredConversionFile } from './pdf-converter.types.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -22,7 +22,8 @@ const activeEngine: IConverterEngine = new LocalConverterEngine();
 
 export async function convertPdfFile(
   file: Express.Multer.File,
-  targetType: ConversionType
+  targetType: ConversionType,
+  options?: PdfConversionOptions
 ): Promise<ConvertJobResult> {
   let inputPath = file.path;
   if (!inputPath && file.buffer) {
@@ -35,6 +36,7 @@ export async function convertPdfFile(
   try {
     const result = await activeEngine.convert({
       inputPath,
+      options,
       originalFilename,
       outputDir: OUTPUT_DIR,
       targetType,

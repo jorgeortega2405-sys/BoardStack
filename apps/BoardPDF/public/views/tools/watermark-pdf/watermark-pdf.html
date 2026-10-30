@@ -70,14 +70,15 @@
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
           <div class="tool-sidebar-notice__text">La marca de agua se estampará sobre o debajo del contenido según la configuración elegida.</div>
         </div>
-        <div class="wm-tabs" data-ref="wm-tabs">
-          <button type="button" class="wm-tab-btn is-active" data-ref="tab-text" data-tab="text">
+        <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-watermark-type" data-active="0">
+          <div class="component-toggle-pill-glider"></div>
+          <button type="button" class="component-button component-button--pill is-active" data-ref="tab-text" data-tab="text">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
-            <span>Agregar texto</span>
+            <span>Texto</span>
           </button>
-          <button type="button" class="wm-tab-btn" data-ref="tab-image" data-tab="image">
+          <button type="button" class="component-button component-button--pill" data-ref="tab-image" data-tab="image">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-            <span>Agregar imagen</span>
+            <span>Imagen</span>
           </button>
         </div>
 
@@ -89,7 +90,7 @@
 
           <span class="tool-sidebar__section-title tool-sidebar__hint-text--compact">Formato de texto:</span>
           <div class="tool-sidebar__field-group--flex-row tool-sidebar__field-group--mb8">
-            <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper tool-sidebar__dropdown--nomargin tool-sidebar__flex-1" data-ref="dropdown-wrapper-wm-font">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin tool-sidebar__flex-1" data-ref="dropdown-wrapper-wm-font">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Fuente">
                 <div class="dropdown-trigger__left">
                   <span class="dropdown-trigger__text">Arial / Helvetica</span>
@@ -118,7 +119,7 @@
                 </div>
               </div>
             </div>
-            <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper tool-sidebar__dropdown--nomargin tool-sidebar__dropdown--w85" data-ref="dropdown-wrapper-wm-size">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin tool-sidebar__dropdown--w85" data-ref="dropdown-wrapper-wm-size">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Tamaño">
                 <div class="dropdown-trigger__left">
                   <span class="dropdown-trigger__text">36 pt</span>
@@ -159,36 +160,33 @@
         </div>
 
         <div class="tool-sidebar__section">
-          <div class="wm-pos-and-mosaic">
-            <div class="wm-column-gap6">
-              <span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin">Posición:</span>
-              <div class="wm-position-box" data-ref="wm-position-box">
-                <div class="wm-position-cell" data-pos="top-left" title="Superior Izquierda"></div>
-                <div class="wm-position-cell" data-pos="top-center" title="Superior Centro"></div>
-                <div class="wm-position-cell" data-pos="top-right" title="Superior Derecha"></div>
-                <div class="wm-position-cell" data-pos="center-left" title="Centro Izquierda"></div>
-                <div class="wm-position-cell is-selected" data-pos="center" title="Centro"></div>
-                <div class="wm-position-cell" data-pos="center-right" title="Centro Derecha"></div>
-                <div class="wm-position-cell" data-pos="bottom-left" title="Inferior Izquierda"></div>
-                <div class="wm-position-cell" data-pos="bottom-center" title="Inferior Centro"></div>
-                <div class="wm-position-cell" data-pos="bottom-right" title="Inferior Derecha"></div>
-              </div>
-            </div>
-
-            <div class="wm-mosaic-column">
-              <label class="wm-checkbox-label" data-ref="label-mosaic">
-                <input class="wm-checkbox-input" data-ref="check-mosaic" type="checkbox" />
-                <span>Mosaico</span>
-              </label>
-            </div>
+          <span class="tool-sidebar__section-title">Posición en la página</span>
+          <div class="wm-position-box" data-ref="wm-position-box">
+            <div class="wm-position-cell" data-pos="top-left" title="Superior Izquierda"></div>
+            <div class="wm-position-cell" data-pos="top-center" title="Superior Centro"></div>
+            <div class="wm-position-cell" data-pos="top-right" title="Superior Derecha"></div>
+            <div class="wm-position-cell" data-pos="center-left" title="Centro Izquierda"></div>
+            <div class="wm-position-cell is-selected" data-pos="center" title="Centro"></div>
+            <div class="wm-position-cell" data-pos="center-right" title="Centro Derecha"></div>
+            <div class="wm-position-cell" data-pos="bottom-left" title="Inferior Izquierda"></div>
+            <div class="wm-position-cell" data-pos="bottom-center" title="Inferior Centro"></div>
+            <div class="wm-position-cell" data-pos="bottom-right" title="Inferior Derecha"></div>
           </div>
+
+          <label class="split-option-card tool-sidebar__field-group--mt10" data-ref="label-mosaic">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Mosaico</span>
+              <span class="split-option-card__subtitle">Repetir la marca en toda la página</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-mosaic" type="checkbox" />
+          </label>
         </div>
 
         <div class="tool-sidebar__section">
           <div class="wm-grid-options">
             <div class="wm-column-gap4">
               <span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin">Transparencia:</span>
-              <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-transparency">
+              <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-transparency">
                 <button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Transparencia">
                   <div class="dropdown-trigger__left">
                     <span class="dropdown-trigger__text">Sin transparencia</span>
@@ -221,7 +219,7 @@
 
             <div class="wm-column-gap4">
               <span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin">Rotación:</span>
-              <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-rotation">
+              <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-rotation">
                 <button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Rotación">
                   <div class="dropdown-trigger__left">
                     <span class="dropdown-trigger__text">No rotar</span>
@@ -293,15 +291,10 @@
 
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Capa:</span>
-          <div class="wm-layers-group">
-            <div class="wm-layer-card is-selected" data-ref="layer-card-over" data-layer="over">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-              <span>Por encima del contenido</span>
-            </div>
-            <div class="wm-layer-card" data-ref="layer-card-under" data-layer="under">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers_clear"></use></svg>
-              <span>Por debajo del contenido</span>
-            </div>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-layer" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="layer-btn-over" data-layer="over">Sobre el contenido</button>
+            <button type="button" class="component-button component-button--pill" data-ref="layer-btn-under" data-layer="under">Bajo el contenido</button>
           </div>
         </div>
       </div>

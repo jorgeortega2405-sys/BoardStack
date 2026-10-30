@@ -80,6 +80,31 @@
           </div>
         </div>
       </div>
+
+      <div class="html-preview-view is-hidden" data-ref="html-preview-view">
+        <div class="tool-workspace__toolbar">
+          <div class="tool-workspace__toolbar-left">
+            <h2 class="tool-workspace__toolbar-title" data-ref="html-preview-title">Vista previa de página web</h2>
+            <span class="component-badge component-badge--sm" data-ref="html-preview-badge">Tu pantalla</span>
+            <button type="button" class="component-button component-button--secondary component-button--sm" data-ref="btn-toolbar-refresh-preview" aria-label="Refrescar vista previa" title="Refrescar vista previa">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+              <span>Refrescar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="html-preview-container" data-ref="html-preview-container">
+          <div class="html-browser-frame" data-ref="html-browser-frame" data-screen="screen" data-orientation="portrait">
+            <div class="html-browser-frame__canvas" data-ref="html-browser-canvas">
+              <div class="html-preview-loader is-hidden" data-ref="html-preview-loader">
+                <div class="component-spinner component-spinner--sm"></div>
+                <span class="html-preview-loader__text">Generando vista previa en tiempo real...</span>
+              </div>
+              <img class="html-preview-img is-hidden" data-ref="html-preview-img" alt="Vista previa de página web" />
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
@@ -100,9 +125,153 @@
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
+        <div class="tool-sidebar-notice" data-ref="converter-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
           <div class="tool-sidebar-notice__text" data-ref="txt-converter-info-notice">El archivo se convertirá a documento PDF de alta fidelidad, listo para imprimir, compartir o archivar.</div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-jpg-options">
+          <span class="tool-sidebar__section-title">Orientación de la página</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-jpg-orientation" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-jpg-orient-portrait" data-val="portrait">Vertical</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-jpg-orient-landscape" data-val="landscape">Horizontal</button>
+          </div>
+
+          <span class="tool-sidebar__section-title">Tamaño de la página</span>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-jpg-page-size">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-jpg-page-size" aria-label="Tamaño de la página">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-jpg-page-size">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-jpg-page-size" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="jpg-page-size-selected-text">Ajustado (mismo tamaño de pagina de la imagen)</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-jpg-page-size-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-jpg-page-size">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-jpg-page-size">
+                <div class="menu-panel__list" data-ref="list-jpg-page-sizes">
+                  <button type="button" class="menu-item is-active" data-ref="option-jpg-size-fit" data-value="fit">
+                    <span class="menu-item__text">Ajustado (mismo tamaño de pagina de la imagen)</span>
+                    <svg class="component-icon menu-item__icon" data-ref="check-jpg-size-fit" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-jpg-size-a4" data-value="a4">
+                    <span class="menu-item__text">A4 297x210 mm</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-jpg-size-a4" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-jpg-size-letter" data-value="letter">
+                    <span class="menu-item__text">US Letter 215x279.4mm</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-jpg-size-letter" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <span class="tool-sidebar__section-title">Margen</span>
+          <div class="component-toggle-pill component-toggle-pill--3 component-toggle-pill--h40" data-ref="toggle-jpg-margin" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-jpg-margin-none" data-val="none">Sin margen</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-jpg-margin-small" data-val="small">Pequeño</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-jpg-margin-large" data-val="large">Grande</button>
+          </div>
+
+          <label class="split-option-card" data-ref="card-merge-images">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Unir todas las imágenes en un único PDF</span>
+              <span class="split-option-card__subtitle">Combina todas las imágenes en un único documento PDF</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-merge-images" type="checkbox" checked />
+          </label>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-html-options">
+          <span class="tool-sidebar__section-title">URL de la página web</span>
+          <label class="field" data-ref="field-html-url">
+            <input class="field__input" data-ref="input-html-url" type="url" placeholder=" " autocomplete="off" />
+            <span class="field__label">Dirección URL</span>
+          </label>
+          <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-refresh-html-preview">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            <span>Refrescar vista previa</span>
+          </button>
+
+          <span class="tool-sidebar__section-title">Tamaño de la pantalla</span>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-html-screen">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-html-screen" aria-label="Tamaño de la pantalla">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-html-screen">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-html-screen" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="html-screen-selected-text">Tu pantalla (medida de tu pantalla)</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-html-screen-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-html-screen">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-html-screen">
+                <div class="menu-panel__list" data-ref="list-html-screens">
+                  <button type="button" class="menu-item is-active" data-ref="option-screen-user" data-value="screen">
+                    <span class="menu-item__text" data-ref="txt-option-screen-user">Tu pantalla (medida de tu pantalla)</span>
+                    <svg class="component-icon menu-item__icon" data-ref="check-screen-user" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-screen-1920" data-value="1920">
+                    <span class="menu-item__text">Escritorio HD (1920px)</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-1920" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-screen-1440" data-value="1440">
+                    <span class="menu-item__text">Escritorio (1440px)</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-1440" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-screen-768" data-value="768">
+                    <span class="menu-item__text">Tableta (768px)</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-768" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-screen-320" data-value="320">
+                    <span class="menu-item__text">Móvil (320px)</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-320" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="split-option-card" data-ref="card-html-single-page">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Una página grande</span>
+              <span class="split-option-card__subtitle">Tu web se convertirá en una sola página grande en lugar de dividirse en varias páginas PDF</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-html-single-page" type="checkbox" />
+          </label>
+
+          <span class="tool-sidebar__section-title">Orientación</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-html-orientation" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-html-orient-portrait" data-val="portrait">Vertical</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-html-orient-landscape" data-val="landscape">Horizontal</button>
+          </div>
+
+          <span class="tool-sidebar__section-title">Margen</span>
+          <div class="component-toggle-pill component-toggle-pill--3 component-toggle-pill--h40" data-ref="toggle-html-margin" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-html-margin-none" data-val="none">Sin margen</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-html-margin-small" data-val="small">Pequeño</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-html-margin-large" data-val="large">Grande</button>
+          </div>
+
+          <label class="split-option-card" data-ref="card-html-block-ads">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Intentar bloquear anuncios</span>
+              <span class="split-option-card__subtitle">Oculta publicidad intrusiva y anuncios de la página</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-html-block-ads" type="checkbox" />
+          </label>
+
+          <label class="split-option-card" data-ref="card-html-remove-popups">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Eliminar ventanas emergentes</span>
+              <span class="split-option-card__subtitle">Suprime banners de cookies y cuadros emergentes</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-html-remove-popups" type="checkbox" checked />
+          </label>
         </div>
       </div>
 

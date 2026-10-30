@@ -1,3 +1,4 @@
+import { openModal } from '../../../components/modal.component.js';
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
@@ -9,7 +10,7 @@ import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
-import { ViewController } from '../../../types/common.types.js';
+import { ModalInstance, ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
@@ -18,6 +19,7 @@ export class UnlockPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
+  private isPasswordRequired = false;
   private isProcessing = false;
   private pdfDocument: any = null;
   private sidebarModal: ToolSidebarModalController | null = null;
@@ -102,8 +104,6 @@ export class UnlockPdfController implements ViewController {
     const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
     const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
-    const togglePasswordBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-password"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
 
     browseBtn?.addEventListener('click', () => fileInput?.click(), { signal });
@@ -167,16 +167,6 @@ export class UnlockPdfController implements ViewController {
       });
     }
 
-    togglePasswordBtn?.addEventListener('click', () => {
-      if (!passwordInput) return;
-      const isPassword = passwordInput.type === 'password';
-      passwordInput.type = isPassword ? 'text' : 'password';
-      const useEl = togglePasswordBtn.querySelector('use');
-      if (useEl) {
-        useEl.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-      }
-    }, { signal });
-
     executeBtn?.addEventListener('click', () => {
       void this.handleExecuteUnlock(executeBtn);
     }, { signal });
@@ -223,6 +213,7 @@ export class UnlockPdfController implements ViewController {
 
     hideElement(canvas);
     hideElement(lockedPlaceholder);
+    this.isPasswordRequired = false;
 
     try {
       const pdfjs = await loadPdfJs();
@@ -240,6 +231,7 @@ export class UnlockPdfController implements ViewController {
         await this.renderPageThumbnail(this.pdfDocument, 1, canvas);
       }
     } catch {
+      this.isPasswordRequired = true;
       showElement(lockedPlaceholder);
     }
   }
@@ -283,54 +275,155 @@ export class UnlockPdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
+  private restoreWorkspaceFromProcessing(): void {
+    this.statusManager?.hide();
+    this.isProcessing = false;
+    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
+
+    showElement(workspaceCard);
+    showElement(sidebar);
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    showElement(fabMore);
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+  }
+
   private async handleExecuteUnlock(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
     this.hideError();
 
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
-    const password = passwordInput?.value.trim() ?? '';
+    if (this.isPasswordRequired) {
+      this.promptPasswordAndUnlock(button);
+      return;
+    }
 
-    this.isProcessing = true;
-    this.showProcessingState();
-    this.statusManager?.showUploading(1, 1);
+    await this.processUnlock('', button);
+  }
 
-    await withButtonLoading(button, async () => {
-      try {
-        const formData = new FormData();
-        formData.append('file', this.currentFile as Blob, this.currentFile?.name);
-        formData.append('options', JSON.stringify({ password }));
+  private promptPasswordAndUnlock(button: HTMLButtonElement): void {
+    const modal = openModal({
+      bodyHtml: `
+        <div class="modal-form-stack" style="display: flex; flex-direction: column; gap: 16px;">
+          <label class="field">
+            <input class="field__input field__input--has-action" data-ref="modal-input-password" type="password" placeholder=" " autocomplete="current-password" autofocus />
+            <span class="field__label">Introduce la contraseña del PDF</span>
+            <button type="button" class="field__action" data-ref="btn-modal-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+            </button>
+          </label>
+        </div>
+      `,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Desbloquear PDF',
+      description: 'Este archivo PDF requiere una contraseña de apertura para poder desbloquearlo.',
+      onConfirm: async () => {
+        const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
+        const password = input?.value.trim() || '';
+        if (!password) {
+          modal.showError('Debes ingresar la contraseña del archivo PDF.');
+          return false;
+        }
+        await this.processUnlock(password, button, modal);
+        return false;
+      },
+      size: 'sm',
+      title: 'Contraseña requerida',
+    });
 
-        const response = await postFormWithProgress(
-          API_ROUTES.tools.unlockPdf.process,
-          formData,
-          (progress) => {
+    const toggleBtn = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-toggle-password"]');
+    const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
+
+    toggleBtn?.addEventListener('click', () => {
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      const useEl = toggleBtn.querySelector('use');
+      if (useEl) {
+        useEl.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
+      }
+    });
+
+    input?.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        modal.confirmBtn?.click();
+      }
+    });
+  }
+
+  private async processUnlock(password: string, button: HTMLButtonElement, modal?: ModalInstance): Promise<void> {
+    if (!this.currentFile) return;
+
+    if (modal) {
+      modal.setConfirmLoading(true);
+      modal.clearError();
+    } else {
+      this.isProcessing = true;
+      this.showProcessingState();
+      this.statusManager?.showUploading(1, 1);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', this.currentFile as Blob, this.currentFile?.name);
+      formData.append('options', JSON.stringify({ password }));
+
+      const response = await postFormWithProgress(
+        API_ROUTES.tools.unlockPdf.process,
+        formData,
+        (progress) => {
+          if (!modal) {
             this.statusManager?.updateUploadProgress(progress);
           }
-        );
-        const result = (await response.json()) as {
-          data?: UnlockPdfResponseData;
-          error?: string;
-          requiresPassword?: boolean;
-          success: boolean;
-        };
-
-        if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al desbloquear el documento PDF.');
         }
+      );
 
-        const token = result.data.fileId;
-        showToast('PDF desbloqueado correctamente.', 'success');
-        saveDownloadPayloadAndNavigate({
-          downloadUrl: `/api/download/${token}`,
-          fileSize: result.data.fileSize,
-          filename: result.data.filename,
-          returnText: 'Desbloquear otro documento PDF',
-          returnUrl: '/unlock-pdf',
-          subtitle: `Se han eliminado exitosamente las restricciones del documento "${this.currentFile?.name}".`,
-          title: '¡PDF desbloqueado con éxito!',
-          token,
-        });
-      } catch {
+      const result = (await response.json()) as {
+        data?: UnlockPdfResponseData;
+        error?: string;
+        requiresPassword?: boolean;
+        success: boolean;
+      };
+
+      if (!response.ok || !result.success || !result.data?.downloadUrl) {
+        if (result.requiresPassword || response.status === 400) {
+          this.isPasswordRequired = true;
+          if (modal) {
+            modal.setConfirmLoading(false);
+            modal.showError('La contraseña introducida es incorrecta. Inténtalo de nuevo.');
+            return;
+          }
+          this.restoreWorkspaceFromProcessing();
+          this.promptPasswordAndUnlock(button);
+          return;
+        }
+        throw new Error(result.error || 'Ocurrió un error al desbloquear el documento PDF.');
+      }
+
+      if (modal) {
+        modal.close();
+      }
+
+      const token = result.data.fileId;
+      showToast('PDF desbloqueado correctamente.', 'success');
+      saveDownloadPayloadAndNavigate({
+        downloadUrl: `/api/download/${token}`,
+        fileSize: result.data.fileSize,
+        filename: result.data.filename,
+        returnText: 'Desbloquear otro documento PDF',
+        returnUrl: '/unlock-pdf',
+        subtitle: `Se han eliminado exitosamente las restricciones del documento "${this.currentFile?.name}".`,
+        title: '¡PDF desbloqueado con éxito!',
+        token,
+      });
+    } catch {
+      if (modal) {
+        modal.setConfirmLoading(false);
+        modal.showError('Error al desbloquear el documento. Verifica los datos e inténtalo de nuevo.');
+      } else {
         this.statusManager?.showError({
           boxText: 'Comprueba que la contraseña ingresada sea la correcta o que el archivo PDF no esté dañado.',
           boxTitle: 'Error al desbloquear el documento',
@@ -338,15 +431,18 @@ export class UnlockPdfController implements ViewController {
           retryText: 'Reintentar Desbloqueo',
           title: '¡Oh no! No hemos podido desbloquear tu archivo.',
         });
-      } finally {
+      }
+    } finally {
+      if (!modal) {
         this.isProcessing = false;
       }
-    });
+    }
   }
 
   private resetToInitial(): void {
     this.currentFile = null;
     this.pdfDocument = null;
+    this.isPasswordRequired = false;
     this.isProcessing = false;
     this.statusManager?.hide();
 
@@ -358,10 +454,8 @@ export class UnlockPdfController implements ViewController {
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
 
     if (fileInput) fileInput.value = '';
-    if (passwordInput) passwordInput.value = '';
     showElement(dropzoneCard);
     hideElement(workspaceCard);
 

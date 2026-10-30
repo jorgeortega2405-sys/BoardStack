@@ -67,18 +67,20 @@ export class RepairPdfController implements ViewController {
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     const dropzone = this.container.querySelector<HTMLElement>('[data-ref="repair-dropzone"]');
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const fabAddBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-fab-add"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
+    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
+    const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
+    const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
-    fabAddBtn?.addEventListener('click', (e) => {
+    browseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       fileInput?.click();
     }, { signal });
 
-    browseBtn?.addEventListener('click', (e) => {
+    fabAddMoreBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       fileInput?.click();
     }, { signal });
@@ -91,7 +93,23 @@ export class RepairPdfController implements ViewController {
       }
     }, { signal });
 
+    fabDriveBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const files = await pickGoogleDriveFiles({ multiselect: false });
+      if (files && files.length > 0) {
+        this.handleFileSelected(files[0]);
+      }
+    }, { signal });
+
     heroDropboxBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const files = await pickDropboxFiles({ multiselect: false });
+      if (files && files.length > 0) {
+        this.handleFileSelected(files[0]);
+      }
+    }, { signal });
+
+    fabDropboxBtn?.addEventListener('click', async (e) => {
       e.stopPropagation();
       const files = await pickDropboxFiles({ multiselect: false });
       if (files && files.length > 0) {
@@ -150,6 +168,7 @@ export class RepairPdfController implements ViewController {
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-workspace"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
@@ -158,6 +177,7 @@ export class RepairPdfController implements ViewController {
 
     showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
+    showElement(fabMore);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
@@ -218,6 +238,7 @@ export class RepairPdfController implements ViewController {
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-workspace"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
@@ -226,6 +247,7 @@ export class RepairPdfController implements ViewController {
 
     hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    hideElement(fabMore);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -250,8 +272,10 @@ export class RepairPdfController implements ViewController {
     this.isProcessing = true;
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
+    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     hideElement(selectedCard);
     hideElement(sidebar);
+    hideElement(fabMore);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
@@ -298,6 +322,7 @@ export class RepairPdfController implements ViewController {
       } catch (err: unknown) {
         showElement(selectedCard);
         showElement(sidebar);
+        showElement(fabMore);
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al reparar el PDF.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();

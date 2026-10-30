@@ -83,7 +83,6 @@ export class RedactPdfController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const clearAllBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-redactions"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-redact"]');
 
     const toolSelectBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-select"]');
@@ -138,14 +137,18 @@ export class RedactPdfController implements ViewController {
       }, { signal });
     }
 
+    const toggleRedactTool = this.container.querySelector<HTMLElement>('[data-ref="toggle-redact-tool"]');
+
     if (toolSelectBtn) {
       toolSelectBtn.addEventListener('click', () => {
+        if (toggleRedactTool) toggleRedactTool.setAttribute('data-active', '0');
         this.switchTool('select-text');
       }, { signal });
     }
 
     if (toolDrawBtn) {
       toolDrawBtn.addEventListener('click', () => {
+        if (toggleRedactTool) toggleRedactTool.setAttribute('data-active', '1');
         this.switchTool('draw-box');
       }, { signal });
     }
@@ -159,12 +162,6 @@ export class RedactPdfController implements ViewController {
     if (zoomOutBtn) {
       zoomOutBtn.addEventListener('click', () => {
         this.changeZoom(-0.15);
-      }, { signal });
-    }
-
-    if (clearAllBtn) {
-      clearAllBtn.addEventListener('click', () => {
-        this.clearAllRedactions();
       }, { signal });
     }
 
@@ -192,6 +189,11 @@ export class RedactPdfController implements ViewController {
     this.currentTool = tool;
     const toolSelectBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-select"]');
     const toolDrawBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-draw"]');
+    const toggleRedactTool = this.container.querySelector<HTMLElement>('[data-ref="toggle-redact-tool"]');
+
+    if (toggleRedactTool) {
+      toggleRedactTool.setAttribute('data-active', tool === 'select-text' ? '0' : '1');
+    }
 
     if (toolSelectBtn && toolDrawBtn) {
       toolSelectBtn.classList.toggle('is-active', tool === 'select-text');
@@ -214,9 +216,9 @@ export class RedactPdfController implements ViewController {
     if (newZoom === this.zoomLevel) return;
     this.zoomLevel = newZoom;
 
-    const zoomLabel = this.container.querySelector<HTMLElement>('[data-ref="val-zoom-level"]');
-    if (zoomLabel) {
-      zoomLabel.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+    const zoomInput = this.container.querySelector<HTMLInputElement>('[data-ref="val-zoom-level"]');
+    if (zoomInput) {
+      zoomInput.value = `${Math.round(this.zoomLevel * 100)}%`;
     }
 
     this.renderDocumentPages();
@@ -371,14 +373,6 @@ export class RedactPdfController implements ViewController {
       const badge = document.createElement('span');
       badge.className = 'redact-thumbnail__badge';
       badge.textContent = `#${i}`;
-
-      const count = this.redactionBoxes.filter((b) => b.pageIndex === pageIndex).length;
-      if (count > 0 && !this.fullPageRedactions.has(pageIndex)) {
-        const censorPill = document.createElement('span');
-        censorPill.className = 'redact-thumbnail__censor-pill';
-        censorPill.textContent = `${count}`;
-        sheet.appendChild(censorPill);
-      }
 
       thumbItem.appendChild(sheet);
       thumbItem.appendChild(badge);
@@ -771,18 +765,6 @@ export class RedactPdfController implements ViewController {
         boxEl.classList.add('is-selected');
       });
 
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'redaction-box__remove-btn';
-      removeBtn.setAttribute('data-tooltip', 'Eliminar censura');
-      removeBtn.setAttribute('aria-label', 'Eliminar censura');
-      removeBtn.textContent = '×';
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.removeRedactionBox(box.id);
-      });
-
-      boxEl.appendChild(removeBtn);
       overlay.appendChild(boxEl);
     });
   }

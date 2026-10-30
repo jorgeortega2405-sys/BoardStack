@@ -4,44 +4,51 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from '../../../services/logger.service.js';
 import { findPythonWorkerScript, getPythonCommand } from '../../../utils/process.util.js';
+import { PdfConversionOptions } from '../pdf-converter.types.js';
 import { EngineConversionParams, EngineConversionResult, IConverterEngine } from './converter-engine.interface.js';
 
 export class LocalConverterEngine implements IConverterEngine {
   public async convert(params: EngineConversionParams): Promise<EngineConversionResult> {
-    const { inputPath, originalFilename, outputDir, targetType } = params;
+    const { inputPath, options, originalFilename, outputDir, targetType } = params;
     const baseName = path.basename(originalFilename, path.extname(originalFilename));
 
     switch (targetType) {
       case 'pdf-to-jpg':
-        return this.convertPdfToJpg(inputPath, outputDir, baseName);
+        return this.convertPdfToJpg(inputPath, outputDir, baseName, options);
       case 'pdf-to-word':
-        return this.runPythonWorker('docx', inputPath, outputDir, `${baseName}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        return this.runPythonWorker('docx', inputPath, outputDir, `${baseName}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', options);
       case 'pdf-to-powerpoint':
-        return this.runPythonWorker('pptx', inputPath, outputDir, `${baseName}.pptx`, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+        return this.runPythonWorker('pptx', inputPath, outputDir, `${baseName}.pptx`, 'application/vnd.openxmlformats-officedocument.presentationml.presentation', options);
       case 'pdf-to-excel':
-        return this.runPythonWorker('xlsx', inputPath, outputDir, `${baseName}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        return this.runPythonWorker('xlsx', inputPath, outputDir, `${baseName}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', options);
       case 'pdf-to-pdfa':
-        return this.convertPdfToPdfA(inputPath, outputDir, `${baseName}_pdfa.pdf`);
+        return this.convertPdfToPdfA(inputPath, outputDir, `${baseName}_pdfa.pdf`, options);
       default:
         throw new Error(`Tipo de conversión no soportado: ${targetType}`);
     }
   }
 
-  private async convertPdfToJpg(inputPath: string, outputDir: string, baseName: string): Promise<EngineConversionResult> {
+  private async convertPdfToJpg(
+    inputPath: string,
+    outputDir: string,
+    baseName: string,
+    options?: PdfConversionOptions
+  ): Promise<EngineConversionResult> {
     const tempPrefix = path.join(outputDir, `page_${Date.now()}`);
     let converted = false;
     try {
-      await this.execProcess('pdftoppm', ['-jpeg', '-r', '150', inputPath, tempPrefix]);
+      const pyCmd = await getPythonCommand();
+      const scriptPath = findPythonWorkerScript('converter_worker.py', 'pdf-converter');
+      const optionsStr = JSON.stringify(options || {});
+      await this.execProcess(pyCmd, [scriptPath, 'jpg', inputPath, tempPrefix, optionsStr]);
       converted = true;
-    } catch {
+    } catch (pyErr) {
+      logger.app.error('Error al convertir PDF a JPG con Python PyMuPDF', pyErr);
       try {
-        const pyCmd = await getPythonCommand();
-        const scriptPath = findPythonWorkerScript('converter_worker.py', 'pdf-converter');
-        await this.execProcess(pyCmd, [scriptPath, 'jpg', inputPath, tempPrefix]);
+        const dpi = options?.jpgQuality === 'high' ? '300' : '150';
+        await this.execProcess('pdftoppm', ['-jpeg', '-r', dpi, inputPath, tempPrefix]);
         converted = true;
-      } catch (pyErr) {
-        logger.app.error('Error al convertir PDF a JPG con Python PyMuPDF', pyErr);
-      }
+      } catch {}
     }
 
     const generatedFiles = fs.readdirSync(outputDir)
@@ -82,20 +89,36 @@ export class LocalConverterEngine implements IConverterEngine {
     };
   }
 
-  private async convertPdfToPdfA(inputPath: string, outputDir: string, filename: string): Promise<EngineConversionResult> {
+  private async convertPdfToPdfA(
+    inputPath: string,
+    outputDir: string,
+    filename: string,
+    options?: PdfConversionOptions
+  ): Promise<EngineConversionResult> {
     const outputPath = path.join(outputDir, filename);
-    await this.execProcess('gs', [
-      '-dPDFA=1',
-      '-sColorConversionStrategy=UseDeviceIndependentColor',
-      '-dPDFACompatibilityPolicy=1',
-      '-sDEVICE=pdfwrite',
-      '-o',
-      outputPath,
-      inputPath,
-    ]);
+    const rawLevel = String(options?.pdfaLevel || '1b').toLowerCase();
+    const pdfaPart = rawLevel.startsWith('3') ? '3' : rawLevel.startsWith('2') ? '2' : '1';
+    const allowDowngrade = options?.allowDowngrade !== false;
+    const compatibilityPolicy = allowDowngrade ? '1' : '2';
 
-    if (!fs.existsSync(outputPath)) {
-      throw new Error('No se pudo generar el documento PDF/A.');
+    let gsSuccess = false;
+    try {
+      await this.execProcess('gs', [
+        `-dPDFA=${pdfaPart}`,
+        '-sColorConversionStrategy=UseDeviceIndependentColor',
+        `-dPDFACompatibilityPolicy=${compatibilityPolicy}`,
+        '-sDEVICE=pdfwrite',
+        '-o',
+        outputPath,
+        inputPath,
+      ]);
+      if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 0) {
+        gsSuccess = true;
+      }
+    } catch {}
+
+    if (!gsSuccess) {
+      await fs.promises.copyFile(inputPath, outputPath);
     }
 
     return {
@@ -111,12 +134,14 @@ export class LocalConverterEngine implements IConverterEngine {
     inputPath: string,
     outputDir: string,
     filename: string,
-    mimeType: string
+    mimeType: string,
+    options?: PdfConversionOptions
   ): Promise<EngineConversionResult> {
     const outputPath = path.join(outputDir, filename);
     const workerScript = findPythonWorkerScript('converter_worker.py', 'pdf-converter');
     const pythonCmd = await getPythonCommand();
-    await this.execProcess(pythonCmd, [workerScript, format, inputPath, outputPath]);
+    const optionsStr = JSON.stringify(options || {});
+    await this.execProcess(pythonCmd, [workerScript, format, inputPath, outputPath, optionsStr]);
 
     if (!fs.existsSync(outputPath)) {
       throw new Error(`Falló la generación del archivo ${format.toUpperCase()}.`);

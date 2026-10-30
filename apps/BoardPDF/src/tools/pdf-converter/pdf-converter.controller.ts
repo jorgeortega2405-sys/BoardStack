@@ -63,7 +63,16 @@ export async function handleConvertPdf(req: Request, res: Response): Promise<voi
       return;
     }
 
-    const result = await convertPdfFile(file, targetType);
+    const options = {
+      allowDowngrade: req.body.allowDowngrade !== 'false' && req.body.allowDowngrade !== false,
+      excelSheets: req.body.excelSheets || 'single',
+      jpgMode: req.body.jpgMode || 'pages',
+      jpgQuality: req.body.jpgQuality || 'normal',
+      ocr: req.body.ocr || 'no',
+      pdfaLevel: req.body.pdfaLevel || '1b',
+    };
+
+    const result = await convertPdfFile(file, targetType, options);
     res.status(200).json({
       data: result,
       message: 'Conversión completada exitosamente.',

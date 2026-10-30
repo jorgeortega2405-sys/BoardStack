@@ -1,6 +1,7 @@
 export interface TranslatePdfParams {
   buffer: Buffer;
   filename: string;
+  layoutMode?: 'preserve' | 'text_only';
   originalname?: string;
   sourceLang?: string;
   targetLang: string;

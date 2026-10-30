@@ -3,11 +3,11 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { logger } from '../../services/logger.service.js';
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
 import { executeProcessWithTimeout } from '../../utils/process.util.js';
-import { StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType } from './to-pdf-converter.types.js';
+import { HtmlToPdfOptions, JpgToPdfOptions, StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType } from './to-pdf-converter.types.js';
 
 const TO_PDF_DIR = path.resolve(process.cwd(), 'data/to-pdf');
 const UPLOADS_DIR = path.join(TO_PDF_DIR, 'uploads');
@@ -93,7 +93,7 @@ export function isValidPublicUrl(rawUrl: string): boolean {
   }
 }
 
-async function renderWithBrowser(targetUrl: string, outputPath: string): Promise<boolean> {
+async function renderWithBrowser(targetUrl: string, outputPath: string, options?: HtmlToPdfOptions): Promise<boolean> {
   const browserCmd = getBrowserCommand();
   if (!browserCmd) {
     return false;
@@ -104,6 +104,15 @@ async function renderWithBrowser(targetUrl: string, outputPath: string): Promise
     await fs.promises.mkdir(tempProfile, { recursive: true });
   } catch {}
 
+  let windowSize = '1920,1080';
+  if (options?.screen === '1440') {
+    windowSize = '1440,900';
+  } else if (options?.screen === '768') {
+    windowSize = '768,1024';
+  } else if (options?.screen === '320') {
+    windowSize = '320,640';
+  }
+
   const args = [
     '--headless=new',
     '--disable-gpu',
@@ -113,6 +122,8 @@ async function renderWithBrowser(targetUrl: string, outputPath: string): Promise
     '--disable-extensions',
     '--disable-crash-reporter',
     '--run-all-compositor-stages-before-draw',
+    `--window-size=${windowSize}`,
+    '--no-pdf-header-footer',
     `--crash-dumps-dir=${tempProfile}`,
     `--user-data-dir=${tempProfile}`,
     `--print-to-pdf=${outputPath}`,
@@ -220,7 +231,7 @@ async function createFallbackPdfFromHtml(html: string, titleOrUrl: string, outpu
   await fs.promises.writeFile(outputPath, pdfBytes);
 }
 
-export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionResult> {
+export async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Promise<ToPdfConversionResult> {
   const parsed = new URL(rawUrl);
   let baseHostname = parsed.hostname.replace(/[^a-zA-Z0-9.-]/g, '_') || 'pagina-web';
   if (baseHostname.startsWith('www.')) {
@@ -231,7 +242,7 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
   const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
 
   try {
-    let browserSucceeded = await renderWithBrowser(rawUrl, destinationPath);
+    let browserSucceeded = await renderWithBrowser(rawUrl, destinationPath, options);
 
     if (!browserSucceeded) {
       try {
@@ -258,6 +269,22 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
       page.drawText('Convertido con BoardPDF Web Engine', { color: rgb(0.5, 0.5, 0.5), font: regularFont, size: 10, x: 50, y: 50 });
       const pdfBytes = await pdfDoc.save();
       await fs.promises.writeFile(destinationPath, pdfBytes);
+    }
+
+    if (options?.orientation === 'landscape' && fs.existsSync(destinationPath)) {
+      try {
+        const generatedBytes = await fs.promises.readFile(destinationPath);
+        const pdfDoc = await PDFDocument.load(generatedBytes);
+        const pages = pdfDoc.getPages();
+        for (const page of pages) {
+          const { height, width } = page.getSize();
+          if (width < height) {
+            page.setRotation(degrees(90));
+          }
+        }
+        const rotatedBytes = await pdfDoc.save();
+        await fs.promises.writeFile(destinationPath, rotatedBytes);
+      } catch {}
     }
 
     const stats = await fs.promises.stat(destinationPath);
@@ -296,23 +323,32 @@ export async function convertUrlToPdf(rawUrl: string): Promise<ToPdfConversionRe
 }
 
 export async function convertToPdf(
-  file: Express.Multer.File,
-  sourceType: ToPdfSourceType
+  fileOrFiles: Express.Multer.File | Express.Multer.File[],
+  sourceType: ToPdfSourceType,
+  jpgOptions?: JpgToPdfOptions
 ): Promise<ToPdfConversionResult> {
-  let inputPath = file.path;
-  if (!inputPath && file.buffer) {
-    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
-    inputPath = path.join(UPLOADS_DIR, `temp_input_${Date.now()}_${path.basename(file.originalname)}`);
-    await fs.promises.writeFile(inputPath, file.buffer);
+  const fileList = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+  const firstFile = fileList[0];
+  if (!firstFile) {
+    throw new Error('No se recibió ningún archivo para convertir.');
   }
-  const originalFilename = file.originalname;
-  const originalSize = file.size || file.buffer?.length || 0;
+
+  const originalFilename = firstFile.originalname;
+  const originalSize = fileList.reduce((acc, f) => acc + (f.size || f.buffer?.length || 0), 0);
   const targetPdfName = getBasePdfName(originalFilename);
   const uniquePrefix = `topdf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
+  const tempFilesToClean: string[] = [];
 
   try {
     if (sourceType === 'html-to-pdf') {
+      let inputPath = firstFile.path;
+      if (!inputPath && firstFile.buffer) {
+        await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+        inputPath = path.join(UPLOADS_DIR, `temp_input_${Date.now()}_${path.basename(firstFile.originalname)}`);
+        await fs.promises.writeFile(inputPath, firstFile.buffer);
+        tempFilesToClean.push(inputPath);
+      }
       const fileUrl = `file:///${path.resolve(inputPath).replace(/\\/g, '/')}`;
       const rendered = await renderWithBrowser(fileUrl, destinationPath);
       if (!rendered) {
@@ -320,58 +356,84 @@ export async function convertToPdf(
         await createFallbackPdfFromHtml(rawContent, originalFilename, destinationPath);
       }
     } else if (sourceType === 'jpg-to-pdf') {
-      let imageConverted = false;
-      try {
-        const imageBytes = await fs.promises.readFile(inputPath);
-        const pdfDoc = await PDFDocument.create();
-        let embeddedImage;
-        try {
-          embeddedImage = await pdfDoc.embedJpg(imageBytes);
-        } catch {
-          try {
-            embeddedImage = await pdfDoc.embedPng(imageBytes);
-          } catch {}
-        }
-        if (embeddedImage) {
-          const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
-          page.drawImage(embeddedImage, {
-            height: embeddedImage.height,
-            width: embeddedImage.width,
-            x: 0,
-            y: 0,
-          });
-          const pdfBytes = await pdfDoc.save();
-          await fs.promises.writeFile(destinationPath, pdfBytes);
-          imageConverted = true;
-        }
-      } catch {}
+      const pdfDoc = await PDFDocument.create();
+      let anyConverted = false;
 
-      if (!imageConverted) {
-        const pythonScript = `import sys, os
-from PIL import Image
-input_file = sys.argv[1]
-output_file = sys.argv[2]
-ext = os.path.splitext(input_file)[1].lower()
-if ext in ['.jpg', '.jpeg']:
-    try:
-        import img2pdf
-        with open(output_file, 'wb') as f:
-            f.write(img2pdf.convert(input_file))
-        sys.exit(0)
-    except Exception:
-        pass
-im = Image.open(input_file)
-if im.mode in ('RGBA', 'LA', 'P'):
-    im = im.convert('RGB')
-im.save(output_file, 'PDF', resolution=100.0)
-`;
-        const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
-        const pyResult = await executeProcessWithTimeout(pyCmd, ['-c', pythonScript, inputPath, destinationPath], { timeoutMs: 45000 });
-        if (pyResult.timedOut || pyResult.code !== 0) {
-          throw new Error(pyResult.stderr || 'Fallo en la conversión de imagen a PDF');
+      const orientation = jpgOptions?.orientation || 'portrait';
+      const pageSize = jpgOptions?.pageSize || 'fit';
+      const marginType = jpgOptions?.margin || 'none';
+      const margin = marginType === 'small' ? 20 : marginType === 'large' ? 45 : 0;
+
+      for (const item of fileList) {
+        let filePath = item.path;
+        if (!filePath && item.buffer) {
+          filePath = path.join(UPLOADS_DIR, `temp_img_${Date.now()}_${path.basename(item.originalname)}`);
+          await fs.promises.writeFile(filePath, item.buffer);
+          tempFilesToClean.push(filePath);
+        }
+        try {
+          const imageBytes = await fs.promises.readFile(filePath);
+          let embeddedImage;
+          try {
+            embeddedImage = await pdfDoc.embedJpg(imageBytes);
+          } catch {
+            try {
+              embeddedImage = await pdfDoc.embedPng(imageBytes);
+            } catch {}
+          }
+
+          if (embeddedImage) {
+            let pageWidth: number;
+            let pageHeight: number;
+
+            if (pageSize === 'a4') {
+              pageWidth = orientation === 'landscape' ? 841.89 : 595.28;
+              pageHeight = orientation === 'landscape' ? 595.28 : 841.89;
+            } else if (pageSize === 'letter') {
+              pageWidth = orientation === 'landscape' ? 792 : 612;
+              pageHeight = orientation === 'landscape' ? 612 : 792;
+            } else {
+              pageWidth = embeddedImage.width + 2 * margin;
+              pageHeight = embeddedImage.height + 2 * margin;
+            }
+
+            const availWidth = Math.max(10, pageWidth - 2 * margin);
+            const availHeight = Math.max(10, pageHeight - 2 * margin);
+            const scale = Math.min(availWidth / embeddedImage.width, availHeight / embeddedImage.height, 1);
+            const renderWidth = embeddedImage.width * scale;
+            const renderHeight = embeddedImage.height * scale;
+            const x = margin + (availWidth - renderWidth) / 2;
+            const y = margin + (availHeight - renderHeight) / 2;
+
+            const page = pdfDoc.addPage([pageWidth, pageHeight]);
+            page.drawImage(embeddedImage, {
+              height: renderHeight,
+              width: renderWidth,
+              x,
+              y,
+            });
+            anyConverted = true;
+          }
+        } catch (imgErr) {
+          logger.app.warn('Error al procesar imagen individual para PDF:', imgErr);
         }
       }
+
+      if (anyConverted) {
+        const pdfBytes = await pdfDoc.save();
+        await fs.promises.writeFile(destinationPath, pdfBytes);
+      } else {
+        throw new Error('No se pudo procesar ninguna de las imágenes seleccionadas.');
+      }
     } else {
+      let inputPath = firstFile.path;
+      if (!inputPath && firstFile.buffer) {
+        await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+        inputPath = path.join(UPLOADS_DIR, `temp_input_${Date.now()}_${path.basename(firstFile.originalname)}`);
+        await fs.promises.writeFile(inputPath, firstFile.buffer);
+        tempFilesToClean.push(inputPath);
+      }
+
       const tempOutDir = path.join(OUTPUT_DIR, uniquePrefix);
       await fs.promises.mkdir(tempOutDir, { recursive: true });
 
@@ -469,12 +531,101 @@ im.save(output_file, 'PDF', resolution=100.0)
     } catch {}
     throw new Error('Ocurrió un error al procesar la conversión a PDF.');
   } finally {
-    try {
-      await fs.promises.unlink(inputPath);
-    } catch {}
+    for (const f of tempFilesToClean) {
+      await fs.promises.unlink(f).catch(() => {});
+    }
+    for (const item of fileList) {
+      if (item.path) {
+        await fs.promises.unlink(item.path).catch(() => {});
+      }
+    }
   }
 }
 
 export async function getStoredToPdfFile(token: string): Promise<StoredToPdfFile | null> {
   return getTempFile<StoredToPdfFile>(token);
+}
+
+export async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<string | null> {
+  const browserCmd = getBrowserCommand();
+  if (!browserCmd || !isValidPublicUrl(rawUrl)) {
+    return null;
+  }
+
+  let windowSize = '1280,800';
+  if (screen === '1920') {
+    windowSize = '1920,1080';
+  } else if (screen === '1440') {
+    windowSize = '1440,900';
+  } else if (screen === '768') {
+    windowSize = '768,1024';
+  } else if (screen === '320') {
+    windowSize = '320,640';
+  }
+
+  const tempShotPath = path.join(os.tmpdir(), `shot_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.png`);
+  const tempProfile = path.join(os.tmpdir(), `shot_prof_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
+
+  let child;
+  try {
+    await fs.promises.mkdir(tempProfile, { recursive: true });
+    const args = [
+      '--headless=new',
+      '--disable-gpu',
+      '--no-sandbox',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-extensions',
+      '--disable-crash-reporter',
+      '--hide-scrollbars',
+      '--mute-audio',
+      `--window-size=${windowSize}`,
+      `--crash-dumps-dir=${tempProfile}`,
+      `--user-data-dir=${tempProfile}`,
+      `--screenshot=${tempShotPath}`,
+      rawUrl,
+    ];
+
+    child = spawn(browserCmd, args, {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+
+    let captured = false;
+    for (let i = 0; i < 60; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (fs.existsSync(tempShotPath)) {
+        const stats = await fs.promises.stat(tempShotPath);
+        if (stats.size > 0) {
+          captured = true;
+          break;
+        }
+      }
+    }
+
+    if (captured && fs.existsSync(tempShotPath)) {
+      const buf = await fs.promises.readFile(tempShotPath);
+      if (buf.length > 0) {
+        return `data:image/png;base64,${buf.toString('base64')}`;
+      }
+    }
+  } catch (err) {
+    logger.app.warn('Fallo capturando vista previa de URL:', err);
+  } finally {
+    try {
+      if (child?.pid) {
+        if (process.platform === 'win32') {
+          spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore' });
+        } else {
+          child.kill('SIGKILL');
+        }
+      }
+    } catch {}
+    await fs.promises.unlink(tempShotPath).catch(() => {});
+    setTimeout(() => {
+      fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
+    }, 2000).unref();
+  }
+  return null;
 }

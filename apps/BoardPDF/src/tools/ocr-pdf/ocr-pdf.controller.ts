@@ -102,8 +102,8 @@ export async function handleProcessOcrPdf(req: Request, res: Response): Promise<
     return;
   }
 
-  const rawLanguage = req.body?.language;
-  const language: OcrLanguage = rawLanguage === 'eng' || rawLanguage === 'spa+eng' ? rawLanguage : 'spa';
+  const rawLanguage = typeof req.body?.language === 'string' && req.body.language.trim() ? req.body.language.trim() : 'spa';
+  const language: OcrLanguage = rawLanguage;
   const deskew = req.body?.deskew === 'true' || req.body?.deskew === true;
   const customFilename = typeof req.body?.filename === 'string' ? req.body.filename : undefined;
 

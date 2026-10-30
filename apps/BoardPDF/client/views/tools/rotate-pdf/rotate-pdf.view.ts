@@ -159,8 +159,6 @@ export class RotatePdfController implements ViewController {
     }, { signal });
     const rotateAllRightBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all-right"]');
     const rotateAllLeftBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all-left"]');
-    const sidebarRotateRightBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-rotate-right"]');
-    const sidebarRotateLeftBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-rotate-left"]');
     const resetRotationsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-rotations"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-rotate"]');
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="rotate-pages-grid"]');
@@ -186,8 +184,6 @@ export class RotatePdfController implements ViewController {
 
     rotateAllRightBtn?.addEventListener('click', () => this.rotateAll(90), { signal });
     rotateAllLeftBtn?.addEventListener('click', () => this.rotateAll(-90), { signal });
-    sidebarRotateRightBtn?.addEventListener('click', () => this.rotateAll(90), { signal });
-    sidebarRotateLeftBtn?.addEventListener('click', () => this.rotateAll(-90), { signal });
     resetRotationsBtn?.addEventListener('click', () => this.resetRotations(), { signal });
 
     pagesGrid?.addEventListener('click', (e) => {
@@ -293,19 +289,18 @@ export class RotatePdfController implements ViewController {
 
     grid.innerHTML = this.pages.map((p) => `
       <div class="pdf-card rotate-page-card" data-ref="card-page-${p.id}" data-page-id="${p.id}">
-        <span class="pdf-card__order-badge">${p.pageNum}</span>
+        <div class="pdf-card__actions">
+          <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-card-rotate-left" title="Girar 90° a la izquierda" aria-label="Girar 90° a la izquierda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_left"></use></svg>
+          </button>
+          <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-card-rotate-right" title="Girar 90° a la derecha" aria-label="Girar 90° a la derecha">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
+          </button>
+        </div>
         <div class="pdf-card__sheet-wrapper">
           <div class="pdf-card__sheet">
             <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}" style="transform: rotate(${p.rotation}deg);"></canvas>
           </div>
-        </div>
-        <div class="rotate-page-card__actions">
-          <button type="button" class="component-button rotate-card-btn" data-ref="btn-card-rotate-left" title="Girar 90° a la izquierda">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_left"></use></svg>
-          </button>
-          <button type="button" class="component-button rotate-card-btn" data-ref="btn-card-rotate-right" title="Girar 90° a la derecha">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-          </button>
         </div>
       </div>
     `).join('');

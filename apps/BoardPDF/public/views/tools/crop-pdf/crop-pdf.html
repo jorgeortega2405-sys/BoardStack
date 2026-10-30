@@ -1,20 +1,4 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="crop-pdf-wrapper">
-  <header class="component-top tool-top is-hidden" data-ref="component-top">
-    <div class="tool-top__left">
-      <div class="crop-page-nav pdf-top-controls is-hidden" data-ref="crop-page-nav">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-prev-page" data-tooltip="Página anterior" aria-label="Página anterior">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-        </button>
-        <span class="tool-preview__page-info" data-ref="txt-page-info">Página 1 de 1</span>
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-next-page" data-tooltip="Página siguiente" aria-label="Página siguiente">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="component-top-right tool-top__right"></div>
-  </header>
-
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="crop-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="crop-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept=".pdf,application/pdf" />
@@ -42,27 +26,34 @@
         </div>
       </div>
 
-      <div class="tool-workspace__canvas is-hidden" data-ref="crop-workspace-card">
-        <div class="crop-workspace-container">
-          <div class="crop-preview-wrap" data-ref="crop-preview-wrap">
-            <canvas class="crop-canvas" data-ref="crop-canvas"></canvas>
-            <div class="crop-mask crop-mask--top" data-ref="mask-top"></div>
-            <div class="crop-mask crop-mask--bottom" data-ref="mask-bottom"></div>
-            <div class="crop-mask crop-mask--left" data-ref="mask-left"></div>
-            <div class="crop-mask crop-mask--right" data-ref="mask-right"></div>
+      <div class="pdf-viewer-workspace pdf-editor-workspace is-hidden" data-ref="crop-workspace-card">
+        <div class="pdf-viewer-main-layout pdf-editor-main-layout" data-ref="crop-main-layout">
+          <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar" data-ref="crop-pages-sidebar">
+            <div class="pdf-viewer-thumbnails-scroll pdf-editor-thumbnails-scroll" data-ref="crop-thumbnails-container"></div>
+          </aside>
 
-            <div class="crop-box" data-ref="crop-box">
-              <div class="crop-handle crop-handle--nw" data-handle="nw"></div>
-              <div class="crop-handle crop-handle--n" data-handle="n"></div>
-              <div class="crop-handle crop-handle--ne" data-handle="ne"></div>
-              <div class="crop-handle crop-handle--e" data-handle="e"></div>
-              <div class="crop-handle crop-handle--se" data-handle="se"></div>
-              <div class="crop-handle crop-handle--s" data-handle="s"></div>
-              <div class="crop-handle crop-handle--sw" data-handle="sw"></div>
-              <div class="crop-handle crop-handle--w" data-handle="w"></div>
+          <div class="pdf-viewer-canvas-container pdf-editor-canvas-container" data-ref="crop-scroll-container">
+            <div class="crop-workspace-container">
+              <div class="crop-preview-wrap" data-ref="crop-preview-wrap">
+                <canvas class="crop-canvas" data-ref="crop-canvas"></canvas>
+                <div class="crop-overlay" data-ref="crop-overlay"></div>
+                <div class="crop-mask crop-mask--top" data-ref="mask-top"></div>
+                <div class="crop-mask crop-mask--bottom" data-ref="mask-bottom"></div>
+                <div class="crop-mask crop-mask--left" data-ref="mask-left"></div>
+                <div class="crop-mask crop-mask--right" data-ref="mask-right"></div>
+
+                <div class="crop-box" data-ref="crop-box">
+                  <div class="crop-handle crop-handle--nw" data-handle="nw"></div>
+                  <div class="crop-handle crop-handle--n" data-handle="n"></div>
+                  <div class="crop-handle crop-handle--ne" data-handle="ne"></div>
+                  <div class="crop-handle crop-handle--e" data-handle="e"></div>
+                  <div class="crop-handle crop-handle--se" data-handle="se"></div>
+                  <div class="crop-handle crop-handle--s" data-handle="s"></div>
+                  <div class="crop-handle crop-handle--sw" data-handle="sw"></div>
+                  <div class="crop-handle crop-handle--w" data-handle="w"></div>
+                </div>
+              </div>
             </div>
-
-            <div class="crop-overlay" data-ref="crop-overlay"></div>
           </div>
         </div>
       </div>
@@ -87,26 +78,15 @@
       <div class="tool-sidebar__body">
         <div class="tool-sidebar-notice" data-ref="crop-info-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Haz clic y arrastra sobre el documento para crear el área de recorte. Podrás redimensionarla si lo necesitas.</div>
-        </div>
-
-        <div class="crop-reset-row">
-          <button type="button" class="component-button component-button--ghost component-button--danger component-button--h32" data-ref="btn-reset-crop">
-            <span class="component-button__text">Restablecer</span>
-          </button>
+          <div class="tool-sidebar-notice__text">Haz clic y arrastra sobre el documento para crear el área de recorte. Podrás moverla o redimensionarla desde las esquinas.</div>
         </div>
 
         <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Páginas:</span>
-          <div class="crop-mode-radios">
-            <label class="crop-radio-label">
-              <input class="crop-radio-input" data-ref="radio-all-pages" type="radio" name="crop-pages-mode" value="all" checked />
-              <span>Todas las páginas</span>
-            </label>
-            <label class="crop-radio-label">
-              <input class="crop-radio-input" data-ref="radio-current-page" type="radio" name="crop-pages-mode" value="current" />
-              <span>Página actual</span>
-            </label>
+          <span class="tool-sidebar__section-title">Páginas a recortar</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-crop-mode" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-crop-all" data-val="all">Todas las páginas</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-crop-current" data-val="current">Página actual</button>
           </div>
         </div>
       </div>

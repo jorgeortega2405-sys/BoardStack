@@ -110,14 +110,17 @@ def convert_to_pptx(input_pdf, output_file):
     doc.close()
     prs.save(output_file)
 
-def convert_to_xlsx(input_pdf, output_file):
+def convert_to_xlsx(input_pdf, output_file, options=None):
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     import pdfplumber
 
+    options = options or {}
+    single_sheet = options.get('excelSheets', 'single') == 'single'
+
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Página 1"
+    ws.title = "Hoja 1" if single_sheet else "Página 1"
 
     header_font = Font(name="Arial", size=10, bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
@@ -129,9 +132,15 @@ def convert_to_xlsx(input_pdf, output_file):
         bottom=Side(style='thin', color='E5E7EB')
     )
 
+    current_row = 1
     with pdfplumber.open(input_pdf) as pdf:
         for p_idx, page in enumerate(pdf.pages):
-            current_ws = ws if p_idx == 0 else wb.create_sheet(title=f"Página {p_idx + 1}")
+            if single_sheet:
+                current_ws = ws
+            else:
+                current_ws = ws if p_idx == 0 else wb.create_sheet(title=f"Página {p_idx + 1}")
+                current_row = 1
+
             tables = page.extract_tables({
                 "vertical_strategy": "lines",
                 "horizontal_strategy": "lines",
@@ -145,7 +154,6 @@ def convert_to_xlsx(input_pdf, output_file):
                     "snap_tolerance": 4,
                 })
 
-            current_row = 1
             if tables:
                 for table in tables:
                     for r_i, row in enumerate(table):
@@ -184,14 +192,48 @@ def convert_to_xlsx(input_pdf, output_file):
 
     wb.save(output_file)
 
-def convert_to_jpg(input_pdf, output_pattern):
+def convert_to_jpg(input_pdf, output_pattern, options=None):
     import pymupdf
+    options = options or {}
     pdf = pymupdf.open(input_pdf)
-    total_pages = len(pdf)
-    for p_idx, page in enumerate(pdf, start=1):
-        pix = page.get_pixmap(dpi=150)
-        out_name = f"{output_pattern}-{p_idx:02d}.jpg" if total_pages > 1 else f"{output_pattern}.jpg"
-        pix.save(out_name)
+    mode = options.get('jpgMode', 'pages')
+    quality = options.get('jpgQuality', 'normal')
+    dpi = 300 if quality == 'high' else 150
+
+    if mode == 'extract':
+        img_idx = 1
+        for page in pdf:
+            for img in page.get_images(full=True):
+                xref = img[0]
+                try:
+                    base_image = pdf.extract_image(xref)
+                    image_bytes = base_image["image"]
+                    image_ext = base_image.get("ext", "jpg") or "jpg"
+                    if image_ext.lower() not in ['jpg', 'jpeg']:
+                        pix = pymupdf.Pixmap(image_bytes)
+                        if pix.n >= 5:
+                            pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+                        out_name = f"{output_pattern}-img_{img_idx:03d}.jpg"
+                        pix.save(out_name)
+                    else:
+                        out_name = f"{output_pattern}-img_{img_idx:03d}.jpg"
+                        with open(out_name, "wb") as f_out:
+                            f_out.write(image_bytes)
+                    img_idx += 1
+                except Exception:
+                    pass
+        if img_idx == 1:
+            total_pages = len(pdf)
+            for p_idx, page in enumerate(pdf, start=1):
+                pix = page.get_pixmap(dpi=dpi)
+                out_name = f"{output_pattern}-{p_idx:02d}.jpg" if total_pages > 1 else f"{output_pattern}.jpg"
+                pix.save(out_name)
+    else:
+        total_pages = len(pdf)
+        for p_idx, page in enumerate(pdf, start=1):
+            pix = page.get_pixmap(dpi=dpi)
+            out_name = f"{output_pattern}-{p_idx:02d}.jpg" if total_pages > 1 else f"{output_pattern}.jpg"
+            pix.save(out_name)
     pdf.close()
 
 def main():
@@ -202,6 +244,12 @@ def main():
     target_format = sys.argv[1].lower()
     input_pdf = sys.argv[2]
     output_file = sys.argv[3]
+    options = {}
+    if len(sys.argv) > 4:
+        try:
+            options = json.loads(sys.argv[4])
+        except Exception:
+            pass
 
     if not os.path.exists(input_pdf):
         print(json.dumps({'error': 'Archivo de entrada no encontrado', 'success': False}))
@@ -213,9 +261,9 @@ def main():
         elif target_format == 'pptx':
             convert_to_pptx(input_pdf, output_file)
         elif target_format == 'xlsx':
-            convert_to_xlsx(input_pdf, output_file)
+            convert_to_xlsx(input_pdf, output_file, options)
         elif target_format == 'jpg' or target_format == 'jpeg':
-            convert_to_jpg(input_pdf, output_file)
+            convert_to_jpg(input_pdf, output_file, options)
         else:
             print(json.dumps({'error': f'Formato no soportado: {target_format}', 'success': False}))
             sys.exit(1)

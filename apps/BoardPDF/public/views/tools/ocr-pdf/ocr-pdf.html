@@ -3,6 +3,23 @@
     <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="ocr-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
 
+      <div class="tool-fab-container" data-ref="tool-fab-container">
+        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
+          <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
+            <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
+          </button>
+          <div class="tool-fab-more__options" data-ref="tool-fab-options">
+            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
+              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+            </button>
+            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-dropbox" data-tooltip="Dropbox" data-tooltip-placement="left" aria-label="Dropbox">
+              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="tool-workspace__canvas" data-ref="ocr-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="ocr-dropzone">
           <h1 class="tool-hero-dropzone__title">OCR PDF</h1>
@@ -53,12 +70,6 @@
             <span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
           </div>
         </div>
-
-        <div class="tool-fab-container">
-          <button type="button" class="tool-fab-btn" data-ref="btn-ocr-fab-add" data-tooltip="Cambiar archivo" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          </button>
-        </div>
       </div>
     </main>
 
@@ -87,32 +98,28 @@
 
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Idioma del Documento</span>
-          <div class="pdf-ocr-languages">
-            <label class="pdf-ocr-lang-option is-active" data-lang="spa">
-              <input class="pdf-ocr-lang-option__radio" data-ref="radio-lang-spa" type="radio" name="ocr-lang" value="spa" checked />
-              <span class="pdf-ocr-lang-option__text">Español</span>
-            </label>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-ocr-language">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-ocr-language" aria-label="Seleccionar idioma">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-ocr-language">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-ocr-language" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="ocr-language-selected-text">Español</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-ocr-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
 
-            <label class="pdf-ocr-lang-option" data-lang="eng">
-              <input class="pdf-ocr-lang-option__radio" data-ref="radio-lang-eng" type="radio" name="ocr-lang" value="eng" />
-              <span class="pdf-ocr-lang-option__text">Inglés (English)</span>
-            </label>
-
-            <label class="pdf-ocr-lang-option" data-lang="spa+eng">
-              <input class="pdf-ocr-lang-option__radio" data-ref="radio-lang-multilingual" type="radio" name="ocr-lang" value="spa+eng" />
-              <span class="pdf-ocr-lang-option__text">Español + Inglés (Bilingüe)</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Opciones de Digitalización</span>
-          <div class="pdf-ocr-toggle-card">
-            <div class="pdf-ocr-toggle-label">
-              <span>Enderezar páginas (Deskew)</span>
-              <span class="pdf-ocr-toggle-subtext">Corrige inclinaciones en escaneos</span>
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-ocr-language">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-ocr-language">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-ocr-language" aria-hidden="true">
+                  <div class="menu-panel__drag-handle" data-ref="drag-handle-ocr-language"></div>
+                </div>
+                <div class="menu-panel__search" data-ref="search-wrapper-ocr-language">
+                  <svg class="component-icon menu-panel__search-icon" data-ref="search-icon-ocr-language" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                  <input class="menu-panel__search-input" data-ref="input-search-ocr-language" type="text" placeholder="Buscar idioma..." maxlength="50" autocomplete="off" />
+                </div>
+                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-ocr-languages"></div>
+                <div class="menu-panel__empty is-hidden" data-ref="empty-ocr-languages">No se encontraron idiomas</div>
+              </div>
             </div>
-            <input class="component-checkbox" data-ref="check-deskew" type="checkbox" checked />
           </div>
         </div>
       </div>

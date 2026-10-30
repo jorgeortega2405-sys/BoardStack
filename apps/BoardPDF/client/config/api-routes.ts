@@ -76,6 +76,7 @@ export const API_ROUTES = {
     toPdfConverter: {
       convert: '/api/tools/to-pdf/convert',
       download: (token: string) => `/api/tools/to-pdf/download/${encodeURIComponent(token)}`,
+      preview: '/api/tools/to-pdf/preview',
     },
     translatePdf: {
       download: (fileId: string) => `/api/tools/translate-pdf/download/${encodeURIComponent(fileId)}`,

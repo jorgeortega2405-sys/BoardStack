@@ -10,46 +10,21 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
+import { OCR_LANGUAGES } from '../ocr-pdf/ocr-pdf.types.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
 
-const SOURCE_LANGUAGES = [
-  { code: '', label: 'Detección automática (Recomendado)' },
-  { code: 'EN', label: 'Inglés' },
-  { code: 'ES', label: 'Español' },
-  { code: 'FR', label: 'Francés' },
-  { code: 'DE', label: 'Alemán' },
-  { code: 'IT', label: 'Italiano' },
-  { code: 'PT', label: 'Portugués' },
-  { code: 'ZH', label: 'Chino' },
-  { code: 'JA', label: 'Japonés' },
-  { code: 'RU', label: 'Ruso' },
-  { code: 'NL', label: 'Neerlandés' },
-  { code: 'PL', label: 'Polaco' },
+const CLEAN_LANGUAGES = OCR_LANGUAGES.filter(
+  (lang) => !lang.code.includes('_') && lang.code !== 'equ' && !lang.name.includes('antiguo')
+);
+
+const SOURCE_LANG_ITEMS = [
+  { code: '', name: 'Detección automática (Recomendado)' },
+  ...CLEAN_LANGUAGES,
 ];
 
-const TARGET_LANGUAGES = [
-  { code: 'ES', label: 'Español (ES)' },
-  { code: 'EN-US', label: 'Inglés Americano (EN-US)' },
-  { code: 'EN-GB', label: 'Inglés Británico (EN-GB)' },
-  { code: 'FR', label: 'Francés (FR)' },
-  { code: 'DE', label: 'Alemán (DE)' },
-  { code: 'IT', label: 'Italiano (IT)' },
-  { code: 'PT-BR', label: 'Portugués Brasileño (PT-BR)' },
-  { code: 'PT-PT', label: 'Portugués Europeo (PT-PT)' },
-  { code: 'ZH', label: 'Chino Simplificado (ZH)' },
-  { code: 'JA', label: 'Japonés (JA)' },
-  { code: 'RU', label: 'Ruso (RU)' },
-  { code: 'NL', label: 'Neerlandés (NL)' },
-  { code: 'PL', label: 'Polaco (PL)' },
-  { code: 'KO', label: 'Coreano (KO)' },
-  { code: 'SV', label: 'Sueco (SV)' },
-  { code: 'DA', label: 'Danés (DA)' },
-  { code: 'FI', label: 'Finés (FI)' },
-  { code: 'TR', label: 'Turco (TR)' },
-  { code: 'UK', label: 'Ucraniano (UK)' },
-];
+const TARGET_LANG_ITEMS = [...CLEAN_LANGUAGES];
 
 export class TranslatePdfViewController implements ViewController {
   private abortController: AbortController | null = null;
@@ -57,10 +32,22 @@ export class TranslatePdfViewController implements ViewController {
   private currentFile: File | null = null;
   private dropdownControllers: Array<{ destroy: () => void }> = [];
   private isProcessing = false;
+  private selectedLayout: 'preserve' | 'text_only' = 'preserve';
   private sidebarModal: ToolSidebarModalController | null = null;
-  private sourceLang: string = '';
+  private sourceLang = '';
   private statusManager: ToolStatusManager | null = null;
-  private targetLang: string = 'ES';
+  private targetLang = 'spa';
+
+  private readonly layoutDetails = {
+    preserve: {
+      desc: 'El PDF procesado mantendrá el diseño lo más cercano posible al PDF original.',
+      title: 'Mantener el diseño',
+    },
+    text_only: {
+      desc: 'El PDF procesado contiene solo texto y su jerarquía.',
+      title: 'Solo texto',
+    },
+  };
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -107,21 +94,14 @@ export class TranslatePdfViewController implements ViewController {
     }
 
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone"]');
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone-card"]');
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const fabAddBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-fab-add"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
     browseBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput?.click();
-    }, { signal });
-
-    fabAddBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       fileInput?.click();
     }, { signal });
@@ -165,59 +145,155 @@ export class TranslatePdfViewController implements ViewController {
       });
     }
 
-    const listSource = this.container.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
-    if (listSource && listSource.children.length === 0) {
-      SOURCE_LANGUAGES.forEach((lang, idx) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `menu-item${idx === 0 ? ' is-active' : ''}`;
-        btn.setAttribute('data-value', lang.code);
-        const span = document.createElement('span');
-        span.className = 'menu-item__text';
-        span.textContent = lang.label;
-        btn.appendChild(span);
-        listSource.appendChild(btn);
-      });
-    }
-
-    const listTarget = this.container.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
-    if (listTarget && listTarget.children.length === 0) {
-      TARGET_LANGUAGES.forEach((lang, idx) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `menu-item${idx === 0 ? ' is-active' : ''}`;
-        btn.setAttribute('data-value', lang.code);
-        const span = document.createElement('span');
-        span.className = 'menu-item__text';
-        span.textContent = lang.label;
-        btn.appendChild(span);
-        listTarget.appendChild(btn);
-      });
-    }
-
     const wrapperSource = this.container.querySelector<HTMLElement>('[data-ref="wrapper-source-lang"]');
+    const listSource = this.container.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
+    const inputSearchSource = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-source-lang"]');
+    const emptySource = this.container.querySelector<HTMLElement>('[data-ref="empty-source-lang"]');
+    const txtSelectedSource = this.container.querySelector<HTMLElement>('[data-ref="txt-selected-source-lang"]');
+
+    if (listSource) {
+      this.renderSourceLanguages(listSource);
+    }
+
+    inputSearchSource?.addEventListener('input', (e) => {
+      if (listSource) {
+        this.filterLanguages(listSource, emptySource, (e.target as HTMLInputElement).value);
+      }
+    }, { signal });
+
     if (wrapperSource) {
       const ctrl = setupDropdown(wrapperSource, {
+        backdrop: this.container.querySelector<HTMLElement>('[data-ref="backdrop-source-lang"]'),
+        menu: this.container.querySelector<HTMLElement>('[data-ref="menu-source-lang"]'),
         onSelect: (val: string) => {
           this.sourceLang = val || '';
+          const found = SOURCE_LANG_ITEMS.find((l) => l.code === val);
+          if (txtSelectedSource) {
+            txtSelectedSource.textContent = found ? found.name : 'Detección automática (Recomendado)';
+          }
+          if (listSource) {
+            this.renderSourceLanguages(listSource);
+            if (inputSearchSource) {
+              inputSearchSource.value = '';
+              this.filterLanguages(listSource, emptySource, '');
+            }
+          }
         },
+        trigger: this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-source-lang"]'),
       });
       this.dropdownControllers.push(ctrl);
     }
 
     const wrapperTarget = this.container.querySelector<HTMLElement>('[data-ref="wrapper-target-lang"]');
+    const listTarget = this.container.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
+    const inputSearchTarget = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-target-lang"]');
+    const emptyTarget = this.container.querySelector<HTMLElement>('[data-ref="empty-target-lang"]');
+    const txtSelectedTarget = this.container.querySelector<HTMLElement>('[data-ref="txt-selected-target-lang"]');
+
+    if (listTarget) {
+      this.renderTargetLanguages(listTarget);
+    }
+
+    inputSearchTarget?.addEventListener('input', (e) => {
+      if (listTarget) {
+        this.filterLanguages(listTarget, emptyTarget, (e.target as HTMLInputElement).value);
+      }
+    }, { signal });
+
     if (wrapperTarget) {
       const ctrl = setupDropdown(wrapperTarget, {
+        backdrop: this.container.querySelector<HTMLElement>('[data-ref="backdrop-target-lang"]'),
+        menu: this.container.querySelector<HTMLElement>('[data-ref="menu-target-lang"]'),
         onSelect: (val: string) => {
-          this.targetLang = val || 'ES';
+          this.targetLang = val || 'spa';
+          const found = TARGET_LANG_ITEMS.find((l) => l.code === val);
+          if (txtSelectedTarget) {
+            txtSelectedTarget.textContent = found ? found.name : 'Español';
+          }
+          if (listTarget) {
+            this.renderTargetLanguages(listTarget);
+            if (inputSearchTarget) {
+              inputSearchTarget.value = '';
+              this.filterLanguages(listTarget, emptyTarget, '');
+            }
+          }
         },
+        trigger: this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-target-lang"]'),
       });
       this.dropdownControllers.push(ctrl);
     }
 
+    const btnPreserve = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-preserve"]');
+    const btnText = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-text"]');
+
+    btnPreserve?.addEventListener('click', () => {
+      this.setLayoutMode('preserve');
+    }, { signal });
+
+    btnText?.addEventListener('click', () => {
+      this.setLayoutMode('text_only');
+    }, { signal });
+
     translateBtn?.addEventListener('click', () => {
       void this.handleTranslate(translateBtn);
     }, { signal });
+  }
+
+  private renderSourceLanguages(container: HTMLElement): void {
+    container.innerHTML = SOURCE_LANG_ITEMS.map((l) => {
+      const isActive = this.sourceLang === l.code;
+      return `
+        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-source-lang" data-lang="${l.code}" data-value="${l.code}">
+          <span class="menu-item__text">${l.name}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  private renderTargetLanguages(container: HTMLElement): void {
+    container.innerHTML = TARGET_LANG_ITEMS.map((l) => {
+      const isActive = this.targetLang === l.code;
+      return `
+        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-target-lang" data-lang="${l.code}" data-value="${l.code}">
+          <span class="menu-item__text">${l.name}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  private filterLanguages(listEl: HTMLElement, emptyEl: HTMLElement | null, query: string): void {
+    const cleanQuery = query.toLowerCase().trim();
+    let matchesCount = 0;
+    const items = listEl.querySelectorAll<HTMLElement>('.menu-item');
+    items.forEach((item) => {
+      const name = item.querySelector('.menu-item__text')?.textContent?.toLowerCase() || '';
+      const code = (item.getAttribute('data-lang') || '').toLowerCase();
+      const match = !cleanQuery || name.includes(cleanQuery) || code.includes(cleanQuery);
+      toggleElement(item, match);
+      if (match) matchesCount++;
+    });
+    if (emptyEl) {
+      toggleElement(emptyEl, matchesCount === 0);
+    }
+  }
+
+  private setLayoutMode(mode: 'preserve' | 'text_only'): void {
+    this.selectedLayout = mode;
+    const toggle = this.container.querySelector<HTMLElement>('[data-ref="translate-layout-toggle"]');
+    if (toggle) {
+      toggle.setAttribute('data-active', mode === 'preserve' ? '0' : '1');
+    }
+
+    const btnPreserve = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-preserve"]');
+    const btnText = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-text"]');
+    if (btnPreserve) btnPreserve.classList.toggle('is-active', mode === 'preserve');
+    if (btnText) btnText.classList.toggle('is-active', mode === 'text_only');
+
+    const titleEl = this.container.querySelector<HTMLElement>('[data-ref="translate-layout-title"]');
+    const descEl = this.container.querySelector<HTMLElement>('[data-ref="translate-layout-desc"]');
+    const detail = this.layoutDetails[mode];
+    if (titleEl && detail) titleEl.textContent = detail.title;
+    if (descEl && detail) descEl.textContent = detail.desc;
   }
 
   private handleFileSelected(file: File): void {
@@ -241,7 +317,6 @@ export class TranslatePdfViewController implements ViewController {
   private renderSelectedState(file: File): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="translate-processing-card"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
@@ -249,7 +324,6 @@ export class TranslatePdfViewController implements ViewController {
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
     hideElement(dropzoneCard);
-    hideElement(processingCard);
     showElement(selectedCard);
 
     showElement(sidebar);
@@ -259,20 +333,19 @@ export class TranslatePdfViewController implements ViewController {
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (translateBtn) translateBtn.disabled = false;
 
-    const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
-    if (canvas) {
-      void this.renderThumbnail(file, canvas);
-    }
+    void this.renderThumbnail(file);
   }
 
-  private async renderThumbnail(file: File, canvas: HTMLCanvasElement): Promise<void> {
-    let pdf: any = null;
+  private async renderThumbnail(file: File): Promise<void> {
+    const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
+    if (!canvas) return;
+
     try {
       const pdfjs = await loadPdfJs();
       const arrayBuffer = await file.arrayBuffer();
-      pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const page = await pdf.getPage(1);
-      const targetWidth = 180;
+      const targetWidth = 140;
       const origViewport = page.getViewport({ scale: 1 });
       const scale = targetWidth / origViewport.width;
       const viewport = page.getViewport({ scale });
@@ -288,12 +361,7 @@ export class TranslatePdfViewController implements ViewController {
         ctx.scale(dpr, dpr);
         await page.render({ canvasContext: ctx, viewport }).promise;
       }
-    } catch {
-    } finally {
-      try {
-        if (pdf) await pdf.destroy();
-      } catch {}
-    }
+    } catch {}
   }
 
   private resetSelectedFile(): void {
@@ -338,6 +406,7 @@ export class TranslatePdfViewController implements ViewController {
         if (this.sourceLang) {
           formData.append('sourceLang', this.sourceLang);
         }
+        formData.append('layoutMode', this.selectedLayout);
 
         const response = await postFormWithProgress(
           API_ROUTES.tools.translatePdf.translate,
@@ -349,7 +418,9 @@ export class TranslatePdfViewController implements ViewController {
         const res = (await response.json()) as { data?: TranslatePdfResultData; error?: string; success: boolean };
 
         this.statusManager?.showProcessingState({
-          subtitle: 'Conservando formato, tipografía y tablas en el idioma de destino',
+          subtitle: this.selectedLayout === 'preserve'
+            ? 'Conservando formato, tipografía y tablas en el idioma de destino'
+            : 'Generando documento con texto traducido estructurado',
           title: 'Traduciendo documento...',
         });
 
@@ -370,11 +441,11 @@ export class TranslatePdfViewController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        showElement(selectedCard);
-        showElement(sidebar);
         const errorMessage = err instanceof Error ? err.message : 'Error al conectar con el servidor.';
         this.statusManager?.showError(errorMessage, () => {
           this.statusManager?.hide();
+          showElement(selectedCard);
+          showElement(sidebar);
         });
         this.showError(errorMessage);
       } finally {

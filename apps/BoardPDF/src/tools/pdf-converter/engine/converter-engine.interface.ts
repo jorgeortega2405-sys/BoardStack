@@ -1,8 +1,8 @@
-import { ConversionType } from '../pdf-converter.types.js';
+import { ConversionType, PdfConversionOptions } from '../pdf-converter.types.js';
 
 export interface EngineConversionParams {
   inputPath: string;
-  options?: Record<string, unknown>;
+  options?: PdfConversionOptions;
   originalFilename: string;
   outputDir: string;
   targetType: ConversionType;

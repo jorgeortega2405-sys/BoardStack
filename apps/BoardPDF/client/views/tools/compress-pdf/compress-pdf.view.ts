@@ -171,16 +171,15 @@ export class CompressPdfController implements ViewController {
       });
     }
 
-    const optionsContainer = this.container.querySelector<HTMLElement>('[data-ref="compress-options-container"]');
-    optionsContainer?.addEventListener('click', (e) => {
+    const levelToggle = this.container.querySelector<HTMLElement>('[data-ref="compress-level-toggle"]');
+    levelToggle?.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      const optionLabel = target.closest<HTMLLabelElement>('.pdf-compress-option');
-      if (!optionLabel) return;
+      const btn = target.closest<HTMLButtonElement>('button[data-level]');
+      if (!btn) return;
 
-      const level = optionLabel.getAttribute('data-level') as ClientPdfCompressLevel;
+      const level = btn.getAttribute('data-level') as ClientPdfCompressLevel;
       if (level) {
-        this.selectedLevel = level;
-        this.updateActiveLevelOption(level);
+        this.setCompressLevel(level);
       }
     }, { signal });
 
@@ -189,19 +188,41 @@ export class CompressPdfController implements ViewController {
     }, { signal });
   }
 
-  private updateActiveLevelOption(level: ClientPdfCompressLevel): void {
-    const options = this.container.querySelectorAll<HTMLLabelElement>('.pdf-compress-option');
-    options.forEach((opt) => {
-      const optLevel = opt.getAttribute('data-level');
-      const radio = opt.querySelector<HTMLInputElement>('input[type="radio"]');
-      if (optLevel === level) {
-        opt.classList.add('is-active');
-        if (radio) radio.checked = true;
-      } else {
-        opt.classList.remove('is-active');
-        if (radio) radio.checked = false;
-      }
+  private readonly qualityDetails: Record<ClientPdfCompressLevel, { desc: string; title: string }> = {
+    extreme: {
+      desc: 'Menor calidad de imagen, máxima reducción de tamaño.',
+      title: 'Compresión extrema',
+    },
+    low: {
+      desc: 'Alta calidad visual, menor reducción de tamaño.',
+      title: 'Baja compresión',
+    },
+    recommended: {
+      desc: 'Buena calidad visual, reducción sustancial de tamaño.',
+      title: 'Compresión recomendada',
+    },
+  };
+
+  private setCompressLevel(level: ClientPdfCompressLevel): void {
+    this.selectedLevel = level;
+
+    const toggle = this.container.querySelector<HTMLElement>('[data-ref="compress-level-toggle"]');
+    if (toggle) {
+      toggle.setAttribute('data-level', level);
+      const activeIdx = level === 'extreme' ? 0 : level === 'recommended' ? 1 : 2;
+      toggle.setAttribute('data-active', activeIdx.toString());
+    }
+
+    const btns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-compress-"]');
+    btns.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-level') === level);
     });
+
+    const titleEl = this.container.querySelector<HTMLElement>('[data-ref="compress-quality-title"]');
+    const descEl = this.container.querySelector<HTMLElement>('[data-ref="compress-quality-desc"]');
+    const detail = this.qualityDetails[level];
+    if (titleEl && detail) titleEl.textContent = detail.title;
+    if (descEl && detail) descEl.textContent = detail.desc;
   }
 
   private handleFileSelected(file: File): void {
@@ -303,6 +324,7 @@ export class CompressPdfController implements ViewController {
       canvas.height = 0;
     }
 
+    this.setCompressLevel('recommended');
     this.statusManager?.hide();
     this.hideError();
   }

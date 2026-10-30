@@ -1,4 +1,4 @@
-export type OcrLanguage = 'spa' | 'eng' | 'spa+eng';
+export type OcrLanguage = string;
 
 export interface OcrPdfParams {
   buffer: Buffer;

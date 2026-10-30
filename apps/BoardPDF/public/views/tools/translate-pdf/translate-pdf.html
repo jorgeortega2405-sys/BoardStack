@@ -6,7 +6,7 @@
       <div class="tool-workspace__canvas" data-ref="translate-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="translate-dropzone">
           <h1 class="tool-hero-dropzone__title">Traducir PDF</h1>
-          <p class="tool-hero-dropzone__desc">Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con DeepL AI.</p>
+          <p class="tool-hero-dropzone__desc">Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con IA avanzada.</p>
 
           <div class="tool-hero-dropzone__actions">
             <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
@@ -53,12 +53,6 @@
             <span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
           </div>
         </div>
-
-        <div class="tool-fab-container">
-          <button type="button" class="tool-fab-btn" data-ref="btn-translate-fab-add" data-tooltip="Cambiar archivo" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          </button>
-        </div>
       </div>
     </main>
 
@@ -76,52 +70,79 @@
 
       <div class="tool-sidebar__header">
         <h1 class="tool-sidebar__title">Traducir PDF</h1>
-        <p class="tool-sidebar__subtitle">Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con DeepL AI.</p>
+        <p class="tool-sidebar__subtitle">Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con IA avanzada.</p>
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="translate-info-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">El documento será traducido preservando tablas, imágenes y la maqueta original.</div>
-        </div>
         <div class="translate-language-group">
-          <label class="translate-language-label">Idioma de Origen</label>
-          <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper" data-ref="wrapper-source-lang">
-            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-source-lang" aria-label="Idioma de Origen">
-              <div class="dropdown-trigger__left">
+          <label class="translate-language-label">Desde</label>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="wrapper-source-lang">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-source-lang" aria-label="Seleccionar idioma de origen">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-source">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
                 <span class="dropdown-trigger__text" data-ref="txt-selected-source-lang">Detección automática (Recomendado)</span>
               </div>
               <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
             </button>
-            <div class="dropdown-backdrop">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto">
+
+            <div class="dropdown-backdrop" data-ref="backdrop-source-lang">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-source-lang">
                 <div class="menu-panel__drag-zone" aria-hidden="true">
                   <div class="menu-panel__drag-handle"></div>
                 </div>
+                <div class="menu-panel__search" data-ref="search-wrapper-source-lang">
+                  <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                  <input class="menu-panel__search-input" data-ref="input-search-source-lang" type="text" placeholder="Buscar idioma..." maxlength="50" autocomplete="off" />
+                </div>
                 <div class="menu-panel__list menu-panel__list--scrollable menu-panel__list--max-h240" data-ref="list-source-lang"></div>
+                <div class="menu-panel__empty is-hidden" data-ref="empty-source-lang">No se encontraron idiomas</div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="translate-language-group">
-          <label class="translate-language-label">Idioma de Destino *</label>
-          <div class="dropdown-wrapper dropdown-wrapper--full tool-dropdown-wrapper" data-ref="wrapper-target-lang">
-            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-target-lang" aria-label="Idioma de Destino">
-              <div class="dropdown-trigger__left">
-                <span class="dropdown-trigger__text" data-ref="txt-selected-target-lang">Español (ES)</span>
+          <label class="translate-language-label">Hasta</label>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="wrapper-target-lang">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-target-lang" aria-label="Seleccionar idioma de destino">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-target">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="txt-selected-target-lang">Español</span>
               </div>
               <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
             </button>
-            <div class="dropdown-backdrop">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto">
+
+            <div class="dropdown-backdrop" data-ref="backdrop-target-lang">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-target-lang">
                 <div class="menu-panel__drag-zone" aria-hidden="true">
                   <div class="menu-panel__drag-handle"></div>
                 </div>
+                <div class="menu-panel__search" data-ref="search-wrapper-target-lang">
+                  <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                  <input class="menu-panel__search-input" data-ref="input-search-target-lang" type="text" placeholder="Buscar idioma..." maxlength="50" autocomplete="off" />
+                </div>
                 <div class="menu-panel__list menu-panel__list--scrollable menu-panel__list--max-h240" data-ref="list-target-lang"></div>
+                <div class="menu-panel__empty is-hidden" data-ref="empty-target-lang">No se encontraron idiomas</div>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="tool-sidebar__section">
+          <span class="tool-sidebar__section-title">Diseño del PDF procesado</span>
+          <div class="component-toggle-pill component-toggle-pill--2" data-ref="translate-layout-toggle" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-layout-preserve" data-layout="preserve">Mantener el diseño</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-layout-text" data-layout="text_only">Solo texto</button>
+          </div>
+        </div>
+
+        <div class="translate-layout-card" data-ref="translate-layout-card">
+          <div class="translate-layout-card__header">
+            <svg class="component-icon translate-layout-card__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <span class="translate-layout-card__title" data-ref="translate-layout-title">Mantener el diseño</span>
+          </div>
+          <p class="translate-layout-card__desc" data-ref="translate-layout-desc">El PDF procesado mantendrá el diseño lo más cercano posible al PDF original.</p>
         </div>
       </div>
 

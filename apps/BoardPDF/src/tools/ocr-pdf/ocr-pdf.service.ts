@@ -20,9 +20,13 @@ function sanitizePdfFilename(rawName?: string): string {
 }
 
 function resolveTesseractLang(lang?: OcrLanguage): string {
-  if (lang === 'eng') return 'eng';
-  if (lang === 'spa+eng') return 'spa+eng';
-  return 'spa';
+  if (!lang || typeof lang !== 'string') return 'spa';
+  const cleanCodes = lang
+    .split('+')
+    .map((s) => s.trim().replace(/[^a-zA-Z0-9_]/g, ''))
+    .filter(Boolean)
+    .slice(0, 3);
+  return cleanCodes.length > 0 ? cleanCodes.join('+') : 'spa';
 }
 
 async function runPythonOcrWorker(

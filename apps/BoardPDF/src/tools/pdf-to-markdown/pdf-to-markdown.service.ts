@@ -1,12 +1,12 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { config } from '../../config/env.config.js';
 import { logger } from '../../services/logger.service.js';
 import { getTempFile, storeTempFile } from '../../services/temp-storage.service.js';
 import { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand } from '../../utils/process.util.js';
 import { MarkdownConversionMode, PdfToMarkdownParams, PdfToMarkdownResponse, StoredMarkdownFile } from './pdf-to-markdown.types.js';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const MODE_INSTRUCTIONS: Record<MarkdownConversionMode, string> = {
   academic: `Enfócate en la conversión de documentos técnicos, científicos o académicos.
@@ -110,7 +110,11 @@ async function callGeminiApi(
   const parts: any[] = [];
   const canUseMultimodal = pdfBuffer && pdfBuffer.length > 0 && pdfBuffer.length <= 18 * 1024 * 1024;
 
-  if (canUseMultimodal) {
+  if (rawText && rawText.length >= 20) {
+    parts.push({
+      text: `${userPrompt}\n\n--- INICIO DEL CONTENIDO DEL DOCUMENTO ---\n${rawText}\n--- FIN DEL CONTENIDO DEL DOCUMENTO ---`,
+    });
+  } else if (canUseMultimodal) {
     parts.push({
       inlineData: {
         data: pdfBuffer.toString('base64'),
@@ -190,60 +194,63 @@ export async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise
     throw new Error('EMPTY_PDF_BUFFER');
   }
 
-  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_md_'));
-  const inputPdfPath = path.join(tempDir, 'document.pdf');
-  const outputMdPath = path.join(tempDir, 'output.md');
-
-  await fs.promises.writeFile(inputPdfPath, buffer);
-
   let markdownResult = '';
   let usedModel = 'local-structural-extractor';
 
-  try {
-    const localResult = await runPythonMarkdownWorker(inputPdfPath, outputMdPath, mode);
-    if (localResult) {
-      markdownResult = localResult;
-    }
-  } finally {
-    try {
-      await fs.promises.rm(tempDir, { force: true, recursive: true });
-    } catch {}
-  }
+  const apiKey = config.gemini?.apiKey;
+  if (apiKey) {
+    let rawExtractedText = await extractTextFromPdf(buffer);
+    const isMultimodalEligible = buffer.length <= 18 * 1024 * 1024;
 
-  if (!markdownResult) {
-    const apiKey = config.gemini?.apiKey;
-    if (apiKey) {
-      let rawExtractedText = '';
-      const isMultimodalEligible = buffer.length <= 18 * 1024 * 1024;
-      if (!isMultimodalEligible) {
-        rawExtractedText = await extractTextFromPdf(buffer);
-      }
-
-      const systemInstruction = `Eres un motor experto de conversión de documentos PDF a Markdown de alta fidelidad.
+    const systemInstruction = `Eres un motor experto de conversión de documentos PDF a Markdown de alta fidelidad.
 Respeta la estructura, tablas GFM y formato semántico del documento sin preámbulos.`;
-      const modeInstruction = MODE_INSTRUCTIONS[mode] || MODE_INSTRUCTIONS.structured;
-      const additionalDirectives: string[] = [];
-      if (includeMathLatex) additionalDirectives.push('- Transcribe expresiones matemáticas en formato LaTeX ($...$ o $$...$$).');
-      if (removeHeadersFooters) additionalDirectives.push('- Omite encabezados y pies de página recurrentes.');
-      if (preserveTables) additionalDirectives.push('- Formatea cualquier tabla como tabla Markdown estándar.');
-      if (customPrompt?.trim()) additionalDirectives.push(`- Instrucción del usuario: ${customPrompt.trim()}`);
+    const modeInstruction = MODE_INSTRUCTIONS[mode] || MODE_INSTRUCTIONS.structured;
+    const additionalDirectives: string[] = [];
+    if (includeMathLatex) additionalDirectives.push('- Transcribe expresiones matemáticas en formato LaTeX ($...$ o $$...$$).');
+    if (removeHeadersFooters) additionalDirectives.push('- Omite encabezados y pies de página recurrentes.');
+    if (preserveTables) additionalDirectives.push('- Formatea cualquier tabla como tabla Markdown estándar.');
+    if (customPrompt?.trim()) additionalDirectives.push(`- Instrucción del usuario: ${customPrompt.trim()}`);
 
-      const userPrompt = `Convierte este documento PDF completo a formato Markdown (.md):\n${modeInstruction}\n${additionalDirectives.join('\n')}`;
-      const primaryModel = config.gemini.model || 'gemini-3.5-flash';
+    const userPrompt = `Convierte este documento PDF completo a formato Markdown (.md):\n${modeInstruction}\n${additionalDirectives.join('\n')}`;
+    const primaryModel = config.gemini.model || 'gemini-flash-lite-latest';
+    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-2.0-flash'];
 
+    for (const modelCandidate of [primaryModel, ...fallbackModels]) {
       try {
         markdownResult = await callGeminiApi(
           systemInstruction,
           userPrompt,
           isMultimodalEligible ? buffer : null,
           rawExtractedText,
-          primaryModel,
+          modelCandidate,
           apiKey
         );
-        usedModel = primaryModel;
+        if (markdownResult) {
+          usedModel = modelCandidate;
+          break;
+        }
       } catch (err) {
-        logger.app.warn('Error con Gemini API fallback en PDF a Markdown', { error: err });
+        logger.app.warn('Error con Gemini API fallback en PDF a Markdown', { error: err, model: modelCandidate });
       }
+    }
+  }
+
+  if (!markdownResult) {
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_md_'));
+    const inputPdfPath = path.join(tempDir, 'document.pdf');
+    const outputMdPath = path.join(tempDir, 'output.md');
+
+    try {
+      await fs.promises.writeFile(inputPdfPath, buffer);
+      const localResult = await runPythonMarkdownWorker(inputPdfPath, outputMdPath, mode);
+      if (localResult) {
+        markdownResult = localResult;
+        usedModel = 'local-structural-extractor';
+      }
+    } finally {
+      try {
+        await fs.promises.rm(tempDir, { force: true, recursive: true });
+      } catch {}
     }
   }
 

@@ -16,6 +16,7 @@ import { CropBoxPercent, CropPdfResponseData } from './crop-pdf.types.js';
 export class CropPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private cropAllPages = true;
   private cropPercent: CropBoxPercent = { height: 90, width: 90, x: 5, y: 5 };
   private currentFile: File | null = null;
   private currentPage = 1;
@@ -98,9 +99,6 @@ export class CropPdfController implements ViewController {
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="crop-sidebar-drag-zone"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
-    const resetBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-crop"]');
-    const prevPageBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-prev-page"]');
-    const nextPageBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-next-page"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
 
     this.sidebarModal = setupToolSidebarModal({
@@ -147,23 +145,17 @@ export class CropPdfController implements ViewController {
       });
     }
 
-    prevPageBtn?.addEventListener('click', () => {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-        void this.renderCurrentPage();
-      }
-    }, { signal });
-
-    nextPageBtn?.addEventListener('click', () => {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
-        void this.renderCurrentPage();
-      }
-    }, { signal });
-
-    resetBtn?.addEventListener('click', () => {
-      this.cropPercent = { height: 100, width: 100, x: 0, y: 0 };
-      this.updateCropDisplay();
+    const cropModeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-crop-mode"]');
+    cropModeToggle?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
+      if (!btn) return;
+      const val = btn.getAttribute('data-val');
+      if (!val) return;
+      this.cropAllPages = val === 'all';
+      cropModeToggle.setAttribute('data-active', this.cropAllPages ? '0' : '1');
+      cropModeToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+      });
     }, { signal });
 
     this.bindCropInteractions(signal);
@@ -190,6 +182,8 @@ export class CropPdfController implements ViewController {
     let startCrop = { ...this.cropPercent };
 
     cropBox.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const handle = (e.target as HTMLElement).closest<HTMLElement>('[data-handle]');
       if (handle) {
         isResizing = true;
@@ -200,11 +194,10 @@ export class CropPdfController implements ViewController {
       startX = e.clientX;
       startY = e.clientY;
       startCrop = { ...this.cropPercent };
-      cropBox.setPointerCapture(e.pointerId);
-      e.stopPropagation();
     }, { signal });
 
     overlay.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
       const rect = wrap.getBoundingClientRect();
       isDrawing = true;
       startX = e.clientX;
@@ -214,10 +207,10 @@ export class CropPdfController implements ViewController {
       this.cropPercent = { height: 1, width: 1, x: xPct, y: yPct };
       startCrop = { ...this.cropPercent };
       this.updateCropDisplay();
-      overlay.setPointerCapture(e.pointerId);
     }, { signal });
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (!isDraggingBox && !isResizing && !isDrawing) return;
       const rect = wrap.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
@@ -278,9 +271,9 @@ export class CropPdfController implements ViewController {
       isDrawing = false;
     };
 
-    wrap.addEventListener('pointermove', handlePointerMove, { signal });
-    wrap.addEventListener('pointerup', handlePointerUp, { signal });
-    wrap.addEventListener('pointercancel', handlePointerUp, { signal });
+    window.addEventListener('pointermove', handlePointerMove, { signal });
+    window.addEventListener('pointerup', handlePointerUp, { signal });
+    window.addEventListener('pointercancel', handlePointerUp, { signal });
   }
 
   private updateCropDisplay(): void {
@@ -339,7 +332,6 @@ export class CropPdfController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
-    const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
     const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
     hideElement(dropzoneCard);
@@ -347,9 +339,6 @@ export class CropPdfController implements ViewController {
     showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-    showElement(pageNav);
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
     if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
       filenameInput.value = `${base}_recortado.pdf`;
@@ -361,6 +350,7 @@ export class CropPdfController implements ViewController {
       this.totalPages = this.pdfDocument.numPages || 1;
       if (executeBtn) executeBtn.disabled = false;
 
+      await this.renderThumbnails();
       await this.renderCurrentPage();
       this.updateCropDisplay();
     } catch {
@@ -369,13 +359,70 @@ export class CropPdfController implements ViewController {
     }
   }
 
+  private async renderThumbnails(): Promise<void> {
+    if (!this.pdfDocument) return;
+    const container = this.container.querySelector<HTMLElement>('[data-ref="crop-thumbnails-container"]');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const numPages = this.pdfDocument.numPages;
+    for (let i = 1; i <= numPages; i++) {
+      const pageNum = i;
+      const thumbItem = document.createElement('div');
+      thumbItem.className = `pdf-editor-thumbnail ${pageNum === this.currentPage ? 'is-active' : ''}`;
+      thumbItem.setAttribute('data-ref', `crop-thumb-page-${pageNum}`);
+
+      const sheet = document.createElement('div');
+      sheet.className = 'pdf-editor-thumbnail__sheet';
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-editor-thumbnail__canvas';
+      sheet.appendChild(canvas);
+
+      const badge = document.createElement('span');
+      badge.className = 'pdf-editor-thumbnail__badge';
+      badge.textContent = `#${i}`;
+
+      thumbItem.appendChild(sheet);
+      thumbItem.appendChild(badge);
+      container.appendChild(thumbItem);
+
+      thumbItem.addEventListener('click', () => {
+        if (this.currentPage === pageNum) return;
+        this.currentPage = pageNum;
+        this.container.querySelectorAll('.pdf-editor-thumbnail').forEach((t) => t.classList.remove('is-active'));
+        thumbItem.classList.add('is-active');
+        void this.renderCurrentPage();
+      });
+
+      try {
+        const page = await this.pdfDocument.getPage(i);
+        const origVp = page.getViewport({ scale: 1 });
+        const thumbScale = 100 / origVp.width;
+        const vp = page.getViewport({ scale: thumbScale });
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = Math.floor(vp.width * dpr);
+        canvas.height = Math.floor(vp.height * dpr);
+        canvas.style.width = `${vp.width}px`;
+        canvas.style.height = `${vp.height}px`;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.scale(dpr, dpr);
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        }
+      } catch {}
+    }
+  }
+
   private async renderCurrentPage(): Promise<void> {
     if (!this.pdfDocument) return;
 
-    const pageInfoEl = this.container.querySelector<HTMLElement>('[data-ref="txt-page-info"]');
-    if (pageInfoEl) {
-      pageInfoEl.textContent = `Página ${this.currentPage} de ${this.totalPages}`;
-    }
+    const thumbs = this.container.querySelectorAll<HTMLElement>('.pdf-editor-thumbnail');
+    thumbs.forEach((t, idx) => {
+      t.classList.toggle('is-active', idx + 1 === this.currentPage);
+    });
 
     try {
       const page = await this.pdfDocument.getPage(this.currentPage);
@@ -396,10 +443,8 @@ export class CropPdfController implements ViewController {
     if (!this.currentFile || this.isProcessing) return;
     this.hideError();
 
-    const radioAll = this.container.querySelector<HTMLInputElement>('[data-ref="radio-all-pages"]');
-
     const optionsPayload = {
-      applyToAll: radioAll?.checked !== false,
+      applyToAll: this.cropAllPages,
       cropBox: this.cropPercent,
       targetPageIndex: this.currentPage - 1,
     };
@@ -486,14 +531,10 @@ export class CropPdfController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
-    const pageNav = this.container.querySelector<HTMLElement>('[data-ref="crop-page-nav"]');
     const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    hideElement(pageNav);
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
     if (filenameInput) filenameInput.value = 'documento_recortado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
   }

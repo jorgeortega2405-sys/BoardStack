@@ -92,9 +92,132 @@
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
+        <div class="tool-sidebar-notice" data-ref="converter-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
           <div class="tool-sidebar-notice__text">El archivo se convertirá extrayendo el contenido, tablas e imágenes con la mayor precisión.</div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-pdf-to-jpg-options">
+          <span class="tool-sidebar__section-title">Modo de conversión</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-jpg-mode" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-jpg-mode-pages" data-val="pages">Páginas a JPG</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-jpg-mode-extract" data-val="extract">Extraer imágenes</button>
+          </div>
+
+          <div class="compress-quality-card" data-ref="jpg-mode-desc-card">
+            <p class="compress-quality-card__desc" data-ref="jpg-mode-desc-text">Cada página del PDF se convertirá en una imagen JPG.</p>
+          </div>
+
+          <span class="tool-sidebar__section-title">Calidad de imagen</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-jpg-quality" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-jpg-quality-normal" data-val="normal">Normal</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-jpg-quality-high" data-val="high">Alta</button>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-pdf-to-word-options">
+          <span class="tool-sidebar__section-title">Reconocimiento óptico (OCR)</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-word-ocr" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-word-ocr-no" data-val="no">Sin OCR</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-word-ocr-yes" data-val="yes">Con OCR</button>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-pdf-to-powerpoint-options">
+          <span class="tool-sidebar__section-title">Reconocimiento óptico (OCR)</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-powerpoint-ocr" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-powerpoint-ocr-no" data-val="no">Sin OCR</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-powerpoint-ocr-yes" data-val="yes">Con OCR</button>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-pdf-to-excel-options">
+          <span class="tool-sidebar__section-title">Reconocimiento óptico (OCR)</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-excel-ocr" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-excel-ocr-no" data-val="no">Sin OCR</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-excel-ocr-yes" data-val="yes">Con OCR</button>
+          </div>
+
+          <span class="tool-sidebar__section-title">Hojas de cálculo</span>
+          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-excel-sheets" data-active="0">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-excel-sheets-single" data-val="single">Una sola hoja</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-excel-sheets-multiple" data-val="multiple">Varias hojas</button>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section is-hidden" data-ref="section-pdf-to-pdfa-options">
+          <div class="tool-sidebar-notice" data-ref="pdfa-sidebar-notice">
+            <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+            <div class="tool-sidebar-notice__text">PDF/A es una versión estandarizada ISO del Formato de Documento Portátil (PDF) especial para el archivado y conservación de documentos electrónicos a largo plazo.<br><br>Elige con qué nivel de conformidad deseas convertir tus documentos:</div>
+          </div>
+
+          <span class="tool-sidebar__section-title">Nivel de conformidad</span>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-pdfa-level">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-pdfa-level" aria-label="Nivel de conformidad">
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-pdfa-level">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-pdfa-level" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="pdfa-level-selected-text">PDF/A-1b</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-pdfa-level-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-pdfa-level">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-pdfa-level">
+                <div class="menu-panel__list" data-ref="list-pdfa-levels">
+                  <button type="button" class="menu-item is-active" data-ref="option-pdfa-1b" data-value="1b">
+                    <span class="menu-item__text">PDF/A-1b</span>
+                    <svg class="component-icon menu-item__icon" data-ref="check-pdfa-1b" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-1a" data-value="1a">
+                    <span class="menu-item__text">PDF/A-1a</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-1a" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-2b" data-value="2b">
+                    <span class="menu-item__text">PDF/A-2b</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-2b" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-2u" data-value="2u">
+                    <span class="menu-item__text">PDF/A-2u</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-2u" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-2a" data-value="2a">
+                    <span class="menu-item__text">PDF/A-2a</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-2a" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-3b" data-value="3b">
+                    <span class="menu-item__text">PDF/A-3b</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-3b" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-3u" data-value="3u">
+                    <span class="menu-item__text">PDF/A-3u</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-3u" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-pdfa-3a" data-value="3a">
+                    <span class="menu-item__text">PDF/A-3a</span>
+                    <svg class="component-icon menu-item__icon is-hidden" data-ref="check-pdfa-3a" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="compress-quality-card pdfa-legend-card" data-ref="pdfa-legend-card">
+            <div class="pdfa-legend-card__content" data-ref="pdfa-legend-content"></div>
+          </div>
+
+          <label class="split-option-card" data-ref="card-allow-downgrade">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title">Permite bajar el nivel de cumplimiento de PDF/A</span>
+              <span class="split-option-card__subtitle">Para convertir a PDF/A, cuando se encuentran ciertos elementos en el PDF original, es posible que se necesite una degradación de conformidad para poder realizar la conversión.</span>
+            </div>
+            <input class="component-checkbox" data-ref="check-allow-downgrade" type="checkbox" checked />
+          </label>
         </div>
       </div>
 

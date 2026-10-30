@@ -2,10 +2,15 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
-dotenv.config();
-const localEnvPath = path.resolve(import.meta.dirname, '../../.env');
-if (fs.existsSync(localEnvPath)) {
-  dotenv.config({ path: localEnvPath });
+const envCandidates = [
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'apps/BoardPDF/.env'),
+  path.resolve(import.meta.dirname, '../../.env'),
+];
+for (const p of envCandidates) {
+  if (fs.existsSync(p)) {
+    dotenv.config({ override: true, path: p });
+  }
 }
 
 export const config = {
@@ -33,8 +38,20 @@ export const config = {
     appSecret: process.env.DROPBOX_APP_SECRET || '',
   },
   gemini: {
-    apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    get apiKey(): string {
+      if (!process.env.GEMINI_API_KEY) {
+        for (const p of envCandidates) {
+          if (fs.existsSync(p)) {
+            dotenv.config({ override: true, path: p });
+            if (process.env.GEMINI_API_KEY) break;
+          }
+        }
+      }
+      return process.env.GEMINI_API_KEY || '';
+    },
+    get model(): string {
+      return process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
+    },
   },
   googlePicker: {
     apiKey: process.env.VITE_GOOGLE_API_KEY || '',

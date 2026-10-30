@@ -1,20 +1,4 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="summarize-pdf-wrapper">
-  <header class="component-top tool-top is-hidden" data-ref="component-top">
-    <div class="tool-top__left"></div>
-
-    <div class="component-top-right tool-top__right">
-      <div class="pdf-viewer-toolbar__group pdf-viewer-toolbar__group--actions pdf-top-controls is-hidden" data-ref="toolbar-actions-group">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-        </button>
-        <span class="pdf-viewer-toolbar__badge" data-ref="viewer-zoom-level">100%</span>
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        </button>
-      </div>
-    </div>
-  </header>
-
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="summarize-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="summarize-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
@@ -44,10 +28,6 @@
 
       <div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
         <div class="pdf-viewer-main-layout">
-          <aside class="pdf-viewer-pages-sidebar">
-            <div class="pdf-viewer-thumbnails-scroll" data-ref="thumbnails-container"></div>
-          </aside>
-
           <div class="pdf-viewer-canvas-container" data-ref="viewer-scroll-container">
             <div class="pdf-viewer-pages-wrapper" data-ref="pages-wrapper"></div>
           </div>
@@ -68,45 +48,14 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">Resumir PDF</h1>
-        <p class="tool-sidebar__subtitle">Lee, comprende y sintetiza cualquier documento PDF de forma inteligente.</p>
+        <h1 class="tool-sidebar__title">Resumen con IA</h1>
+        <p class="tool-sidebar__subtitle">Puntos clave, ideas principales y conclusiones generadas por inteligencia artificial.</p>
       </div>
 
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Nuestra inteligencia artificial leerá y resumirá los puntos clave y conclusiones del documento.</div>
+      <div class="tool-sidebar__body tool-sidebar__body--chat" data-ref="summarize-sidebar-body">
+        <div class="ai-summary-result-panel ai-summary-result-panel--full is-hidden" data-ref="section-summary-result">
+          <div class="ai-summary-content" data-ref="summary-rendered-text"></div>
         </div>
-
-        <div class="tool-sidebar__section is-hidden" data-ref="section-processing">
-          <div class="ai-pulse-bar" data-ref="ai-pulse-bar"></div>
-          <p class="tool-sidebar__subtitle ai-processing-status">Leyendo documento y sintetizando...</p>
-        </div>
-
-        <div class="tool-sidebar__section is-hidden" data-ref="section-summary-result">
-          <div class="ai-summary-result-panel">
-            <div class="ai-summary-header">
-              <div class="ai-summary-meta">
-                <span class="ai-summary-badge" data-ref="summary-badge-model">BoardPDF AI</span>
-                <span class="ai-summary-badge" data-ref="summary-badge-words">0 palabras</span>
-              </div>
-              <button type="button" class="component-button component-button--secondary component-button--h36" data-ref="btn-copy-summary" title="Copiar resumen al portapapeles">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#file_copy"></use></svg>
-                <span>Copiar</span>
-              </button>
-            </div>
-            <div class="ai-summary-content" data-ref="summary-rendered-text"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-summarize-action" disabled>
-          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-          <span>Generar Resumen</span>
-          <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="summarize-global-error" role="alert"></div>
       </div>
     </aside>
   </div>

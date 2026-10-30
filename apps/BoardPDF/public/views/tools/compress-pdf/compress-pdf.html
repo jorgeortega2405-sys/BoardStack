@@ -94,45 +94,20 @@
       <div class="tool-sidebar__body">
         <div class="tool-sidebar__section">
           <span class="tool-sidebar__section-title">Nivel de Compresión</span>
-          <div class="pdf-compress-options" data-ref="compress-options-container">
-            <label class="pdf-compress-option" data-level="extreme">
-              <input class="pdf-compress-option__radio" data-ref="radio-compress-extreme" type="radio" name="compress-level" value="extreme" />
-              <div class="pdf-compress-option__body">
-                <div class="pdf-compress-option__title-row">
-                  <span class="pdf-compress-option__title">Alta Compresión</span>
-                  <span class="pdf-compress-option__badge">Menor tamaño</span>
-                </div>
-                <p class="pdf-compress-option__desc">Máxima reducción de peso (72 DPI). Ideal para enviar por correo o web.</p>
-              </div>
-            </label>
-
-            <label class="pdf-compress-option is-active" data-level="recommended">
-              <input class="pdf-compress-option__radio" data-ref="radio-compress-recommended" type="radio" name="compress-level" value="recommended" checked />
-              <div class="pdf-compress-option__body">
-                <div class="pdf-compress-option__title-row">
-                  <span class="pdf-compress-option__title">Compresión Recomendada</span>
-                  <span class="pdf-compress-option__badge">Recomendado</span>
-                </div>
-                <p class="pdf-compress-option__desc">Excelente balance entre calidad nítida y reducción sustancial de tamaño (150 DPI).</p>
-              </div>
-            </label>
-
-            <label class="pdf-compress-option" data-level="low">
-              <input class="pdf-compress-option__radio" data-ref="radio-compress-low" type="radio" name="compress-level" value="low" />
-              <div class="pdf-compress-option__body">
-                <div class="pdf-compress-option__title-row">
-                  <span class="pdf-compress-option__title">Baja Compresión</span>
-                  <span class="pdf-compress-option__badge">Alta calidad</span>
-                </div>
-                <p class="pdf-compress-option__desc">Compresión ligera preservando resolución óptima (300 DPI) para impresión.</p>
-              </div>
-            </label>
+          <div class="component-toggle-pill component-toggle-pill--3" data-ref="compress-level-toggle" data-level="recommended" data-active="1">
+            <div class="component-toggle-pill-glider"></div>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-compress-extreme" data-level="extreme">Extrema</button>
+            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-compress-recommended" data-level="recommended">Recomendada</button>
+            <button type="button" class="component-button component-button--pill" data-ref="btn-compress-low" data-level="low">Baja</button>
           </div>
         </div>
 
-        <div class="tool-sidebar-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">La compresión mantendrá la estructura, texto y páginas del documento original.</div>
+        <div class="compress-quality-card" data-ref="compress-quality-card">
+          <div class="compress-quality-card__header">
+            <svg class="component-icon compress-quality-card__icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
+            <span class="compress-quality-card__title" data-ref="compress-quality-title">Compresión recomendada</span>
+          </div>
+          <p class="compress-quality-card__desc" data-ref="compress-quality-desc">Buena calidad visual, reducción sustancial de tamaño.</p>
         </div>
       </div>
 

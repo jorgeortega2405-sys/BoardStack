@@ -37,26 +37,6 @@ Estructura la respuesta de la siguiente forma con formato Markdown limpio:
 };
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const tempId = randomUUID();
-  const tempPath = path.join(os.tmpdir(), `boardpdf_sum_${tempId}.pdf`);
-
-  await fs.writeFile(tempPath, buffer);
-
-  try {
-    const { stdout } = await execFileAsync('pdftotext', [tempPath, '-'], {
-      maxBuffer: 30 * 1024 * 1024,
-    });
-    if (stdout && stdout.trim().length > 0) {
-      return stdout.trim();
-    }
-  } catch (error) {
-    logger.app.warn('Fallo al extraer texto con pdftotext, intentando con pdfjs-dist', { error });
-  } finally {
-    try {
-      await fs.unlink(tempPath);
-    } catch {}
-  }
-
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
@@ -71,11 +51,33 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
       pagesText.push(pageStrings.join(' '));
     }
 
-    return pagesText.join('\n\n').trim();
+    const fullText = pagesText.join('\n\n').trim();
+    if (fullText.length > 0) {
+      return fullText;
+    }
   } catch (err) {
-    logger.app.warn('Error al extraer texto con pdfjs-dist en summarize-pdf', err);
-    return '';
+    logger.app.warn('Fallo al extraer texto con pdfjs-dist en summarize-pdf', { error: err });
   }
+
+  const tempId = randomUUID();
+  const tempPath = path.join(os.tmpdir(), `boardpdf_sum_${tempId}.pdf`);
+
+  try {
+    await fs.writeFile(tempPath, buffer);
+    const { stdout } = await execFileAsync('pdftotext', [tempPath, '-'], {
+      maxBuffer: 30 * 1024 * 1024,
+    });
+    if (stdout && stdout.trim().length > 0) {
+      return stdout.trim();
+    }
+  } catch {
+  } finally {
+    try {
+      await fs.unlink(tempPath);
+    } catch {}
+  }
+
+  return '';
 }
 
 async function callGeminiApi(prompt: string, text: string, modelName: string, apiKey: string): Promise<string> {
@@ -150,8 +152,8 @@ export async function summarizePdf(params: SummarizePdfParams): Promise<Summariz
   const basePrompt = MODE_PROMPTS[mode] || MODE_PROMPTS.standard;
   const finalPrompt = customPrompt ? `${basePrompt}\n\nInstrucción adicional del usuario: ${customPrompt}` : basePrompt;
 
-  const primaryModel = config.gemini.model || 'gemini-3.5-flash';
-  const fallbackModels = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
+  const primaryModel = config.gemini.model || 'gemini-flash-lite-latest';
+  const fallbackModels = ['gemini-flash-lite-latest', 'gemini-2.0-flash'];
 
   let summary = '';
   let usedModel = primaryModel;

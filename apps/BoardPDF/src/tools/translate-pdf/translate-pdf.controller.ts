@@ -47,6 +47,7 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     const mode = req.body.mode === 'standard' ? 'standard' : 'advanced';
     const targetLang = typeof req.body.targetLang === 'string' ? req.body.targetLang.trim() : '';
     const sourceLang = typeof req.body.sourceLang === 'string' ? req.body.sourceLang.trim() : undefined;
+    const layoutMode = req.body.layoutMode === 'text_only' ? 'text_only' : 'preserve';
 
     if (!targetLang) {
       res.status(400).json({
@@ -59,6 +60,7 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     const result = await translatePdf({
       buffer: file.buffer,
       filename: file.filename || file.originalname,
+      layoutMode,
       originalname: file.originalname,
       sourceLang,
       targetLang,
@@ -72,6 +74,14 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     logger.app.error('Error al procesar la traducción del PDF', {
       error: error?.message || error,
     });
+
+    if (error?.message === 'EMPTY_PDF_TEXT') {
+      res.status(400).json({
+        error: 'No se pudo detectar texto para traducir en el documento PDF seleccionado.',
+        success: false,
+      });
+      return;
+    }
 
     if (error?.message === 'DEEPL_QUOTA_EXCEEDED') {
       res.status(429).json({

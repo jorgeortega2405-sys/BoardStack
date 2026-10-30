@@ -3,6 +3,23 @@
     <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="repair-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
 
+      <div class="tool-fab-container" data-ref="tool-fab-container">
+        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
+          <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
+            <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
+          </button>
+          <div class="tool-fab-more__options" data-ref="tool-fab-options">
+            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
+              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+            </button>
+            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-dropbox" data-tooltip="Dropbox" data-tooltip-placement="left" aria-label="Dropbox">
+              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="tool-workspace__canvas" data-ref="repair-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="repair-dropzone">
           <h1 class="tool-hero-dropzone__title">Reparar PDF</h1>
@@ -53,12 +70,6 @@
             <span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
           </div>
         </div>
-
-        <div class="tool-fab-container">
-          <button type="button" class="tool-fab-btn" data-ref="btn-repair-fab-add" data-tooltip="Cambiar archivo" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          </button>
-        </div>
       </div>
     </main>
 
@@ -83,24 +94,6 @@
         <div class="tool-sidebar-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
           <div class="tool-sidebar-notice__text">El archivo será analizado y reparado manteniendo el contenido recuperable intacto.</div>
-        </div>
-
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Diagnóstico y Reparación</span>
-          <div class="pdf-repair-info-box">
-            <div class="pdf-repair-info-box__item">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-              <span>Reconstrucción de índices y xrefs dañados</span>
-            </div>
-            <div class="pdf-repair-info-box__item">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-              <span>Recuperación de páginas y catálogos rotos</span>
-            </div>
-            <div class="pdf-repair-info-box__item">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-              <span>Sanitización y normalización de objetos PDF</span>
-            </div>
-          </div>
         </div>
       </div>
 

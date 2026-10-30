@@ -49,6 +49,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
             '**/data/**',
             '**/.git/**',
             '**/public/uploads/**',
+            '**/test/**',
             '**/tests/**',
             '**/scripts/**',
           ],
@@ -240,3 +241,4 @@ async function startServer(): Promise<void> {
 }
 
 void startServer();
+

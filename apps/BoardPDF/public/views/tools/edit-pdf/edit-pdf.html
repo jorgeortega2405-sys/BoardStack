@@ -2,14 +2,15 @@
   <header class="component-top tool-top is-hidden" data-ref="component-top">
     <div class="tool-top__left">
       <div class="pdf-editor-top-controls pdf-top-controls is-hidden" data-ref="editor-top-controls">
-        <div class="pdf-editor-mode-switcher" data-ref="mode-switcher">
-          <button type="button" class="pdf-editor-mode-btn is-active" data-ref="btn-mode-annotate" data-mode="annotate">
+        <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-editor-mode" data-active="0">
+          <div class="component-toggle-pill-glider"></div>
+          <button type="button" class="component-button component-button--pill is-active" data-ref="btn-mode-annotate" data-mode="annotate">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-            <span class="pdf-editor-mode-btn__text">Anotar</span>
+            <span>Anotar</span>
           </button>
-          <button type="button" class="pdf-editor-mode-btn" data-ref="btn-mode-edit" data-mode="edit">
+          <button type="button" class="component-button component-button--pill" data-ref="btn-mode-edit" data-mode="edit">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_text"></use></svg>
-            <span class="pdf-editor-mode-btn__text">Editar</span>
+            <span>Editar</span>
           </button>
         </div>
 
@@ -22,20 +23,14 @@
           <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-text" data-tool="text" data-tooltip="Añadir texto" aria-label="Texto">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#title"></use></svg>
           </button>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-shapes" data-tool="shapes" data-tooltip="Formas y figuras" aria-label="Formas">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+          </button>
           <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-image" data-tool="image" data-tooltip="Añadir imagen" aria-label="Imagen">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
           </button>
           <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-draw" data-tool="draw" data-tooltip="Dibujar a mano alzada" aria-label="Dibujar">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-          </button>
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-line" data-tool="line" data-tooltip="Línea recta" aria-label="Línea">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
-          </button>
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-rect" data-tool="rect" data-tooltip="Rectángulo" aria-label="Rectángulo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
-          </button>
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="tool-circle" data-tool="circle" data-tooltip="Círculo" aria-label="Círculo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#radio_button_unchecked"></use></svg>
           </button>
         </div>
 
@@ -59,16 +54,99 @@
 
         <div class="tool-top__divider"></div>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-        </button>
-        <span class="pdf-editor-status-pill" data-ref="val-zoom-level">100%</span>
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        </button>
+        <div class="component-inline-control component-inline-control--sm" data-ref="control-zoom">
+          <div class="component-inline-control__group">
+            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-out" data-step-change="-1" aria-label="Disminuir zoom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+          </div>
+          <input class="component-inline-control__input" data-ref="val-zoom-level" type="text" value="100%" readonly autocomplete="off" />
+          <div class="component-inline-control__group">
+            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-in" data-step-change="1" aria-label="Aumentar zoom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
+
+  <div class="pdf-editor-subtoolbar is-hidden" data-ref="editor-subtoolbar">
+    <div class="pdf-editor-subtoolbar__group is-hidden" data-ref="subtoolbar-shapes">
+      <button type="button" class="component-button component-button--h36 component-button--icon-only is-active" data-ref="btn-sub-rect" data-shape="rect" data-tooltip="Rectángulo" aria-label="Rectángulo">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-sub-circle" data-shape="circle" data-tooltip="Círculo" aria-label="Círculo">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#radio_button_unchecked"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-sub-line" data-shape="line" data-tooltip="Línea" aria-label="Línea">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
+      </button>
+
+      <div class="pdf-editor-subtoolbar__divider"></div>
+
+      <div class="pdf-editor-subtoolbar__group" data-ref="sub-shape-stroke-group">
+        <span class="tool-sidebar__hint-text--compact">Borde:</span>
+        <button type="button" class="pdf-editor-subtoolbar__color-trigger" data-ref="btn-trigger-stroke-color">
+          <div class="pdf-editor-subtoolbar__color-preview" data-ref="preview-stroke-color" style="background-color: #000000;"></div>
+        </button>
+      </div>
+
+      <div class="pdf-editor-subtoolbar__group" data-ref="sub-shape-fill-group">
+        <span class="tool-sidebar__hint-text--compact">Relleno:</span>
+        <button type="button" class="pdf-editor-subtoolbar__color-trigger" data-ref="btn-trigger-fill-color">
+          <div class="pdf-editor-subtoolbar__color-preview" data-ref="preview-fill-color" style="background-color: transparent;"></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="pdf-editor-subtoolbar__group is-hidden" data-ref="subtoolbar-text">
+      <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-text-bold" data-tooltip="Negrita" aria-label="Negrita">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-text-italic" data-tooltip="Cursiva" aria-label="Cursiva">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_italic"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-text-underline" data-tooltip="Subrayado" aria-label="Subrayado">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_underlined"></use></svg>
+      </button>
+
+      <div class="pdf-editor-subtoolbar__divider"></div>
+
+      <div class="pdf-editor-subtoolbar__group">
+        <span class="tool-sidebar__hint-text--compact">Color:</span>
+        <button type="button" class="pdf-editor-subtoolbar__color-trigger" data-ref="btn-trigger-text-color">
+          <div class="pdf-editor-subtoolbar__color-preview" data-ref="preview-text-color" style="background-color: #000000;"></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="pdf-editor-subtoolbar__group is-hidden" data-ref="subtoolbar-draw">
+      <div class="pdf-editor-subtoolbar__group">
+        <span class="tool-sidebar__hint-text--compact">Color de trazo:</span>
+        <button type="button" class="pdf-editor-subtoolbar__color-trigger" data-ref="btn-trigger-draw-color">
+          <div class="pdf-editor-subtoolbar__color-preview" data-ref="preview-draw-color" style="background-color: #000000;"></div>
+        </button>
+      </div>
+      <div class="pdf-editor-subtoolbar__group">
+        <span class="tool-sidebar__hint-text--compact">Grosor:</span>
+        <div class="pdf-stroke-options" data-ref="draw-stroke-options">
+          <button type="button" class="pdf-stroke-btn" data-ref="stroke-1" data-width="1" aria-label="1 píxel">
+            <span class="pdf-stroke-btn__line pdf-stroke-btn__line--1"></span>
+          </button>
+          <button type="button" class="pdf-stroke-btn is-active" data-ref="stroke-2" data-width="2" aria-label="2 píxeles">
+            <span class="pdf-stroke-btn__line pdf-stroke-btn__line--2"></span>
+          </button>
+          <button type="button" class="pdf-stroke-btn" data-ref="stroke-4" data-width="4" aria-label="4 píxeles">
+            <span class="pdf-stroke-btn__line pdf-stroke-btn__line--4"></span>
+          </button>
+          <button type="button" class="pdf-stroke-btn" data-ref="stroke-8" data-width="8" aria-label="8 píxeles">
+            <span class="pdf-stroke-btn__line pdf-stroke-btn__line--8"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="edit-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="edit-pdf-workspace">
@@ -125,69 +203,23 @@
       </div>
 
       <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">Propiedades</h1>
-        <p class="tool-sidebar__subtitle">Personaliza los colores, fuentes y atributos del elemento seleccionado.</p>
+        <h1 class="tool-sidebar__title">Editar PDF</h1>
+        <p class="tool-sidebar__subtitle">Modifica o añade texto, carga imágenes o anota en tus páginas PDF.</p>
       </div>
 
       <div class="tool-sidebar__body">
         <div class="tool-sidebar-notice" data-ref="edit-info-notice">
           <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Haz clic en los elementos agregados en el documento para ajustar sus propiedades de color y trazo.</div>
-        </div>
-        <div class="tool-sidebar__section" data-ref="section-color">
-          <span class="tool-sidebar__section-title">Color de Trazo / Texto</span>
-          <div class="pdf-color-swatches" data-ref="color-swatches-stroke">
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--black is-active" data-ref="swatch-black" data-color="#000000" aria-label="Negro"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--red" data-ref="swatch-red" data-color="#ef4444" aria-label="Rojo"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--blue" data-ref="swatch-blue" data-color="#3b82f6" aria-label="Azul"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--green" data-ref="swatch-green" data-color="#10b981" aria-label="Verde"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--yellow" data-ref="swatch-yellow" data-color="#f59e0b" aria-label="Amarillo"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--purple" data-ref="swatch-purple" data-color="#8b5cf6" aria-label="Púrpura"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--white" data-ref="swatch-white" data-color="#ffffff" aria-label="Blanco"></button>
-          </div>
+          <div class="tool-sidebar-notice__text">Utiliza la barra de herramientas para modificar o añadir texto, cargar imágenes o anotar de una forma fácil.</div>
         </div>
 
-        <div class="tool-sidebar__section" data-ref="section-fill">
-          <span class="tool-sidebar__section-title">Color de Relleno (Formas)</span>
-          <div class="pdf-color-swatches" data-ref="color-swatches-fill">
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-transparent is-active" data-ref="fill-transparent" data-color="transparent" aria-label="Transparente"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-white" data-ref="fill-white" data-color="#ffffff" aria-label="Blanco"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-yellow" data-ref="fill-yellow" data-color="#fef3c7" aria-label="Amarillo claro"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-blue" data-ref="fill-blue" data-color="#dbeafe" aria-label="Azul claro"></button>
-            <button type="button" class="pdf-color-swatch pdf-color-swatch--fill-red" data-ref="fill-red" data-color="#fee2e2" aria-label="Rojo claro"></button>
+        <div class="pdf-editor-elements-container" data-ref="elements-container">
+          <div class="pdf-editor-elements-header is-hidden" data-ref="elements-header">
+            <span class="pdf-editor-elements-title" data-ref="txt-elements-count">Elementos añadidos</span>
+            <button type="button" class="component-button component-button--ghost component-button--danger component-button--sm" data-ref="btn-clear-all-elements">Eliminar todos</button>
           </div>
+          <div class="pdf-editor-elements-list" data-ref="elements-list"></div>
         </div>
-
-        <div class="tool-sidebar__section" data-ref="section-stroke-width">
-          <span class="tool-sidebar__section-title">Grosor de Línea</span>
-          <div class="pdf-stroke-options" data-ref="stroke-options">
-            <button type="button" class="pdf-stroke-btn" data-ref="stroke-1" data-width="1" aria-label="1 píxel">
-              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--1"></span>
-            </button>
-            <button type="button" class="pdf-stroke-btn is-active" data-ref="stroke-2" data-width="2" aria-label="2 píxeles">
-              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--2"></span>
-            </button>
-            <button type="button" class="pdf-stroke-btn" data-ref="stroke-4" data-width="4" aria-label="4 píxeles">
-              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--4"></span>
-            </button>
-            <button type="button" class="pdf-stroke-btn" data-ref="stroke-8" data-width="8" aria-label="8 píxeles">
-              <span class="pdf-stroke-btn__line pdf-stroke-btn__line--8"></span>
-            </button>
-          </div>
-        </div>
-
-        <div class="tool-sidebar__section" data-ref="section-font-size">
-          <span class="tool-sidebar__section-title">Tamaño de Fuente</span>
-          <div class="pdf-font-size-options" data-ref="font-size-options">
-            <button type="button" class="pdf-font-size-btn" data-ref="font-12" data-size="12">12</button>
-            <button type="button" class="pdf-font-size-btn is-active" data-ref="font-14" data-size="14">14</button>
-            <button type="button" class="pdf-font-size-btn" data-ref="font-16" data-size="16">16</button>
-            <button type="button" class="pdf-font-size-btn" data-ref="font-20" data-size="20">20</button>
-            <button type="button" class="pdf-font-size-btn" data-ref="font-24" data-size="24">24</button>
-            <button type="button" class="pdf-font-size-btn" data-ref="font-32" data-size="32">32</button>
-          </div>
-        </div>
-
       </div>
 
       <div class="tool-sidebar__footer">

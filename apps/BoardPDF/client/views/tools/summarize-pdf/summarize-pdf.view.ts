@@ -1,17 +1,15 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
-import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, animateTypewriter, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
-import { formatBytes } from '../../../utils/format.util.js';
+import { ToolSidebarModalController, animateTypewriter, bindFileDropzone, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { SummarizePdfResultData } from './summarize-pdf.types.js';
 
 function renderSimpleMarkdown(md: string): string {
@@ -30,29 +28,39 @@ function renderSimpleMarkdown(md: string): string {
       continue;
     }
 
-    if (line.startsWith('# ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h1>${escapeHtml(line.slice(2))}</h1>`;
-      continue;
-    }
-    if (line.startsWith('## ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h2>${escapeHtml(line.slice(3))}</h2>`;
-      continue;
-    }
     if (line.startsWith('### ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h3>${escapeHtml(line.slice(4))}</h3>`;
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<h3>${formatInlineMarkdown(line.slice(4))}</h3>`;
       continue;
     }
 
-    if (line.startsWith('* ') || line.startsWith('- ') || /^\d+\.\s/.test(line)) {
+    if (line.startsWith('## ')) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<h2>${formatInlineMarkdown(line.slice(3))}</h2>`;
+      continue;
+    }
+
+    if (line.startsWith('# ')) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<h1>${formatInlineMarkdown(line.slice(2))}</h1>`;
+      continue;
+    }
+
+    if (line.startsWith('- ') || line.startsWith('* ')) {
       if (!inList) {
         html += '<ul>';
         inList = true;
       }
-      const itemText = line.replace(/^(\*|-|\d+\.)\s+/, '');
-      html += `<li>${formatInlineMarkdown(escapeHtml(itemText))}</li>`;
+      html += `<li>${formatInlineMarkdown(line.slice(2))}</li>`;
       continue;
     }
 
@@ -61,7 +69,7 @@ function renderSimpleMarkdown(md: string): string {
       inList = false;
     }
 
-    html += `<p>${formatInlineMarkdown(escapeHtml(line))}</p>`;
+    html += `<p>${formatInlineMarkdown(line)}</p>`;
   }
 
   if (inList) {
@@ -69,13 +77,6 @@ function renderSimpleMarkdown(md: string): string {
   }
 
   return html;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 function formatInlineMarkdown(text: string): string {
@@ -87,7 +88,6 @@ function formatInlineMarkdown(text: string): string {
 
 export class SummarizePdfController implements ViewController {
   private abortController: AbortController | null = null;
-  private activePageIndex = 0;
   private container: HTMLElement;
   private currentFile: File | null = null;
   private currentResult: SummarizePdfResultData | null = null;
@@ -138,10 +138,6 @@ export class SummarizePdfController implements ViewController {
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     const dropzone = this.container.querySelector<HTMLElement>('[data-ref="summarize-dropzone"]');
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const actionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
-    const copyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-summary"]');
-    const zoomInBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-in"]');
-    const zoomOutBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-out"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
@@ -195,76 +191,41 @@ export class SummarizePdfController implements ViewController {
       },
       signal,
     });
-
-    zoomInBtn?.addEventListener('click', () => {
-      if (this.zoomScale < 2.0) {
-        this.zoomScale = Math.min(2.0, this.zoomScale + 0.15);
-        this.updateZoomDisplay();
-        void this.renderAllPages();
-      }
-    }, { signal });
-
-    zoomOutBtn?.addEventListener('click', () => {
-      if (this.zoomScale > 0.5) {
-        this.zoomScale = Math.max(0.5, this.zoomScale - 0.15);
-        this.updateZoomDisplay();
-        void this.renderAllPages();
-      }
-    }, { signal });
-
-    actionBtn?.addEventListener('click', () => {
-      void this.handleSummarize(actionBtn);
-    }, { signal });
-
-    copyBtn?.addEventListener('click', () => {
-      this.handleCopySummary();
-    }, { signal });
   }
 
   private async handleDriveImport(): Promise<void> {
     if (this.isProcessing) return;
-    this.hideError();
     try {
       const files = await pickGoogleDriveFiles({ multiselect: false });
       if (files.length > 0) {
         await this.handleFileSelected(files[0]);
       }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
+    } catch {
+      showToast('Error al importar archivo desde Google Drive.', 'danger');
     }
   }
 
   private async handleDropboxImport(): Promise<void> {
     if (this.isProcessing) return;
-    this.hideError();
     try {
       const files = await pickDropboxFiles({ multiselect: false });
       if (files.length > 0) {
         await this.handleFileSelected(files[0]);
       }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
-    }
-  }
-
-  private updateZoomDisplay(): void {
-    const zoomEl = this.container.querySelector<HTMLElement>('[data-ref="viewer-zoom-level"]');
-    if (zoomEl) {
-      zoomEl.textContent = `${Math.round(this.zoomScale * 100)}%`;
+    } catch {
+      showToast('Error al importar archivo desde Dropbox.', 'danger');
     }
   }
 
   public async handleFileSelected(file: File): Promise<void> {
-    this.hideError();
-
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      this.showError('Solo se permiten documentos en formato PDF.');
+      showToast('Solo se permiten documentos en formato PDF.', 'danger');
       return;
     }
 
     const limits = getCurrentUserToolLimits('summarize-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo PDF excede el límite máximo de ${limits.maxFileSizeMB} MB.`);
+      showToast(`El archivo PDF excede el límite máximo de ${limits.maxFileSizeMB} MB.`, 'danger');
       return;
     }
 
@@ -274,22 +235,18 @@ export class SummarizePdfController implements ViewController {
       const buffer = await file.arrayBuffer();
       this.pdfDocument = await loadPdfDocument(buffer);
 
-      this.renderViewerState(file);
-      await this.renderThumbnails();
-      await this.renderAllPages();
+      this.renderViewerState();
+      void this.renderAllPages();
+      await this.startSummarize();
     } catch {
-      this.showError('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté protegido o dañado.');
+      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté protegido o dañado.', 'danger');
       this.resetSelectedFile();
     }
   }
 
-  private renderViewerState(file: File): void {
+  private renderViewerState(): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-dropzone-card"]');
     const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
-    const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="viewer-file-name"]');
-    const pageCountEl = this.container.querySelector<HTMLElement>('[data-ref="viewer-page-count"]');
-    const pagesCountBadge = this.container.querySelector<HTMLElement>('[data-ref="pages-count-badge"]');
-    const actionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
@@ -299,82 +256,6 @@ export class SummarizePdfController implements ViewController {
     showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (outputNameInput) {
-      const baseName = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${baseName}_resumen.pdf`;
-    }
-    const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(zoomActions);
-    showElement(topHeader);
-
-    const numPages = this.pdfDocument?.numPages || 1;
-    if (fileNameEl) fileNameEl.textContent = file.name;
-    if (pageCountEl) pageCountEl.textContent = `${numPages} página${numPages === 1 ? '' : 's'}`;
-    if (pagesCountBadge) pagesCountBadge.textContent = `${numPages}`;
-    if (actionBtn) actionBtn.disabled = false;
-  }
-
-  private async renderThumbnails(): Promise<void> {
-    if (!this.pdfDocument) return;
-    const container = this.container.querySelector<HTMLElement>('[data-ref="thumbnails-container"]');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const numPages = this.pdfDocument.numPages;
-    for (let i = 1; i <= numPages; i++) {
-      const pageIndex = i - 1;
-      const thumbItem = document.createElement('div');
-      thumbItem.className = `pdf-viewer-thumbnail ${pageIndex === this.activePageIndex ? 'is-active' : ''}`;
-      thumbItem.setAttribute('data-ref', `thumb-page-${pageIndex}`);
-
-      const sheet = document.createElement('div');
-      sheet.className = 'pdf-viewer-thumbnail__sheet';
-
-      const canvas = document.createElement('canvas');
-      canvas.className = 'pdf-viewer-thumbnail__canvas';
-      sheet.appendChild(canvas);
-
-      const badge = document.createElement('span');
-      badge.className = 'pdf-viewer-thumbnail__badge';
-      badge.textContent = `#${i}`;
-
-      thumbItem.appendChild(sheet);
-      thumbItem.appendChild(badge);
-      container.appendChild(thumbItem);
-
-      thumbItem.addEventListener('click', () => {
-        this.activePageIndex = pageIndex;
-        this.container.querySelectorAll('.pdf-viewer-thumbnail').forEach((t) => t.classList.remove('is-active'));
-        thumbItem.classList.add('is-active');
-
-        const targetPageCard = this.container.querySelector<HTMLElement>(`[data-page-index="${pageIndex}"]`);
-        if (targetPageCard) {
-          targetPageCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-
-      try {
-        const page = await this.pdfDocument.getPage(i);
-        const origVp = page.getViewport({ scale: 1 });
-        const thumbScale = 100 / origVp.width;
-        const vp = page.getViewport({ scale: thumbScale });
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-        canvas.width = Math.floor(vp.width * dpr);
-        canvas.height = Math.floor(vp.height * dpr);
-        canvas.style.width = `${vp.width}px`;
-        canvas.style.height = `${vp.height}px`;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.scale(dpr, dpr);
-          await page.render({ canvasContext: ctx, viewport: vp }).promise;
-        }
-      } catch {}
-    }
   }
 
   private async renderAllPages(): Promise<void> {
@@ -403,42 +284,25 @@ export class SummarizePdfController implements ViewController {
       canvas.setAttribute('data-ref', `page-canvas-${pageNum}`);
       pageCard.appendChild(canvas);
 
-      const footer = document.createElement('span');
-      footer.className = 'pdf-viewer-page-card__footer';
-      footer.textContent = `Pág. ${pageNum} de ${numPages}`;
-      pageCard.appendChild(footer);
-
       pagesWrapper.appendChild(pageCard);
 
       try {
         const page = await this.pdfDocument.getPage(pageNum);
-        const baseViewport = page.getViewport({ scale: 1 });
-        const pageWidth = baseViewport.width;
-        const pageHeight = baseViewport.height;
-
-        const containerWidth = scrollContainer ? (scrollContainer.clientWidth > 100 ? scrollContainer.clientWidth : 700) : 700;
-        const baseDisplayWidth = Math.min(680, Math.max(300, containerWidth - 48));
-        const displayWidth = Math.round(baseDisplayWidth * this.zoomScale);
-        const displayHeight = Math.round((pageHeight / pageWidth) * displayWidth);
-
-        pageCard.style.width = `${displayWidth}px`;
-        pageCard.style.height = `${displayHeight}px`;
-
+        const origViewport = page.getViewport({ scale: 1 });
+        const targetWidth = Math.min(scrollContainer?.clientWidth ? scrollContainer.clientWidth - 48 : 800, 800);
+        const scale = (targetWidth / origViewport.width) * this.zoomScale;
+        const viewport = page.getViewport({ scale });
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.round(displayWidth * dpr);
-        canvas.height = Math.round(displayHeight * dpr);
-        canvas.style.width = `${displayWidth}px`;
-        canvas.style.height = `${displayHeight}px`;
 
-        const renderScale = (displayWidth / pageWidth) * dpr;
-        const viewport = page.getViewport({ scale: renderScale });
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          await page.render({
-            canvasContext: ctx,
-            viewport,
-          }).promise;
+          ctx.scale(dpr, dpr);
+          await page.render({ canvasContext: ctx, viewport }).promise;
         }
       } catch {}
     }
@@ -451,25 +315,19 @@ export class SummarizePdfController implements ViewController {
     this.currentResult = null;
     this.pdfDocument = null;
     this.zoomScale = 1.0;
-    this.activePageIndex = 0;
     this.statusManager?.hide();
-    this.updateZoomDisplay();
 
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     if (fileInput) fileInput.value = '';
 
     const scrollContainer = this.container.querySelector<HTMLElement>('[data-ref="viewer-scroll-container"]');
     const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
-    const thumbnailsContainer = this.container.querySelector<HTMLElement>('[data-ref="thumbnails-container"]');
     if (pagesWrapper) pagesWrapper.innerHTML = '';
     else if (scrollContainer) scrollContainer.innerHTML = '';
-    if (thumbnailsContainer) thumbnailsContainer.innerHTML = '';
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-dropzone-card"]');
     const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
     const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
-    const processingSection = this.container.querySelector<HTMLElement>('[data-ref="section-processing"]');
-    const actionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
@@ -481,76 +339,76 @@ export class SummarizePdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (scrollContainer) scrollContainer.innerHTML = '';
     hideElement(resultSection);
-    hideElement(processingSection);
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (outputNameInput) {
-      outputNameInput.value = 'resumen.pdf';
-    }
-    const zoomActions = this.container.querySelector<HTMLElement>('[data-ref="toolbar-actions-group"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(zoomActions);
-    hideElement(topHeader);
     this.sidebarModal?.close();
-
-    if (actionBtn) actionBtn.disabled = true;
-    this.hideError();
   }
 
-  private async handleSummarize(button: HTMLButtonElement): Promise<void> {
+  private async startSummarize(): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
-    this.hideError();
 
     this.isProcessing = true;
+    const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
+
+    hideElement(viewerCard);
+    hideElement(sidebar);
+    if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+    this.sidebarModal?.close();
+
     this.statusManager?.showUploading(1, 1);
 
-    await withButtonLoading(button, async () => {
-      try {
-        const formData = new FormData();
-        formData.append('pdf', this.currentFile as Blob, this.currentFile?.name);
+    try {
+      const formData = new FormData();
+      formData.append('pdf', this.currentFile as Blob, this.currentFile?.name);
 
-        const response = await postFormWithProgress(
-          API_ROUTES.tools.summarizePdf.summarize,
-          formData,
-          (progress) => {
-            this.statusManager?.updateUploadProgress(progress);
-          }
-        );
-        const result = (await response.json()) as { data?: SummarizePdfResultData; error?: string; success: boolean };
-
-        this.statusManager?.showProcessingState({
-          subtitle: 'Leyendo documento y sintetizando puntos clave con IA',
-          title: 'Resumiendo documento PDF...',
-        });
-
-        if (!response.ok || !result.success || !result.data) {
-          throw new Error(result.error || 'Error al generar el resumen del documento.');
+      const response = await postFormWithProgress(
+        API_ROUTES.tools.summarizePdf.summarize,
+        formData,
+        (progress) => {
+          this.statusManager?.updateUploadProgress(progress);
         }
+      );
+      const result = (await response.json()) as { data?: SummarizePdfResultData; error?: string; success: boolean };
 
-        this.currentResult = result.data;
-        this.statusManager?.hide();
-        showToast('Resumen generado exitosamente.', 'success');
-        this.renderSummaryResult(result.data);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al resumir el PDF.';
-        this.statusManager?.showError(errorMessage, () => {
-          this.statusManager?.hide();
-        });
-        this.showError(errorMessage);
-      } finally {
-        this.isProcessing = false;
+      this.statusManager?.showProcessingState({
+        subtitle: 'Leyendo documento y sintetizando puntos clave con IA',
+        title: 'Resumiendo documento PDF...',
+      });
+
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.error || 'Error al generar el resumen del documento.');
       }
-    });
+
+      this.currentResult = result.data;
+      this.statusManager?.hide();
+      showElement(viewerCard);
+      showElement(sidebar);
+      if (settingsBtn) settingsBtn.classList.add('is-visible');
+      if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+      showToast('Resumen generado exitosamente.', 'success');
+      this.renderSummaryResult(result.data);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al resumir el PDF.';
+      this.statusManager?.showError(errorMessage, () => {
+        this.statusManager?.hide();
+        showElement(viewerCard);
+        showElement(sidebar);
+        if (settingsBtn) settingsBtn.classList.add('is-visible');
+        if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+      });
+      showToast(errorMessage, 'danger');
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   private renderSummaryResult(data: SummarizePdfResultData): void {
     const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
     const renderedTextEl = this.container.querySelector<HTMLElement>('[data-ref="summary-rendered-text"]');
-    const modelBadge = this.container.querySelector<HTMLElement>('[data-ref="summary-badge-model"]');
-    const wordsBadge = this.container.querySelector<HTMLElement>('[data-ref="summary-badge-words"]');
 
     showElement(resultSection);
-    if (modelBadge) modelBadge.textContent = 'BoardPDF AI';
-    if (wordsBadge) wordsBadge.textContent = `${data.wordCount} palabras`;
 
     if (renderedTextEl) {
       renderedTextEl.scrollTop = 0;
@@ -559,36 +417,8 @@ export class SummarizePdfController implements ViewController {
           renderedTextEl.scrollTop = renderedTextEl.scrollHeight;
         },
         renderHtml: renderSimpleMarkdown,
-        signal: this.abortController?.signal
+        signal: this.abortController?.signal,
       });
-    }
-  }
-
-  private handleCopySummary(): void {
-    if (!this.currentResult?.summary) return;
-    navigator.clipboard.writeText(this.currentResult.summary)
-      .then(() => {
-        showToast('Resumen copiado al portapapeles.', 'success');
-      })
-      .catch(() => {
-        showToast('No se pudo copiar el resumen.', 'error');
-      });
-  }
-
-  private showError(message: string): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"]');
-    if (errorEl) {
-      errorEl.textContent = message;
-      showElement(errorEl);
-    }
-    showToast(message, 'danger');
-  }
-
-  private hideError(): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"]');
-    if (errorEl) {
-      errorEl.textContent = '';
-      hideElement(errorEl);
     }
   }
 }

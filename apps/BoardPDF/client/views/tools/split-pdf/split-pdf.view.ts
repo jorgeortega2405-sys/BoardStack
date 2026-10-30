@@ -223,24 +223,8 @@ export class SplitPdfController implements ViewController {
       this.updateSummary();
     }, { signal });
 
-    const mergeRangesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-ranges-toggle"]');
-    const btnMergeRangesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-no"]');
-    const btnMergeRangesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-yes"]');
     const checkMergeRanges = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-ranges"]');
-
-    btnMergeRangesNo?.addEventListener('click', () => {
-      if (checkMergeRanges) checkMergeRanges.checked = false;
-      mergeRangesToggle?.setAttribute('data-merge', 'no');
-      btnMergeRangesNo.classList.add('is-active');
-      btnMergeRangesYes?.classList.remove('is-active');
-      this.updateSummary();
-    }, { signal });
-
-    btnMergeRangesYes?.addEventListener('click', () => {
-      if (checkMergeRanges) checkMergeRanges.checked = true;
-      mergeRangesToggle?.setAttribute('data-merge', 'yes');
-      btnMergeRangesYes.classList.add('is-active');
-      btnMergeRangesNo?.classList.remove('is-active');
+    checkMergeRanges?.addEventListener('change', () => {
       this.updateSummary();
     }, { signal });
 
@@ -268,24 +252,8 @@ export class SplitPdfController implements ViewController {
       this.updateSummary();
     }, { signal });
 
-    const mergePagesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-pages-toggle"]');
-    const btnMergePagesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-no"]');
-    const btnMergePagesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-yes"]');
     const checkMergePages = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
-
-    btnMergePagesNo?.addEventListener('click', () => {
-      if (checkMergePages) checkMergePages.checked = false;
-      mergePagesToggle?.setAttribute('data-merge', 'no');
-      btnMergePagesNo.classList.add('is-active');
-      btnMergePagesYes?.classList.remove('is-active');
-      this.updateSummary();
-    }, { signal });
-
-    btnMergePagesYes?.addEventListener('click', () => {
-      if (checkMergePages) checkMergePages.checked = true;
-      mergePagesToggle?.setAttribute('data-merge', 'yes');
-      btnMergePagesYes.classList.add('is-active');
-      btnMergePagesNo?.classList.remove('is-active');
+    checkMergePages?.addEventListener('change', () => {
       this.updateSummary();
     }, { signal });
 
@@ -573,20 +541,26 @@ export class SplitPdfController implements ViewController {
 
     container.innerHTML = this.ranges.map((range, index) => {
       const canDelete = this.ranges.length > 1;
+      const pageCount = Math.max(0, range.to - range.from + 1);
+      const countLabel = pageCount === 1 ? '1 pág.' : `${pageCount} págs.`;
+
       return `
         <div class="split-range-card" data-ref="range-card-${range.id}" data-id="${range.id}">
-          <div class="tool-sidebar__section-header split-range-card__header">
-            <span class="tool-sidebar__section-title split-range-card__title">Rango ${index + 1}:</span>
+          <div class="split-range-card__header">
+            <div class="split-range-card__meta">
+              <span class="component-badge component-badge--sm split-range-card__badge">Rango ${index + 1}</span>
+              <span class="split-range-card__pages-count" data-ref="count-range-${range.id}">${countLabel}</span>
+            </div>
             ${canDelete ? `
               <button type="button" class="split-range-card__btn-delete" data-ref="btn-delete-range" data-id="${range.id}" title="Eliminar rango" aria-label="Eliminar rango">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             ` : ''}
           </div>
-          <div class="split-range-card__inputs">
-            <div class="split-range-input-wrap" data-ref="wrap-range-from-${range.id}">
-              <span class="split-range-input-label">Desde pág.</span>
-              <div class="component-inline-control component-inline-control--full component-inline-control--sm" data-ref="control-range-from-${range.id}">
+          <div class="split-range-card__body">
+            <div class="split-range-card__col" data-ref="wrap-range-from-${range.id}">
+              <span class="split-range-card__field-label">Desde</span>
+              <div class="component-inline-control component-inline-control--sm split-range-card__control" data-ref="control-range-from-${range.id}">
                 <div class="component-inline-control__group">
                   <button type="button" class="component-inline-control__btn" data-ref="btn-range-from-dec" data-id="${range.id}" data-step-change="-1" aria-label="Disminuir página inicial">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
@@ -600,9 +574,12 @@ export class SplitPdfController implements ViewController {
                 </div>
               </div>
             </div>
-            <div class="split-range-input-wrap" data-ref="wrap-range-to-${range.id}">
-              <span class="split-range-input-label">Hasta pág.</span>
-              <div class="component-inline-control component-inline-control--full component-inline-control--sm" data-ref="control-range-to-${range.id}">
+            <div class="split-range-card__arrow" aria-hidden="true">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+            </div>
+            <div class="split-range-card__col" data-ref="wrap-range-to-${range.id}">
+              <span class="split-range-card__field-label">Hasta</span>
+              <div class="component-inline-control component-inline-control--sm split-range-card__control" data-ref="control-range-to-${range.id}">
                 <div class="component-inline-control__group">
                   <button type="button" class="component-inline-control__btn" data-ref="btn-range-to-dec" data-id="${range.id}" data-step-change="-1" aria-label="Disminuir página final">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
@@ -639,6 +616,7 @@ export class SplitPdfController implements ViewController {
         if (found) {
           const val = parseInt(input.value, 10);
           found.from = isNaN(val) ? 1 : Math.max(1, Math.min(total, val));
+          this.updateRangeCountLabel(id, found);
           this.renderPagesWorkspace();
           this.updateSummary();
         }
@@ -652,11 +630,21 @@ export class SplitPdfController implements ViewController {
         if (found) {
           const val = parseInt(input.value, 10);
           found.to = isNaN(val) ? total : Math.max(1, Math.min(total, val));
+          this.updateRangeCountLabel(id, found);
           this.renderPagesWorkspace();
           this.updateSummary();
         }
       });
     });
+  }
+
+  private updateRangeCountLabel(id: string | null, range: RangeItem): void {
+    if (!id) return;
+    const countEl = this.container.querySelector<HTMLElement>(`[data-ref="count-range-${id}"]`);
+    if (countEl) {
+      const pageCount = Math.max(0, range.to - range.from + 1);
+      countEl.textContent = pageCount === 1 ? '1 pág.' : `${pageCount} págs.`;
+    }
   }
 
   private renderFilesView(): void {
@@ -746,7 +734,7 @@ export class SplitPdfController implements ViewController {
       : `
         <div class="pdf-card__placeholder">
           <svg class="component-icon pdf-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-          <span style="font-size: 0.75rem; color: var(--text-tertiary);">${page.num}</span>
+          <span class="pdf-card__placeholder-text">${page.num}</span>
         </div>
       `;
 
@@ -977,21 +965,13 @@ export class SplitPdfController implements ViewController {
     if (tabsNav) tabsNav.setAttribute('data-mode', 'range');
     const rangeSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-range-submode-toggle"]');
     if (rangeSubmodeToggle) rangeSubmodeToggle.setAttribute('data-submode', 'custom');
-    const mergeRangesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-ranges-toggle"]');
-    if (mergeRangesToggle) mergeRangesToggle.setAttribute('data-merge', 'no');
-    const btnMergeRangesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-no"]');
-    const btnMergeRangesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-ranges-yes"]');
-    btnMergeRangesNo?.classList.add('is-active');
-    btnMergeRangesYes?.classList.remove('is-active');
+    const checkMergeRanges = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-ranges"]');
+    if (checkMergeRanges) checkMergeRanges.checked = false;
 
     const pagesSubmodeToggle = this.container.querySelector<HTMLElement>('[data-ref="split-pages-submode-toggle"]');
     if (pagesSubmodeToggle) pagesSubmodeToggle.setAttribute('data-submode', 'all');
-    const mergePagesToggle = this.container.querySelector<HTMLElement>('[data-ref="split-merge-pages-toggle"]');
-    if (mergePagesToggle) mergePagesToggle.setAttribute('data-merge', 'no');
-    const btnMergePagesNo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-no"]');
-    const btnMergePagesYes = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-merge-pages-yes"]');
-    btnMergePagesNo?.classList.add('is-active');
-    btnMergePagesYes?.classList.remove('is-active');
+    const checkMergePages = this.container.querySelector<HTMLInputElement>('[data-ref="check-merge-pages"]');
+    if (checkMergePages) checkMergePages.checked = false;
 
     this.updateSummary();
     this.updateActionButtons();

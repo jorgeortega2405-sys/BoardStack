@@ -146,6 +146,61 @@ html, body {
   box-sizing: border-box;
 }
 
+.layout-content:has(.layout-nav) {
+  padding: 0 6px 0 0;
+  gap: 0;
+  background-color: #ffffff;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.layout-content:has(.layout-nav)::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: var(--layout-scroll-height, 0);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.layout-content:has(.layout-nav) .layout-nav {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: flex-start !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  flex-shrink: 0 !important;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper,
+.layout-content:has(.layout-nav) .home-wrapper,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
+  position: sticky !important;
+  top: 6px !important;
+  margin-top: 6px;
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  flex: 1 1 auto;
+  align-self: flex-start;
+  box-sizing: border-box;
+  touch-action: pan-y;
+}
+
+.layout-content:has(.layout-nav) .component-wrapper--full:not(.no-padding) {
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+}
+
 .layout-content:has(.layout-nav) .view-wrapper .layout-scrollable,
 .layout-content:has(.layout-nav) .view-wrapper .view-scrollable,
 .layout-content:has(.layout-nav) .home-wrapper .layout-body--scrollable,

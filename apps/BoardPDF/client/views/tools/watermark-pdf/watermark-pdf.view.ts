@@ -137,14 +137,9 @@ export class WatermarkPdfController implements ViewController {
       void this.handleDropboxImport();
     }, { signal });
 
-    const tabText = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-text"]');
-    const tabImage = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-image"]');
     const secText = this.container.querySelector<HTMLElement>('[data-ref="section-text-options"]');
     const secImage = this.container.querySelector<HTMLElement>('[data-ref="section-image-options"]');
-
     const checkMosaic = this.container.querySelector<HTMLInputElement>('[data-ref="check-mosaic"]');
-    const layerOver = this.container.querySelector<HTMLElement>('[data-ref="layer-card-over"]');
-    const layerUnder = this.container.querySelector<HTMLElement>('[data-ref="layer-card-under"]');
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="wm-dropzone-card"]');
 
@@ -167,20 +162,24 @@ export class WatermarkPdfController implements ViewController {
       });
     }
 
-    tabText?.addEventListener('click', () => {
-      this.activeTab = 'text';
-      tabText.classList.add('is-active');
-      tabImage?.classList.remove('is-active');
-      showElement(secText);
-      hideElement(secImage);
-    }, { signal });
-
-    tabImage?.addEventListener('click', () => {
-      this.activeTab = 'image';
-      tabImage.classList.add('is-active');
-      tabText?.classList.remove('is-active');
-      hideElement(secText);
-      showElement(secImage);
+    const wmTypeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-watermark-type"]');
+    wmTypeToggle?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-tab]');
+      if (!btn) return;
+      const tab = btn.getAttribute('data-tab') as 'text' | 'image';
+      if (!tab) return;
+      this.activeTab = tab;
+      wmTypeToggle.setAttribute('data-active', tab === 'text' ? '0' : '1');
+      wmTypeToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+      });
+      if (tab === 'text') {
+        showElement(secText);
+        hideElement(secImage);
+      } else {
+        hideElement(secText);
+        showElement(secImage);
+      }
     }, { signal });
 
     pickImageBtn?.addEventListener('click', () => imageInput?.click(), { signal });
@@ -209,16 +208,17 @@ export class WatermarkPdfController implements ViewController {
       this.updateIndicators();
     }, { signal });
 
-    layerOver?.addEventListener('click', () => {
-      this.layer = 'over';
-      layerOver.classList.add('is-selected');
-      layerUnder?.classList.remove('is-selected');
-    }, { signal });
-
-    layerUnder?.addEventListener('click', () => {
-      this.layer = 'under';
-      layerUnder.classList.add('is-selected');
-      layerOver?.classList.remove('is-selected');
+    const layerToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-layer"]');
+    layerToggle?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-layer]');
+      if (!btn) return;
+      const val = btn.getAttribute('data-layer') as 'over' | 'under';
+      if (!val) return;
+      this.layer = val;
+      layerToggle.setAttribute('data-active', val === 'over' ? '0' : '1');
+      layerToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+      });
     }, { signal });
 
     const wrapperFont = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-font"]');
@@ -348,7 +348,6 @@ export class WatermarkPdfController implements ViewController {
 
     grid.innerHTML = this.pages.map((p) => `
       <div class="pdf-card wm-page-card" data-ref="card-page-${p.id}">
-        <span class="pdf-card__order-badge">${p.pageNum}</span>
         <div class="pdf-card__sheet-wrapper">
           <div class="pdf-card__sheet">
             ${this.isMosaic

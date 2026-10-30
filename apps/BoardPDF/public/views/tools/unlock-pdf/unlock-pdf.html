@@ -52,7 +52,7 @@
 
         <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
-          <span>Introduce la contraseña en el panel lateral para desbloquear y quitar restricciones a tu PDF.</span>
+          <span>Haz clic en Desbloquear PDF en el panel lateral para quitar las restricciones a tu documento.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
@@ -96,19 +96,9 @@
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="tool-sidebar__section tool-sidebar__section--stack16">
-          <label class="field">
-            <input class="field__input field__input--has-action" data-ref="input-unlock-password" type="password" placeholder=" " autocomplete="current-password" />
-            <span class="field__label">Contraseña (si se requiere para abrir)</span>
-            <button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            </button>
-          </label>
-
-          <div class="tool-sidebar-notice">
-            <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-            <div class="tool-sidebar-notice__text">Si el documento únicamente cuenta con restricciones de edición o impresión (sin contraseña de lectura), puedes dejar el campo de contraseña vacío.</div>
-          </div>
+        <div class="tool-sidebar-notice">
+          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+          <div class="tool-sidebar-notice__text">Elimina al instante la protección y restricciones de edición, copia o impresión de tu documento PDF. Si el archivo cuenta con contraseña de lectura, te la pediremos al procesarlo.</div>
         </div>
       </div>
 

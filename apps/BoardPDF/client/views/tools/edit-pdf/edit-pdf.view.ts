@@ -20,6 +20,7 @@ export class EditPdfController implements ViewController {
   private container: HTMLElement;
   private currentFile: File | null = null;
   private currentMode: EditPdfMode = 'annotate';
+  private currentShapeType: EditShapeType = 'rect';
   private currentTool: EditPdfTool = 'select';
   private drawings: EditDrawingStroke[] = [];
   private hasNativeText = false;
@@ -157,11 +158,14 @@ export class EditPdfController implements ViewController {
       signal,
     });
 
+    const toggleEditorMode = this.container.querySelector<HTMLElement>('[data-ref="toggle-editor-mode"]');
     btnModeAnnotate?.addEventListener('click', () => {
+      if (toggleEditorMode) toggleEditorMode.setAttribute('data-active', '0');
       this.setMode('annotate');
     }, { signal });
 
     btnModeEdit?.addEventListener('click', () => {
+      if (toggleEditorMode) toggleEditorMode.setAttribute('data-active', '1');
       this.setMode('edit');
     }, { signal });
 
@@ -176,6 +180,101 @@ export class EditPdfController implements ViewController {
         }
       }, { signal });
     });
+
+    const shapeSubBtns = [
+      { btn: this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-rect"]'), type: 'rect' as EditShapeType },
+      { btn: this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-circle"]'), type: 'circle' as EditShapeType },
+      { btn: this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-line"]'), type: 'line' as EditShapeType },
+    ];
+    shapeSubBtns.forEach(({ btn, type }) => {
+      btn?.addEventListener('click', () => {
+        shapeSubBtns.forEach((item) => item.btn?.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.currentShapeType = type;
+      }, { signal });
+    });
+
+    const bindColorTrigger = (
+      btnRef: string,
+      previewRef: string,
+      initialColor: string,
+      onColorChange: (color: string) => void
+    ) => {
+      const btn = this.container.querySelector<HTMLButtonElement>(`[data-ref="${btnRef}"]`);
+      const preview = this.container.querySelector<HTMLElement>(`[data-ref="${previewRef}"]`);
+      if (!btn || !preview) return;
+
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = initialColor.startsWith('#') ? initialColor : '#000000';
+      input.style.display = 'none';
+      this.container.appendChild(input);
+
+      btn.addEventListener('click', () => {
+        input.click();
+      }, { signal });
+
+      input.addEventListener('input', () => {
+        const val = input.value;
+        preview.style.backgroundColor = val;
+        onColorChange(val);
+      }, { signal });
+    };
+
+    bindColorTrigger('btn-trigger-stroke-color', 'preview-stroke-color', this.properties.strokeColor, (color) => {
+      this.properties.strokeColor = color;
+      this.applySelectedElementProperties();
+    });
+
+    bindColorTrigger('btn-trigger-fill-color', 'preview-fill-color', '#ffffff', (color) => {
+      this.properties.fillColor = color;
+      this.applySelectedElementProperties();
+    });
+
+    bindColorTrigger('btn-trigger-text-color', 'preview-text-color', this.properties.strokeColor, (color) => {
+      this.properties.strokeColor = color;
+      this.applySelectedElementProperties();
+    });
+
+    bindColorTrigger('btn-trigger-draw-color', 'preview-draw-color', this.properties.strokeColor, (color) => {
+      this.properties.strokeColor = color;
+      this.applySelectedElementProperties();
+    });
+
+    const strokeBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="stroke-"]');
+    strokeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        strokeBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const width = parseInt(btn.getAttribute('data-width') || '2', 10);
+        this.properties.strokeWidth = width;
+        this.applySelectedElementProperties();
+      }, { signal });
+    });
+
+    const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-bold"]');
+    const btnItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-italic"]');
+    const btnUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-underline"]');
+
+    btnBold?.addEventListener('click', () => {
+      btnBold.classList.toggle('is-active');
+      document.execCommand('bold');
+    }, { signal });
+
+    btnItalic?.addEventListener('click', () => {
+      btnItalic.classList.toggle('is-active');
+      document.execCommand('italic');
+    }, { signal });
+
+    btnUnderline?.addEventListener('click', () => {
+      btnUnderline.classList.toggle('is-active');
+      document.execCommand('underline');
+    }, { signal });
+
+    const btnClearAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-all-elements"]');
+    btnClearAll?.addEventListener('click', () => {
+      this.clearAllElements();
+    }, { signal });
 
     imgInput?.addEventListener('change', () => {
       const files = imgInput.files;
@@ -209,50 +308,6 @@ export class EditPdfController implements ViewController {
       this.handleRedo();
     }, { signal });
 
-    const colorSwatches = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="swatch-"]');
-    colorSwatches.forEach((swatch) => {
-      swatch.addEventListener('click', () => {
-        colorSwatches.forEach((s) => s.classList.remove('is-active'));
-        swatch.classList.add('is-active');
-        const color = swatch.getAttribute('data-color') || '#000000';
-        this.properties.strokeColor = color;
-        this.applySelectedElementProperties();
-      }, { signal });
-    });
-
-    const fillSwatches = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="fill-"]');
-    fillSwatches.forEach((swatch) => {
-      swatch.addEventListener('click', () => {
-        fillSwatches.forEach((s) => s.classList.remove('is-active'));
-        swatch.classList.add('is-active');
-        const color = swatch.getAttribute('data-color') || 'transparent';
-        this.properties.fillColor = color;
-        this.applySelectedElementProperties();
-      }, { signal });
-    });
-
-    const strokeBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="stroke-"]');
-    strokeBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        strokeBtns.forEach((b) => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        const width = parseInt(btn.getAttribute('data-width') || '2', 10);
-        this.properties.strokeWidth = width;
-        this.applySelectedElementProperties();
-      }, { signal });
-    });
-
-    const fontBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="font-"]');
-    fontBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        fontBtns.forEach((b) => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        const size = parseInt(btn.getAttribute('data-size') || '14', 10);
-        this.properties.fontSize = size;
-        this.applySelectedElementProperties();
-      }, { signal });
-    });
-
     const executeSave = () => {
       if (sidebarSaveBtn) void this.handleSavePdf(sidebarSaveBtn);
     };
@@ -267,11 +322,14 @@ export class EditPdfController implements ViewController {
     const groupAnnotate = this.container.querySelector<HTMLElement>('[data-ref="tools-group-annotate"]');
     const groupEdit = this.container.querySelector<HTMLElement>('[data-ref="tools-group-edit"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
+    const toggleEditorMode = this.container.querySelector<HTMLElement>('[data-ref="toggle-editor-mode"]');
 
+    if (toggleEditorMode) toggleEditorMode.setAttribute('data-active', mode === 'annotate' ? '0' : '1');
     if (btnAnnotate) btnAnnotate.classList.toggle('is-active', mode === 'annotate');
     if (btnEdit) btnEdit.classList.toggle('is-active', mode === 'edit');
     toggleElement(groupAnnotate, mode === 'annotate');
     toggleElement(groupEdit, mode === 'edit');
+    this.updateSubtoolbar();
 
     if (workspace) {
       workspace.classList.toggle('mode--annotate', mode === 'annotate');
@@ -305,12 +363,47 @@ export class EditPdfController implements ViewController {
     toolButtons.forEach((btn) => {
       btn.classList.toggle('is-active', btn.getAttribute('data-tool') === tool);
     });
+    this.updateSubtoolbar();
+  }
+
+  private updateSubtoolbar(): void {
+    const subtoolbar = this.container.querySelector<HTMLElement>('[data-ref="editor-subtoolbar"]');
+    const subShapes = this.container.querySelector<HTMLElement>('[data-ref="subtoolbar-shapes"]');
+    const subText = this.container.querySelector<HTMLElement>('[data-ref="subtoolbar-text"]');
+    const subDraw = this.container.querySelector<HTMLElement>('[data-ref="subtoolbar-draw"]');
+
+    if (this.currentMode !== 'annotate') {
+      hideElement(subtoolbar);
+      return;
+    }
+
+    if (this.currentTool === 'shapes') {
+      showElement(subtoolbar);
+      showElement(subShapes);
+      hideElement(subText);
+      hideElement(subDraw);
+    } else if (this.currentTool === 'text') {
+      showElement(subtoolbar);
+      hideElement(subShapes);
+      showElement(subText);
+      hideElement(subDraw);
+    } else if (this.currentTool === 'draw') {
+      showElement(subtoolbar);
+      hideElement(subShapes);
+      hideElement(subText);
+      showElement(subDraw);
+    } else {
+      hideElement(subtoolbar);
+      hideElement(subShapes);
+      hideElement(subText);
+      hideElement(subDraw);
+    }
   }
 
   private updateZoomDisplay(): void {
-    const zoomLevelEl = this.container.querySelector<HTMLElement>('[data-ref="val-zoom-level"]');
-    if (zoomLevelEl) {
-      zoomLevelEl.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+    const zoomInput = this.container.querySelector<HTMLInputElement>('[data-ref="val-zoom-level"]');
+    if (zoomInput) {
+      zoomInput.value = `${Math.round(this.zoomLevel * 100)}%`;
     }
   }
 
@@ -708,6 +801,8 @@ export class EditPdfController implements ViewController {
         }
       } else if (this.currentTool === 'text') {
         this.addTextBoxAt(pt.x, pt.y, pageIndex, overlay);
+      } else if (this.currentTool === 'shapes') {
+        this.startShapeDraw(pt.x, pt.y, pageIndex, overlay, shapesSvg, this.currentShapeType);
       } else if (this.currentTool === 'line' || this.currentTool === 'rect' || this.currentTool === 'circle') {
         this.startShapeDraw(pt.x, pt.y, pageIndex, overlay, shapesSvg, this.currentTool);
       }
@@ -1150,7 +1245,184 @@ export class EditPdfController implements ViewController {
     if (btnRedo) btnRedo.disabled = this.redoStack.length === 0;
   }
 
-  private updateModificationsSummary(): void {}
+  private updateModificationsSummary(): void {
+    this.renderElementsList();
+  }
+
+  private clearAllElements(): void {
+    const total = this.texts.length + this.shapes.length + this.drawings.length + this.images.length + this.replacements.length;
+    if (total === 0) return;
+    this.texts = [];
+    this.shapes = [];
+    this.drawings = [];
+    this.images = [];
+    this.replacements = [];
+    this.undoStack = [];
+    this.redoStack = [];
+    this.updateUndoRedoButtons();
+    this.renderElementsList();
+    void this.rerenderAllPages();
+    showToast('Se eliminaron todos los elementos añadidos.', 'info');
+  }
+
+  private deleteElementById(id: string): void {
+    this.texts = this.texts.filter((t) => t.id !== id);
+    this.shapes = this.shapes.filter((s) => s.id !== id);
+    this.drawings = this.drawings.filter((d) => d.id !== id);
+    this.images = this.images.filter((img) => img.id !== id);
+    this.replacements = this.replacements.filter((r) => r.id !== id);
+    this.renderElementsList();
+    void this.rerenderAllPages();
+  }
+
+  private renderElementsList(): void {
+    const header = this.container.querySelector<HTMLElement>('[data-ref="elements-header"]');
+    const title = this.container.querySelector<HTMLElement>('[data-ref="txt-elements-count"]');
+    const list = this.container.querySelector<HTMLElement>('[data-ref="elements-list"]');
+    if (!list) return;
+
+    list.innerHTML = '';
+    const total = this.texts.length + this.shapes.length + this.drawings.length + this.images.length + this.replacements.length;
+
+    if (total === 0) {
+      if (header) hideElement(header);
+      return;
+    }
+
+    if (header) showElement(header);
+    if (title) title.textContent = `Elementos añadidos (${total})`;
+
+    const allItems: Array<{
+      icon: string;
+      id: string;
+      label: string;
+      pageIndex: number;
+      type: string;
+    }> = [];
+
+    this.texts.forEach((t) => {
+      allItems.push({
+        icon: 'title',
+        id: t.id,
+        label: t.text.length > 25 ? `${t.text.slice(0, 25)}...` : t.text,
+        pageIndex: t.pageIndex,
+        type: 'text',
+      });
+    });
+
+    this.shapes.forEach((s) => {
+      const shapeIcon = s.type === 'rect' ? 'crop_square' : s.type === 'circle' ? 'radio_button_unchecked' : 'horizontal_rule';
+      const shapeLabel = s.type === 'rect' ? 'Rectángulo' : s.type === 'circle' ? 'Círculo' : 'Línea';
+      allItems.push({
+        icon: shapeIcon,
+        id: s.id,
+        label: shapeLabel,
+        pageIndex: s.pageIndex,
+        type: 'shape',
+      });
+    });
+
+    this.drawings.forEach((d) => {
+      allItems.push({
+        icon: 'brush',
+        id: d.id,
+        label: 'Dibujo a mano alzada',
+        pageIndex: d.pageIndex,
+        type: 'drawing',
+      });
+    });
+
+    this.images.forEach((img) => {
+      allItems.push({
+        icon: 'image',
+        id: img.id,
+        label: 'Imagen añadida',
+        pageIndex: img.pageIndex,
+        type: 'image',
+      });
+    });
+
+    this.replacements.forEach((rep) => {
+      allItems.push({
+        icon: 'format_color_text',
+        id: rep.id,
+        label: `Texto: "${rep.newText.length > 15 ? rep.newText.slice(0, 15) + '...' : rep.newText}"`,
+        pageIndex: rep.pageIndex,
+        type: 'replacement',
+      });
+    });
+
+    allItems.sort((a, b) => a.pageIndex - b.pageIndex);
+
+    const pagesMap = new Map<number, typeof allItems>();
+    allItems.forEach((item) => {
+      const pageItems = pagesMap.get(item.pageIndex) || [];
+      pageItems.push(item);
+      pagesMap.set(item.pageIndex, pageItems);
+    });
+
+    pagesMap.forEach((items, pageIndex) => {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'pdf-editor-elements-group';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'pdf-editor-elements-group__title';
+      titleEl.textContent = `Página ${pageIndex + 1}`;
+      groupEl.appendChild(titleEl);
+
+      items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'pdf-editor-element-row';
+        row.setAttribute('data-id', item.id);
+
+        const dragSpan = document.createElement('span');
+        dragSpan.className = 'pdf-editor-element-row__drag';
+        dragSpan.innerHTML = '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#drag_indicator"></use></svg>';
+        row.appendChild(dragSpan);
+
+        const iconSvg = document.createElement('span');
+        iconSvg.className = 'pdf-editor-element-row__icon';
+        iconSvg.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${item.icon}"></use></svg>`;
+        row.appendChild(iconSvg);
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'pdf-editor-element-row__label';
+        labelSpan.textContent = item.label;
+        row.appendChild(labelSpan);
+
+        const actions = document.createElement('div');
+        actions.className = 'pdf-editor-element-row__actions';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'pdf-editor-element-row__btn pdf-editor-element-row__btn--delete';
+        deleteBtn.setAttribute('data-id', item.id);
+        deleteBtn.setAttribute('aria-label', 'Eliminar elemento');
+        deleteBtn.innerHTML = '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.deleteElementById(item.id);
+        });
+        actions.appendChild(deleteBtn);
+        row.appendChild(actions);
+
+        row.addEventListener('click', () => {
+          this.container.querySelectorAll('.pdf-editor-element-row').forEach((r) => r.classList.remove('is-active'));
+          row.classList.add('is-active');
+          const targetPage = this.container.querySelector<HTMLElement>(`[data-page-index="${item.pageIndex}"]`);
+          if (targetPage) {
+            targetPage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+
+        groupEl.appendChild(row);
+      });
+
+      list.appendChild(groupEl);
+    });
+
+    renderIcons(list);
+  }
 
   private restoreModifications(): void {
     this.drawings.forEach((stroke) => {
@@ -1296,6 +1568,7 @@ export class EditPdfController implements ViewController {
         });
       }
     });
+    this.renderElementsList();
   }
 
   private async rerenderAllPages(): Promise<void> {
@@ -1339,6 +1612,9 @@ export class EditPdfController implements ViewController {
       outputNameInput.value = 'documento_editado.pdf';
     }
     this.sidebarModal?.close();
+    this.renderElementsList();
+    const subtoolbar = this.container.querySelector<HTMLElement>('[data-ref="editor-subtoolbar"]');
+    hideElement(subtoolbar);
 
     this.hideError();
   }
@@ -1350,6 +1626,7 @@ export class EditPdfController implements ViewController {
     const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
+    const subtoolbar = this.container.querySelector<HTMLElement>('[data-ref="editor-subtoolbar"]');
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
 
@@ -1357,6 +1634,7 @@ export class EditPdfController implements ViewController {
     hideElement(editorCard);
     hideElement(topControls);
     hideElement(topActions);
+    hideElement(subtoolbar);
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     hideElement(topHeader);
     hideElement(sidebar);
@@ -1459,6 +1737,7 @@ export class EditPdfController implements ViewController {
       showElement(topActions);
       const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
       showElement(topHeader);
+      this.updateSubtoolbar();
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     } else {
       this.resetSelectedFile();

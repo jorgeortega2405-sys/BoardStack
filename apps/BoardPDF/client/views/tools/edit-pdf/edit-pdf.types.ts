@@ -1,5 +1,5 @@
 export type EditPdfMode = 'annotate' | 'edit';
-export type EditPdfTool = 'circle' | 'draw' | 'image' | 'line' | 'rect' | 'select' | 'text';
+export type EditPdfTool = 'circle' | 'draw' | 'image' | 'line' | 'rect' | 'select' | 'shapes' | 'text';
 export type EditShapeType = 'circle' | 'line' | 'rect';
 
 export interface EditTextAddition {

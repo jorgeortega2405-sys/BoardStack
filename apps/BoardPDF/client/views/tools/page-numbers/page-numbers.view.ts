@@ -133,8 +133,6 @@ export class PageNumbersController implements ViewController {
       void this.handleDropboxImport();
     }, { signal });
 
-    const radioSingle = this.container.querySelector<HTMLInputElement>('[data-ref="radio-mode-single"]');
-    const radioDouble = this.container.querySelector<HTMLInputElement>('[data-ref="radio-mode-double"]');
     const checkCover = this.container.querySelector<HTMLInputElement>('[data-ref="check-cover"]');
     const customTextBox = this.container.querySelector<HTMLElement>('[data-ref="box-custom-text"]');
 
@@ -159,18 +157,18 @@ export class PageNumbersController implements ViewController {
       });
     }
 
-    radioSingle?.addEventListener('change', () => {
-      if (radioSingle.checked) {
-        this.mode = 'single';
-        this.renderPagesGrid();
-      }
-    }, { signal });
-
-    radioDouble?.addEventListener('change', () => {
-      if (radioDouble.checked) {
-        this.mode = 'double';
-        this.renderPagesGrid();
-      }
+    const pageModeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
+    pageModeToggle?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
+      if (!btn) return;
+      const val = btn.getAttribute('data-val') as 'single' | 'double';
+      if (!val || val === this.mode) return;
+      this.mode = val;
+      pageModeToggle.setAttribute('data-active', val === 'single' ? '0' : '1');
+      pageModeToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+      });
+      this.renderPagesGrid();
     }, { signal });
 
     checkCover?.addEventListener('change', () => {
@@ -178,15 +176,19 @@ export class PageNumbersController implements ViewController {
       this.updateIndicators();
     }, { signal });
 
-    const wrapperMargin = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-margin"]');
-    if (wrapperMargin) {
-      const ctrl = setupDropdown(wrapperMargin, {
-        onSelect: (val: string) => {
-          this.margin = (val as PageNumberMargin) || 'recommended';
-        },
+    const marginToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-margin"]');
+    marginToggle?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
+      if (!btn) return;
+      const val = btn.getAttribute('data-val') as PageNumberMargin;
+      if (!val) return;
+      this.margin = val;
+      const idx = val === 'recommended' ? '0' : val === 'small' ? '1' : '2';
+      marginToggle.setAttribute('data-active', idx);
+      marginToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
       });
-      this.dropdownControllers.push(ctrl);
-    }
+    }, { signal });
 
     const wrapperFormat = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-format"]');
     if (wrapperFormat) {
@@ -320,7 +322,6 @@ export class PageNumbersController implements ViewController {
       grid.className = 'pdf-items-grid pn-pages-grid';
       grid.innerHTML = this.pages.map((p) => `
         <div class="pdf-card pn-page-card" data-ref="card-page-${p.id}" data-page-num="${p.pageNum}">
-          <span class="pdf-card__order-badge">${p.pageNum}</span>
           <div class="pdf-card__sheet-wrapper">
             <div class="pdf-card__sheet">
               <span class="pn-page-card__cover-badge" data-ref="cover-badge-${p.id}" style="${this.firstPageIsCover && p.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
@@ -342,7 +343,6 @@ export class PageNumbersController implements ViewController {
 
         html += `
           <div class="pdf-card pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}" style="width: 170px;">
-            <span class="pdf-card__order-badge">${leftPage.pageNum}</span>
             <div class="pdf-card__sheet-wrapper">
               <div class="pdf-card__sheet">
                 <span class="pn-page-card__cover-badge" data-ref="cover-badge-${leftPage.id}" style="${this.firstPageIsCover && leftPage.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
@@ -356,7 +356,6 @@ export class PageNumbersController implements ViewController {
         if (rightPage) {
           html += `
             <div class="pdf-card pn-page-card" data-ref="card-page-${rightPage.id}" data-page-num="${rightPage.pageNum}" style="width: 170px;">
-              <span class="pdf-card__order-badge">${rightPage.pageNum}</span>
               <div class="pdf-card__sheet-wrapper">
                 <div class="pdf-card__sheet">
                   <span class="pn-page-card__cover-badge" data-ref="cover-badge-${rightPage.id}" style="display: none;">Portada</span>
