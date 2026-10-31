@@ -317,6 +317,24 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
+    handler: async ({ query }) => {
+      await loadStylesheet('/css/tools/collaborative-pdf.css');
+      const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
+      return await createCollaborativePdfEditorView(query.get('id') || '');
+    },
+    id: 'collaborative-pdf-editor',
+    match: (path) => path === '/collaborative-pdf/editor' || path.startsWith('/collaborative-pdf/editor'),
+  },
+  {
+    handler: async () => {
+      await loadStylesheet('/css/tools/collaborative-pdf.css');
+      const { createCollaborativePdfDashboardView } = await import('../views/collaborative-pdf/collaborative-pdf-dashboard.view.js');
+      return await createCollaborativePdfDashboardView();
+    },
+    id: 'collaborative-pdf',
+    match: (path) => path === '/collaborative-pdf' || path.startsWith('/collaborative-pdf'),
+  },
+  {
     handler: async () => {
       await loadStylesheet('/css/components/component-views.css');
       const { createWorkflowsPageView } = await import('../views/workflows.view.js');

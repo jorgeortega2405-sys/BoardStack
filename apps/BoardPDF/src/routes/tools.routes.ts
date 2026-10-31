@@ -1,4 +1,5 @@
 import cloudRoutes from '../tools/cloud/cloud.routes.js';
+import collaborativePdfRoutes from '../tools/collaborative-pdf/collaborative-pdf.routes.js';
 import comparePdfRoutes from '../tools/compare-pdf/compare-pdf.routes.js';
 import compressPdfRoutes from '../tools/compress-pdf/compress-pdf.routes.js';
 import cropPdfRoutes from '../tools/crop-pdf/crop-pdf.routes.js';
@@ -25,6 +26,7 @@ import { Router } from 'express';
 const router = Router();
 
 router.use(cloudRoutes);
+router.use(collaborativePdfRoutes);
 router.use(comparePdfRoutes);
 router.use(compressPdfRoutes);
 router.use(cropPdfRoutes);

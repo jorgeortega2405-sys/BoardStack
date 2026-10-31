@@ -96,3 +96,16 @@ CREATE TABLE IF NOT EXISTS purchases (
   INDEX idx_purchases_session (stripe_session_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS collaborative_documents (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id INT NULL,
+  title VARCHAR(255) NOT NULL DEFAULT 'Documento sin título',
+  content_json LONGTEXT NOT NULL,
+  pdf_filename VARCHAR(255) NULL,
+  page_count INT UNSIGNED NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_user_docs (user_id),
+  INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

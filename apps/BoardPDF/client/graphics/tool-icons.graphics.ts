@@ -341,3 +341,15 @@ export const SVG_TOOL_WORKFLOW = `
     </svg>
   </div>
 `;
+
+export const SVG_TOOL_COLLABORATIVE_PDF = `
+  <div class="icon-outline icon-outline--purple" data-ref="icon-outline-collaborative-pdf">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <circle cx="10" cy="13" r="1.5" />
+      <rect x="13.5" y="11.5" width="3" height="3" rx="0.5" />
+      <path d="M8 17.5h8" />
+    </svg>
+  </div>
+`;

@@ -1,0 +1,208 @@
+@import '../components/component-views.css';
+@import './tool-base.css';
+
+.tool-card--create-doc {
+  background-color: var(--bg-surface);
+  border: 2px dashed var(--border-color);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  padding: 24px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tool-card--create-doc:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.tool-card--doc {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  padding: 24px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tool-card--doc:hover {
+  border-color: var(--primary);
+  box-shadow: var(--sl-shadow-medium);
+  transform: translateY(-2px);
+}
+
+.collaborative-editor-wrapper {
+  background-color: var(--bg-surface);
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.collaborative-top-bar {
+  align-items: center;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  display: flex;
+  height: 56px;
+  justify-content: space-between;
+  padding: 0 16px;
+  width: 100%;
+  z-index: 10;
+}
+
+.collaborative-top-bar__left,
+.collaborative-top-bar__center,
+.collaborative-top-bar__right {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.collaborative-title-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  max-width: 260px;
+  padding: 6px 10px;
+  transition: all 0.15s ease;
+}
+
+.collaborative-title-input:hover,
+.collaborative-title-input:focus {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  outline: none;
+}
+
+.collaborative-subtoolbar {
+  align-items: center;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 16px;
+  width: 100%;
+  z-index: 9;
+}
+
+.collaborative-subtoolbar__divider {
+  background-color: var(--border-color);
+  height: 24px;
+  margin: 0 4px;
+  width: 1px;
+}
+
+.collaborative-workspace {
+  align-items: center;
+  background-color: var(--bg-secondary);
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  padding: 32px 16px;
+  position: relative;
+  width: 100%;
+}
+
+.collaborative-pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.collaborative-page-sheet {
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+  height: 842px;
+  margin: 0 auto;
+  position: relative;
+  user-select: none;
+  width: 595px;
+}
+
+.collaborative-shapes-svg {
+  height: 100%;
+  left: 0;
+  overflow: visible;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.collaborative-drawing-canvas {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.collaborative-text-box {
+  background: transparent;
+  box-sizing: border-box;
+  cursor: move;
+  line-height: 1.25;
+  min-height: 24px;
+  min-width: 60px;
+  outline: none;
+  padding: 2px 4px;
+  position: absolute;
+  user-select: text;
+  word-break: break-word;
+  z-index: 5;
+}
+
+.collaborative-text-box.is-selected {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.collaborative-shape-item {
+  cursor: move;
+  transition: stroke 0.1s ease;
+}
+
+.collaborative-shape-item.is-selected {
+  outline: 2px dashed var(--primary);
+}
+
+.collaborative-color-btn {
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 4px;
+  height: 32px;
+  padding: 0 6px;
+}
+
+.collaborative-color-preview {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  height: 16px;
+  width: 16px;
+}

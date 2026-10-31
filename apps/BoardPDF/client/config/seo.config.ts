@@ -10,6 +10,28 @@ export interface RouteSeoInfo {
 }
 
 export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
+  'collaborative-pdf': {
+    category: 'collaborative',
+    descriptions: {
+      en: 'Create and edit collaborative PDF documents online with shapes, text, and cloud storage.',
+      es: 'Crea y edita documentos PDF colaborativos online con formas, texto y guardado en la nube.',
+    },
+    isTool: true,
+    routeId: 'collaborative-pdf',
+    slugs: {
+      de: 'kollaboratives-pdf',
+      en: 'collaborative-pdf',
+      es: 'pdf-colaborativo',
+      fr: 'pdf-collaboratif',
+      it: 'pdf-collaborativo',
+      pt: 'pdf-colaborativo',
+    },
+    titles: {
+      en: 'Collaborative PDF - Create & Edit PDF Documents Online | BoardPDF',
+      es: 'PDF Colaborativo - Crea y Edita Documentos PDF Online | BoardPDF',
+    },
+  },
+
   home: {
     descriptions: {
       en: 'Free and secure online PDF tools. Merge, split, compress, edit, convert, and protect your PDF documents with ease.',

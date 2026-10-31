@@ -1,0 +1,100 @@
+<div class="component-wrapper component-wrapper--full view-wrapper collaborative-editor-wrapper" data-ref="collaborative-editor-wrapper">
+  <header class="collaborative-top-bar" data-ref="collaborative-top-bar">
+    <div class="collaborative-top-bar__left">
+      <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-back-dashboard">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        <span class="component-button__text">Mis PDFs</span>
+      </button>
+
+      <div class="collaborative-subtoolbar__divider"></div>
+
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" placeholder="Nombre del documento" />
+      <span class="component-badge component-badge--sm" data-ref="badge-save-status">Guardado</span>
+    </div>
+
+    <div class="collaborative-top-bar__right">
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-undo" data-tooltip="Deshacer" aria-label="Deshacer" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-redo" data-tooltip="Rehacer" aria-label="Rehacer" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+
+      <div class="collaborative-subtoolbar__divider"></div>
+
+      <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-share-link" data-tooltip="Copiar enlace directo" aria-label="Compartir enlace">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+        <span class="component-button__text">Compartir</span>
+      </button>
+
+      <button type="button" class="component-button component-button--primary component-button--h36" data-ref="btn-save-server">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+        <span class="component-button__text">Guardar</span>
+      </button>
+
+      <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-download-pdf">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+        <span class="component-button__text">Descargar PDF</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="collaborative-subtoolbar" data-ref="collaborative-subtoolbar">
+    <div class="pdf-editor-tools-group" data-ref="tools-group">
+      <button type="button" class="component-button component-button--icon-only component-button--h36 is-active" data-ref="tool-select" data-tool="select" data-tooltip="Seleccionar y mover" aria-label="Seleccionar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h36" data-ref="tool-text" data-tool="text" data-tooltip="Añadir texto" aria-label="Texto">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#title"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h36" data-ref="tool-rect" data-tool="rect" data-tooltip="Rectángulo" aria-label="Rectángulo">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h36" data-ref="tool-circle" data-tool="circle" data-tooltip="Círculo" aria-label="Círculo">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#radio_button_unchecked"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h36" data-ref="tool-line" data-tool="line" data-tooltip="Línea" aria-label="Línea">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h36" data-ref="tool-draw" data-tool="draw" data-tooltip="Dibujar a mano alzada" aria-label="Dibujar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+      </button>
+    </div>
+
+    <div class="collaborative-subtoolbar__divider"></div>
+
+    <div class="pdf-editor-tools-group" data-ref="styling-group">
+      <label class="collaborative-color-btn" data-ref="label-stroke-color" data-tooltip="Color de trazo / borde">
+        <div class="collaborative-color-preview" data-ref="preview-stroke-color" style="background-color: #000000;"></div>
+        <input class="is-hidden" data-ref="input-stroke-color" type="color" value="#000000" />
+      </label>
+
+      <label class="collaborative-color-btn" data-ref="label-fill-color" data-tooltip="Color de relleno">
+        <div class="collaborative-color-preview" data-ref="preview-fill-color" style="background-color: transparent; border: 1px dashed #aaa;"></div>
+        <input class="is-hidden" data-ref="input-fill-color" type="color" value="#ffffff" />
+      </label>
+
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-toggle-bold" data-tooltip="Negrita" aria-label="Negrita">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h36 is-hidden" data-ref="btn-delete-element" data-tooltip="Eliminar elemento seleccionado" aria-label="Eliminar elemento">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+      </button>
+    </div>
+
+    <div class="collaborative-subtoolbar__divider"></div>
+
+    <div class="pdf-editor-tools-group" data-ref="page-actions-group">
+      <span class="component-badge component-badge--sm" data-ref="txt-page-info">Página 1 de 1</span>
+      <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-add-page">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        <span class="component-button__text">Añadir página</span>
+      </button>
+    </div>
+  </div>
+
+  <main class="collaborative-workspace" data-ref="collaborative-workspace">
+    <div class="collaborative-pages-container" data-ref="pages-container"></div>
+  </main>
+</div>

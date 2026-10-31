@@ -14,6 +14,11 @@ export const API_ROUTES = {
   },
   avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
   avatarBase: '/api/avatar',
+  collaborativeDocs: {
+    base: '/api/collaborative-docs',
+    byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
+    pdf: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/pdf`,
+  },
   download: {
     delete: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
     file: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
