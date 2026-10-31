@@ -312,7 +312,8 @@ html, body {
 }
 
 .rail-top-default,
-.rail-center-default {
+.rail-center-default,
+.rail-center-collaborative {
   align-items: center;
   box-sizing: border-box;
   display: flex;
