@@ -6,7 +6,7 @@ import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.j
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { applyAvatarTier } from '../utils/tier.util.js';
+import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
 export class CheckoutController implements ViewController {
   private abortController: AbortController | null = null;
@@ -16,6 +16,8 @@ export class CheckoutController implements ViewController {
   private currentPlan: 'pro' | 'business' = 'pro';
   private currentStep: 1 | 2 = 1;
   private elements: any = null;
+  private isCardSelected = false;
+  private isInitializingGateway = false;
   private isSubmitting = false;
   private oneTimeDuration: '1_month' | '12_months' = '1_month';
   private paymentElement: any = null;
@@ -43,6 +45,16 @@ export class CheckoutController implements ViewController {
       this.currentPlan = 'pro';
     }
 
+    const userTier = normalizeTier(currentUser.subscription_tier);
+    const targetTier = this.currentPlan;
+    const userWeight = getTierWeight(userTier);
+    const targetWeight = getTierWeight(targetTier);
+
+    if (userWeight >= targetWeight && userWeight > 0) {
+      this.renderAlreadyOwnedPlan(userTier, targetTier);
+      return;
+    }
+
     const cycleParam = params.get('cycle');
     if (cycleParam === 'yearly') {
       this.recurringCycle = 'yearly';
@@ -57,6 +69,23 @@ export class CheckoutController implements ViewController {
       this.currentMode = 'one_time';
     } else {
       this.currentMode = 'recurring';
+    }
+
+    const pill = this.container.querySelector<HTMLElement>('[data-ref="checkout-mode-toggle"]');
+    if (pill) {
+      pill.setAttribute('data-cycle', this.currentMode);
+    }
+
+    const btnRecurring = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-recurring"]');
+    const btnOneTime = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-one-time"]');
+    if (btnRecurring && btnOneTime) {
+      if (this.currentMode === 'recurring') {
+        btnRecurring.classList.add('active');
+        btnOneTime.classList.remove('active');
+      } else {
+        btnOneTime.classList.add('active');
+        btnRecurring.classList.remove('active');
+      }
     }
 
     this.bindEvents();
@@ -76,6 +105,69 @@ export class CheckoutController implements ViewController {
       } catch {}
       this.paymentElement = null;
     }
+  }
+
+  private renderAlreadyOwnedPlan(userTier: string, targetTier: string): void {
+    const isExactSame = userTier === targetTier;
+    const activeBlock = this.container.querySelector<HTMLElement>('[data-ref="checkout-already-active"]');
+    const step1El = this.container.querySelector<HTMLElement>('[data-ref="checkout-step-1"]');
+    const step2El = this.container.querySelector<HTMLElement>('[data-ref="checkout-step-2"]');
+    const btnNext = this.container.querySelector<HTMLElement>('[data-ref="btn-checkout-next"]');
+    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
+    const titleEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-active-title"]');
+    const descEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-active-desc"]');
+    const summaryPriceRow = this.container.querySelector<HTMLElement>('.checkout-summary-price-row');
+    const summaryNotice = this.container.querySelector<HTMLElement>('[data-ref="summary-notice-text"]');
+
+    if (step1El) step1El.style.display = 'none';
+    if (step2El) step2El.style.display = 'none';
+    if (btnNext) btnNext.style.display = 'none';
+    if (btnSubmit) btnSubmit.style.display = 'none';
+
+    if (activeBlock) {
+      activeBlock.style.display = 'flex';
+    }
+
+    const planName = targetTier === 'business' ? 'BoardPDF Negocios' : 'BoardPDF Pro';
+    const currentName = getTierDisplayName(userTier);
+
+    if (titleEl) {
+      titleEl.textContent = isExactSame
+        ? `Ya cuentas con el plan ${planName}`
+        : 'Tu cuenta ya cuenta con un plan superior';
+    }
+
+    if (descEl) {
+      descEl.textContent = isExactSame
+        ? `Tu cuenta ya dispone de este plan activo. No requieres realizar ningún pago adicional para disfrutar de todas sus ventajas.`
+        : `Actualmente dispones del plan ${currentName}, el cual ya incluye todas las herramientas y límites avanzados del plan ${planName}.`;
+    }
+
+    if (summaryPriceRow) {
+      summaryPriceRow.style.display = 'none';
+    }
+
+    if (summaryNotice) {
+      summaryNotice.textContent = isExactSame
+        ? 'Plan actualmente activo en tu cuenta.'
+        : `Plan superior (${currentName}) activo en tu cuenta.`;
+    }
+
+    const signal = this.abortController?.signal;
+    const btnBilling = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-goto-billing"]');
+    const btnPricing = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-goto-pricing"]');
+
+    btnBilling?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/settings/billing');
+    }, { signal });
+
+    btnPricing?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/pricing');
+    }, { signal });
+
+    renderIcons(this.container);
   }
 
   private bindEvents(): void {
@@ -135,6 +227,12 @@ export class CheckoutController implements ViewController {
       this.goToStep(1);
     }, { signal });
 
+    const methodHeader = this.container.querySelector<HTMLElement>('[data-ref="method-card-header"]');
+    methodHeader?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.toggleCardPaymentMethod();
+    }, { signal });
+
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
     btnSubmit?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -148,7 +246,7 @@ export class CheckoutController implements ViewController {
     const step1El = this.container.querySelector<HTMLElement>('[data-ref="checkout-step-1"]');
     const step2El = this.container.querySelector<HTMLElement>('[data-ref="checkout-step-2"]');
     const btnNext = this.container.querySelector<HTMLElement>('[data-ref="btn-checkout-next"]');
-    const btnSubmit = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-payment"]');
+    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
 
     if (step === 1) {
       if (step1El) step1El.style.display = 'flex';
@@ -159,9 +257,12 @@ export class CheckoutController implements ViewController {
       if (step1El) step1El.style.display = 'none';
       if (step2El) step2El.style.display = 'flex';
       if (btnNext) btnNext.style.display = 'none';
-      if (btnSubmit) btnSubmit.style.display = 'flex';
+      if (btnSubmit) {
+        btnSubmit.style.display = 'flex';
+        btnSubmit.disabled = !this.isCardSelected;
+      }
 
-      if (!this.paymentElement) {
+      if (this.isCardSelected && !this.paymentElement) {
         void this.initializeGateway();
       }
     }
@@ -177,10 +278,25 @@ export class CheckoutController implements ViewController {
       this.paymentElement = null;
     }
     this.currentIntent = null;
+    this.isCardSelected = false;
+    this.isInitializingGateway = false;
+
+    const methodCard = this.container.querySelector<HTMLElement>('[data-ref="method-card-card"]');
+    const methodBody = this.container.querySelector<HTMLElement>('[data-ref="method-card-body"]');
+    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
+
+    methodCard?.classList.remove('is-selected');
+    if (methodBody) methodBody.style.display = 'none';
+    if (btnSubmit) btnSubmit.disabled = true;
   }
 
   private setBillingMode(mode: 'recurring' | 'one_time'): void {
     this.currentMode = mode;
+
+    const pill = this.container.querySelector<HTMLElement>('[data-ref="checkout-mode-toggle"]');
+    if (pill) {
+      pill.setAttribute('data-cycle', mode);
+    }
 
     const btnRecurring = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-recurring"]');
     const btnOneTime = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-one-time"]');
@@ -199,6 +315,28 @@ export class CheckoutController implements ViewController {
     this.updateSelectionCards();
     this.updateSummary();
     this.invalidateGateway();
+  }
+
+  private toggleCardPaymentMethod(): void {
+    this.isCardSelected = !this.isCardSelected;
+
+    const methodCard = this.container.querySelector<HTMLElement>('[data-ref="method-card-card"]');
+    const methodBody = this.container.querySelector<HTMLElement>('[data-ref="method-card-body"]');
+    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
+
+    if (this.isCardSelected) {
+      methodCard?.classList.add('is-selected');
+      if (methodBody) methodBody.style.display = 'flex';
+      if (!this.paymentElement) {
+        void this.initializeGateway();
+      } else if (btnSubmit) {
+        btnSubmit.disabled = false;
+      }
+    } else {
+      methodCard?.classList.remove('is-selected');
+      if (methodBody) methodBody.style.display = 'none';
+      if (btnSubmit) btnSubmit.disabled = true;
+    }
   }
 
   private updatePlanView(): void {
@@ -336,6 +474,9 @@ export class CheckoutController implements ViewController {
   }
 
   private async initializeGateway(): Promise<void> {
+    if (this.isInitializingGateway) return;
+    this.isInitializingGateway = true;
+
     const mountPoint = this.container.querySelector<HTMLElement>('[data-ref="stripe-payment-mount-point"]');
     const loadingEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-elements-loading"]');
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
@@ -406,7 +547,7 @@ export class CheckoutController implements ViewController {
         this.paymentElement.mount(mountPoint);
         this.paymentElement.on('ready', () => {
           if (loadingEl) loadingEl.style.display = 'none';
-          if (btnSubmit) btnSubmit.disabled = false;
+          if (btnSubmit && this.isCardSelected) btnSubmit.disabled = false;
         });
 
         this.paymentElement.on('change', (e: any) => {
@@ -414,7 +555,7 @@ export class CheckoutController implements ViewController {
             if (e.empty) {
               if (btnSubmit) btnSubmit.disabled = true;
             } else if (e.complete) {
-              if (btnSubmit) btnSubmit.disabled = false;
+              if (btnSubmit && this.isCardSelected) btnSubmit.disabled = false;
               errorBanner.style.display = 'none';
             }
           }
@@ -426,11 +567,13 @@ export class CheckoutController implements ViewController {
         errorBanner.textContent = 'Error al cargar los componentes de pago seguro.';
         errorBanner.style.display = 'block';
       }
+    } finally {
+      this.isInitializingGateway = false;
     }
   }
 
   private async handlePaymentSubmit(): Promise<void> {
-    if (this.isSubmitting || !this.stripe || !this.elements) return;
+    if (this.isSubmitting || !this.stripe || !this.elements || !this.isCardSelected) return;
 
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
     const btnSubmitText = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-text"]');

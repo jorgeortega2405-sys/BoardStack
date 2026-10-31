@@ -386,3 +386,11 @@ export const translatePdfLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
+export const paymentLimiter = createRateLimiter({
+  keyGenerator: getUserOrIpKey,
+  max: 12,
+  message: 'Has realizado demasiados intentos de compra o pago. Por favor espera unos minutos antes de intentar de nuevo.',
+  prefix: 'payment_intent',
+  windowMs: 5 * 60 * 1000,
+});
+

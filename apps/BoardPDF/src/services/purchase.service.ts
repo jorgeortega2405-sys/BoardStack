@@ -34,10 +34,10 @@ export class PurchaseService {
           status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-          stripe_payment_intent_id = VALUES(stripe_payment_intent_id),
-          stripe_subscription_id = VALUES(stripe_subscription_id),
-          stripe_customer_id = VALUES(stripe_customer_id),
-          status = VALUES(status),
+          stripe_payment_intent_id = COALESCE(VALUES(stripe_payment_intent_id), stripe_payment_intent_id),
+          stripe_subscription_id = COALESCE(VALUES(stripe_subscription_id), stripe_subscription_id),
+          stripe_customer_id = COALESCE(VALUES(stripe_customer_id), stripe_customer_id),
+          status = IF(purchases.status = 'completed', 'completed', VALUES(status)),
           updated_at = CURRENT_TIMESTAMP`,
         [
           purchase.user_id,
@@ -131,20 +131,129 @@ export class PurchaseService {
     return rows[0] as PurchaseRecord;
   }
 
+  public async fulfillPurchase(
+    userId: number,
+    tier: string,
+    purchaseData: PurchaseRecord,
+    periodEnd?: Date | null,
+    subscriptionId?: string | null,
+    status = 'active'
+  ): Promise<{ alreadyCompleted: boolean; success: boolean }> {
+    const pool = getDbPool();
+    const connection = await pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      const lookupKey = purchaseData.stripe_session_id || purchaseData.stripe_payment_intent_id;
+      const [existingRows] = await connection.query<RowDataPacket[]>(
+        'SELECT id, user_id, status FROM purchases WHERE stripe_session_id = ? OR stripe_payment_intent_id = ? FOR UPDATE',
+        [lookupKey, lookupKey]
+      );
+
+      if (existingRows.length > 0) {
+        const existing = existingRows[0];
+        if (existing.user_id !== userId) {
+          await connection.rollback();
+          throw new Error('La transacción no corresponde al usuario autenticado.');
+        }
+
+        if (existing.status === 'completed') {
+          await connection.commit();
+          return { alreadyCompleted: true, success: true };
+        }
+      }
+
+      await connection.query<ResultSetHeader>(
+        `INSERT INTO purchases (
+          user_id,
+          stripe_session_id,
+          stripe_payment_intent_id,
+          stripe_subscription_id,
+          stripe_customer_id,
+          plan_id,
+          billing_period,
+          amount_total,
+          currency,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+        ON DUPLICATE KEY UPDATE
+          stripe_payment_intent_id = COALESCE(VALUES(stripe_payment_intent_id), stripe_payment_intent_id),
+          stripe_subscription_id = COALESCE(VALUES(stripe_subscription_id), stripe_subscription_id),
+          stripe_customer_id = COALESCE(VALUES(stripe_customer_id), stripe_customer_id),
+          status = 'completed',
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          userId,
+          purchaseData.stripe_session_id,
+          purchaseData.stripe_payment_intent_id || null,
+          purchaseData.stripe_subscription_id || null,
+          purchaseData.stripe_customer_id || null,
+          purchaseData.plan_id,
+          purchaseData.billing_period,
+          purchaseData.amount_total,
+          purchaseData.currency.toUpperCase(),
+        ]
+      );
+
+      const canonicalTier = normalizeTierKey(tier);
+      const shouldUpdateSubId = subscriptionId !== undefined;
+      const shouldUpdatePeriodEnd = periodEnd !== undefined;
+
+      const params: any[] = [canonicalTier, purchaseData.stripe_customer_id || null];
+      if (shouldUpdateSubId) params.push(subscriptionId);
+      params.push(status);
+      if (shouldUpdatePeriodEnd) params.push(periodEnd);
+      params.push(userId);
+
+      await connection.query<ResultSetHeader>(
+        `UPDATE users
+        SET
+          subscription_tier = ?,
+          stripe_customer_id = COALESCE(?, stripe_customer_id),
+          stripe_subscription_id = ${shouldUpdateSubId ? '?' : 'stripe_subscription_id'},
+          subscription_status = ?,
+          subscription_period_end = ${shouldUpdatePeriodEnd ? '?' : 'subscription_period_end'}
+        WHERE id = ?`,
+        params
+      );
+
+      await connection.commit();
+
+      try {
+        await redis.del(`user:profile:${userId}`);
+      } catch {}
+
+      logger.db.info('Compra confirmada y procesada atómicamente', {
+        plan: canonicalTier,
+        userId,
+      });
+
+      return { alreadyCompleted: false, success: true };
+    } catch (error) {
+      await connection.rollback();
+      logger.db.error('Error al procesar cumplimiento atómico de compra', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   public async updatePurchaseStatus(
     purchaseId: number,
     status: 'completed' | 'pending' | 'failed' | 'refunded',
     paymentIntentId?: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     const pool = getDbPool();
-    await pool.query<ResultSetHeader>(
+    const [result] = await pool.query<ResultSetHeader>(
       `UPDATE purchases
       SET status = ?,
           stripe_payment_intent_id = COALESCE(?, stripe_payment_intent_id),
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?`,
+      WHERE id = ? AND status != 'completed'`,
       [status, paymentIntentId || null, purchaseId]
     );
+    return result.affectedRows > 0;
   }
 
   public async getUserBillingInfo(userId: number): Promise<{
@@ -179,17 +288,19 @@ export class PurchaseService {
   public async getUserByStripeCustomerId(customerId: string): Promise<{
     email: string;
     id: number;
+    stripe_subscription_id: string | null;
     subscription_tier: SubscriptionTierId;
   } | null> {
     const pool = getDbPool();
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, email, subscription_tier FROM users WHERE stripe_customer_id = ? LIMIT 1',
+      'SELECT id, email, subscription_tier, stripe_subscription_id FROM users WHERE stripe_customer_id = ? LIMIT 1',
       [customerId]
     );
     if (rows.length === 0) return null;
     return {
       email: rows[0].email,
       id: rows[0].id,
+      stripe_subscription_id: rows[0].stripe_subscription_id || null,
       subscription_tier: normalizeTierKey(rows[0].subscription_tier),
     };
   }

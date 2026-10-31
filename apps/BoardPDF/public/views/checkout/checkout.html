@@ -1,15 +1,35 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper checkout-wrapper" data-ref="checkout-wrapper">
+  <div class="view-backdrop view-backdrop--dots" data-ref="checkout-backdrop"></div>
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="checkout-scrollable">
     <div class="checkout-view" data-ref="checkout-view">
       <div class="checkout-container">
         <div class="checkout-grid">
-          <!-- Columna Izquierda -->
           <div class="checkout-main">
-            <!-- PASO 1: Elegir Plan -->
+            <div class="checkout-already-active" data-ref="checkout-already-active" style="display: none;">
+              <div class="checkout-already-active__card">
+                <div class="checkout-already-active__icon-wrapper" data-ref="checkout-active-icon">
+                  <svg class="component-icon checkout-already-active__icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                </div>
+                <h2 class="checkout-already-active__title" data-ref="checkout-active-title">Plan ya activo en tu cuenta</h2>
+                <p class="checkout-already-active__description" data-ref="checkout-active-desc">
+                  Actualmente cuentas con este plan activo. No es necesario realizar una nueva compra.
+                </p>
+                <div class="checkout-already-active__actions">
+                  <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-goto-billing">
+                    <span>Administrar mi suscripción</span>
+                  </button>
+                  <button type="button" class="component-button component-button--h55 component-button--ghost component-button--w-full" data-ref="btn-goto-pricing">
+                    <span>Ver otros planes</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="checkout-step checkout-step--1" data-ref="checkout-step-1">
               <h1 class="checkout-title" data-ref="checkout-step1-title">Elegir plan</h1>
 
               <div class="component-toggle-pill checkout-toggle-pill" data-ref="checkout-mode-toggle" data-cycle="recurring">
+                <div class="component-toggle-pill-glider" data-ref="checkout-glider"></div>
                 <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-mode-recurring">
                   <span>Pago recurrente</span>
                 </button>
@@ -63,7 +83,6 @@
               </div>
             </div>
 
-            <!-- PASO 2: Finalizar Pago -->
             <div class="checkout-step checkout-step--2" data-ref="checkout-step-2" style="display: none;">
               <button type="button" class="checkout-back-link" data-ref="btn-back-to-step1">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
@@ -87,9 +106,8 @@
                 <h2 class="checkout-methods-section__title">Método de pago</h2>
 
                 <div class="checkout-methods-list" data-ref="checkout-methods-list">
-                  <!-- Opción 1: Tarjeta (Activa y expandida) -->
-                  <div class="checkout-method-card is-selected" data-ref="method-card-card">
-                    <div class="checkout-method-card__header">
+                  <div class="checkout-method-card" data-ref="method-card-card">
+                    <div class="checkout-method-card__header" data-ref="method-card-header">
                       <div class="checkout-method-card__left">
                         <div class="checkout-method-card__radio"></div>
                         <div class="checkout-method-card__icon">
@@ -99,7 +117,7 @@
                       </div>
                     </div>
 
-                    <div class="checkout-method-card__body" data-ref="method-card-body">
+                    <div class="checkout-method-card__body" data-ref="method-card-body" style="display: none;">
                       <div class="checkout-elements-box" data-ref="checkout-elements-box">
                         <div class="checkout-elements-loading" data-ref="checkout-elements-loading">
                           <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
@@ -113,54 +131,11 @@
                       </div>
                     </div>
                   </div>
-
-                  <!-- Opción 2: PayPal -->
-                  <div class="checkout-method-card is-disabled" data-ref="method-card-paypal">
-                    <div class="checkout-method-card__header">
-                      <div class="checkout-method-card__left">
-                        <div class="checkout-method-card__radio"></div>
-                        <div class="checkout-method-card__icon">
-                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
-                        </div>
-                        <span class="checkout-method-card__name">PayPal</span>
-                      </div>
-                      <span class="component-badge component-badge--sm">Próximamente</span>
-                    </div>
-                  </div>
-
-                  <!-- Opción 3: Mercado Pago -->
-                  <div class="checkout-method-card is-disabled" data-ref="method-card-mercadopago">
-                    <div class="checkout-method-card__header">
-                      <div class="checkout-method-card__left">
-                        <div class="checkout-method-card__radio"></div>
-                        <div class="checkout-method-card__icon">
-                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
-                        </div>
-                        <span class="checkout-method-card__name">Mercado Pago</span>
-                      </div>
-                      <span class="component-badge component-badge--sm">Próximamente</span>
-                    </div>
-                  </div>
-
-                  <!-- Opción 4: Google Pay -->
-                  <div class="checkout-method-card is-disabled" data-ref="method-card-googlepay">
-                    <div class="checkout-method-card__header">
-                      <div class="checkout-method-card__left">
-                        <div class="checkout-method-card__radio"></div>
-                        <div class="checkout-method-card__icon">
-                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#phone_iphone"></use></svg>
-                        </div>
-                        <span class="checkout-method-card__name">Google Pay</span>
-                      </div>
-                      <span class="component-badge component-badge--sm">Próximamente</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Columna Derecha (Sidebar Resumen) -->
           <aside class="checkout-sidebar">
             <div class="checkout-summary-card">
               <div class="checkout-summary-card__header">
@@ -199,13 +174,11 @@
                 Próximo cobro programado automáticamente al concluir el ciclo.
               </p>
 
-              <!-- Botón Paso 1: Siguiente -->
-              <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-checkout-next">
+              <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-checkout-next">
                 <span>Siguiente</span>
               </button>
 
-              <!-- Botón Paso 2: Pagar (Oculto inicialmente en Paso 1) -->
-              <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-submit-payment" style="display: none;" disabled>
+              <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-payment" style="display: none;" disabled>
                 <span data-ref="btn-submit-text">Pagar USD $9.99</span>
               </button>
 

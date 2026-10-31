@@ -1,7 +1,8 @@
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
-import { addAccountToSession, clearSessionCookie, hashPassword, removeAccountFromSession, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, hashPassword, removeAccountFromSession, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.service.js';
+import { purchaseService } from '../services/purchase.service.js';
 import { createUser, findUserByEmail, findUserDuplicates, updateUserLastLogin } from '../services/user.service.js';
 import { generateSixDigitCode, getPendingRegistration, savePendingRegistration, verifyAndConsumeCode } from '../services/verification.service.js';
 import { UserPayload } from '../types/auth.types.js';
@@ -263,6 +264,16 @@ export async function me(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     const accounts = getLinkedAccounts(req);
+
+    if (user && typeof user.id === 'number') {
+      const billing = await purchaseService.getUserBillingInfo(user.id);
+      if (billing && billing.subscription_tier !== user.subscription_tier) {
+        user.subscription_tier = billing.subscription_tier;
+        updateActiveAccountInSession(res, req, {
+          subscription_tier: billing.subscription_tier,
+        });
+      }
+    }
 
     res.status(200).json({
       accounts: accounts.map(sanitizeUser),

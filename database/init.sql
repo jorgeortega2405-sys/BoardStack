@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS purchases (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_purchases_user (user_id),
   INDEX idx_purchases_session (stripe_session_id),
+  INDEX idx_purchases_intent (stripe_payment_intent_id),
+  INDEX idx_purchases_subscription (stripe_subscription_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

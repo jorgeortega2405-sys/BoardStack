@@ -3,7 +3,7 @@ import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.js';
 import { showToast } from '../services/toast.service.js';
-import { applyAvatarTier } from '../utils/tier.util.js';
+import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
 export interface CheckoutModalOptions {
   billingPeriod?: 'monthly' | 'yearly';
@@ -17,6 +17,21 @@ let activeCheckoutModal: { close: () => void } | null = null;
 export async function openCheckoutModal(options: CheckoutModalOptions): Promise<{ close: () => void } | null> {
   if (activeCheckoutModal) {
     activeCheckoutModal.close();
+  }
+
+  if (currentUser) {
+    const userTier = normalizeTier(currentUser.subscription_tier);
+    const userWeight = getTierWeight(userTier);
+    const targetWeight = getTierWeight(options.planId);
+
+    if (userWeight === targetWeight) {
+      showToast(`Ya cuentas con el plan ${options.planId === 'business' ? 'Negocios' : 'Pro'} activo.`, 'info');
+      return null;
+    }
+    if (userWeight > targetWeight) {
+      showToast(`Tu plan actual ${getTierDisplayName(userTier)} ya incluye todas las ventajas de este plan.`, 'info');
+      return null;
+    }
   }
 
   const billingPeriod = options.billingPeriod || 'monthly';

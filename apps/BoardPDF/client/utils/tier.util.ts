@@ -19,3 +19,39 @@ export function applyAvatarTier(el: HTMLElement | null, tier?: string, color?: s
   const tierColor = color || getFallbackTierColor(normalizedTier);
   el.style.setProperty('--avatar-tier-bg', tierColor);
 }
+
+export function normalizeTier(tier?: string | null): 'free' | 'pro' | 'business' | 'enterprise' {
+  const clean = (tier || 'free').toLowerCase().trim();
+  if (clean === 'negocios' || clean === 'business') return 'business';
+  if (clean === 'empresas' || clean === 'enterprise') return 'enterprise';
+  if (clean === 'pro') return 'pro';
+  return 'free';
+}
+
+export function getTierWeight(tier?: string | null): number {
+  const norm = normalizeTier(tier);
+  switch (norm) {
+    case 'enterprise':
+      return 3;
+    case 'business':
+      return 2;
+    case 'pro':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+export function getTierDisplayName(tier?: string | null): string {
+  const norm = normalizeTier(tier);
+  switch (norm) {
+    case 'enterprise':
+      return 'Empresas';
+    case 'business':
+      return 'Negocios';
+    case 'pro':
+      return 'Pro';
+    default:
+      return 'Gratuito';
+  }
+}

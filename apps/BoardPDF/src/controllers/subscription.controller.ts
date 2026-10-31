@@ -9,6 +9,20 @@ import { SubscriptionTierId } from '../types/subscription.types.js';
 import { sendBadRequest, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
+function isSafeClientError(msg: string): boolean {
+  return (
+    msg.includes('Ya cuentas con') ||
+    msg.includes('plan superior') ||
+    msg.includes('solicitud de compra en proceso') ||
+    msg.includes('no corresponde') ||
+    msg.includes('no disponible para contratación') ||
+    msg.includes('procesando la confirmación') ||
+    msg.includes('aún no se ha completado') ||
+    msg.includes('suscripción activa') ||
+    msg.includes('No es necesario adquirir')
+  );
+}
+
 export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
   try {
     const subscriptions = Object.values(PLAN_TIER_CONFIGS);
@@ -50,7 +64,11 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
       success: true,
       url: checkout.url,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message && isSafeClientError(error.message)) {
+      sendBadRequest(res, error.message);
+      return;
+    }
     sendInternalError(res, 'Error al generar sesión de checkout en Stripe', error, 'Error al conectar con la pasarela de pagos.');
   }
 }
@@ -291,7 +309,11 @@ export async function createSubscriptionIntent(req: Request, res: Response): Pro
     );
 
     sendSuccess(res, result);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message && isSafeClientError(error.message)) {
+      sendBadRequest(res, error.message);
+      return;
+    }
     sendInternalError(res, 'Error al inicializar pasarela de suscripción', error, 'No se pudo iniciar el proceso de pago.');
   }
 }
@@ -316,8 +338,16 @@ export async function confirmSubscriptionPayment(req: Request, res: Response): P
       paymentIntentId
     );
 
+    updateActiveAccountInSession(res, req, {
+      subscription_tier: result.tier as SubscriptionTierId,
+    });
+
     sendSuccess(res, result);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message && isSafeClientError(error.message)) {
+      sendBadRequest(res, error.message);
+      return;
+    }
     sendInternalError(res, 'Error al confirmar activación de suscripción', error, 'No se pudo activar la suscripción.');
   }
 }
@@ -351,7 +381,11 @@ export async function createOneTimeIntent(req: Request, res: Response): Promise<
     );
 
     sendSuccess(res, result);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message && isSafeClientError(error.message)) {
+      sendBadRequest(res, error.message);
+      return;
+    }
     sendInternalError(res, 'Error al inicializar pago único', error, 'No se pudo iniciar el proceso de pago único.');
   }
 }
@@ -371,8 +405,17 @@ export async function confirmOneTimePayment(req: Request, res: Response): Promis
     }
 
     const result = await stripeService.confirmOneTimePayment(user.id, paymentIntentId);
+
+    updateActiveAccountInSession(res, req, {
+      subscription_tier: result.planId as SubscriptionTierId,
+    });
+
     sendSuccess(res, result);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message && isSafeClientError(error.message)) {
+      sendBadRequest(res, error.message);
+      return;
+    }
     sendInternalError(res, 'Error al confirmar activación de pago único', error, 'No se pudo confirmar el pago.');
   }
 }

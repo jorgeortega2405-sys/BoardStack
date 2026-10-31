@@ -73,3 +73,14 @@ export function getTierBorderColor(tier?: string | null): string {
   const norm = normalizeTierKey(tier);
   return PLAN_TIER_CONFIGS[norm].borderColor;
 }
+
+export const TIER_WEIGHTS: Record<SubscriptionTierId, number> = {
+  business: 2,
+  enterprise: 3,
+  free: 0,
+  pro: 1,
+};
+
+export function getTierWeight(tier?: string | null): number {
+  return TIER_WEIGHTS[normalizeTierKey(tier)];
+}

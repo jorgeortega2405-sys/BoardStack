@@ -7,7 +7,7 @@ import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { applyAvatarTier } from '../utils/tier.util.js';
+import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
 export class PricingController implements ViewController {
   private abortController: AbortController | null = null;
@@ -23,6 +23,7 @@ export class PricingController implements ViewController {
     this.abortController = new AbortController();
     this.bindEvents();
     this.renderFooter();
+    this.updateUserTierStatus();
     renderIcons(this.container);
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -133,6 +134,45 @@ export class PricingController implements ViewController {
     }
   }
 
+  private updateUserTierStatus(): void {
+    if (!currentUser) return;
+
+    const userTier = normalizeTier(currentUser.subscription_tier);
+    const userWeight = getTierWeight(userTier);
+
+    const btnPro = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-pro"]');
+    const btnBusiness = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-business"]');
+
+    if (btnPro) {
+      if (userWeight === 1) {
+        btnPro.classList.add('component-button--disabled');
+        btnPro.disabled = true;
+        btnPro.innerHTML = '<span>Tu plan actual</span>';
+      } else if (userWeight > 1) {
+        btnPro.classList.add('component-button--disabled');
+        btnPro.disabled = true;
+        btnPro.innerHTML = '<span>Incluido en tu plan</span>';
+      }
+    }
+
+    if (btnBusiness) {
+      if (userWeight === 2) {
+        btnBusiness.classList.add('component-button--disabled');
+        btnBusiness.disabled = true;
+        btnBusiness.innerHTML = '<span>Tu plan actual</span>';
+      } else if (userWeight === 1) {
+        const defaultText = btnBusiness.querySelector<HTMLElement>('.component-button__default-text');
+        const hoverText = btnBusiness.querySelector<HTMLElement>('.component-button__hover-text');
+        if (defaultText) defaultText.textContent = 'Mejorar a Negocios';
+        if (hoverText) hoverText.textContent = 'Mejorar ahora';
+      } else if (userWeight > 2) {
+        btnBusiness.classList.add('component-button--disabled');
+        btnBusiness.disabled = true;
+        btnBusiness.innerHTML = '<span>Incluido en tu plan</span>';
+      }
+    }
+  }
+
   private handlePlanAction(tierId: string): void {
     if (!currentUser) {
       showToast(t('upgrade.login_required', 'Inicia sesión para seleccionar un plan.'), 'info');
@@ -141,6 +181,20 @@ export class PricingController implements ViewController {
     }
 
     if (tierId !== 'pro' && tierId !== 'business') {
+      return;
+    }
+
+    const userTier = normalizeTier(currentUser.subscription_tier);
+    const userWeight = getTierWeight(userTier);
+    const targetWeight = getTierWeight(tierId);
+
+    if (userWeight === targetWeight) {
+      showToast(`Ya cuentas con el plan ${tierId === 'business' ? 'Negocios' : 'Pro'} activo.`, 'info');
+      return;
+    }
+
+    if (userWeight > targetWeight) {
+      showToast(`Tu plan actual ${getTierDisplayName(userTier)} ya incluye todas las ventajas de este plan.`, 'info');
       return;
     }
 
