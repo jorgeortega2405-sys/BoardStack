@@ -1,7 +1,7 @@
 import { config } from '../config/env.config.js';
 import { normalizeTierKey, PLAN_TIER_CONFIGS } from '../config/plans.config.js';
 import { redis } from '../config/redis.config.js';
-import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, SubscriptionTierId } from '../types/subscription.types.js';
+import { BillingDetailsResponse, OneTimePaymentIntentResponse, PaymentMethod, PurchaseRecord, SubscriptionIntentResponse, SubscriptionTierId } from '../types/subscription.types.js';
 import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
 import Stripe from 'stripe';
@@ -132,7 +132,263 @@ export class StripeService {
       userId,
     });
 
-    return { id: session.id, sessionId: session.id, url: session.url };
+    return { id: session.id, url: session.url };
+  }
+
+  public async createSubscriptionIntent(
+    userId: number,
+    email: string,
+    planId: string,
+    billingPeriod: 'monthly' | 'yearly' = 'monthly'
+  ): Promise<SubscriptionIntentResponse> {
+    const normalizedPlan = normalizeTierKey(planId);
+    const tier = PLAN_TIER_CONFIGS[normalizedPlan];
+
+    if (!tier || normalizedPlan === 'free' || normalizedPlan === 'enterprise') {
+      throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
+    }
+
+    const isYearly = billingPeriod === 'yearly';
+    const priceId = isYearly ? tier.stripePriceYearlyId : tier.stripePriceMonthlyId;
+    if (!priceId) {
+      throw new Error(`ID de precio de Stripe no configurado para el plan ${tier.name}.`);
+    }
+
+    const unitPrice = isYearly ? tier.priceYearly * 12 : tier.priceMonthly;
+    const customer = await this.getOrCreateCustomer(userId, email);
+
+    const subscription = await this.stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: {
+        payment_method_types: ['card'],
+        save_default_payment_method: 'on_subscription',
+      },
+      expand: ['latest_invoice.payment_intent'],
+      metadata: {
+        billingPeriod,
+        planId: tier.id,
+        userId: String(userId),
+      },
+    });
+
+    const invoice = subscription.latest_invoice as any;
+    const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent | undefined;
+    const clientSecret = paymentIntent?.client_secret;
+
+    if (!clientSecret || !paymentIntent?.id) {
+      throw new Error('No se pudo inicializar la pasarela de pagos con Stripe Elements.');
+    }
+
+    await purchaseService.recordPurchase({
+      amount_total: unitPrice,
+      billing_period: billingPeriod,
+      currency: 'USD',
+      plan_id: tier.id,
+      status: 'pending',
+      stripe_customer_id: customer.id,
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_session_id: paymentIntent.id,
+      stripe_subscription_id: subscription.id,
+      user_id: userId,
+    });
+
+    logger.app.info('Intento de suscripción con Stripe Elements creado', {
+      billingPeriod,
+      paymentIntentId: paymentIntent.id,
+      plan: tier.id,
+      subscriptionId: subscription.id,
+      userId,
+    });
+
+    return {
+      amount: unitPrice,
+      billingPeriod,
+      clientSecret,
+      currency: 'USD',
+      paymentIntentId: paymentIntent.id,
+      planId: tier.id,
+      planName: tier.name,
+      publishableKey: config.stripe.publishableKey,
+      subscriptionId: subscription.id,
+      success: true,
+    };
+  }
+
+  public async confirmSubscriptionPayment(
+    userId: number,
+    subscriptionId: string,
+    paymentIntentId?: string
+  ): Promise<{ success: boolean; tier: SubscriptionTierId; subscriptionId: string }> {
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, {
+      expand: ['customer', 'latest_invoice.payment_intent'],
+    });
+
+    const subUserId = Number(subscription.metadata?.userId);
+    if (subUserId && subUserId !== userId) {
+      throw new Error('La suscripción pertenece a otra cuenta.');
+    }
+
+    const rawPlan = subscription.metadata?.planId || 'pro';
+    const planId = normalizeTierKey(rawPlan);
+
+    const rawEnd = (subscription as any).current_period_end;
+    const periodEndDate = typeof rawEnd === 'number' ? new Date(rawEnd * 1000) : null;
+    const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id;
+
+    const subStatus = subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : subscription.status;
+    await purchaseService.updateUserSubscription(
+      userId,
+      planId,
+      customerId,
+      subscription.id,
+      subStatus,
+      periodEndDate
+    );
+
+    const existingPurchase = await purchaseService.getPurchaseBySessionId(paymentIntentId || subscription.id);
+    if (existingPurchase && typeof existingPurchase.id === 'number') {
+      await purchaseService.updatePurchaseStatus(existingPurchase.id, 'completed', paymentIntentId);
+    }
+
+    logger.security.info('Suscripción confirmada y activada mediante Stripe Elements', {
+      periodEnd: periodEndDate,
+      plan: planId,
+      status: subscription.status,
+      subscriptionId: subscription.id,
+      userId,
+    });
+
+    return {
+      subscriptionId: subscription.id,
+      success: true,
+      tier: planId,
+    };
+  }
+
+  public async createOneTimePaymentIntent(
+    userId: number,
+    email: string,
+    planId: string,
+    duration: '1_month' | '12_months' = '1_month'
+  ): Promise<OneTimePaymentIntentResponse> {
+    const normalizedPlan = normalizeTierKey(planId);
+    const tier = PLAN_TIER_CONFIGS[normalizedPlan];
+
+    if (!tier || normalizedPlan === 'free' || normalizedPlan === 'enterprise') {
+      throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
+    }
+
+    const isYearly = duration === '12_months';
+    const unitPrice = isYearly ? tier.priceYearly * 12 : tier.priceMonthly;
+    const amountInCents = Math.round(unitPrice * 100);
+
+    const customer = await this.getOrCreateCustomer(userId, email);
+
+    const paymentIntent = await this.stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: 'usd',
+      customer: customer.id,
+      description: `BoardPDF ${tier.name} - Pago único (${isYearly ? '12 meses' : '1 mes'})`,
+      metadata: {
+        billingType: 'one_time',
+        duration,
+        planId: tier.id,
+        userId: String(userId),
+      },
+      payment_method_types: ['card'],
+    } as any);
+
+    if (!paymentIntent.client_secret) {
+      throw new Error('No se pudo inicializar la pasarela de pago para pago único.');
+    }
+
+    await purchaseService.recordPurchase({
+      amount_total: unitPrice,
+      billing_period: isYearly ? 'one_time_yearly' : 'one_time_monthly',
+      currency: 'USD',
+      plan_id: tier.id,
+      status: 'pending',
+      stripe_customer_id: customer.id,
+      stripe_payment_intent_id: paymentIntent.id,
+      stripe_session_id: paymentIntent.id,
+      user_id: userId,
+    });
+
+    logger.app.info('Intento de pago único creado', {
+      amount: unitPrice,
+      duration,
+      paymentIntentId: paymentIntent.id,
+      plan: tier.id,
+      userId,
+    });
+
+    return {
+      amount: unitPrice,
+      billingType: 'one_time',
+      clientSecret: paymentIntent.client_secret,
+      currency: 'USD',
+      duration,
+      paymentIntentId: paymentIntent.id,
+      planId: tier.id,
+      planName: tier.name,
+      publishableKey: config.stripe.publishableKey,
+      success: true,
+    };
+  }
+
+  public async confirmOneTimePayment(
+    userId: number,
+    paymentIntentId: string
+  ): Promise<{ periodEnd: Date; planId: SubscriptionTierId; success: boolean }> {
+    const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
+
+    const piUserId = Number(paymentIntent.metadata?.userId);
+    if (piUserId && piUserId !== userId) {
+      throw new Error('El intento de pago pertenece a otra cuenta.');
+    }
+
+    if (paymentIntent.status !== 'succeeded') {
+      throw new Error('El pago aún no se ha completado.');
+    }
+
+    const rawPlan = paymentIntent.metadata?.planId || 'pro';
+    const planId = normalizeTierKey(rawPlan);
+    const duration = paymentIntent.metadata?.duration || '1_month';
+    const isYearly = duration === '12_months';
+
+    const durationDays = isYearly ? 365 : 30;
+    const periodEndDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    const customerId = typeof paymentIntent.customer === 'string' ? paymentIntent.customer : null;
+
+    await purchaseService.updateUserSubscription(
+      userId,
+      planId,
+      customerId,
+      null,
+      'active',
+      periodEndDate
+    );
+
+    const existingPurchase = await purchaseService.getPurchaseBySessionId(paymentIntentId);
+    if (existingPurchase && typeof existingPurchase.id === 'number') {
+      await purchaseService.updatePurchaseStatus(existingPurchase.id, 'completed', paymentIntentId);
+    }
+
+    logger.security.info('Suscripción de pago único activada exitosamente', {
+      duration,
+      paymentIntentId,
+      periodEnd: periodEndDate,
+      plan: planId,
+      userId,
+    });
+
+    return {
+      periodEnd: periodEndDate,
+      planId,
+      success: true,
+    };
   }
 
   public async verifyAndSyncCheckoutSession(

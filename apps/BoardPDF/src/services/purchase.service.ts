@@ -124,11 +124,27 @@ export class PurchaseService {
   public async getPurchaseBySessionId(sessionId: string): Promise<PurchaseRecord | null> {
     const pool = getDbPool();
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM purchases WHERE stripe_session_id = ? LIMIT 1',
-      [sessionId]
+      'SELECT * FROM purchases WHERE stripe_session_id = ? OR stripe_payment_intent_id = ? LIMIT 1',
+      [sessionId, sessionId]
     );
     if (rows.length === 0) return null;
     return rows[0] as PurchaseRecord;
+  }
+
+  public async updatePurchaseStatus(
+    purchaseId: number,
+    status: 'completed' | 'pending' | 'failed' | 'refunded',
+    paymentIntentId?: string
+  ): Promise<void> {
+    const pool = getDbPool();
+    await pool.query<ResultSetHeader>(
+      `UPDATE purchases
+      SET status = ?,
+          stripe_payment_intent_id = COALESCE(?, stripe_payment_intent_id),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+      [status, paymentIntentId || null, purchaseId]
+    );
   }
 
   public async getUserBillingInfo(userId: number): Promise<{

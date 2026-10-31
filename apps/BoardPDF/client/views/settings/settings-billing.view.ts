@@ -207,5 +207,16 @@ export async function createBillingView(): Promise<HTMLElement> {
 
   await loadBillingData();
 
+  const onSubscriptionUpdated = () => {
+    void loadBillingData();
+  };
+  window.addEventListener('subscription-updated', onSubscriptionUpdated);
+
+  (container as any).__controller = {
+    destroy: () => {
+      window.removeEventListener('subscription-updated', onSubscriptionUpdated);
+    },
+  };
+
   return container;
 }

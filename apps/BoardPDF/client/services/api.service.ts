@@ -1,4 +1,5 @@
 import { User } from '../types/auth.types.js';
+import { OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
 
 export let currentUser: User | null = null;
 export let linkedAccounts: User[] = [];
@@ -282,6 +283,77 @@ export async function createCheckoutApi(planId: string, billingPeriod: string): 
     return await res.json();
   } catch {
     return { error: 'Error al conectar con la pasarela de pagos', success: false };
+  }
+}
+
+export async function createSubscriptionIntentApi(
+  planId: string,
+  billingPeriod: string = 'monthly'
+): Promise<SubscriptionIntentResponse & { error?: string }> {
+  try {
+    const res = await postApi('/api/subscription/create-intent', { billingPeriod, planId });
+    return await res.json();
+  } catch {
+    return {
+      amount: 0,
+      billingPeriod: billingPeriod as any,
+      clientSecret: '',
+      currency: 'USD',
+      error: 'Error al conectar con la pasarela de pagos.',
+      paymentIntentId: '',
+      planId: planId as any,
+      planName: '',
+      publishableKey: '',
+      subscriptionId: '',
+      success: false,
+    };
+  }
+}
+
+export async function confirmSubscriptionPaymentApi(
+  subscriptionId: string,
+  paymentIntentId?: string
+): Promise<{ error?: string; message?: string; success: boolean; tier?: string }> {
+  try {
+    const res = await postApi('/api/subscription/confirm-intent', { paymentIntentId, subscriptionId });
+    return await res.json();
+  } catch {
+    return { error: 'Error al confirmar la suscripción.', success: false };
+  }
+}
+
+export async function createOneTimePaymentIntentApi(
+  planId: string,
+  duration: '1_month' | '12_months' = '1_month'
+): Promise<OneTimePaymentIntentResponse & { error?: string }> {
+  try {
+    const res = await postApi('/api/subscription/create-one-time-intent', { duration, planId });
+    return await res.json();
+  } catch {
+    return {
+      amount: 0,
+      billingType: 'one_time',
+      clientSecret: '',
+      currency: 'USD',
+      duration,
+      error: 'Error al conectar con la pasarela de pagos.',
+      paymentIntentId: '',
+      planId: planId as any,
+      planName: '',
+      publishableKey: '',
+      success: false,
+    };
+  }
+}
+
+export async function confirmOneTimePaymentApi(
+  paymentIntentId: string
+): Promise<{ error?: string; periodEnd?: string; planId?: string; success: boolean }> {
+  try {
+    const res = await postApi('/api/subscription/confirm-one-time-intent', { paymentIntentId });
+    return await res.json();
+  } catch {
+    return { error: 'Error al confirmar el pago único.', success: false };
   }
 }
 

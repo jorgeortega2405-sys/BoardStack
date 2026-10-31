@@ -1,6 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
-import { createCheckoutApi, currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
+import { currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -133,30 +133,18 @@ export class PricingController implements ViewController {
     }
   }
 
-  private async handlePlanAction(tierId: string): Promise<void> {
+  private handlePlanAction(tierId: string): void {
     if (!currentUser) {
       showToast(t('upgrade.login_required', 'Inicia sesión para seleccionar un plan.'), 'info');
       navigate('/login');
       return;
     }
 
-    const btn = this.container.querySelector<HTMLButtonElement>(`[data-ref="btn-subscribe-${tierId}"]`);
-    if (btn) {
-      btn.disabled = true;
+    if (tierId !== 'pro' && tierId !== 'business') {
+      return;
     }
 
-    try {
-      const res = await createCheckoutApi(tierId, this.currentCycle);
-      if (res.success && res.url) {
-        window.location.href = res.url;
-      } else {
-        showToast(res.error || 'No se pudo iniciar el proceso de pago.', 'danger');
-        if (btn) btn.disabled = false;
-      }
-    } catch {
-      showToast('Error al conectar con la pasarela de pagos.', 'danger');
-      if (btn) btn.disabled = false;
-    }
+    navigate(`/checkout?plan=${tierId}&cycle=${this.currentCycle}`);
   }
 
   private async handlePaymentReturn(sessionId: string): Promise<void> {

@@ -261,3 +261,118 @@ export async function deletePaymentMethod(req: Request, res: Response): Promise<
     sendInternalError(res, 'Error al eliminar método de pago', error, 'No se pudo eliminar la tarjeta.');
   }
 }
+
+export async function createSubscriptionIntent(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const { billingPeriod, planId } = req.body;
+    if (!planId) {
+      sendBadRequest(res, 'El plan es obligatorio.');
+      return;
+    }
+
+    const canonicalPlan = normalizeTierKey(planId);
+    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise') {
+      sendBadRequest(res, 'El plan solicitado no admite suscripción directa.');
+      return;
+    }
+
+    const cycle: 'monthly' | 'yearly' = billingPeriod === 'yearly' ? 'yearly' : 'monthly';
+    const result = await stripeService.createSubscriptionIntent(
+      user.id,
+      user.email,
+      canonicalPlan,
+      cycle
+    );
+
+    sendSuccess(res, result);
+  } catch (error) {
+    sendInternalError(res, 'Error al inicializar pasarela de suscripción', error, 'No se pudo iniciar el proceso de pago.');
+  }
+}
+
+export async function confirmSubscriptionPayment(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const { paymentIntentId, subscriptionId } = req.body;
+    if (!subscriptionId) {
+      sendBadRequest(res, 'ID de suscripción ausente.');
+      return;
+    }
+
+    const result = await stripeService.confirmSubscriptionPayment(
+      user.id,
+      subscriptionId,
+      paymentIntentId
+    );
+
+    sendSuccess(res, result);
+  } catch (error) {
+    sendInternalError(res, 'Error al confirmar activación de suscripción', error, 'No se pudo activar la suscripción.');
+  }
+}
+
+export async function createOneTimeIntent(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const { duration, planId } = req.body;
+    if (!planId) {
+      sendBadRequest(res, 'El plan es obligatorio.');
+      return;
+    }
+
+    const canonicalPlan = normalizeTierKey(planId);
+    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise') {
+      sendBadRequest(res, 'El plan solicitado no admite suscripción directa.');
+      return;
+    }
+
+    const dur: '1_month' | '12_months' = duration === '12_months' ? '12_months' : '1_month';
+    const result = await stripeService.createOneTimePaymentIntent(
+      user.id,
+      user.email,
+      canonicalPlan,
+      dur
+    );
+
+    sendSuccess(res, result);
+  } catch (error) {
+    sendInternalError(res, 'Error al inicializar pago único', error, 'No se pudo iniciar el proceso de pago único.');
+  }
+}
+
+export async function confirmOneTimePayment(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const { paymentIntentId } = req.body;
+    if (!paymentIntentId) {
+      sendBadRequest(res, 'ID de intento de pago ausente.');
+      return;
+    }
+
+    const result = await stripeService.confirmOneTimePayment(user.id, paymentIntentId);
+    sendSuccess(res, result);
+  } catch (error) {
+    sendInternalError(res, 'Error al confirmar activación de pago único', error, 'No se pudo confirmar el pago.');
+  }
+}

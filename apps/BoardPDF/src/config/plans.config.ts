@@ -11,6 +11,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
     priceMonthly: 19.99,
     priceYearly: 15.99,
     ringBg: '#10b981',
+    stripePriceMonthlyId: 'price_1UWf5dE4dfTcnyKKYCQ5Ue2K',
+    stripePriceYearlyId: 'price_1UWf5dE4dfTcnyKKbvBdN2eP',
     tagline: 'Máxima potencia, automatización y colaboración avanzada para despachos y equipos en crecimiento.',
   },
   enterprise: {
@@ -47,6 +49,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
     priceMonthly: 9.99,
     priceYearly: 7.99,
     ringBg: '#3b82f6',
+    stripePriceMonthlyId: 'price_1UWf5cE4dfTcnyKK45Xiqzgo',
+    stripePriceYearlyId: 'price_1UWf5cE4dfTcnyKK1M2gQcZI',
     tagline: 'El plan más equilibrado para profesionales, investigadores y creadores independientes.',
   },
 };

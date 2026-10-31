@@ -410,6 +410,15 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/pricing' || path === '/precios' || path === '/precio' || path.startsWith('/pricing') || path.startsWith('/precios') || path.startsWith('/precio'),
   },
   {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-checkout.css');
+      const { createCheckoutView } = await import('../views/checkout.view.js');
+      return await createCheckoutView();
+    },
+    id: 'checkout',
+    match: (path) => path === '/checkout' || path.startsWith('/checkout'),
+  },
+  {
     handler: async ({ path }) => {
       await loadStylesheet('/css/components/component-views.css');
       const { createHelpCookiesView, createHelpFaqView, createHelpPrivacyView, createHelpSecurityView, createHelpTermsView } = await import('../views/help.view.js');

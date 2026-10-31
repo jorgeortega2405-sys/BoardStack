@@ -674,6 +674,25 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
       es: 'Sobre Nosotros - Nuestra Historia | BoardPDF',
     },
   },
+  checkout: {
+    descriptions: {
+      en: 'Complete your BoardPDF subscription checkout securely.',
+      es: 'Completa tu suscripción de BoardPDF de forma segura.',
+    },
+    routeId: 'checkout',
+    slugs: {
+      de: 'kasse',
+      en: 'checkout',
+      es: 'checkout',
+      fr: 'caisse',
+      it: 'cassa',
+      pt: 'checkout',
+    },
+    titles: {
+      en: 'Checkout | BoardPDF',
+      es: 'Completar Suscripción | BoardPDF',
+    },
+  },
   contact: {
     descriptions: {
       en: 'Get in touch with the BoardPDF team for inquiries, support, or partnership opportunities.',
@@ -848,6 +867,7 @@ SLUG_TO_ROUTE_MAP.set('about', 'about');
 SLUG_TO_ROUTE_MAP.set('sobre-nosotros', 'about');
 SLUG_TO_ROUTE_MAP.set('contact', 'contact');
 SLUG_TO_ROUTE_MAP.set('contacto', 'contact');
+SLUG_TO_ROUTE_MAP.set('checkout', 'checkout');
 SLUG_TO_ROUTE_MAP.set('pricing', 'pricing');
 SLUG_TO_ROUTE_MAP.set('precios', 'pricing');
 SLUG_TO_ROUTE_MAP.set('precio', 'pricing');

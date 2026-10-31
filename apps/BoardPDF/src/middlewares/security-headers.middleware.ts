@@ -9,6 +9,7 @@ export function buildContentSecurityPolicy(): string {
     "'unsafe-inline'",
     'https://challenges.cloudflare.com',
     'https://apis.google.com',
+    'https://js.stripe.com',
   ];
   if (isDev) {
     scriptDirectives.push("'unsafe-eval'");
@@ -23,12 +24,19 @@ export function buildContentSecurityPolicy(): string {
       'https://challenges.cloudflare.com',
       'https://*.googleapis.com',
       'https://*.dropboxapi.com',
+      'https://api.stripe.com',
     ],
     'default-src': ["'self'"],
     'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
     'form-action': ["'self'"],
     'frame-ancestors': ["'none'"],
-    'frame-src': ["'self'", 'https://challenges.cloudflare.com', 'https://accounts.google.com'],
+    'frame-src': [
+      "'self'",
+      'https://challenges.cloudflare.com',
+      'https://accounts.google.com',
+      'https://js.stripe.com',
+      'https://hooks.stripe.com',
+    ],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'object-src': ["'self'", 'blob:'],
     'script-src': scriptDirectives,
@@ -47,7 +55,7 @@ export function securityHeaders() {
   return function securityHeadersMiddleware(req: Request, res: Response, next: NextFunction): void {
     res.setHeader('Content-Security-Policy', cspHeader);
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');

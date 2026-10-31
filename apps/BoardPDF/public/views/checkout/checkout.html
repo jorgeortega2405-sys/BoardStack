@@ -1,0 +1,223 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper checkout-wrapper" data-ref="checkout-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="checkout-scrollable">
+    <div class="checkout-view" data-ref="checkout-view">
+      <div class="checkout-container">
+        <div class="checkout-grid">
+          <!-- Columna Izquierda -->
+          <div class="checkout-main">
+            <!-- PASO 1: Elegir Plan -->
+            <div class="checkout-step checkout-step--1" data-ref="checkout-step-1">
+              <h1 class="checkout-title" data-ref="checkout-step1-title">Elegir plan</h1>
+
+              <div class="component-toggle-pill checkout-toggle-pill" data-ref="checkout-mode-toggle" data-cycle="recurring">
+                <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-mode-recurring">
+                  <span>Pago recurrente</span>
+                </button>
+                <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-mode-one-time">
+                  <span>Pago único</span>
+                </button>
+              </div>
+
+              <div class="checkout-benefits" data-ref="checkout-benefits-list">
+                <div class="checkout-benefit-item" data-ref="benefit-item-1">
+                  <span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+                  <span data-ref="benefit-text-1">Cancela cuando quieras. Sin compromisos a largo plazo.</span>
+                </div>
+                <div class="checkout-benefit-item" data-ref="benefit-item-2">
+                  <span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+                  <span data-ref="benefit-text-2">Acceso inmediato e ilimitado a todas las herramientas avanzadas.</span>
+                </div>
+                <div class="checkout-benefit-item" data-ref="benefit-item-3">
+                  <span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+                  <span data-ref="benefit-text-3">Facturación automática para que nunca pierdas el acceso a tus archivos.</span>
+                </div>
+              </div>
+
+              <div class="checkout-options-group" data-ref="checkout-options-container">
+                <div class="checkout-option-card is-selected" data-ref="option-card-1">
+                  <div class="checkout-option-card__left">
+                    <div class="checkout-option-card__radio"></div>
+                    <div class="checkout-option-card__info">
+                      <div class="checkout-option-card__title-row">
+                        <h3 class="checkout-option-card__title" data-ref="option-title-1">Mensual</h3>
+                      </div>
+                      <p class="checkout-option-card__desc" data-ref="option-desc-1">Facturación cada mes</p>
+                    </div>
+                  </div>
+                  <div class="checkout-option-card__price" data-ref="option-price-1">USD $9.99</div>
+                </div>
+
+                <div class="checkout-option-card" data-ref="option-card-2">
+                  <div class="checkout-option-card__left">
+                    <div class="checkout-option-card__radio"></div>
+                    <div class="checkout-option-card__info">
+                      <div class="checkout-option-card__title-row">
+                        <h3 class="checkout-option-card__title" data-ref="option-title-2">Anual</h3>
+                        <span class="component-badge component-badge--sm component-badge--success" data-ref="option-badge-2">Ahorra 20%</span>
+                      </div>
+                      <p class="checkout-option-card__desc" data-ref="option-desc-2">USD $7.99 al mes facturado anualmente</p>
+                    </div>
+                  </div>
+                  <div class="checkout-option-card__price" data-ref="option-price-2">USD $95.88</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PASO 2: Finalizar Pago -->
+            <div class="checkout-step checkout-step--2" data-ref="checkout-step-2" style="display: none;">
+              <button type="button" class="checkout-back-link" data-ref="btn-back-to-step1">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                <span>Cambiar plan o período</span>
+              </button>
+
+              <h1 class="checkout-title" data-ref="checkout-step2-title">Finalizar pago</h1>
+
+              <div class="checkout-benefits" data-ref="step2-benefits-list">
+                <div class="checkout-benefit-item">
+                  <span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+                  <span data-ref="step2-benefit-1">Transacción cifrada y protegida por Stripe.</span>
+                </div>
+                <div class="checkout-benefit-item">
+                  <span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+                  <span data-ref="step2-benefit-2">Sin costos ocultos ni cargos adicionales.</span>
+                </div>
+              </div>
+
+              <div class="checkout-methods-section">
+                <h2 class="checkout-methods-section__title">Método de pago</h2>
+
+                <div class="checkout-methods-list" data-ref="checkout-methods-list">
+                  <!-- Opción 1: Tarjeta (Activa y expandida) -->
+                  <div class="checkout-method-card is-selected" data-ref="method-card-card">
+                    <div class="checkout-method-card__header">
+                      <div class="checkout-method-card__left">
+                        <div class="checkout-method-card__radio"></div>
+                        <div class="checkout-method-card__icon">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+                        </div>
+                        <span class="checkout-method-card__name">Tarjeta de crédito o débito</span>
+                      </div>
+                    </div>
+
+                    <div class="checkout-method-card__body" data-ref="method-card-body">
+                      <div class="checkout-elements-box" data-ref="checkout-elements-box">
+                        <div class="checkout-elements-loading" data-ref="checkout-elements-loading">
+                          <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
+                          <span>Cargando pasarela segura...</span>
+                        </div>
+                        <div data-ref="stripe-payment-mount-point"></div>
+                      </div>
+                      <div class="checkout-secure-badge">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+                        <span>Procesamiento cifrado SSL de 256 bits respaldado por Stripe</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Opción 2: PayPal -->
+                  <div class="checkout-method-card is-disabled" data-ref="method-card-paypal">
+                    <div class="checkout-method-card__header">
+                      <div class="checkout-method-card__left">
+                        <div class="checkout-method-card__radio"></div>
+                        <div class="checkout-method-card__icon">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+                        </div>
+                        <span class="checkout-method-card__name">PayPal</span>
+                      </div>
+                      <span class="component-badge component-badge--sm">Próximamente</span>
+                    </div>
+                  </div>
+
+                  <!-- Opción 3: Mercado Pago -->
+                  <div class="checkout-method-card is-disabled" data-ref="method-card-mercadopago">
+                    <div class="checkout-method-card__header">
+                      <div class="checkout-method-card__left">
+                        <div class="checkout-method-card__radio"></div>
+                        <div class="checkout-method-card__icon">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+                        </div>
+                        <span class="checkout-method-card__name">Mercado Pago</span>
+                      </div>
+                      <span class="component-badge component-badge--sm">Próximamente</span>
+                    </div>
+                  </div>
+
+                  <!-- Opción 4: Google Pay -->
+                  <div class="checkout-method-card is-disabled" data-ref="method-card-googlepay">
+                    <div class="checkout-method-card__header">
+                      <div class="checkout-method-card__left">
+                        <div class="checkout-method-card__radio"></div>
+                        <div class="checkout-method-card__icon">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#phone_iphone"></use></svg>
+                        </div>
+                        <span class="checkout-method-card__name">Google Pay</span>
+                      </div>
+                      <span class="component-badge component-badge--sm">Próximamente</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna Derecha (Sidebar Resumen) -->
+          <aside class="checkout-sidebar">
+            <div class="checkout-summary-card">
+              <div class="checkout-summary-card__header">
+                <div class="checkout-summary-card__icon" data-ref="summary-plan-icon">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
+                </div>
+                <div>
+                  <h3 class="checkout-summary-card__title" data-ref="summary-plan-title">BoardPDF Pro</h3>
+                  <p class="checkout-summary-card__type" data-ref="summary-plan-type">Facturación recurrente</p>
+                </div>
+              </div>
+
+              <ul class="checkout-summary-items">
+                <li class="checkout-summary-item">
+                  <span class="checkout-summary-item__bullet"></span>
+                  <span data-ref="summary-feat-1">Acceso ilimitado a todas las herramientas</span>
+                </li>
+                <li class="checkout-summary-item">
+                  <span class="checkout-summary-item__bullet"></span>
+                  <span data-ref="summary-feat-2">Almacenamiento y procesamiento prioritario</span>
+                </li>
+                <li class="checkout-summary-item">
+                  <span class="checkout-summary-item__bullet"></span>
+                  <span data-ref="summary-feat-3">Sin marcas de agua ni límites diarios</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="checkout-summary-card">
+              <div class="checkout-summary-price-row">
+                <span class="checkout-summary-price-row__label">A pagar hoy</span>
+                <span class="checkout-summary-price-row__val" data-ref="summary-price-val">USD $9.99</span>
+              </div>
+
+              <p class="checkout-summary-notice" data-ref="summary-notice-text">
+                Próximo cobro programado automáticamente al concluir el ciclo.
+              </p>
+
+              <!-- Botón Paso 1: Siguiente -->
+              <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-checkout-next">
+                <span>Siguiente</span>
+              </button>
+
+              <!-- Botón Paso 2: Pagar (Oculto inicialmente en Paso 1) -->
+              <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-submit-payment" style="display: none;" disabled>
+                <span data-ref="btn-submit-text">Pagar USD $9.99</span>
+              </button>
+
+              <div class="banner banner--danger" data-ref="checkout-error-banner" style="display: none; width: 100%; margin-top: 10px;"></div>
+
+              <p class="checkout-terms-note">
+                Al continuar, aceptas las Condiciones de uso y la Política de privacidad de BoardPDF.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

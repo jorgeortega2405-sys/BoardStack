@@ -2,7 +2,7 @@ export type SubscriptionTierId = 'business' | 'enterprise' | 'free' | 'pro';
 
 export interface PurchaseRecord {
   amount_total: number;
-  billing_period: 'monthly' | 'yearly';
+  billing_period: 'monthly' | 'yearly' | 'one_time_monthly' | 'one_time_yearly';
   created_at?: Date | string;
   currency: string;
   id?: number;
@@ -51,5 +51,33 @@ export interface SubscriptionTier {
   priceMonthly: number;
   priceYearly: number;
   ringBg: string;
+  stripePriceMonthlyId?: string;
+  stripePriceYearlyId?: string;
   tagline: string;
+}
+
+export interface SubscriptionIntentResponse {
+  amount: number;
+  billingPeriod: 'monthly' | 'yearly';
+  clientSecret: string;
+  currency: string;
+  paymentIntentId: string;
+  planId: SubscriptionTierId;
+  planName: string;
+  publishableKey: string;
+  subscriptionId: string;
+  success: boolean;
+}
+
+export interface OneTimePaymentIntentResponse {
+  amount: number;
+  billingType: 'one_time';
+  clientSecret: string;
+  currency: string;
+  duration: '1_month' | '12_months';
+  paymentIntentId: string;
+  planId: SubscriptionTierId;
+  planName: string;
+  publishableKey: string;
+  success: boolean;
 }
