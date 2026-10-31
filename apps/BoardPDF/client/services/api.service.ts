@@ -50,10 +50,6 @@ export async function ensureCsrfToken(forceRefresh = false): Promise<string> {
   return token;
 }
 
-export function hasPermission(_user: User | null, _permission: string): boolean {
-  return true;
-}
-
 async function timedFetch(url: string, init: RequestInit): Promise<Response> {
   return await fetch(url, init);
 }
@@ -268,4 +264,68 @@ export async function logoutAllApi(): Promise<boolean> {
   } catch {}
   setAuthState(null, []);
   return true;
+}
+
+export function updateUserSubscriptionTier(tier: string): void {
+  if (currentUser) {
+    currentUser.subscription_tier = tier;
+    setAuthState(
+      { ...currentUser, subscription_tier: tier },
+      linkedAccounts.map((a) => (a.id === currentUser?.id ? { ...a, subscription_tier: tier } : a))
+    );
+  }
+}
+
+export async function createCheckoutApi(planId: string, billingPeriod: string): Promise<{ error?: string; sessionId?: string; success: boolean; url?: string }> {
+  try {
+    const res = await postApi('/api/subscription/checkout', { billingPeriod, planId });
+    return await res.json();
+  } catch {
+    return { error: 'Error al conectar con la pasarela de pagos', success: false };
+  }
+}
+
+export async function verifySubscriptionSessionApi(sessionId: string): Promise<{ error?: string; message?: string; purchase?: any; success: boolean; tier?: string }> {
+  try {
+    const res = await getApi(`/api/subscription/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+    return await res.json();
+  } catch {
+    return { error: 'Error al verificar sesión de pago', success: false };
+  }
+}
+
+export async function getBillingDetailsApi(): Promise<any> {
+  try {
+    const res = await getApi('/api/subscription/billing');
+    return await res.json();
+  } catch {
+    return { hasSubscription: false, success: false, tier: 'free' };
+  }
+}
+
+export async function getPurchaseHistoryApi(): Promise<{ purchases: any[]; success: boolean }> {
+  try {
+    const res = await getApi('/api/subscription/purchases');
+    return await res.json();
+  } catch {
+    return { purchases: [], success: false };
+  }
+}
+
+export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<any> {
+  try {
+    const res = await postApi('/api/subscription/renewal', { cancelAtPeriodEnd });
+    return await res.json();
+  } catch {
+    return { error: 'Error de red al actualizar renovación', success: false };
+  }
+}
+
+export async function cancelSubscriptionImmediateApi(): Promise<any> {
+  try {
+    const res = await postApi('/api/subscription/cancel-immediate', {});
+    return await res.json();
+  } catch {
+    return { error: 'Error de red al cancelar suscripción', success: false };
+  }
 }

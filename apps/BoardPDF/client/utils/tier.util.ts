@@ -1,6 +1,9 @@
 const FALLBACK_TIER_COLORS: Record<string, string> = {
-  business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  business: '#10b981',
+  empresas: '#ef4444',
+  enterprise: '#ef4444',
   free: '#9ca3af',
+  negocios: '#10b981',
   pro: '#3b82f6',
 };
 

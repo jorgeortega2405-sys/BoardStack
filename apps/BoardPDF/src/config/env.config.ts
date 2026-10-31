@@ -85,6 +85,11 @@ export const config = {
     port: parseInt(process.env.SMTP_PORT || '465', 10),
     user: process.env.SMTP_USER || '',
   },
+  stripe: {
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  },
   turnstile: {
     enabled: process.env.TURNSTILE_ENABLED === 'true' || Boolean(process.env.TURNSTILE_SECRET_KEY),
     secretKey: process.env.TURNSTILE_SECRET_KEY || '',

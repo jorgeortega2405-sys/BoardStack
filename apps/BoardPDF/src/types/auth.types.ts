@@ -7,6 +7,7 @@ export interface UserPayload {
   role?: string;
   roles?: string[];
   subscription_tier?: string;
+  two_factor_enabled?: boolean;
   username: string;
 }
 
@@ -19,6 +20,7 @@ export interface SessionAccount {
   roles?: string[];
   sessionId?: string;
   subscription_tier?: string;
+  two_factor_enabled?: boolean;
   username: string;
 }
 

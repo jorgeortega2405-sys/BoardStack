@@ -502,6 +502,30 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/reset-password',
   },
   {
+    handler: async ({ path }) => {
+      await loadStylesheet('/css/components/component-settings.css');
+      const { createBillingView, createPurchasesView, createSecurityView, createYourAccountView } = await import('../views/settings.view.js');
+      if (path === '/settings' || path === '/settings/' || path === '/settings/your-account') {
+        if (path === '/settings' || path === '/settings/') {
+          window.history.replaceState({}, '', '/settings/your-account');
+        }
+        return await createYourAccountView();
+      }
+      if (path === '/settings/security') {
+        return await createSecurityView();
+      }
+      if (path === '/settings/billing') {
+        return await createBillingView();
+      }
+      if (path === '/settings/purchases' || path === '/settings/purchase-history') {
+        return await createPurchasesView();
+      }
+      return await createYourAccountView();
+    },
+    id: 'settings',
+    match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
+  },
+  {
     handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();

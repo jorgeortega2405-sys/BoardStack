@@ -1033,3 +1033,53 @@ export function setupSortableGrid(
     sortable,
   };
 }
+
+export interface RenderEmptyStateOptions {
+  container: HTMLElement;
+  dataRef?: string;
+  desc: string;
+  graphicType?: string;
+  isTable?: boolean;
+  title: string;
+}
+
+export function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement {
+  removeEmptyState(options.container, options.dataRef);
+
+  const emptyEl = document.createElement('div');
+  emptyEl.className = `component-empty-state${options.isTable ? ' component-empty-state--table' : ''}`;
+  if (options.dataRef) {
+    emptyEl.setAttribute('data-ref', options.dataRef);
+  }
+
+  const graphicEl = document.createElement('div');
+  graphicEl.className = 'component-empty-state-graphic';
+  if (options.graphicType === 'search') {
+    graphicEl.innerHTML = `<svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="62" cy="62" r="30" stroke="currentColor" stroke-width="3" fill="none" opacity="0.4"/><line x1="84" y1="84" x2="112" y2="112" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.4"/></svg>`;
+  } else {
+    graphicEl.innerHTML = `<svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="illCardGradSub" x1="25" y1="35" x2="115" y2="95" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#71717a"/><stop offset="50%" stop-color="#52525b"/><stop offset="100%" stop-color="#27272a"/></linearGradient></defs><rect x="30" y="42" width="80" height="54" rx="10" fill="url(#illCardGradSub)" stroke="#71717a" stroke-width="2"/><rect x="30" y="54" width="80" height="10" fill="#18181b"/><rect x="42" y="74" width="16" height="12" rx="3" fill="#e4e4e7" opacity="0.7"/><g transform="translate(86, 78)"><path d="M0 -8 L2.4 -2.5 L8.5 -2.5 L3.6 1.2 L5.5 7 L0 3.5 L-5.5 7 L-3.6 1.2 L-8.5 -2.5 L-2.4 -2.5 Z" fill="#fbbf24"/></g></svg>`;
+  }
+
+  const titleEl = document.createElement('h2');
+  titleEl.className = 'component-empty-state-title';
+  titleEl.textContent = options.title;
+
+  const descEl = document.createElement('p');
+  descEl.className = 'component-empty-state-desc';
+  descEl.textContent = options.desc;
+
+  emptyEl.appendChild(graphicEl);
+  emptyEl.appendChild(titleEl);
+  emptyEl.appendChild(descEl);
+
+  options.container.appendChild(emptyEl);
+  return emptyEl;
+}
+
+export function removeEmptyState(container: HTMLElement, dataRef?: string): void {
+  const selector = dataRef ? `[data-ref="${dataRef}"]` : '.component-empty-state';
+  const existing = container.querySelector(selector);
+  if (existing) {
+    existing.remove();
+  }
+}

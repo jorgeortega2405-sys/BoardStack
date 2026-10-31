@@ -11,7 +11,7 @@ import { isSupportedLanguage } from '../utils/languages.util.js';
 import { setupUserMenu } from './layout-user-menu.component.js';
 
 export let isDrawerOpen = false;
-export let currentDrawerMode: 'apps' | 'help' | 'workflows' = 'workflows';
+export let currentDrawerMode: 'apps' | 'help' | 'settings' | 'workflows' = 'workflows';
 let activeResizeObserver: ResizeObserver | null = null;
 let activeMutationObserver: MutationObserver | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -52,7 +52,7 @@ function getActiveHelpSection(raw: string): 'faq' | 'security' | 'privacy' | 'te
 
 export function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
-  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/');
+  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings');
 }
 
 export function updateSidebarAuthState(_sidebar?: HTMLElement): void {}
@@ -62,6 +62,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isHome = cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1)));
   const isHelp = getActiveHelpSection(cleanPath) !== null;
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
+  const isSettings = cleanPath.startsWith('/settings');
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
@@ -85,7 +86,9 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnRailLogin?.classList.toggle('is-active', isAuth && !isDrawerOpen);
 
   if (isDrawerOpen) {
-    if (isHelp && currentDrawerMode !== 'help') {
+    if (isSettings && currentDrawerMode !== 'settings') {
+      currentDrawerMode = 'settings';
+    } else if (isHelp && currentDrawerMode !== 'help') {
       currentDrawerMode = 'help';
     } else if (isWorkflows && currentDrawerMode !== 'workflows') {
       currentDrawerMode = 'workflows';
@@ -196,7 +199,9 @@ export async function populateDrawerContent(drawer: HTMLElement, activePath?: st
     hideElement(drawerFooter);
   }
 
-  if (currentDrawerMode === 'help') {
+  if (currentDrawerMode === 'settings') {
+    renderSettingsDrawerContent(drawerBody, drawerFooter, activePath);
+  } else if (currentDrawerMode === 'help') {
     renderHelpDrawerContent(drawerBody, drawerFooter, activePath);
   } else if (currentDrawerMode === 'apps') {
     renderAppsDrawerContent(drawerBody);
@@ -343,6 +348,71 @@ function renderHelpDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElem
   }
 }
 
+function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElement | null, activePath?: string): void {
+  const currentPath = activePath || window.location.pathname;
+
+  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+    btn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      navigate(path);
+    });
+  };
+
+  drawerBody.innerHTML = `
+    <div class="drawer-section__header" data-ref="drawer-settings-header" style="padding: 8px 8px 4px 8px;">
+      <span class="drawer-section__title" data-ref="drawer-settings-title" data-i18n="nav.settings" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${t('nav.settings', 'Configuración')}</span>
+    </div>
+    <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+      <span class="menu-item__text" data-i18n="nav.your_account">${t('nav.your_account', 'Tu cuenta')}</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+      <span class="menu-item__text" data-i18n="nav.security">${t('nav.security', 'Seguridad')}</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+      <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing', 'Facturación')}</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+      <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases', 'Historial de compras')}</span>
+    </button>
+  `;
+
+  translateElement(drawerBody);
+
+  const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
+  const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
+  const btnBilling = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+  const btnPurchases = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+
+  if (currentPath === '/settings' || currentPath === '/settings/your-account') {
+    btnAccount?.classList.add('is-active');
+  } else if (currentPath === '/settings/security') {
+    btnSecurity?.classList.add('is-active');
+  } else if (currentPath === '/settings/billing') {
+    btnBilling?.classList.add('is-active');
+  } else if (currentPath === '/settings/purchases' || currentPath === '/settings/purchase-history') {
+    btnPurchases?.classList.add('is-active');
+  }
+
+  bindNavLink(btnAccount, '/settings/your-account');
+  bindNavLink(btnSecurity, '/settings/security');
+  bindNavLink(btnBilling, '/settings/billing');
+  bindNavLink(btnPurchases, '/settings/purchases');
+
+  if (drawerFooter) {
+    drawerFooter.innerHTML = '';
+    hideElement(drawerFooter);
+  }
+
+  renderIcons(drawerBody);
+}
+
 function renderAppsDrawerContent(drawerBody: HTMLElement): void {
   const categoriesConfig = [
     { id: 'organize', name: t('home.cat_organize') || 'Ordenar PDF' },
@@ -437,13 +507,14 @@ function closeDynamicDrawer(): void {
   }
 }
 
-export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'workflows'): void {
+export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'settings' | 'workflows'): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const currentPath = window.location.pathname;
   const cleanPath = (currentPath || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
+  const isSettings = cleanPath.startsWith('/settings');
   const isHelp = getActiveHelpSection(cleanPath) !== null;
-  const targetMode = mode || (isHelp ? 'help' : (isWorkflows ? 'workflows' : 'workflows'));
+  const targetMode = mode || (isSettings ? 'settings' : (isHelp ? 'help' : (isWorkflows ? 'workflows' : 'workflows')));
 
   if (forceState === undefined) {
     if (isDrawerOpen && currentDrawerMode === targetMode) {
@@ -491,11 +562,18 @@ function setupDrawerContent(sidebar: HTMLElement): void {
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (isDrawerOpen && currentDrawerMode === 'workflows') {
+    if (isDrawerOpen) {
       toggleDrawer(false);
     } else {
-      toggleDrawer(true, 'workflows');
+      const currentPath = window.location.pathname;
+      const mode = currentPath.startsWith('/settings')
+        ? 'settings'
+        : getActiveHelpSection(currentPath) !== null
+          ? 'help'
+          : 'workflows';
+      toggleDrawer(true, mode);
     }
+
   });
 
   isDrawerOpen = false;

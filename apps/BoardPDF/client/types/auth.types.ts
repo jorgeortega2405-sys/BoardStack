@@ -7,6 +7,7 @@ export interface User {
   role?: string;
   roles?: string[];
   subscription_tier?: string;
+  two_factor_enabled?: boolean;
   username: string;
 }
 

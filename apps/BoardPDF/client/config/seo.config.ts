@@ -1,4 +1,4 @@
-﻿import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, normalizeLanguageCode } from '../utils/languages.util.js';
+import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, normalizeLanguageCode } from '../utils/languages.util.js';
 
 export interface RouteSeoInfo {
   category?: string;

@@ -1,10 +1,50 @@
 export const API_ROUTES = {
+  auth: {
+    forgotPassword: '/api/forgot-password',
+    login: '/api/login',
+    logout: '/api/logout',
+    logoutAll: '/api/auth/logout-all',
+    me: '/api/me',
+    registerResendCode: '/api/register/resend-code',
+    registerSendCode: '/api/register/send-code',
+    registerStage1: '/api/register/stage1-validate',
+    registerVerifyCode: '/api/register/verify-code',
+    resetPassword: '/api/reset-password',
+    switchAccount: '/api/auth/switch-account',
+  },
+  avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
+  avatarBase: '/api/avatar',
   download: {
     delete: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
     file: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
     info: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}/info`,
   },
   health: '/api/health',
+  settings: {
+    accountDelete: '/api/settings/account/delete',
+    avatar: '/api/settings/avatar',
+    email: '/api/settings/email',
+    emailRequestCode: '/api/settings/email/request-code',
+    emailVerifyCode: '/api/settings/email/verify-code',
+    password: '/api/settings/password',
+    passwordStatus: '/api/settings/password/status',
+    passwordVerify: '/api/settings/password/verify',
+    preferences: '/api/settings/preferences',
+    twoFactorDisable: '/api/settings/2fa/disable',
+    twoFactorEnable: '/api/settings/2fa/enable',
+    twoFactorGenerate: '/api/settings/2fa/generate',
+    twoFactorStatus: '/api/settings/2fa/status',
+    username: '/api/settings/username',
+  },
+  subscription: {
+    billing: '/api/subscription/billing',
+    cancelImmediate: '/api/subscription/cancel-immediate',
+    checkout: '/api/subscription/checkout',
+    plans: '/api/subscription/plans',
+    purchases: '/api/subscription/purchases',
+    renewal: '/api/subscription/renewal',
+    verifySession: (sessionId: string) => `/api/subscription/verify-session?session_id=${encodeURIComponent(sessionId)}`,
+  },
   tools: {
     comparePdf: {
       compare: '/api/tools/compare-pdf/compare',
@@ -91,4 +131,6 @@ export const API_ROUTES = {
       process: '/api/tools/watermark-pdf/process',
     },
   },
-};
+} as const;
+
+export default API_ROUTES;

@@ -34,7 +34,8 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "5.7.284",
     "qr-code-styling": "^1.9.2",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "@rolldown/binding-win32-x64-msvc": "^1.2.15",

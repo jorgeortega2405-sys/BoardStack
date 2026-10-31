@@ -1,12 +1,13 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
-import { currentUser } from '../services/api.service.js';
+import { createCheckoutApi, currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
+import { applyAvatarTier } from '../utils/tier.util.js';
 
 export class PricingController implements ViewController {
   private abortController: AbortController | null = null;
@@ -23,6 +24,17 @@ export class PricingController implements ViewController {
     this.bindEvents();
     this.renderFooter();
     renderIcons(this.container);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+
+    if (paymentStatus === 'success' && sessionId) {
+      void this.handlePaymentReturn(sessionId);
+    } else if (paymentStatus === 'cancelled') {
+      showToast(t('upgrade.cancelled', 'El proceso de pago fue cancelado.'), 'info');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }
 
   destroy(): void {
@@ -55,13 +67,13 @@ export class PricingController implements ViewController {
     const btnPro = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-pro"]');
     btnPro?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.handlePlanAction('pro');
+      void this.handlePlanAction('pro');
     }, { signal });
 
     const btnBusiness = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-business"]');
     btnBusiness?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.handlePlanAction('business');
+      void this.handlePlanAction('business');
     }, { signal });
 
     const btnEnterprise = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-enterprise"]');
@@ -121,13 +133,48 @@ export class PricingController implements ViewController {
     }
   }
 
-  private handlePlanAction(tierId: string): void {
+  private async handlePlanAction(tierId: string): Promise<void> {
     if (!currentUser) {
-      showToast(t('upgrade.login_required') || 'Inicia sesión para seleccionar un plan.', 'info');
+      showToast(t('upgrade.login_required', 'Inicia sesión para seleccionar un plan.'), 'info');
       navigate('/login');
       return;
     }
-    showToast(t('upgrade.notice') || 'La pasarela de pagos estará disponible próximamente.', 'info');
+
+    const btn = this.container.querySelector<HTMLButtonElement>(`[data-ref="btn-subscribe-${tierId}"]`);
+    if (btn) {
+      btn.disabled = true;
+    }
+
+    try {
+      const res = await createCheckoutApi(tierId, this.currentCycle);
+      if (res.success && res.url) {
+        window.location.href = res.url;
+      } else {
+        showToast(res.error || 'No se pudo iniciar el proceso de pago.', 'danger');
+        if (btn) btn.disabled = false;
+      }
+    } catch {
+      showToast('Error al conectar con la pasarela de pagos.', 'danger');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  private async handlePaymentReturn(sessionId: string): Promise<void> {
+    try {
+      const res = await verifySubscriptionSessionApi(sessionId);
+      if (res.success && res.tier) {
+        updateUserSubscriptionTier(res.tier);
+        const avatarEl = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
+        applyAvatarTier(avatarEl, res.tier);
+        showToast(t('upgrade.success', '¡Tu suscripción ha sido activada con éxito!'), 'success');
+      } else {
+        showToast(res.error || 'No se pudo verificar el estado de la suscripción.', 'danger');
+      }
+    } catch {
+      showToast('Error al confirmar tu suscripción.', 'danger');
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }
 
   private renderFooter(): void {

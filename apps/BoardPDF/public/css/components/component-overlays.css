@@ -802,3 +802,296 @@ body.modal-open {
     width: 100%;
   }
 }
+
+.modal-card--split {
+  width: 1024px;
+  max-width: calc(100vw - 32px);
+  height: 585px;
+  min-height: 585px;
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  display: grid;
+  grid-template-columns: 530px 1fr;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: none;
+}
+
+.modal-split__left {
+  padding: 40px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background-color: var(--bg-surface);
+  overflow-y: auto;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.modal-split__stage {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.modal-split__header {
+  margin-bottom: 20px;
+}
+
+.modal-split__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.modal-split__desc {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.modal-split__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field__input--code {
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  letter-spacing: 4px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.modal-split__link-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  transition: color var(--sl-transition-fast, 0.15s ease);
+  outline: none;
+}
+
+.modal-split__link-toggle:hover {
+  color: var(--text-primary);
+}
+
+.modal-split__link-toggle .component-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.modal-split__secret-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface-elevated, rgba(125, 125, 125, 0.08));
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.modal-split__secret-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+  letter-spacing: 1px;
+}
+
+.modal-split__secret-copy {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color var(--sl-transition-fast, 0.15s ease), background-color var(--sl-transition-fast, 0.15s ease);
+}
+
+.modal-split__secret-copy:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg, rgba(125, 125, 125, 0.08));
+}
+
+.modal-split__secret-copy .component-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.backup-codes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.code-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-surface-elevated, rgba(125, 125, 125, 0.06));
+  border: 1px solid var(--border-color);
+  text-align: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--sl-transition-fast, 0.15s ease), border-color var(--sl-transition-fast, 0.15s ease), transform var(--sl-transition-fast, 0.1s ease);
+  user-select: all;
+}
+
+.code-badge:hover {
+  border-color: var(--border-color-hover, var(--text-primary));
+  background-color: var(--hover-bg, rgba(125, 125, 125, 0.08));
+  transform: translateY(-1px);
+}
+
+.code-badge:active {
+  transform: translateY(0);
+}
+
+.modal-split__backup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-split__backup-actions .component-button {
+  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.modal-card--split .modal-split__right {
+  background: linear-gradient(135deg, #050505, #242424, #0a0a0a);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-left: 1px solid var(--border-color);
+}
+
+.modal-split__visual-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  gap: 16px;
+}
+
+.modal-split__qr-wrapper {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-split__qr-canvas {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-split__right-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+}
+
+.modal-split__right-hint .component-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.modal-split__svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.6));
+}
+
+.modal-split__right-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: #4ade80;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.modal-split__right-status .component-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .modal-card--split {
+    grid-template-columns: 1fr;
+    width: 95vw;
+    height: auto;
+    min-height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 16px;
+  }
+
+  .modal-split__right {
+    border-left: none;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 260px;
+    padding: 24px 16px;
+    order: -1;
+  }
+
+  .modal-split__left {
+    padding: 24px 20px;
+  }
+}

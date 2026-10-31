@@ -197,7 +197,11 @@ export async function render(rawPath = window.location.pathname, options?: Rende
     translateElement(currentSidebar);
     if (!isAuthView && hasDesignatedMenuItems(internalPath)) {
       if (window.innerWidth > 768) {
-        const drawerMode = internalPath.includes('/workflows') || internalPath.includes('/workflow/') ? 'workflows' : 'help';
+        const drawerMode = internalPath.startsWith('/settings')
+          ? 'settings'
+          : internalPath.includes('/workflows') || internalPath.includes('/workflow/')
+            ? 'workflows'
+            : 'help';
         toggleDrawer(true, drawerMode);
       }
     }

@@ -23,6 +23,10 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
 
+  if (req.path === '/api/subscription/webhook' || req.originalUrl.startsWith('/api/subscription/webhook')) {
+    return next();
+  }
+
   const clientToken = req.headers[CSRF_HEADER_NAME] || (req.body && typeof req.body === 'object' ? req.body._csrf : undefined);
   if (!clientToken || clientToken !== token) {
     logger.security.warn('Petición bloqueada por fallo o ausencia de token CSRF', {

@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url VARCHAR(512) NULL,
   role VARCHAR(50) NOT NULL DEFAULT 'USER',
   subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
+  stripe_customer_id VARCHAR(255) NULL,
+  stripe_subscription_id VARCHAR(255) NULL,
+  subscription_status VARCHAR(50) NOT NULL DEFAULT 'inactive',
+  subscription_period_end TIMESTAMP NULL,
   two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   two_factor_secret VARCHAR(255) NULL,
   two_factor_recovery_codes TEXT NULL,
@@ -71,5 +75,24 @@ CREATE TABLE IF NOT EXISTS user_audit_logs (
   user_agent VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_audit_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS purchases (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
+  stripe_payment_intent_id VARCHAR(255) NULL,
+  stripe_subscription_id VARCHAR(255) NULL,
+  stripe_customer_id VARCHAR(255) NULL,
+  plan_id VARCHAR(50) NOT NULL,
+  billing_period VARCHAR(20) NOT NULL,
+  amount_total DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+  status VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_purchases_user (user_id),
+  INDEX idx_purchases_session (stripe_session_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

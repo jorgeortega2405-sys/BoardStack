@@ -9,6 +9,8 @@ import { originProtection, securityHeaders } from './middlewares/security-header
 import authRoutes from './routes/auth.routes.js';
 import downloadRoutes from './routes/download.routes.js';
 import seoRoutes from './routes/seo.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import compression from 'compression';
@@ -231,6 +233,8 @@ async function startServer(): Promise<void> {
 
   app.use('/api', authRoutes);
   app.use('/api', downloadRoutes);
+  app.use('/api', settingsRoutes);
+  app.use('/api', subscriptionRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);
 

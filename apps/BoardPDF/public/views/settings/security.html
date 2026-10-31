@@ -1,0 +1,66 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+    <div class="settings-layout" data-ref="settings-layout">
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.security.title">Inicio de sesión y seguridad</h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.security.subtitle">Gestiona tu contraseña, métodos de autenticación en dos pasos, sesiones activas y seguridad de la cuenta.</p>
+      </div>
+
+      <div class="banner banner--info" data-ref="protected-account-banner" style="display: none; margin-bottom: 24px;">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+        <div class="banner__text">
+          <strong data-i18n="settings.security.account_protected_banner_title">Cuenta oficial protegida</strong>
+          <span data-i18n="settings.security.account_protected_banner_desc">Esta cuenta es oficial del sistema y sus métodos de seguridad no pueden ser modificados.</span>
+        </div>
+      </div>
+
+      <div class="settings-group" data-ref="group-auth-methods">
+        <div class="settings-item" data-ref="item-password">
+          <div class="settings-item__content" data-ref="item-password-content">
+            <div class="settings-item__icon-box" data-ref="item-password-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="item-password-text">
+              <h2 class="settings-item__title" data-ref="item-password-title" data-i18n="settings.security.password_title">Contraseña</h2>
+              <p class="settings-item__desc" data-ref="item-password-desc" data-i18n="settings.security.password_desc">Cambia tu contraseña periódicamente para mantener tu cuenta protegida.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-password-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-change-password" data-i18n="settings.security.btn_change_password">Cambiar contraseña</button>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item" data-ref="item-2fa">
+          <div class="settings-item__content" data-ref="item-2fa-content">
+            <div class="settings-item__icon-box" data-ref="item-2fa-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="item-2fa-text">
+              <h2 class="settings-item__title" data-ref="item-2fa-title" data-i18n="settings.security.two_factor_title">Autenticación en dos pasos (2FA)</h2>
+              <p class="settings-item__desc" data-ref="item-2fa-desc" data-i18n="settings.security.two_factor_desc">Añade un nivel extra de seguridad a tu cuenta solicitando un código al iniciar sesión.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-2fa-actions">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-configure-2fa" data-i18n="settings.security.btn_configure_2fa">Configurar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group" data-ref="group-danger-zone">
+        <div class="settings-item" data-ref="item-delete-account">
+          <div class="settings-item__content" data-ref="item-delete-account-content">
+            <div class="settings-item__text" data-ref="item-delete-account-text">
+              <h2 class="settings-item__title" data-ref="item-delete-account-title" data-i18n="settings.security.delete_account_title">Eliminar cuenta</h2>
+              <p class="settings-item__desc" data-ref="item-delete-account-desc" data-i18n="settings.security.delete_account_desc">Al eliminar tu cuenta, todos tus archivos, flujos de trabajo y datos personales se borrarán de forma permanente e irrecuperable.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-delete-account-actions">
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-delete-account" data-i18n="settings.security.btn_delete_account">Eliminar cuenta</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

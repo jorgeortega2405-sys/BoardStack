@@ -23,6 +23,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
   const btnSwitchAccountMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-switch-account-menu"]');
   const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
   const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
+  const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
   const btnLogout = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout"]');
   const btnLogoutAll = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout-all"]');
   const accountSwitcherList = avatarContainer.querySelector<HTMLElement>('[data-ref="account-switcher-list"]');
@@ -208,6 +209,12 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
       return;
     }
     navigate('/login');
+  });
+
+  btnSettings?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMenu();
+    navigate('/settings/your-account');
   });
 
   btnLogout?.addEventListener('click', async (e) => {

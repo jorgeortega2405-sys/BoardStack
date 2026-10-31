@@ -183,6 +183,33 @@ export async function switchAccountInSession(
   return { accounts: session.accounts, activeUser: target, success: true };
 }
 
+export function updateActiveAccountInSession(
+  res: Response,
+  req: Request,
+  updatedData: Partial<UserPayload>
+): void {
+  const session = getMultiAccountSession(req);
+  if (!session) return;
+
+  const idx = session.accounts.findIndex((a) => a.id === session.activeId);
+  if (idx >= 0) {
+    session.accounts[idx] = {
+      ...session.accounts[idx],
+      ...updatedData,
+      last_accessed: Date.now(),
+    };
+    (req as any)._cachedMultiAccountSession = session;
+    setMultiAccountCookie(res, session);
+  }
+}
+
+export async function revokeAllUserSessions(
+  _userId: number,
+  _ip?: string,
+  _ua?: string
+): Promise<void> {
+}
+
 export async function removeAccountFromSession(
   res: Response,
   req: Request,
