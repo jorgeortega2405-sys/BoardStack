@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <rect width="100" height="100" rx="50" fill="#FFEDD5"/>
+  <!-- Ears -->
+  <circle cx="24" cy="28" r="12" fill="#EA580C"/>
+  <circle cx="24" cy="28" r="6" fill="#1E293B"/>
+  <circle cx="76" cy="28" r="12" fill="#EA580C"/>
+  <circle cx="76" cy="28" r="6" fill="#1E293B"/>
+  <!-- Face -->
+  <circle cx="50" cy="56" r="32" fill="#F97316"/>
+  <!-- Forehead Stripes -->
+  <polygon points="50,30 47,38 53,38" fill="#1E293B"/>
+  <polygon points="42,34 40,42 44,40" fill="#1E293B"/>
+  <polygon points="58,34 60,42 56,40" fill="#1E293B"/>
+  <!-- Side Stripes -->
+  <polygon points="20,52 30,53 22,57" fill="#1E293B"/>
+  <polygon points="80,52 70,53 78,57" fill="#1E293B"/>
+  <!-- Muzzle -->
+  <ellipse cx="44" cy="66" rx="8" ry="6" fill="#FFFFFF"/>
+  <ellipse cx="56" cy="66" rx="8" ry="6" fill="#FFFFFF"/>
+  <!-- Eyes -->
+  <ellipse cx="36" cy="51" rx="4" ry="4.5" fill="#1E293B"/>
+  <circle cx="37.5" cy="49.5" r="1.5" fill="#FFFFFF"/>
+  <ellipse cx="64" cy="51" rx="4" ry="4.5" fill="#1E293B"/>
+  <circle cx="65.5" cy="49.5" r="1.5" fill="#FFFFFF"/>
+  <!-- Nose -->
+  <polygon points="47,60 53,60 50,64" fill="#EA580C"/>
+  <path d="M47 68 Q50 71 53 68" stroke="#1E293B" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,12 @@
+{
+  "name": "collab-server",
+  "version": "1.0.0",
+  "description": "BoardStack Collaborative WebSocket Server in Rust",
+  "private": true,
+  "scripts": {
+    "build": "cargo build --release",
+    "dev": "cargo run",
+    "start": "cargo run --release",
+    "test": "cargo test"
+  }
+}

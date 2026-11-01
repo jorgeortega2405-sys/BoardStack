@@ -1,12 +1,16 @@
 import { API_ROUTES } from '../../config/api-routes.js';
-import { getApi, postFormApi, putApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { hideElement, showElement, withButtonLoading } from '../../utils/dom.util.js';
+import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
+import { getLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../utils/collab-local-draft.util.js';
+import { debounce, hideElement, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 
 interface ElementText {
@@ -92,12 +96,18 @@ export class CollaborativePdfEditorController implements ViewController {
   private abortController: AbortController | null = null;
   private activePageIndex = 0;
   private activePanelTab: 'colors' | 'elements' | 'text' | 'tools' | 'uploads' | null = null;
+  private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'text-color' | null = null;
   private recentColors: string[] = [];
   private activeTool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text' = 'select';
   private activeUploadFilter: 'all' | 'images' | 'pdfs' = 'all';
+  private canEditDoc = true;
+  private collabCleanup: (() => void) | null = null;
   private container: HTMLElement;
+  private docAccessLevel: 'anyone_with_link' | 'restricted' = 'restricted';
   private docId = '';
+  private docMembers: Array<{ avatar_url?: string | null; email?: string; id?: number; role: 'editor' | 'viewer'; user_id: number; username: string }> = [];
   private docTitle = 'Documento sin título';
   private drawColor = '#000000';
   private drawMode: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
@@ -106,15 +116,30 @@ export class CollaborativePdfEditorController implements ViewController {
   private drawerAbortController: AbortController | null = null;
   private drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
   private elements: EditorElement[] = [];
+  private guestIdentity: { avatarUrl: string; username: string } | null = null;
+  private hasPendingSave = false;
+  private isAutoSaving = false;
+  private isCollabRoomFull = false;
+  private isDocOwner = true;
+  private isLocalOnly = false;
   private isModified = false;
+  private isRestrictedAccess = false;
+  private lastCursorBroadcast = 0;
+  private lastSavedTimestamp = 0;
   private lockedPages = new Set<number>();
+  private myClientId = '';
+  private myColor = '#6366f1';
   private pageBackgrounds: string[] = [];
   private pageCount = 1;
   private pagePdfSources: Array<PagePdfSource | null> = [];
   private pageTitles: string[] = [];
+  private remoteCursorElements = new Map<string, HTMLElement>();
+  private remoteCursorTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private remotePeers = new Map<string, { avatarUrl?: string | null; clientId: string; color: string; isGuest?: boolean; userId?: number | null; username: string }>();
   private selectedElementId: string | null = null;
   private selectedPageIndex: number | null = null;
   private selectedPdfAsset: UploadedAsset | null = null;
+  private shareModalElement: HTMLElement | null = null;
   private uploadedAssets: UploadedAsset[] = [];
   private zoomLevel = 1.0;
 
@@ -138,15 +163,42 @@ export class CollaborativePdfEditorController implements ViewController {
     }
 
     this.setupRailNavigation();
-    await this.loadDocument();
+    const loaded = await this.loadDocument();
+    if (!loaded) return;
+    this.initCollabWebSocket();
     this.renderPages();
     this.bindEvents();
     void this.loadUploadedAssets();
     this.updateFooterPageInfo();
+    this.renderPresenceList();
     renderIcons(this.container);
   }
 
   destroy(): void {
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+    if (this.autoSaveMaxWaitTimer) {
+      clearTimeout(this.autoSaveMaxWaitTimer);
+      this.autoSaveMaxWaitTimer = null;
+    }
+    for (const timer of this.remoteCursorTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.remoteCursorTimers.clear();
+    if (this.collabCleanup) {
+      this.collabCleanup();
+      this.collabCleanup = null;
+    }
+    if (this.shareModalElement) {
+      this.shareModalElement.remove();
+      this.shareModalElement = null;
+    }
+    for (const el of this.remoteCursorElements.values()) {
+      el.remove();
+    }
+    this.remoteCursorElements.clear();
     if (this.drawerRemovalTimer) {
       clearTimeout(this.drawerRemovalTimer);
       this.drawerRemovalTimer = null;
@@ -242,52 +294,13 @@ export class CollaborativePdfEditorController implements ViewController {
       this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
     });
 
-    const btnElemShapes = this.queryPanel<HTMLButtonElement>('[data-ref="btn-elem-shapes"]');
-    btnElemShapes?.addEventListener('click', () => {
-      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
-      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
-      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
-      if (mainView) hideElement(mainView);
-      if (shapesView) showElement(shapesView);
-      if (backBtn) showElement(backBtn);
-      if (titleEl) titleEl.textContent = 'Formas';
-    }, { signal });
-
-    const goBackToElements = () => {
-      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
-      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
-      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
-      if (mainView) showElement(mainView);
-      if (shapesView) hideElement(shapesView);
-      if (backBtn) hideElement(backBtn);
-      if (titleEl) titleEl.textContent = 'Elementos';
-    };
-
-    const btnShapesBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]');
-    btnShapesBack?.addEventListener('click', goBackToElements, { signal });
-
     const btnDrawerBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-drawer-back"]');
     btnDrawerBack?.addEventListener('click', () => {
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
       const pdfApplyPanel = this.queryPanel<HTMLElement>('[data-ref="pdf-apply-panel"]');
-      if (shapesView && !shapesView.classList.contains('is-hidden')) {
-        goBackToElements();
-      } else if (pdfApplyPanel && !pdfApplyPanel.classList.contains('is-hidden')) {
+      if (pdfApplyPanel && !pdfApplyPanel.classList.contains('is-hidden')) {
         this.closePdfApplyPanel();
       }
     }, { signal });
-
-    const panelShapeBtns = this.queryPanelAll<HTMLButtonElement>('.collaborative-shape-card');
-    panelShapeBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const shape = btn.getAttribute('data-shape') as ElementShape['shapeType'];
-        if (shape) {
-          this.addShapeElement(shape);
-        }
-      }, { signal });
-    });
 
     const colorSwatches = this.queryPanelAll<HTMLButtonElement>('[data-ref="swatch-color"]');
     colorSwatches.forEach((btn) => {
@@ -505,9 +518,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     if (tab === 'elements') {
       const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
       if (mainView) showElement(mainView);
-      if (shapesView) hideElement(shapesView);
     }
 
     if (tab === 'uploads') {
@@ -632,7 +643,7 @@ export class CollaborativePdfEditorController implements ViewController {
       y: yOffset + (this.elements.length % 6) * 32,
     };
 
-    this.elements.push(newElement);
+    this.pushElement(newElement);
     this.renderPages();
 
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
@@ -641,6 +652,7 @@ export class CollaborativePdfEditorController implements ViewController {
       newElement.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
       elNode.style.width = `${newElement.width}px`;
       elNode.style.height = `${newElement.height}px`;
+      this.broadcastElementUpdate(newElement);
     }
 
     this.selectElement(id);
@@ -734,11 +746,10 @@ export class CollaborativePdfEditorController implements ViewController {
       y: 180 + (this.elements.length % 5) * 25,
     };
 
-    this.elements.push(newShape);
+    this.pushElement(newShape);
     this.renderPages();
     this.selectElement(id);
     this.activateSelectTool();
-    this.setModified(true);
   }
 
   private addLineElement(lineType: 'flexible' | 'multiconnect' | 'straight'): void {
@@ -769,11 +780,10 @@ export class CollaborativePdfEditorController implements ViewController {
       y2,
     };
 
-    this.elements.push(newLine);
+    this.pushElement(newLine);
     this.renderPages();
     this.selectElement(id);
     this.activateSelectTool();
-    this.setModified(true);
   }
 
   private addStickyNoteElement(color: string): void {
@@ -794,11 +804,10 @@ export class CollaborativePdfEditorController implements ViewController {
       y: 150 + (this.elements.length % 5) * 30,
     };
 
-    this.elements.push(newSticky);
+    this.pushElement(newSticky);
     this.renderPages();
     this.selectElement(id);
     this.activateSelectTool();
-    this.setModified(true);
 
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
     elNode?.focus();
@@ -820,6 +829,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectPage(targetIndex);
     this.setModified(true);
+    this.broadcastDocSync();
     showToast(`Página ${targetIndex + 1} añadida`, 'success');
   }
 
@@ -859,6 +869,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectPage(targetIndex);
     this.setModified(true);
+    this.broadcastDocSync();
     showToast(`Página ${targetIndex + 1} duplicada`, 'success');
   }
 
@@ -883,6 +894,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectPage(this.activePageIndex);
     this.setModified(true);
+    this.broadcastDocSync();
     showToast('Página eliminada', 'info');
   }
 
@@ -914,6 +926,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectPage(prev);
     this.setModified(true);
+    this.broadcastDocSync();
   }
 
   private movePageDown(pageIndex: number): void {
@@ -944,21 +957,142 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectPage(next);
     this.setModified(true);
+    this.broadcastDocSync();
   }
 
-  private async loadDocument(): Promise<void> {
-    if (!this.docId) return;
+  private async loadDocument(): Promise<boolean> {
+    if (!this.docId) return false;
+    let serverDoc: any = null;
+
+    if (!currentUser) {
+      const localDraft = getLocalDraft(this.docId);
+      if (localDraft) {
+        this.isLocalOnly = true;
+        this.docTitle = localDraft.title;
+        this.docAccessLevel = 'restricted';
+        this.isDocOwner = true;
+        this.canEditDoc = true;
+        this.docMembers = [];
+        this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
+        this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
+        this.pageTitles = Array.isArray(localDraft.content?.pageTitles) ? localDraft.content.pageTitles : [];
+        this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) ? localDraft.content.pageBackgrounds : [];
+        this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) ? localDraft.content.pagePdfSources : [];
+      } else {
+        try {
+          const res = await getApi(API_ROUTES.collaborativeDocs.byId(this.docId));
+          if (res.ok) {
+            const data = await res.json();
+            serverDoc = data.document;
+            if (data.document) {
+              this.isLocalOnly = false;
+              this.docTitle = data.document.title || 'Documento sin título';
+              this.docAccessLevel = data.document.access_level || 'restricted';
+              this.isDocOwner = data.isOwner ?? false;
+              this.canEditDoc = data.canEdit ?? true;
+              this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+              this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+              this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+              this.pageTitles = Array.isArray(data.document.content?.pageTitles) ? data.document.content.pageTitles : [];
+              this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) ? data.document.content.pageBackgrounds : [];
+              this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) ? data.document.content.pagePdfSources : [];
+            }
+          } else if (res.status === 403) {
+            this.isRestrictedAccess = true;
+            this.renderRestrictedScreen();
+            return false;
+          } else {
+            const newDraft = saveLocalDraft(this.docId, { title: 'Documento sin título' });
+            this.isLocalOnly = true;
+            this.docTitle = newDraft.title;
+            this.docAccessLevel = 'restricted';
+            this.isDocOwner = true;
+            this.canEditDoc = true;
+            this.docMembers = [];
+            this.pageCount = 1;
+            this.elements = [];
+            this.pageTitles = [''];
+            this.pageBackgrounds = ['#ffffff'];
+            this.pagePdfSources = [null];
+          }
+        } catch {
+          const newDraft = saveLocalDraft(this.docId, { title: 'Documento sin título' });
+          this.isLocalOnly = true;
+          this.docTitle = newDraft.title;
+          this.docAccessLevel = 'restricted';
+          this.isDocOwner = true;
+          this.canEditDoc = true;
+          this.docMembers = [];
+          this.pageCount = 1;
+          this.elements = [];
+          this.pageTitles = [''];
+          this.pageBackgrounds = ['#ffffff'];
+          this.pagePdfSources = [null];
+        }
+      }
+    } else {
+      try {
+        const res = await getApi(API_ROUTES.collaborativeDocs.byId(this.docId));
+        if (res.status === 403) {
+          this.isRestrictedAccess = true;
+          this.renderRestrictedScreen();
+          return false;
+        }
+        if (res.ok) {
+          const data = await res.json();
+          serverDoc = data.document;
+          if (data.document) {
+            this.isLocalOnly = false;
+            this.docTitle = data.document.title || 'Documento sin título';
+            this.docAccessLevel = data.document.access_level || 'restricted';
+            this.isDocOwner = data.isOwner ?? true;
+            this.canEditDoc = data.canEdit ?? true;
+            this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+            this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+            this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+            this.pageTitles = Array.isArray(data.document.content?.pageTitles) ? data.document.content.pageTitles : [];
+            this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) ? data.document.content.pageBackgrounds : [];
+            this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) ? data.document.content.pagePdfSources : [];
+          }
+        } else {
+          const localDraft = getLocalDraft(this.docId);
+          if (localDraft) {
+            this.isLocalOnly = true;
+            this.docTitle = localDraft.title;
+            this.docAccessLevel = 'restricted';
+            this.isDocOwner = true;
+            this.canEditDoc = true;
+            this.docMembers = [];
+            this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
+            this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
+            this.pageTitles = Array.isArray(localDraft.content?.pageTitles) ? localDraft.content.pageTitles : [];
+            this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) ? localDraft.content.pageBackgrounds : [];
+            this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) ? localDraft.content.pagePdfSources : [];
+            this.scheduleAutoSave(50);
+          } else {
+            showToast('El documento colaborativo no existe o fue eliminado.', 'danger');
+            navigate('/collaborative-pdf');
+            return false;
+          }
+        }
+      } catch {
+        return false;
+      }
+    }
+
     try {
-      const res = await getApi(API_ROUTES.collaborativeDocs.byId(this.docId));
-      if (res.ok) {
-        const data = await res.json();
-        if (data.document) {
-          this.docTitle = data.document.title || 'Documento sin título';
-          this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
-          this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
-          this.pageTitles = Array.isArray(data.document.content?.pageTitles) ? data.document.content.pageTitles : [];
-          this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) ? data.document.content.pageBackgrounds : [];
-          this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) ? data.document.content.pagePdfSources : [];
+      const walRaw = localStorage.getItem(`boardpdf_wal_${this.docId}`);
+      if (walRaw) {
+        const wal = JSON.parse(walRaw);
+        const serverTime = serverDoc?.updated_at ? new Date(serverDoc.updated_at).getTime() : 0;
+        if (wal && wal.elements && Array.isArray(wal.elements) && (!serverDoc || wal.timestamp > serverTime)) {
+          this.elements = wal.elements;
+          if (wal.title) this.docTitle = wal.title;
+          if (Array.isArray(wal.pageTitles)) this.pageTitles = wal.pageTitles;
+          if (Array.isArray(wal.pageBackgrounds)) this.pageBackgrounds = wal.pageBackgrounds;
+          if (Array.isArray(wal.pagePdfSources)) this.pagePdfSources = wal.pagePdfSources;
+          if (typeof wal.pageCount === 'number') this.pageCount = wal.pageCount;
+          this.scheduleAutoSave(100);
         }
       }
     } catch {}
@@ -967,26 +1101,197 @@ export class CollaborativePdfEditorController implements ViewController {
     if (titleInput) {
       titleInput.value = this.docTitle;
     }
-    this.setModified(false);
+    this.setSaveStatus('saved');
+    return true;
+  }
+
+  private renderRestrictedScreen(): void {
+    this.container.innerHTML = `
+      <div class="component-wrapper component-wrapper--full view-wrapper" style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box;">
+        <div class="collab-share-card" style="text-align:center;align-items:center;max-width:420px;">
+          <div class="collab-access-icon-circle" style="width:64px;height:64px;margin-bottom:8px;">
+            <svg class="component-icon" style="width:32px;height:32px;color:#ef4444;" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+          </div>
+          <h2 class="collab-share-title">Acceso restringido</h2>
+          <p style="color:var(--text-muted,#6b7280);font-size:14px;line-height:1.5;margin:0 0 16px 0;">Solo las personas invitadas por el creador del diseño pueden acceder a este enlace.</p>
+          <a class="component-button component-button--black component-button--h44" href="/collaborative-pdf" style="width:100%;">Volver a Mis Documentos</a>
+        </div>
+      </div>
+    `;
+    renderIcons(this.container);
+  }
+
+  private writeLocalWal(): void {
+    if (!this.docId) return;
+    try {
+      const walData = {
+        elements: this.elements,
+        pageBackgrounds: this.pageBackgrounds,
+        pageCount: this.pageCount,
+        pagePdfSources: this.pagePdfSources,
+        pageTitles: this.pageTitles,
+        timestamp: Date.now(),
+        title: this.docTitle,
+      };
+      localStorage.setItem(`boardpdf_wal_${this.docId}`, JSON.stringify(walData));
+    } catch {}
   }
 
   private setModified(val: boolean): void {
     this.isModified = val;
+    if (val) {
+      this.writeLocalWal();
+      this.scheduleAutoSave();
+    } else {
+      this.setSaveStatus('saved');
+    }
+  }
+
+  private setSaveStatus(status: 'saving' | 'saved' | 'error'): void {
     const cloudBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cloud-status"]');
+    const footerStatus = this.container.querySelector<HTMLElement>('[data-ref="txt-footer-status"]');
+
+    if (this.isLocalOnly) {
+      if (cloudBtn) {
+        cloudBtn.classList.remove('is-saving', 'btn-cloud-status--dirty');
+        if (status === 'saving') {
+          cloudBtn.classList.add('is-saving');
+          cloudBtn.setAttribute('data-tooltip', 'Guardando borrador localmente...');
+          cloudBtn.setAttribute('aria-label', 'Guardando borrador local');
+        } else {
+          cloudBtn.classList.add('is-saved');
+          cloudBtn.setAttribute('data-tooltip', 'Guardado en tu navegador');
+          cloudBtn.setAttribute('aria-label', 'Guardado en tu navegador');
+        }
+      }
+      if (footerStatus) {
+        footerStatus.textContent = status === 'saving' ? 'Guardando local...' : 'Guardado en tu navegador';
+      }
+      return;
+    }
+
     if (cloudBtn) {
-      if (val) {
-        cloudBtn.classList.add('btn-cloud-status--dirty');
-        cloudBtn.setAttribute('data-tooltip', 'Cambios sin guardar - Haz clic para guardar');
-        cloudBtn.setAttribute('aria-label', 'Guardar cambios pendientes');
-      } else {
-        cloudBtn.classList.remove('btn-cloud-status--dirty');
-        cloudBtn.setAttribute('data-tooltip', 'Guardado en el servidor');
+      cloudBtn.classList.remove('is-saving', 'is-saved', 'btn-cloud-status--dirty');
+      if (status === 'saving') {
+        cloudBtn.classList.add('is-saving');
+        cloudBtn.setAttribute('data-tooltip', 'Guardando cambios automáticamente...');
+        cloudBtn.setAttribute('aria-label', 'Guardando cambios...');
+      } else if (status === 'saved') {
+        cloudBtn.classList.add('is-saved');
+        cloudBtn.setAttribute('data-tooltip', 'Cambios guardados en la nube');
         cloudBtn.setAttribute('aria-label', 'Documento guardado');
+      } else {
+        cloudBtn.classList.add('btn-cloud-status--dirty');
+        cloudBtn.setAttribute('data-tooltip', 'Guardado localmente. Reintentando sincronización...');
+        cloudBtn.setAttribute('aria-label', 'Guardado local');
       }
     }
-    const footerStatus = this.container.querySelector<HTMLElement>('[data-ref="txt-footer-status"]');
+
     if (footerStatus) {
-      footerStatus.textContent = val ? 'Cambios sin guardar' : 'Documento guardado';
+      footerStatus.textContent =
+        status === 'saving' ? 'Guardando...' :
+        status === 'saved' ? 'Guardado en la nube' :
+        'Guardado local';
+    }
+  }
+
+  private scheduleAutoSave(delayMs = 350): void {
+    if (!this.docId || !this.canEditDoc) return;
+    this.writeLocalWal();
+    this.setSaveStatus('saving');
+    this.hasPendingSave = true;
+
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+
+    if (!this.autoSaveMaxWaitTimer) {
+      this.autoSaveMaxWaitTimer = setTimeout(() => {
+        this.autoSaveMaxWaitTimer = null;
+        void this.flushAutoSave();
+      }, 1200);
+    }
+
+    this.autoSaveTimer = setTimeout(() => {
+      if (this.autoSaveMaxWaitTimer) {
+        clearTimeout(this.autoSaveMaxWaitTimer);
+        this.autoSaveMaxWaitTimer = null;
+      }
+      void this.flushAutoSave();
+    }, delayMs);
+  }
+
+  private async flushAutoSave(): Promise<void> {
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+    if (this.autoSaveMaxWaitTimer) {
+      clearTimeout(this.autoSaveMaxWaitTimer);
+      this.autoSaveMaxWaitTimer = null;
+    }
+
+    if (!this.docId || !this.canEditDoc) return;
+    if (this.isAutoSaving) {
+      this.hasPendingSave = true;
+      return;
+    }
+
+    this.isAutoSaving = true;
+    this.hasPendingSave = false;
+    this.setSaveStatus('saving');
+
+    if (this.isLocalOnly) {
+      saveLocalDraft(this.docId, {
+        content: {
+          elements: this.elements,
+          pageBackgrounds: this.pageBackgrounds,
+          pageCount: this.pageCount,
+          pagePdfSources: this.pagePdfSources,
+          pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
+          pageTitles: this.pageTitles,
+        },
+        title: this.docTitle,
+      });
+      this.lastSavedTimestamp = Date.now();
+      this.isModified = false;
+      this.setSaveStatus('saved');
+      this.isAutoSaving = false;
+      if (this.hasPendingSave) {
+        this.scheduleAutoSave(200);
+      }
+      return;
+    }
+
+    const payload = {
+      content: {
+        elements: this.elements,
+        pageBackgrounds: this.pageBackgrounds,
+        pageCount: this.pageCount,
+        pagePdfSources: this.pagePdfSources,
+        pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
+        pageTitles: this.pageTitles,
+      },
+      id: this.docId,
+      title: this.docTitle,
+    };
+
+    try {
+      const res = await putApi(API_ROUTES.collaborativeDocs.byId(this.docId), payload);
+      if (res.ok) {
+        this.lastSavedTimestamp = Date.now();
+        this.isModified = false;
+        this.setSaveStatus('saved');
+      } else {
+        this.setSaveStatus('error');
+      }
+    } catch {
+      this.setSaveStatus('error');
+    } finally {
+      this.isAutoSaving = false;
+      if (this.hasPendingSave) {
+        this.scheduleAutoSave(200);
+      }
     }
   }
 
@@ -1262,8 +1567,8 @@ export class CollaborativePdfEditorController implements ViewController {
           type: 'drawing',
           width: this.getEffectiveDrawWidth(),
         };
-        this.elements.push(newDrawing);
-        this.setModified(true);
+        this.pushElement(newDrawing);
+        void this.flushAutoSave();
       }
       currentStroke = [];
     };
@@ -1275,9 +1580,12 @@ export class CollaborativePdfEditorController implements ViewController {
   private eraseAt(x: number, y: number, pageIndex: number): void {
     const radius = 24;
     const prevCount = this.elements.length;
+    const toRemove: string[] = [];
     this.elements = this.elements.filter((el) => {
       if (el.type !== 'drawing' || (el.pageIndex ?? 0) !== pageIndex) return true;
-      return !el.points.some((pt) => Math.hypot(pt.x - x, pt.y - y) <= radius);
+      const hit = el.points.some((pt) => Math.hypot(pt.x - x, pt.y - y) <= radius);
+      if (hit) toRemove.push(el.id);
+      return !hit;
     });
     if (this.elements.length !== prevCount) {
       const canvas = this.container.querySelector<HTMLCanvasElement>(`[data-ref="drawing-canvas-${pageIndex}"]`);
@@ -1285,6 +1593,8 @@ export class CollaborativePdfEditorController implements ViewController {
         this.drawFreehandOnCanvas(canvas, pageIndex);
       }
       this.setModified(true);
+      toRemove.forEach((id) => this.broadcastElementDelete(id, pageIndex));
+      void this.flushAutoSave();
     }
   }
 
@@ -1388,6 +1698,12 @@ export class CollaborativePdfEditorController implements ViewController {
       sel?.addRange(range);
     });
 
+    div.addEventListener('input', () => {
+      el.text = div.innerText;
+      this.setModified(true);
+      this.broadcastElementUpdate(el);
+    });
+
     div.addEventListener('blur', () => {
       div.contentEditable = 'false';
       div.classList.remove('is-editing');
@@ -1402,6 +1718,8 @@ export class CollaborativePdfEditorController implements ViewController {
         this.updateTransformBoxPosition();
       }
       this.setModified(true);
+      this.broadcastElementUpdate(el);
+      void this.flushAutoSave();
     });
 
     div.addEventListener('keydown', (e) => {
@@ -1818,7 +2136,7 @@ export class CollaborativePdfEditorController implements ViewController {
       y: 180 + (this.elements.length % 5) * 20,
     };
 
-    this.elements.push(newImg);
+    this.pushElement(newImg);
     this.renderPages();
     this.selectElement(id);
     this.activateSelectTool();
@@ -1852,6 +2170,8 @@ export class CollaborativePdfEditorController implements ViewController {
       this.clearSmartGuides(item.pageIndex ?? 0);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      this.broadcastElementUpdate(item);
+      void this.flushAutoSave();
     };
 
     element.addEventListener('mousedown', (e) => {
@@ -1895,6 +2215,8 @@ export class CollaborativePdfEditorController implements ViewController {
 
       this.renderPages();
       this.setModified(true);
+      this.broadcastElementUpdate(item);
+      void this.flushAutoSave();
     };
 
     node.addEventListener('mousedown', (e) => {
@@ -2060,6 +2382,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      this.broadcastElementUpdate(el);
+      void this.flushAutoSave();
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -2215,6 +2539,8 @@ export class CollaborativePdfEditorController implements ViewController {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       this.renderPages();
+      this.broadcastElementUpdate(el);
+      void this.flushAutoSave();
     };
 
     document.addEventListener('mousemove', onMouseMove);
@@ -2558,11 +2884,15 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private deleteSelectedElement(): void {
     if (this.selectedElementId) {
-      this.elements = this.elements.filter((el) => el.id !== this.selectedElementId);
+      const targetId = this.selectedElementId;
+      const targetEl = this.elements.find((el) => el.id === targetId);
+      const pIdx = targetEl?.pageIndex ?? 0;
+      this.elements = this.elements.filter((el) => el.id !== targetId);
       this.selectedElementId = null;
       this.removeTransformBox();
       this.renderPages();
       this.setModified(true);
+      this.broadcastElementDelete(targetId, pIdx);
     } else if (this.selectedPageIndex !== null) {
       this.deletePage(this.selectedPageIndex);
     }
@@ -2578,10 +2908,9 @@ export class CollaborativePdfEditorController implements ViewController {
       clone.y = (clone.y || 100) + 24;
       if (clone.x2 !== undefined) clone.x2 += 24;
       if (clone.y2 !== undefined) clone.y2 += 24;
-      this.elements.push(clone);
+      this.pushElement(clone);
       this.renderPages();
       this.selectElement(clone.id);
-      this.setModified(true);
       showToast('Elemento duplicado', 'info');
     } else if (this.selectedPageIndex !== null) {
       this.duplicatePage(this.selectedPageIndex);
@@ -2960,21 +3289,84 @@ export class CollaborativePdfEditorController implements ViewController {
     titleInput?.addEventListener('input', () => {
       this.docTitle = titleInput.value.trim() || 'Documento sin título';
       this.setModified(true);
+      wsService.send({ title: this.docTitle, type: 'titleChange' });
     }, { signal });
 
     const cloudBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cloud-status"]');
     cloudBtn?.addEventListener('click', async () => {
       await withButtonLoading(cloudBtn, async () => {
-        await this.saveDocument();
+        await this.flushAutoSave();
       });
     }, { signal });
 
     const shareBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-link"]');
     shareBtn?.addEventListener('click', () => {
-      const url = `${window.location.origin}/d/${encodeURIComponent(this.docId)}`;
-      void navigator.clipboard.writeText(url).then(() => {
-        showToast('Enlace de colaboración copiado al portapapeles', 'info');
-      });
+      this.openShareModal();
+    }, { signal });
+
+    const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="pages-container"]');
+    pagesContainer?.addEventListener('pointermove', (e: PointerEvent) => {
+      const now = performance.now();
+      if (this.isCollabRoomFull || now - this.lastCursorBroadcast < 35) return;
+      this.lastCursorBroadcast = now;
+      const targetSheet = (e.target as HTMLElement)?.closest<HTMLElement>('.collaborative-page-sheet');
+      if (targetSheet) {
+        const pIdx = parseInt(targetSheet.getAttribute('data-page-index') || '0', 10);
+        const rect = targetSheet.getBoundingClientRect();
+        const scale = this.zoomLevel || 1.0;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        wsService.send({
+          pageIndex: pIdx,
+          type: 'cursor',
+          x: Math.round(x),
+          y: Math.round(y),
+        });
+      }
+    }, { signal });
+
+    window.addEventListener('beforeunload', () => {
+      this.writeLocalWal();
+      if (this.isLocalOnly) {
+        saveLocalDraft(this.docId, {
+          content: {
+            elements: this.elements,
+            pageBackgrounds: this.pageBackgrounds,
+            pageCount: this.pageCount,
+            pagePdfSources: this.pagePdfSources,
+            pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
+            pageTitles: this.pageTitles,
+          },
+          title: this.docTitle,
+        });
+        return;
+      }
+      if (this.hasPendingSave || this.autoSaveTimer) {
+        const payload = JSON.stringify({
+          content: {
+            elements: this.elements,
+            pageBackgrounds: this.pageBackgrounds,
+            pageCount: this.pageCount,
+            pagePdfSources: this.pagePdfSources,
+            pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
+            pageTitles: this.pageTitles,
+          },
+          id: this.docId,
+          title: this.docTitle,
+        });
+        const url = API_ROUTES.collaborativeDocs.byId(this.docId);
+        if (typeof navigator.sendBeacon === 'function') {
+          const blob = new Blob([payload], { type: 'application/json' });
+          navigator.sendBeacon(url, blob);
+        }
+      }
+    }, { signal });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && (this.hasPendingSave || this.autoSaveTimer)) {
+        this.writeLocalWal();
+        void this.flushAutoSave();
+      }
     }, { signal });
 
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
@@ -3455,9 +3847,626 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
-  private async saveDocument(): Promise<void> {
-    try {
-      const payload = {
+  private pushElement(el: EditorElement, broadcast = true): void {
+    this.elements.push(el);
+    this.setModified(true);
+    if (broadcast && !this.isCollabRoomFull) {
+      wsService.send({
+        action: 'add',
+        element: el,
+        pageIndex: el.pageIndex,
+        type: 'elementChange',
+      });
+    }
+  }
+
+  private broadcastElementUpdate(el: EditorElement): void {
+    if (this.isCollabRoomFull) return;
+    wsService.send({
+      action: 'update',
+      element: el,
+      pageIndex: el.pageIndex,
+      type: 'elementChange',
+    });
+  }
+
+  private broadcastElementDelete(id: string, pageIndex: number): void {
+    if (this.isCollabRoomFull) return;
+    wsService.send({
+      action: 'delete',
+      element: { id },
+      pageIndex,
+      type: 'elementChange',
+    });
+  }
+
+  private broadcastDocSync(): void {
+    if (this.isCollabRoomFull) return;
+    wsService.send({
+      elements: this.elements,
+      pageBackgrounds: this.pageBackgrounds,
+      pageCount: this.pageCount,
+      title: this.docTitle,
+      type: 'docSync',
+    });
+  }
+
+  private initCollabWebSocket(): void {
+    if (this.isLocalOnly) {
+      return;
+    }
+
+    const user = currentUser;
+    const isGuest = !user;
+    let username = user?.username;
+    let avatarUrl = user?.avatar_url || null;
+
+    if (isGuest) {
+      if (!this.guestIdentity) {
+        this.guestIdentity = getOrCreateGuestIdentity();
+      }
+      username = this.guestIdentity.username;
+      avatarUrl = this.guestIdentity.avatarUrl;
+    }
+
+    this.collabCleanup = wsService.joinCollabRoom({
+      avatarUrl,
+      docId: this.docId,
+      isGuest,
+      onMessage: (msg) => this.handleCollabSocketMessage(msg),
+      userId: user?.id || null,
+      username: username || 'Invitado',
+    });
+  }
+
+  private handleCollabSocketMessage(msg: any): void {
+    if (!msg || typeof msg !== 'object') return;
+
+    if (msg.type === 'joined') {
+      this.myClientId = msg.clientId;
+      this.myColor = msg.color;
+      this.remotePeers.clear();
+      if (Array.isArray(msg.peers)) {
+        for (const p of msg.peers) {
+          this.remotePeers.set(p.clientId, p);
+        }
+      }
+      this.renderPresenceList();
+    } else if (msg.type === 'userJoined') {
+      if (msg.peer && msg.peer.clientId !== this.myClientId) {
+        this.remotePeers.set(msg.peer.clientId, msg.peer);
+        this.renderPresenceList();
+        showToast(`${msg.peer.username} se unió al diseño`, 'info');
+      }
+    } else if (msg.type === 'userLeft') {
+      this.remotePeers.delete(msg.clientId);
+      const cursorEl = this.remoteCursorElements.get(msg.clientId);
+      if (cursorEl) {
+        cursorEl.remove();
+        this.remoteCursorElements.delete(msg.clientId);
+      }
+      const timer = this.remoteCursorTimers.get(msg.clientId);
+      if (timer) {
+        clearTimeout(timer);
+        this.remoteCursorTimers.delete(msg.clientId);
+      }
+      this.renderPresenceList();
+    } else if (msg.type === 'remoteCursor') {
+      if (msg.clientId !== this.myClientId) {
+        this.renderRemoteCursor(msg);
+      }
+    } else if (msg.type === 'elementChange') {
+      if (msg.senderClientId !== this.myClientId) {
+        this.handleRemoteElementChange(msg.action, msg.element);
+      }
+    } else if (msg.type === 'docSync') {
+      if (msg.senderClientId !== this.myClientId) {
+        if (Array.isArray(msg.elements)) this.elements = msg.elements;
+        if (Array.isArray(msg.pageBackgrounds)) this.pageBackgrounds = msg.pageBackgrounds;
+        if (typeof msg.pageCount === 'number') this.pageCount = msg.pageCount;
+        if (typeof msg.title === 'string') {
+          this.docTitle = msg.title;
+          const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+          if (titleInput && document.activeElement !== titleInput) titleInput.value = msg.title;
+        }
+        this.renderPages();
+      }
+    } else if (msg.type === 'titleChange') {
+      if (msg.senderClientId !== this.myClientId && typeof msg.title === 'string') {
+        this.docTitle = msg.title;
+        const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+        if (titleInput && document.activeElement !== titleInput) {
+          titleInput.value = msg.title;
+        }
+      }
+    } else if (msg.type === 'roomFull') {
+      this.isCollabRoomFull = true;
+      showToast(msg.message || 'La sala colaborativa ha alcanzado el límite máximo de 12 colaboradores simultáneos.', 'warning');
+      this.renderPresenceList();
+    } else if (msg.type === 'rateLimited') {
+      showToast(msg.message || 'Demasiadas acciones por segundo. Por favor reduce la velocidad.', 'warning');
+    }
+  }
+
+  private renderPresenceList(): void {
+    const presenceContainer = this.container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
+    if (!presenceContainer) return;
+
+    if (!currentUser && !this.guestIdentity) {
+      this.guestIdentity = getOrCreateGuestIdentity();
+    }
+
+    presenceContainer.innerHTML = '';
+
+    const myName = currentUser?.username || this.guestIdentity?.username || 'Tú';
+    const myAvatar = currentUser?.avatar_url || this.guestIdentity?.avatarUrl || null;
+    const myInitials = myName.substring(0, 2).toUpperCase();
+    const myBubble = document.createElement('div');
+    myBubble.className = 'collab-presence-bubble';
+    myBubble.style.backgroundColor = this.myColor;
+    const fullSuffix = this.isCollabRoomFull ? ' (Sala llena)' : '';
+    myBubble.setAttribute('data-tooltip', `${myName} (Tú)${fullSuffix}`);
+    myBubble.setAttribute('aria-label', `${myName} (Tú)${fullSuffix}`);
+    if (myAvatar) {
+      myBubble.innerHTML = `<img src="${myAvatar}" alt="${myName}" />`;
+    } else {
+      myBubble.textContent = myInitials;
+    }
+    presenceContainer.appendChild(myBubble);
+
+    for (const peer of this.remotePeers.values()) {
+      const peerBubble = document.createElement('div');
+      peerBubble.className = 'collab-presence-bubble';
+      peerBubble.style.backgroundColor = peer.color;
+      const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
+      peerBubble.setAttribute('data-tooltip', peerLabel);
+      peerBubble.setAttribute('aria-label', peerLabel);
+      if (peer.avatarUrl) {
+        peerBubble.innerHTML = `<img src="${peer.avatarUrl}" alt="${peer.username}" />`;
+      } else {
+        peerBubble.textContent = peer.username.substring(0, 2).toUpperCase();
+      }
+      presenceContainer.appendChild(peerBubble);
+    }
+  }
+
+  private renderRemoteCursor(msg: any): void {
+    const pageIndex = msg.page_index ?? msg.pageIndex ?? 0;
+    const pageEl = this.container.querySelector<HTMLElement>(`.collaborative-page-sheet[data-page-index="${pageIndex}"]`);
+    if (!pageEl) return;
+
+    let cursorEl = this.remoteCursorElements.get(msg.clientId);
+    if (!cursorEl || cursorEl.parentElement !== pageEl) {
+      if (cursorEl) cursorEl.remove();
+      cursorEl = document.createElement('div');
+      cursorEl.className = 'collab-remote-cursor';
+      cursorEl.setAttribute('data-ref', `collab-cursor-${msg.clientId}`);
+      const peer = this.remotePeers.get(msg.clientId);
+      const peerAvatar = peer?.avatarUrl || msg.avatarUrl || null;
+      cursorEl.innerHTML = `
+        <svg class="collab-cursor-pointer" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z" fill="${msg.color}" stroke="#ffffff" stroke-width="1.5"/>
+        </svg>
+        <div class="collab-cursor-badge" style="background-color: ${msg.color};">
+          ${peerAvatar ? `<img class="collab-cursor-avatar" src="${peerAvatar}" alt="" />` : ''}
+          <span>${escapeHtml(msg.username)}</span>
+        </div>
+      `;
+      pageEl.appendChild(cursorEl);
+      this.remoteCursorElements.set(msg.clientId, cursorEl);
+    }
+
+    cursorEl.style.transform = `translate(${msg.x}px, ${msg.y}px)`;
+    cursorEl.style.opacity = '1';
+
+    const prevTimer = this.remoteCursorTimers.get(msg.clientId);
+    if (prevTimer) clearTimeout(prevTimer);
+    const newTimer = setTimeout(() => {
+      if (cursorEl) cursorEl.style.opacity = '0';
+    }, 4000);
+    this.remoteCursorTimers.set(msg.clientId, newTimer);
+  }
+
+  private handleRemoteElementChange(action: string, element: any): void {
+    if (action === 'add') {
+      const idx = this.elements.findIndex((e) => e.id === element.id);
+      if (idx >= 0) {
+        this.elements[idx] = element;
+      } else {
+        this.elements.push(element);
+      }
+      this.renderPages();
+    } else if (action === 'update') {
+      const idx = this.elements.findIndex((e) => e.id === element.id);
+      if (idx >= 0) {
+        this.elements[idx] = element;
+        this.renderPages();
+      }
+    } else if (action === 'delete') {
+      this.elements = this.elements.filter((e) => e.id !== element.id);
+      if (this.selectedElementId === element.id) {
+        this.selectedElementId = null;
+        this.removeTransformBox();
+      }
+      this.renderPages();
+    }
+  }
+
+  private openShareModal(): void {
+    if (this.isLocalOnly) {
+      this.openLocalAuthModal();
+      return;
+    }
+
+    if (this.shareModalElement) {
+      this.shareModalElement.remove();
+      this.shareModalElement = null;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop collab-share-backdrop';
+    modal.setAttribute('data-ref', 'collab-share-backdrop');
+
+    const canManagePermissions = this.isDocOwner && !!currentUser;
+    const isLinkMode = this.docAccessLevel === 'anyone_with_link';
+    const ownerName = currentUser?.username || 'Propietario';
+    const ownerAvatar = currentUser?.avatar_url || null;
+    const ownerInitials = ownerName.substring(0, 2).toUpperCase();
+
+    modal.innerHTML = `
+      <div class="modal-container collab-share-container" data-ref="collab-share-container">
+        <div class="collab-share-card" data-ref="collab-share-card">
+          <div class="collab-share-header">
+            <h2 class="collab-share-title">Compartir el diseño</h2>
+            <button type="button" class="collab-share-close-btn" data-ref="btn-collab-share-close" aria-label="Cerrar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+
+          <div class="collab-share-section">
+            <div class="collab-share-section__title">Personas con acceso</div>
+            ${canManagePermissions ? `
+              <div class="collab-share-search-box">
+                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
+              </div>
+              <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
+            ` : ''}
+
+            <div class="collab-share-members-row" data-ref="collab-share-members-row">
+              <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
+              ${canManagePermissions ? `
+                <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                </button>
+              ` : ''}
+            </div>
+
+            <div class="collab-share-members-list is-hidden" data-ref="collab-share-members-details"></div>
+          </div>
+
+          <div class="collab-share-section">
+            <div class="collab-share-section__title">Nivel de acceso</div>
+            <div class="collab-access-select-wrapper" data-ref="collab-access-select-wrapper">
+              <button type="button" class="collab-access-trigger ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" ${!canManagePermissions ? 'disabled' : ''}>
+                <div class="collab-access-trigger__left">
+                  <div class="collab-access-icon-circle" data-ref="access-trigger-icon">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
+                  </div>
+                  <span class="collab-access-trigger__label" data-ref="access-trigger-label">${isLinkMode ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues'}</span>
+                </div>
+                ${canManagePermissions ? `<svg class="component-icon collab-access-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
+              </button>
+
+              ${canManagePermissions ? `
+                <div class="collab-access-menu is-hidden" data-ref="collab-access-menu">
+                  <button type="button" class="collab-access-option ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
+                    <div class="collab-access-option__icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                    </div>
+                    <div class="collab-access-option__text">
+                      <div class="collab-access-option__title">Solo las personas que agregues</div>
+                      <div class="collab-access-option__desc">Solo las personas con acceso al diseño pueden usar este enlace.</div>
+                    </div>
+                    <div class="collab-access-option__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </div>
+                  </button>
+
+                  <button type="button" class="collab-access-option ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
+                    <div class="collab-access-option__icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                    </div>
+                    <div class="collab-access-option__text">
+                      <div class="collab-access-option__title">Cualquier persona que tenga el enlace</div>
+                      <div class="collab-access-option__desc">Cualquiera podrá acceder al diseño con el enlace. <strong>No es necesario iniciar sesión.</strong></div>
+                    </div>
+                    <div class="collab-access-option__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </div>
+                  </button>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="collab-share-actions">
+            <button type="button" class="component-button collab-share-copy-btn" data-ref="btn-collab-copy-link">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+              <span data-ref="txt-copy-link">Copiar el enlace</span>
+            </button>
+            <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
+          </div>
+
+          <div class="collab-share-divider"></div>
+
+          <div class="collab-share-footer">
+            <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
+              <div class="collab-share-download-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              </div>
+              <span class="collab-share-download-text">Descargar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    this.shareModalElement = modal;
+    renderIcons(modal);
+
+    const closeModal = () => {
+      modal.remove();
+      this.shareModalElement = null;
+    };
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal || (e.target as HTMLElement).getAttribute('data-ref') === 'collab-share-container') {
+        closeModal();
+      }
+    });
+
+    const closeBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-share-close"]');
+    closeBtn?.addEventListener('click', () => closeModal());
+
+    const searchInput = modal.querySelector<HTMLInputElement>('[data-ref="input-share-search-user"]');
+    const searchDropdown = modal.querySelector<HTMLElement>('[data-ref="collab-share-search-dropdown"]');
+    const focusAddBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-focus-search-user"]');
+    focusAddBtn?.addEventListener('click', () => searchInput?.focus());
+
+    const renderAvatars = () => {
+      const avatarsList = modal.querySelector<HTMLElement>('[data-ref="collab-share-avatars-list"]');
+      const detailsList = modal.querySelector<HTMLElement>('[data-ref="collab-share-members-details"]');
+      if (!avatarsList) return;
+
+      avatarsList.innerHTML = '';
+      if (detailsList) {
+        detailsList.innerHTML = '';
+        if (this.docMembers.length === 0) {
+          detailsList.classList.add('is-hidden');
+        } else {
+          detailsList.classList.remove('is-hidden');
+        }
+      }
+
+      const ownerBubble = document.createElement('div');
+      ownerBubble.className = 'collab-avatar-bubble';
+      ownerBubble.setAttribute('data-tooltip', `${ownerName} (Tú)`);
+      if (ownerAvatar) {
+        ownerBubble.innerHTML = `<img src="${ownerAvatar}" alt="${ownerName}" />`;
+      } else {
+        ownerBubble.textContent = ownerInitials;
+      }
+      avatarsList.appendChild(ownerBubble);
+
+      for (const m of this.docMembers) {
+        const bubble = document.createElement('div');
+        bubble.className = 'collab-avatar-bubble';
+        bubble.style.backgroundColor = '#6366f1';
+        bubble.setAttribute('data-tooltip', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
+        if (m.avatar_url) {
+          bubble.innerHTML = `<img src="${m.avatar_url}" alt="${m.username}" />`;
+        } else {
+          bubble.textContent = m.username.substring(0, 2).toUpperCase();
+        }
+        avatarsList.appendChild(bubble);
+
+        if (detailsList) {
+          const row = document.createElement('div');
+          row.className = 'collab-share-member-row';
+          row.innerHTML = `
+            <div class="collab-share-member-info">
+              <span class="collab-share-member-name">${m.username}</span>
+              <span class="collab-share-member-badge">${m.email || 'Miembro'} • ${m.role === 'editor' ? 'Editor' : 'Lector'}</span>
+            </div>
+            ${canManagePermissions ? `
+            <button type="button" class="collab-share-remove-btn" data-user-id="${m.user_id}" data-tooltip="Remover acceso" aria-label="Remover acceso a ${m.username}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+            </button>
+            ` : ''}
+          `;
+          const removeBtn = row.querySelector<HTMLButtonElement>('.collab-share-remove-btn');
+          removeBtn?.addEventListener('click', async () => {
+            const res = await deleteApi(API_ROUTES.collaborativeDocs.memberDelete(this.docId, m.user_id));
+            if (res.ok) {
+              this.docMembers = this.docMembers.filter((item) => item.user_id !== m.user_id);
+              renderAvatars();
+              showToast('Colaborador eliminado', 'info');
+            }
+          });
+          detailsList.appendChild(row);
+        }
+      }
+      renderIcons(modal);
+    };
+
+    renderAvatars();
+
+    const doSearch = debounce(async (q: string) => {
+      if (!searchDropdown) return;
+      if (!q.trim()) {
+        searchDropdown.classList.add('is-hidden');
+        searchDropdown.innerHTML = '';
+        return;
+      }
+      try {
+        const res = await getApi(API_ROUTES.collaborativeDocs.searchUsers(q, this.docId));
+        if (res.ok) {
+          const data = await res.json();
+          const users: Array<{ avatar_url?: string | null; email: string; id: number; username: string }> = data.users || [];
+          if (users.length === 0) {
+            searchDropdown.innerHTML = `<div style="padding: 10px; font-size: 13px; color: var(--text-muted); text-align: center;">No se encontraron usuarios</div>`;
+            searchDropdown.classList.remove('is-hidden');
+          } else {
+            searchDropdown.innerHTML = '';
+            for (const u of users) {
+              const item = document.createElement('button');
+              item.type = 'button';
+              item.className = 'collab-share-user-item';
+              item.innerHTML = `
+                <div class="collab-share-user-item__info">
+                  <span class="collab-share-user-item__name">${u.username}</span>
+                  <span class="collab-share-user-item__email">${u.email}</span>
+                </div>
+                <span class="component-button component-button--h30 component-button--black" style="font-size: 12px; padding: 0 10px;">Agregar</span>
+              `;
+              item.addEventListener('click', async () => {
+                const addRes = await postApi(API_ROUTES.collaborativeDocs.members(this.docId), { role: 'editor', userId: u.id });
+                if (addRes.ok) {
+                  const addData = await addRes.json();
+                  if (addData.member) {
+                    this.docMembers.push(addData.member);
+                  }
+                  renderAvatars();
+                  searchDropdown.classList.add('is-hidden');
+                  if (searchInput) searchInput.value = '';
+                  showToast(`${u.username} agregado como editor`, 'info');
+                }
+              });
+              searchDropdown.appendChild(item);
+            }
+            searchDropdown.classList.remove('is-hidden');
+          }
+        }
+      } catch {}
+    }, 250);
+
+    searchInput?.addEventListener('input', () => {
+      void doSearch(searchInput.value);
+    });
+
+    const accessTrigger = modal.querySelector<HTMLButtonElement>('[data-ref="btn-access-trigger"]');
+    const accessMenu = modal.querySelector<HTMLElement>('[data-ref="collab-access-menu"]');
+    const optRestricted = modal.querySelector<HTMLButtonElement>('[data-ref="option-access-restricted"]');
+    const optLink = modal.querySelector<HTMLButtonElement>('[data-ref="option-access-link"]');
+    const triggerLabel = modal.querySelector<HTMLElement>('[data-ref="access-trigger-label"]');
+    const triggerIcon = modal.querySelector<HTMLElement>('[data-ref="access-trigger-icon"]');
+    const checkRestricted = modal.querySelector<HTMLElement>('[data-ref="check-access-restricted"]');
+    const checkLink = modal.querySelector<HTMLElement>('[data-ref="check-access-link"]');
+
+    if (canManagePermissions) {
+      accessTrigger?.addEventListener('click', () => {
+        accessTrigger.classList.toggle('is-open');
+        accessMenu?.classList.toggle('is-hidden');
+      });
+
+      const selectAccess = async (level: 'anyone_with_link' | 'restricted') => {
+        this.docAccessLevel = level;
+        accessTrigger?.classList.remove('is-open');
+        accessMenu?.classList.add('is-hidden');
+
+        const isL = level === 'anyone_with_link';
+        if (triggerLabel) triggerLabel.textContent = isL ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues';
+        if (triggerIcon) triggerIcon.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isL ? 'language' : 'groups'}"></use></svg>`;
+
+        optRestricted?.classList.toggle('is-selected', !isL);
+        optLink?.classList.toggle('is-selected', isL);
+        checkRestricted?.classList.toggle('is-hidden', isL);
+        checkLink?.classList.toggle('is-hidden', !isL);
+        renderIcons(modal);
+
+        try {
+          await patchApi(API_ROUTES.collaborativeDocs.accessLevel(this.docId), { accessLevel: level });
+          showToast('Nivel de acceso actualizado', 'info');
+        } catch {}
+      };
+
+      optRestricted?.addEventListener('click', () => void selectAccess('restricted'));
+      optLink?.addEventListener('click', () => void selectAccess('anyone_with_link'));
+    }
+
+    const copyBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-copy-link"]');
+    const copyTxt = modal.querySelector<HTMLElement>('[data-ref="txt-copy-link"]');
+    copyBtn?.addEventListener('click', () => {
+      const url = `${window.location.origin}/d/${encodeURIComponent(this.docId)}`;
+      void navigator.clipboard.writeText(url).then(() => {
+        if (copyTxt) copyTxt.textContent = '¡Enlace copiado!';
+        showToast('Enlace de colaboración copiado al portapapeles', 'info');
+        setTimeout(() => {
+          if (copyTxt) copyTxt.textContent = 'Copiar el enlace';
+        }, 2000);
+      });
+    });
+
+    const downloadBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
+    downloadBtn?.addEventListener('click', () => {
+      const downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${this.docTitle || 'document'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast('Descarga iniciada', 'info');
+    });
+  }
+
+  private openLocalAuthModal(): void {
+    if (this.shareModalElement) {
+      this.shareModalElement.remove();
+      this.shareModalElement = null;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop collab-share-backdrop';
+    modal.setAttribute('data-ref', 'collab-local-auth-backdrop');
+
+    modal.innerHTML = `
+      <div class="modal-container collab-share-container" data-ref="collab-local-auth-container" style="max-width: 440px;">
+        <div class="collab-share-card" data-ref="collab-local-auth-card">
+          <div class="collab-share-header">
+            <h2 class="collab-share-title">Compartir este diseño</h2>
+            <button type="button" class="collab-share-close-btn" data-ref="btn-close-local-auth-modal" aria-label="Cerrar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+          <div style="text-align: center; padding: 12px 4px 20px 4px;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--surface-secondary, #f3f4f6); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+              <svg class="component-icon" style="width: 28px; height: 28px; color: var(--primary, #2563eb);" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+            </div>
+            <p style="font-size: 14px; color: var(--text-secondary, #4b5563); line-height: 1.5; margin: 0 0 20px 0;">
+              Tu diseño se encuentra guardado en este navegador. Para compartir un enlace de colaboración en tiempo real o invitar personas, guarda tu trabajo en tu cuenta de BoardPDF.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-local-modal-register" style="width: 100%;">
+                Crear cuenta gratis y guardar
+              </button>
+              <button type="button" class="component-button component-button--ghost component-button--h44" data-ref="btn-local-modal-login" style="width: 100%;">
+                Ya tengo cuenta, iniciar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    this.shareModalElement = modal;
+    renderIcons(modal);
+
+    const storeCurrentAsPending = () => {
+      const draft = saveLocalDraft(this.docId, {
         content: {
           elements: this.elements,
           pageBackgrounds: this.pageBackgrounds,
@@ -3466,19 +4475,44 @@ export class CollaborativePdfEditorController implements ViewController {
           pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
           pageTitles: this.pageTitles,
         },
-        id: this.docId,
         title: this.docTitle,
-      };
+      });
+      setPendingCloudSyncDraft(draft);
+    };
 
-      const res = await putApi(API_ROUTES.collaborativeDocs.byId(this.docId), payload);
-      if (res.ok) {
-        this.setModified(false);
-        showToast('Documento guardado en el servidor con éxito', 'success');
-      } else {
-        showToast('No se pudo guardar el documento en el servidor.', 'error');
+    modal.querySelector('[data-ref="btn-close-local-auth-modal"]')?.addEventListener('click', () => {
+      modal.remove();
+      this.shareModalElement = null;
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        this.shareModalElement = null;
       }
-    } catch {
-      showToast('Error de red al guardar documento.', 'error');
+    });
+
+    modal.querySelector('[data-ref="btn-local-modal-register"]')?.addEventListener('click', () => {
+      storeCurrentAsPending();
+      modal.remove();
+      this.shareModalElement = null;
+      navigate(`/register?redirect=${encodeURIComponent(`/d/${this.docId}`)}`);
+    });
+
+    modal.querySelector('[data-ref="btn-local-modal-login"]')?.addEventListener('click', () => {
+      storeCurrentAsPending();
+      modal.remove();
+      this.shareModalElement = null;
+      navigate(`/login?redirect=${encodeURIComponent(`/d/${this.docId}`)}`);
+    });
+  }
+
+  private async saveDocument(): Promise<void> {
+    await this.flushAutoSave();
+    if (this.isLocalOnly) {
+      showToast('Borrador guardado localmente', 'success');
+    } else {
+      showToast('Documento guardado en la nube', 'success');
     }
   }
 }

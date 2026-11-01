@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <rect width="100" height="100" rx="50" fill="#DCFCE7"/>
+  <!-- Bulging Eyes Top -->
+  <circle cx="30" cy="36" r="16" fill="#22C55E"/>
+  <circle cx="30" cy="36" r="11" fill="#FEF08A"/>
+  <circle cx="32" cy="36" r="6" fill="#1E293B"/>
+  <circle cx="34" cy="34" r="2" fill="#FFFFFF"/>
+  <circle cx="70" cy="36" r="16" fill="#22C55E"/>
+  <circle cx="70" cy="36" r="11" fill="#FEF08A"/>
+  <circle cx="68" cy="36" r="6" fill="#1E293B"/>
+  <circle cx="66" cy="34" r="2" fill="#FFFFFF"/>
+  <!-- Head -->
+  <ellipse cx="50" cy="62" rx="34" ry="26" fill="#22C55E"/>
+  <!-- Light Belly Area -->
+  <ellipse cx="50" cy="72" rx="22" ry="14" fill="#86EFAC"/>
+  <!-- Nostrils -->
+  <circle cx="46" cy="55" r="1.2" fill="#15803D"/>
+  <circle cx="54" cy="55" r="1.2" fill="#15803D"/>
+  <!-- Cheeks -->
+  <circle cx="26" cy="65" r="5" fill="#F472B6" opacity="0.6"/>
+  <circle cx="74" cy="65" r="5" fill="#F472B6" opacity="0.6"/>
+  <!-- Big Smile -->
+  <path d="M32 63 Q50 78 68 63" stroke="#15803D" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

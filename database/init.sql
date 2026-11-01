@@ -106,8 +106,21 @@ CREATE TABLE IF NOT EXISTS collaborative_documents (
   content_json LONGTEXT NOT NULL,
   pdf_filename VARCHAR(255) NULL,
   page_count INT UNSIGNED NOT NULL DEFAULT 1,
+  access_level ENUM('restricted', 'anyone_with_link') NOT NULL DEFAULT 'restricted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_docs (user_id),
   INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS collaborative_document_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  document_id VARCHAR(64) NOT NULL,
+  user_id INT NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'editor',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_doc_user (document_id, user_id),
+  INDEX idx_doc_members (document_id),
+  INDEX idx_user_members (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

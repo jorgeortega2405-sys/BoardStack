@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <rect width="100" height="100" rx="50" fill="#F3E8FF"/>
+  <!-- Ears -->
+  <ellipse cx="34" cy="24" rx="8" ry="20" fill="#FFFFFF" transform="rotate(-10 34 24)"/>
+  <ellipse cx="34" cy="24" rx="4" ry="14" fill="#F472B6" opacity="0.6" transform="rotate(-10 34 24)"/>
+  <ellipse cx="66" cy="24" rx="8" ry="20" fill="#FFFFFF" transform="rotate(10 66 24)"/>
+  <ellipse cx="66" cy="24" rx="4" ry="14" fill="#F472B6" opacity="0.6" transform="rotate(10 66 24)"/>
+  <!-- Head -->
+  <ellipse cx="50" cy="62" rx="32" ry="28" fill="#FFFFFF"/>
+  <!-- Eyes -->
+  <ellipse cx="35" cy="57" rx="3.5" ry="5" fill="#1E293B"/>
+  <circle cx="36.5" cy="55" r="1.5" fill="#FFFFFF"/>
+  <ellipse cx="65" cy="57" rx="3.5" ry="5" fill="#1E293B"/>
+  <circle cx="66.5" cy="55" r="1.5" fill="#FFFFFF"/>
+  <!-- Cheeks -->
+  <circle cx="25" cy="67" r="5" fill="#FDA4AF" opacity="0.7"/>
+  <circle cx="75" cy="67" r="5" fill="#FDA4AF" opacity="0.7"/>
+  <!-- Nose & Mouth -->
+  <polygon points="48,65 52,65 50,68" fill="#FB7185"/>
+  <path d="M46 70 Q50 73 54 70" stroke="#CBD5E1" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</svg>

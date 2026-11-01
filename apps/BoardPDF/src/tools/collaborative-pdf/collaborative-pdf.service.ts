@@ -1,7 +1,7 @@
 import { getDbPool } from '../../config/database.config.js';
 import { logger } from '../../services/logger.service.js';
 import { cleanTextForWinAnsi, parseHexColor } from '../../utils/pdf.util.js';
-import { CollaborativeDocumentContent, CollaborativeDocumentRecord } from './collaborative-pdf.types.js';
+import { CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeMember } from './collaborative-pdf.types.js';
 import fs from 'fs';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -241,12 +241,13 @@ export async function listCollaborativeDocuments(
   try {
     const pool = getDbPool();
     const query = userId
-      ? 'SELECT id, user_id, title, content_json, pdf_filename, page_count, created_at, updated_at FROM collaborative_documents WHERE user_id = ? OR user_id IS NULL ORDER BY updated_at DESC'
-      : 'SELECT id, user_id, title, content_json, pdf_filename, page_count, created_at, updated_at FROM collaborative_documents ORDER BY updated_at DESC LIMIT 50';
+      ? 'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE user_id = ? OR user_id IS NULL ORDER BY updated_at DESC'
+      : 'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents ORDER BY updated_at DESC LIMIT 50';
     const params = userId ? [userId] : [];
     const [rows] = await pool.query<any[]>(query, params);
     if (Array.isArray(rows) && rows.length > 0) {
       return rows.map((r) => ({
+        access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
         id: r.id,
@@ -264,10 +265,12 @@ export async function listCollaborativeDocuments(
   const files = fs.readdirSync(STORAGE_DIR);
   const docs: CollaborativeDocumentRecord[] = [];
   for (const file of files) {
-    if (file.endsWith('.json')) {
+    if (file.endsWith('.json') && !file.endsWith('.members.json')) {
       try {
         const raw = fs.readFileSync(path.join(STORAGE_DIR, file), 'utf-8');
-        docs.push(JSON.parse(raw));
+        const parsed = JSON.parse(raw);
+        if (!parsed.access_level) parsed.access_level = 'restricted';
+        docs.push(parsed);
       } catch {}
     }
   }
@@ -281,15 +284,18 @@ export async function getCollaborativeDocument(
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
-      'SELECT id, user_id, title, content_json, pdf_filename, page_count, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (Array.isArray(rows) && rows.length > 0) {
       const r = rows[0];
+      const members = await getCollaborativeDocMembers(id);
       return {
+        access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
         id: r.id,
+        members,
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
         title: r.title,
@@ -305,13 +311,17 @@ export async function getCollaborativeDocument(
   if (fs.existsSync(jsonPath)) {
     try {
       const raw = fs.readFileSync(jsonPath, 'utf-8');
-      return JSON.parse(raw);
+      const doc = JSON.parse(raw);
+      if (!doc.access_level) doc.access_level = 'restricted';
+      doc.members = await getCollaborativeDocMembers(id);
+      return doc;
     } catch {}
   }
   return null;
 }
 
 export async function saveCollaborativeDocument(payload: {
+  accessLevel?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   id: string;
   title: string;
@@ -323,7 +333,19 @@ export async function saveCollaborativeDocument(payload: {
   const pdfFilename = `${payload.id}.pdf`;
   const now = new Date().toISOString();
 
+  let existingUserId = payload.userId ?? null;
+  let existingAccess: 'anyone_with_link' | 'restricted' = payload.accessLevel || 'restricted';
+  const existingDocPath = path.join(STORAGE_DIR, `${payload.id}.json`);
+  if (fs.existsSync(existingDocPath)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(existingDocPath, 'utf-8'));
+      if (!payload.accessLevel && prev.access_level) existingAccess = prev.access_level;
+      if (existingUserId === null && prev.user_id) existingUserId = prev.user_id;
+    } catch {}
+  }
+
   const record: CollaborativeDocumentRecord = {
+    access_level: existingAccess,
     content: payload.content,
     created_at: now,
     id: payload.id,
@@ -331,25 +353,24 @@ export async function saveCollaborativeDocument(payload: {
     pdf_filename: pdfFilename,
     title,
     updated_at: now,
-    user_id: payload.userId || null,
+    user_id: existingUserId,
   };
 
-  const pdfBuffer = await renderCollaborativePdf(title, payload.content);
-  fs.writeFileSync(path.join(STORAGE_DIR, pdfFilename), pdfBuffer);
   fs.writeFileSync(path.join(STORAGE_DIR, `${payload.id}.json`), JSON.stringify(record, null, 2));
 
   try {
     const pool = getDbPool();
     await pool.query(
-      `INSERT INTO collaborative_documents (id, user_id, title, content_json, pdf_filename, page_count, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `INSERT INTO collaborative_documents (id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
        ON DUPLICATE KEY UPDATE title = VALUES(title), content_json = VALUES(content_json), page_count = VALUES(page_count), updated_at = NOW()`,
-      [payload.id, payload.userId || null, title, JSON.stringify(payload.content), pdfFilename, pageCount]
+      [payload.id, existingUserId, title, JSON.stringify(payload.content), pdfFilename, pageCount, existingAccess]
     );
   } catch (err) {
     logger.db.warn('No se pudo guardar documento colaborativo en MySQL, guardado en disco con éxito', err);
   }
 
+  record.members = await getCollaborativeDocMembers(payload.id);
   return record;
 }
 
@@ -357,16 +378,23 @@ export async function deleteCollaborativeDocument(id: string): Promise<boolean> 
   ensureStorageDir();
   try {
     const pool = getDbPool();
+    await pool.query('DELETE FROM collaborative_document_members WHERE document_id = ?', [id]);
     await pool.query('DELETE FROM collaborative_documents WHERE id = ?', [id]);
   } catch (err) {
     logger.db.warn('Error al eliminar documento colaborativo de MySQL', err);
   }
 
   const jsonPath = path.join(STORAGE_DIR, `${id}.json`);
+  const membersPath = path.join(STORAGE_DIR, `${id}.members.json`);
   const pdfPath = path.join(STORAGE_DIR, `${id}.pdf`);
   if (fs.existsSync(jsonPath)) {
     try {
       fs.unlinkSync(jsonPath);
+    } catch {}
+  }
+  if (fs.existsSync(membersPath)) {
+    try {
+      fs.unlinkSync(membersPath);
     } catch {}
   }
   if (fs.existsSync(pdfPath)) {
@@ -377,11 +405,206 @@ export async function deleteCollaborativeDocument(id: string): Promise<boolean> 
   return true;
 }
 
-export function getRenderedPdfPath(id: string): string | null {
+export async function getCollaborativeDocMembers(docId: string): Promise<CollaborativeMember[]> {
+  ensureStorageDir();
+  try {
+    const pool = getDbPool();
+    const [rows] = await pool.query<any[]>(
+      `SELECT m.id, m.user_id, m.role, m.created_at, u.username, u.email, u.avatar_url
+       FROM collaborative_document_members m
+       JOIN users u ON m.user_id = u.id
+       WHERE m.document_id = ?
+       ORDER BY m.created_at ASC`,
+      [docId]
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map((r) => ({
+        avatar_url: r.avatar_url || null,
+        created_at: new Date(r.created_at).toISOString(),
+        email: r.email || '',
+        id: r.id,
+        role: r.role || 'editor',
+        user_id: r.user_id,
+        username: r.username || '',
+      }));
+    }
+  } catch (err) {
+    logger.db.warn('No se pudieron leer miembros de MySQL, leyendo respaldo local', err);
+  }
+
+  const membersPath = path.join(STORAGE_DIR, `${docId}.members.json`);
+  if (fs.existsSync(membersPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(membersPath, 'utf-8'));
+    } catch {}
+  }
+  return [];
+}
+
+export async function addCollaborativeDocMember(
+  docId: string,
+  targetUserId: number,
+  role: 'editor' | 'viewer' = 'editor',
+  _requestingUserId?: number | null
+): Promise<CollaborativeMember | null> {
+  ensureStorageDir();
+  let userRecord: { avatar_url: string | null; email: string; id: number; username: string } | null = null;
+  try {
+    const pool = getDbPool();
+    const [userRows] = await pool.query<any[]>('SELECT id, username, email, avatar_url FROM users WHERE id = ? LIMIT 1', [targetUserId]);
+    if (Array.isArray(userRows) && userRows.length > 0) {
+      userRecord = userRows[0];
+      await pool.query(
+        `INSERT INTO collaborative_document_members (document_id, user_id, role, created_at)
+         VALUES (?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+        [docId, targetUserId, role]
+      );
+    }
+  } catch (err) {
+    logger.db.warn('Error al guardar miembro en MySQL, guardando en respaldo local', err);
+  }
+
+  const membersPath = path.join(STORAGE_DIR, `${docId}.members.json`);
+  let localMembers: CollaborativeMember[] = [];
+  if (fs.existsSync(membersPath)) {
+    try {
+      localMembers = JSON.parse(fs.readFileSync(membersPath, 'utf-8'));
+    } catch {}
+  }
+
+  const existingIdx = localMembers.findIndex((m) => m.user_id === targetUserId);
+  const memberObj: CollaborativeMember = {
+    avatar_url: userRecord?.avatar_url || null,
+    created_at: new Date().toISOString(),
+    email: userRecord?.email || '',
+    role,
+    user_id: targetUserId,
+    username: userRecord?.username || `Usuario ${targetUserId}`,
+  };
+
+  if (existingIdx >= 0) {
+    localMembers[existingIdx] = memberObj;
+  } else {
+    localMembers.push(memberObj);
+  }
+
+  fs.writeFileSync(membersPath, JSON.stringify(localMembers, null, 2), 'utf-8');
+  return memberObj;
+}
+
+export async function removeCollaborativeDocMember(
+  docId: string,
+  targetUserId: number,
+  _requestingUserId?: number | null
+): Promise<boolean> {
+  ensureStorageDir();
+  try {
+    const pool = getDbPool();
+    await pool.query('DELETE FROM collaborative_document_members WHERE document_id = ? AND user_id = ?', [docId, targetUserId]);
+  } catch (err) {
+    logger.db.warn('Error al eliminar miembro en MySQL', err);
+  }
+
+  const membersPath = path.join(STORAGE_DIR, `${docId}.members.json`);
+  if (fs.existsSync(membersPath)) {
+    try {
+      const localMembers: CollaborativeMember[] = JSON.parse(fs.readFileSync(membersPath, 'utf-8'));
+      const filtered = localMembers.filter((m) => m.user_id !== targetUserId);
+      fs.writeFileSync(membersPath, JSON.stringify(filtered, null, 2), 'utf-8');
+    } catch {}
+  }
+  return true;
+}
+
+export async function updateCollaborativeDocAccessLevel(
+  docId: string,
+  accessLevel: 'anyone_with_link' | 'restricted',
+  _requestingUserId?: number | null
+): Promise<boolean> {
+  ensureStorageDir();
+  try {
+    const pool = getDbPool();
+    await pool.query('UPDATE collaborative_documents SET access_level = ?, updated_at = NOW() WHERE id = ?', [accessLevel, docId]);
+  } catch (err) {
+    logger.db.warn('Error al actualizar nivel de acceso en MySQL', err);
+  }
+
+  const jsonPath = path.join(STORAGE_DIR, `${docId}.json`);
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const doc = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+      doc.access_level = accessLevel;
+      doc.updated_at = new Date().toISOString();
+      fs.writeFileSync(jsonPath, JSON.stringify(doc, null, 2), 'utf-8');
+    } catch {}
+  }
+  return true;
+}
+
+export async function searchRegisteredUsers(
+  query: string,
+  excludeDocId?: string
+): Promise<Array<{ avatar_url: string | null; email: string; id: number; username: string }>> {
+  const cleanQ = query.trim().toLowerCase();
+  if (!cleanQ) return [];
+
+  try {
+    const pool = getDbPool();
+    const [rows] = await pool.query<any[]>(
+      `SELECT id, username, email, avatar_url
+       FROM users
+       WHERE (LOWER(username) LIKE ? OR LOWER(email) LIKE ?)
+       LIMIT 10`,
+      [`%${cleanQ}%`, `%${cleanQ}%`]
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      let filtered = rows;
+      if (excludeDocId) {
+        const members = await getCollaborativeDocMembers(excludeDocId);
+        const memberIds = new Set(members.map((m) => m.user_id));
+        filtered = rows.filter((r) => !memberIds.has(r.id));
+      }
+      return filtered.map((r) => ({
+        avatar_url: r.avatar_url || null,
+        email: r.email || '',
+        id: r.id,
+        username: r.username || '',
+      }));
+    }
+  } catch (err) {
+    logger.db.warn('No se pudo buscar usuarios en MySQL', err);
+  }
+
+  return [];
+}
+
+export async function getRenderedPdfPath(id: string): Promise<string | null> {
   ensureStorageDir();
   const pdfPath = path.join(STORAGE_DIR, `${id}.pdf`);
+  const jsonPath = path.join(STORAGE_DIR, `${id}.json`);
   if (fs.existsSync(pdfPath)) {
-    return pdfPath;
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const pdfMtime = fs.statSync(pdfPath).mtimeMs;
+        const jsonMtime = fs.statSync(jsonPath).mtimeMs;
+        if (pdfMtime >= jsonMtime) {
+          return pdfPath;
+        }
+      } catch {}
+    } else {
+      return pdfPath;
+    }
   }
-  return null;
+
+  const doc = await getCollaborativeDocument(id);
+  if (!doc) return null;
+  try {
+    const pdfBuffer = await renderCollaborativePdf(doc.title, doc.content);
+    fs.writeFileSync(pdfPath, pdfBuffer);
+    return pdfPath;
+  } catch (err) {
+    logger.app.error('Error al renderizar PDF bajo demanda para descarga', err);
+    return null;
+  }
 }

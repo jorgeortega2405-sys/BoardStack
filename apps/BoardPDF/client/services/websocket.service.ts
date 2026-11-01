@@ -10,10 +10,22 @@ export interface AiProgressEvent {
   totalSteps?: number;
 }
 
+export interface CollabJoinOptions {
+  avatarUrl?: string | null;
+  docId: string;
+  isGuest?: boolean;
+  onMessage: (msg: any) => void;
+  userId?: number | string | null;
+  username: string;
+}
+
 type ProgressCallback = (event: AiProgressEvent) => void;
+type CollabCallback = (msg: any) => void;
 
 class WebSocketClientService {
   private activeSubscriptions = new Map<string, Set<ProgressCallback>>();
+  private collabCallbacks = new Set<CollabCallback>();
+  private currentCollabJoin: Record<string, unknown> | null = null;
   private isConnecting = false;
   private pingInterval: number | null = null;
   private reconnectAttempts = 0;
@@ -25,6 +37,9 @@ class WebSocketClientService {
       if (sessionId) {
         this.sendSubscribe(sessionId);
       }
+      if (this.currentCollabJoin) {
+        this.send(this.currentCollabJoin);
+      }
       return Promise.resolve(this.socket);
     }
 
@@ -34,6 +49,7 @@ class WebSocketClientService {
           if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             window.clearInterval(intervalId);
             if (sessionId) this.sendSubscribe(sessionId);
+            if (this.currentCollabJoin) this.send(this.currentCollabJoin);
             resolve(this.socket);
           } else if (!this.isConnecting) {
             window.clearInterval(intervalId);
@@ -51,13 +67,13 @@ class WebSocketClientService {
         const hostname = window.location.hostname || 'localhost';
         const wsPort = '3001';
         const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
-        const wsUrl = `${protocol}//${hostname}:${wsPort}/ws/ai${query}`;
+        const wsUrl = `${protocol}//${hostname}:${wsPort}/ws/collab${query}`;
 
         console.log(`[WebSocket] Conectando a ${wsUrl}...`);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          console.log('[WebSocket] Conexión establecida con éxito con BoardPDF WS.');
+          console.log('[WebSocket] Conexión establecida con éxito con BoardPDF WS (Rust).');
           this.socket = ws;
           this.isConnecting = false;
           this.reconnectAttempts = 0;
@@ -67,12 +83,23 @@ class WebSocketClientService {
             this.sendSubscribe(subId);
           }
 
+          if (this.currentCollabJoin) {
+            this.send(this.currentCollabJoin);
+          }
+
           resolve(ws);
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+
+            if (this.collabCallbacks.size > 0) {
+              for (const cb of this.collabCallbacks) {
+                cb(data);
+              }
+            }
+
             const targets = [data.sessionId, data.chatId, data.target].filter(Boolean) as string[];
             const executedCallbacks = new Set<ProgressCallback>();
 
@@ -110,6 +137,40 @@ class WebSocketClientService {
         resolve(null);
       }
     });
+  }
+
+  joinCollabRoom(options: CollabJoinOptions): () => void {
+    const rawUserId = options.userId;
+    const parsedUserId =
+      rawUserId != null && rawUserId !== '' && !isNaN(Number(rawUserId))
+        ? Number(rawUserId)
+        : null;
+
+    const payload = {
+      avatarUrl: options.avatarUrl || null,
+      docId: options.docId,
+      isGuest: options.isGuest ?? (parsedUserId == null),
+      type: 'join',
+      userId: parsedUserId,
+      username: options.username,
+    };
+
+    this.currentCollabJoin = payload;
+    this.collabCallbacks.add(options.onMessage);
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.send(payload);
+    } else {
+      void this.connect();
+    }
+
+    return () => {
+      this.collabCallbacks.delete(options.onMessage);
+      if (this.currentCollabJoin?.docId === options.docId) {
+        this.currentCollabJoin = null;
+        this.send({ type: 'leave' });
+      }
+    };
   }
 
   subscribe(sessionId: string, callback: (event: any) => void): () => void {
@@ -184,7 +245,7 @@ class WebSocketClientService {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer !== null) return;
-    if (this.activeSubscriptions.size === 0) return;
+    if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) return;
 
     const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 10000);
     this.reconnectAttempts++;
@@ -207,6 +268,8 @@ class WebSocketClientService {
       this.socket = null;
     }
     this.activeSubscriptions.clear();
+    this.collabCallbacks.clear();
+    this.currentCollabJoin = null;
   }
 }
 

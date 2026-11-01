@@ -4,6 +4,7 @@ import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
+import { getPendingCloudSyncDraft, removeLocalDraft, setPendingCloudSyncDraft } from '../utils/collab-local-draft.util.js';
 import { createBannerManager, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
 
@@ -15,6 +16,37 @@ interface RegistrationFlowState {
 }
 
 const REG_STORAGE_KEY = 'boardpdf_reg_flow';
+
+async function syncPendingDraftIfAny(): Promise<string | null> {
+  const pending = getPendingCloudSyncDraft();
+  if (pending) {
+    try {
+      const res = await postApi('/api/collaborative-docs', {
+        content: pending.content,
+        id: pending.id,
+        title: pending.title,
+      });
+      if (res.ok) {
+        removeLocalDraft(pending.id);
+        setPendingCloudSyncDraft(null);
+        showToast('¡Tu diseño local se ha sincronizado con tu cuenta!', 'success');
+        return `/d/${encodeURIComponent(pending.id)}`;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function getRedirectTarget(): string {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const redirectParam = params.get('redirect');
+    if (redirectParam && redirectParam.startsWith('/')) {
+      return redirectParam;
+    }
+  } catch {}
+  return '/';
+}
 
 function getRegistrationState(): RegistrationFlowState {
   try {
@@ -104,7 +136,12 @@ class LoginViewController implements ViewController {
 
           setAuthState(data.user, data.accounts || []);
           showToast(`¡Bienvenido de nuevo, ${data.user.username}!`, 'success');
-          navigate('/');
+          const syncedUrl = await syncPendingDraftIfAny();
+          if (syncedUrl) {
+            navigate(syncedUrl);
+          } else {
+            navigate(getRedirectTarget());
+          }
         } catch {
           banners.showError('Error de conexión al iniciar sesión.');
         }
@@ -138,7 +175,8 @@ class LoginViewController implements ViewController {
     const registerBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-to-register"]');
     registerBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      navigate('/register');
+      const search = window.location.search || '';
+      navigate(`/register${search}`);
     }, { signal });
   }
 
@@ -360,7 +398,12 @@ class RegisterViewController implements ViewController {
           setAuthState(data.user, data.accounts || []);
           clearRegistrationState();
           showToast(`¡Bienvenido a BoardPDF, ${data.user.username}!`, 'success');
-          navigate('/');
+          const syncedUrl = await syncPendingDraftIfAny();
+          if (syncedUrl) {
+            navigate(syncedUrl);
+          } else {
+            navigate(getRedirectTarget());
+          }
         } catch {
           bannersStage3.showError('Error de conexión al verificar código.');
         }
@@ -415,7 +458,8 @@ class RegisterViewController implements ViewController {
     const loginBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-to-login"]');
     loginBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      navigate('/login');
+      const search = window.location.search || '';
+      navigate(`/login${search}`);
     }, { signal });
   }
 

@@ -1,5 +1,6 @@
 import { User } from '../types/auth.types.js';
 import { OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
+import { wsService } from './websocket.service.js';
 
 export let currentUser: User | null = null;
 export let linkedAccounts: User[] = [];
@@ -77,6 +78,20 @@ export async function postApi(url: string, body?: unknown, customHeaders?: Recor
       ...(customHeaders || {}),
     },
     method: 'POST',
+  });
+}
+
+export async function patchApi(url: string, body?: unknown): Promise<Response> {
+  const token = await ensureCsrfToken();
+  return timedFetch(url, {
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'x-csrf-token': token,
+    },
+    method: 'PATCH',
   });
 }
 
@@ -242,6 +257,17 @@ export async function switchAccountApi(userId: number | string): Promise<{ accou
   }
 }
 
+function clearWalStorage(): void {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('boardpdf_wal_')) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+}
+
 export async function logoutApi(userId?: number | string): Promise<{ accounts?: User[]; success: boolean; switched?: boolean; user?: User | null }> {
   try {
     const res = await postApi('/api/auth/logout', userId ? { userId } : {});
@@ -251,10 +277,14 @@ export async function logoutApi(userId?: number | string): Promise<{ accounts?: 
         setAuthState(data.user, data.accounts || []);
         return { accounts: data.accounts, success: true, switched: true, user: data.user };
       }
+      clearWalStorage();
+      wsService.disconnect();
       setAuthState(null, []);
       return { accounts: [], success: true, switched: false, user: null };
     }
   } catch {}
+  clearWalStorage();
+  wsService.disconnect();
   setAuthState(null, []);
   return { accounts: [], success: true, switched: false, user: null };
 }
@@ -263,6 +293,8 @@ export async function logoutAllApi(): Promise<boolean> {
   try {
     await postApi('/api/auth/logout-all');
   } catch {}
+  clearWalStorage();
+  wsService.disconnect();
   setAuthState(null, []);
   return true;
 }

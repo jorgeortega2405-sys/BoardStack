@@ -76,10 +76,22 @@ export interface CollaborativeDocumentContent {
   pageTitles?: string[];
 }
 
+export interface CollaborativeMember {
+  avatar_url?: string | null;
+  created_at?: string;
+  email?: string;
+  id?: number;
+  role: 'editor' | 'viewer';
+  user_id: number;
+  username: string;
+}
+
 export interface CollaborativeDocumentRecord {
+  access_level?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   created_at: string;
   id: string;
+  members?: CollaborativeMember[];
   page_count: number;
   pdf_filename?: string | null;
   title: string;

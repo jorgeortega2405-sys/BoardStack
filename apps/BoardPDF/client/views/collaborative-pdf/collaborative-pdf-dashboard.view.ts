@@ -1,16 +1,18 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { SVG_TOOL_COLLABORATIVE_PDF } from '../../graphics/tool-icons.graphics.js';
-import { deleteApi, getApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, getApi } from '../../services/api.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
+import { listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 
 interface DocItem {
   content?: any;
   created_at: string;
   id: string;
+  is_local?: boolean;
   page_count: number;
   pdf_filename?: string;
   title: string;
@@ -41,14 +43,34 @@ export class CollaborativePdfDashboardController implements ViewController {
   }
 
   private async loadDocuments(): Promise<void> {
+    const localDrafts = listLocalDrafts().map((d) => ({
+      content: d.content,
+      created_at: d.createdAt,
+      id: d.id,
+      is_local: true,
+      page_count: d.content?.pageCount || 1,
+      title: d.title,
+      updated_at: d.updatedAt,
+    }));
+
+    if (!currentUser) {
+      this.documents = localDrafts;
+      return;
+    }
+
     try {
       const res = await getApi(API_ROUTES.collaborativeDocs.base);
       if (res.ok) {
         const data = await res.json();
-        this.documents = Array.isArray(data.documents) ? data.documents : [];
+        const serverDocs = Array.isArray(data.documents) ? data.documents : [];
+        const serverIds = new Set(serverDocs.map((s: DocItem) => s.id));
+        const unmigratedLocals = localDrafts.filter((l) => !serverIds.has(l.id));
+        this.documents = [...unmigratedLocals, ...serverDocs];
+      } else {
+        this.documents = localDrafts;
       }
     } catch {
-      this.documents = [];
+      this.documents = localDrafts;
     }
   }
 
@@ -77,26 +99,32 @@ export class CollaborativePdfDashboardController implements ViewController {
         month: 'short',
       });
 
+      const isLocal = !!doc.is_local;
+      const statusLabel = isLocal ? 'Guardado en tu navegador' : 'Guardado en la nube';
+      const statusColor = isLocal ? 'color: #f59e0b;' : 'color: var(--text-tertiary);';
+
       return `
         <div class="tool-card tool-card--doc" data-ref="card-doc-${doc.id}" data-doc-id="${doc.id}">
           <div class="tool-card__icon-box" data-ref="icon-box-doc-${doc.id}">
             ${SVG_TOOL_COLLABORATIVE_PDF}
           </div>
           <div class="tool-card__actions" data-ref="actions-doc-${doc.id}" style="align-items: center; display: flex; gap: 6px; position: absolute; right: 16px; top: 16px;">
+            ${!isLocal ? `
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-share-doc-${doc.id}" data-id="${doc.id}" data-tooltip="Copiar enlace" aria-label="Copiar enlace">
               <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
             </button>
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-download-doc-${doc.id}" data-id="${doc.id}" data-tooltip="Descargar PDF" aria-label="Descargar PDF">
               <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </button>
-            <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-delete-doc-${doc.id}" data-id="${doc.id}" data-tooltip="Eliminar" aria-label="Eliminar documento">
+            ` : ''}
+            <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-delete-doc-${doc.id}" data-id="${doc.id}" data-is-local="${isLocal ? '1' : '0'}" data-tooltip="Eliminar" aria-label="Eliminar documento">
               <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
           <h3 class="tool-card__title" data-ref="title-doc-${doc.id}">${this.escapeHtml(doc.title)}</h3>
           <p class="tool-card__desc" data-ref="desc-doc-${doc.id}">${doc.page_count} ${doc.page_count === 1 ? 'página' : 'páginas'} • Actualizado ${updatedDate}</p>
           <div class="tool-card__footer" data-ref="footer-doc-${doc.id}" style="align-items: center; display: flex; justify-content: space-between; margin-top: auto; padding-top: 14px;">
-            <span class="tool-card__status" style="color: var(--text-tertiary); font-size: 11px;">Guardado en servidor</span>
+            <span class="tool-card__status" style="${statusColor} font-size: 11px; font-weight: 500;">${statusLabel}</span>
             <span class="tool-card__action-link" style="color: var(--primary); font-size: 12px; font-weight: 600;">Editar documento →</span>
           </div>
         </div>
@@ -120,6 +148,9 @@ export class CollaborativePdfDashboardController implements ViewController {
         if (createCard) {
           e.preventDefault();
           const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+          if (!currentUser) {
+            saveLocalDraft(newDocId, { title: 'Documento sin título' });
+          }
           navigate(`/d/${encodeURIComponent(newDocId)}`);
           return;
         }
@@ -154,8 +185,9 @@ export class CollaborativePdfDashboardController implements ViewController {
           e.preventDefault();
           e.stopPropagation();
           const docId = deleteBtn.getAttribute('data-id');
+          const isLocal = deleteBtn.getAttribute('data-is-local') === '1';
           if (docId) {
-            this.handleDelete(docId);
+            this.handleDelete(docId, isLocal);
           }
           return;
         }
@@ -173,8 +205,15 @@ export class CollaborativePdfDashboardController implements ViewController {
     );
   }
 
-  private async handleDelete(id: string): Promise<void> {
+  private async handleDelete(id: string, isLocal = false): Promise<void> {
     if (!window.confirm('¿Deseas eliminar este documento PDF permanentemente?')) {
+      return;
+    }
+    if (isLocal) {
+      removeLocalDraft(id);
+      showToast('Borrador local eliminado con éxito', 'success');
+      this.documents = this.documents.filter((d) => d.id !== id);
+      this.renderGrid();
       return;
     }
     try {

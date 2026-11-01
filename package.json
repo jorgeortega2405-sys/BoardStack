@@ -9,10 +9,13 @@
   "scripts": {
     "build": "npm run build --workspace=apps/BoardPDF",
     "build:boardpdf": "npm run build --workspace=apps/BoardPDF",
+    "build:collab": "cargo build --release --manifest-path apps/collab-server/Cargo.toml",
+    "collab": "cargo run --manifest-path apps/collab-server/Cargo.toml",
     "dev": "npm run dev --workspace=apps/BoardPDF",
     "dev:boardpdf": "npm run dev --workspace=apps/BoardPDF",
     "test": "npm test --workspace=apps/BoardPDF",
     "test:boardpdf": "npm test --workspace=apps/BoardPDF",
+    "test:collab": "cargo test --manifest-path apps/collab-server/Cargo.toml",
     "typecheck": "npm run typecheck --workspace=apps/BoardPDF",
     "typecheck:boardpdf": "npm run typecheck --workspace=apps/BoardPDF"
   }

@@ -39,261 +39,56 @@ export function createCollaborativeDrawerElement(): HTMLElement {
   <div class="layout-drawer__body" data-ref="side-panel-body">
     <div class="collaborative-panel-section" data-ref="panel-section-elements">
       <div class="collaborative-elements-main" data-ref="elements-main-view">
-        <div class="collaborative-elements-list" data-ref="list-elements">
-          <button type="button" class="menu-item" data-ref="btn-elem-shapes">
-            <span class="menu-item__icon tool-item__mini-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
-            </span>
-            <span class="menu-item__text">Formas</span>
+        <div class="collaborative-panel-grid collaborative-panel-grid--3" data-ref="list-elements">
+          <button type="button" class="collaborative-element-card" data-ref="btn-elem-tables" data-tooltip="Tablas" aria-label="Tablas">
+            <div class="collaborative-element-card__icon-wrap">
+              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                <rect x="7" y="3" width="50" height="50" rx="14" fill="#fb923c" transform="rotate(3 32 28)"></rect>
+                <rect x="7" y="7" width="50" height="50" rx="14" fill="#ea580c"></rect>
+                <rect x="8" y="8" width="48" height="48" rx="13" fill="#f97316"></rect>
+                <rect x="16" y="16" width="32" height="32" rx="4" fill="#fb923c" stroke="#ffffff" stroke-width="2.5"></rect>
+                <line x1="16" y1="25" x2="48" y2="25" stroke="#ffffff" stroke-width="2.5"></line>
+                <line x1="16" y1="35" x2="48" y2="35" stroke="#ffffff" stroke-width="2.5"></line>
+                <line x1="26" y1="16" x2="26" y2="48" stroke="#ffffff" stroke-width="2.5"></line>
+                <line x1="38" y1="16" x2="38" y2="48" stroke="#ffffff" stroke-width="2.5"></line>
+              </svg>
+            </div>
+            <span class="collaborative-element-card__text">Tablas</span>
           </button>
 
-          <button type="button" class="menu-item" data-ref="btn-elem-tables">
-            <span class="menu-item__icon tool-item__mini-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
-            </span>
-            <span class="menu-item__text">Tablas</span>
+          <button type="button" class="collaborative-element-card" data-ref="btn-elem-photos" data-tooltip="Fotos" aria-label="Fotos">
+            <div class="collaborative-element-card__icon-wrap">
+              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                <rect x="7" y="3" width="50" height="50" rx="14" fill="#60a5fa" transform="rotate(-3 32 28)"></rect>
+                <rect x="7" y="7" width="50" height="50" rx="14" fill="#1d4ed8"></rect>
+                <rect x="8" y="8" width="48" height="48" rx="13" fill="#3b82f6"></rect>
+                <rect x="16" y="16" width="32" height="32" rx="5" fill="#ffffff"></rect>
+                <rect x="19" y="19" width="26" height="26" rx="3" fill="#38bdf8"></rect>
+                <circle cx="38" cy="24" r="3" fill="#facc15"></circle>
+                <polygon points="19,45 28,33 34,39 40,32 45,38 45,45" fill="#22c55e"></polygon>
+                <polygon points="26,45 33,37 40,45" fill="#15803d"></polygon>
+              </svg>
+            </div>
+            <span class="collaborative-element-card__text">Fotos</span>
           </button>
 
-          <button type="button" class="menu-item" data-ref="btn-elem-photos">
-            <span class="menu-item__icon tool-item__mini-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
-            </span>
-            <span class="menu-item__text">Fotos</span>
+          <button type="button" class="collaborative-element-card" data-ref="btn-elem-charts" data-tooltip="Gráficas" aria-label="Gráficas">
+            <div class="collaborative-element-card__icon-wrap">
+              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                <rect x="7" y="3" width="50" height="50" rx="14" fill="#2dd4bf" transform="rotate(3 32 28)"></rect>
+                <rect x="7" y="7" width="50" height="50" rx="14" fill="#0f766e"></rect>
+                <rect x="8" y="8" width="48" height="48" rx="13" fill="#14b8a6"></rect>
+                <rect x="16" y="16" width="32" height="32" rx="4" fill="#ffffff" fill-opacity="0.2"></rect>
+                <line x1="32" y1="18" x2="32" y2="46" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2"></line>
+                <path d="M 17 40 L 24 28 L 32 34 L 40 24 L 47 31 L 47 46 L 17 46 Z" fill="#c084fc" fill-opacity="0.7"></path>
+                <path d="M 17 46 L 23 36 L 31 40 L 39 31 L 47 37 L 47 46 Z" fill="#9333ea" fill-opacity="0.9"></path>
+                <polyline points="17,40 24,28 32,34 40,24 47,31" fill="none" stroke="#fdf4ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+                <circle cx="24" cy="28" r="2.5" fill="#ffffff"></circle>
+                <circle cx="40" cy="24" r="2.5" fill="#ffffff"></circle>
+              </svg>
+            </div>
+            <span class="collaborative-element-card__text">Gráficas</span>
           </button>
-
-          <button type="button" class="menu-item" data-ref="btn-elem-charts">
-            <span class="menu-item__icon tool-item__mini-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#show_chart"></use></svg>
-            </span>
-            <span class="menu-item__text">Gráficas</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="collaborative-shapes-view is-hidden" data-ref="elements-shapes-view">
-        <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-shapes-back" data-tooltip="Volver a elementos" aria-label="Volver">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-          </button>
-          <span class="collaborative-shapes-title">Formas</span>
-        </div>
-
-        <div class="collaborative-shapes-content" data-ref="shapes-content">
-          <div class="collaborative-shapes-section">
-            <span class="collaborative-shapes-section__title">Formas básicas</span>
-            <div class="collaborative-shapes-grid" data-ref="shapes-grid-basic">
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-rect" data-shape="rect" data-tooltip="Cuadrado" aria-label="Cuadrado">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><rect x="2" y="2" width="36" height="36" fill="#000000"></rect></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-rounded-rect" data-shape="rounded-rect" data-tooltip="Rectángulo redondeado" aria-label="Rectángulo redondeado">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><rect x="2" y="2" width="36" height="36" rx="8" fill="#000000"></rect></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-circle" data-shape="circle" data-tooltip="Círculo" aria-label="Círculo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><circle cx="20" cy="20" r="18" fill="#000000"></circle></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-triangle" data-shape="triangle" data-tooltip="Triángulo" aria-label="Triángulo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 38,38 2,38" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-triangle-down" data-shape="triangle-down" data-tooltip="Triángulo invertido" aria-label="Triángulo invertido">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,2 38,2 20,38" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-diamond" data-shape="diamond" data-tooltip="Rombo" aria-label="Rombo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 38,20 20,38 2,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-cross" data-shape="cross" data-tooltip="Cruz" aria-label="Cruz">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="13,2 27,2 27,13 38,13 38,27 27,27 27,38 13,38 13,27 2,27 2,13 13,13" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-plaque" data-shape="plaque" data-tooltip="Placa" aria-label="Placa">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 8 Q 20 2 38 8 V 32 Q 20 38 2 32 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-scalloped-rect" data-shape="scalloped-rect" data-tooltip="Cuadrado festoneado" aria-label="Cuadrado festoneado">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 8 2 H 32 A 6 6 0 0 0 38 8 V 32 A 6 6 0 0 0 32 38 H 8 A 6 6 0 0 0 2 32 V 8 A 6 6 0 0 0 8 2 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-parallelogram-right" data-shape="parallelogram-right" data-tooltip="Paralelogramo" aria-label="Paralelogramo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="10,4 38,4 30,36 2,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-parallelogram-left" data-shape="parallelogram-left" data-tooltip="Paralelogramo invertido" aria-label="Paralelogramo invertido">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 30,4 38,36 10,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-trapezoid" data-shape="trapezoid" data-tooltip="Trapecio" aria-label="Trapecio">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="8,4 32,4 38,36 2,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-trapezoid-inverted" data-shape="trapezoid-inverted" data-tooltip="Trapecio invertido" aria-label="Trapecio invertido">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 38,4 32,36 8,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-shield" data-shape="shield" data-tooltip="Escudo" aria-label="Escudo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 4 2 H 36 V 22 C 36 34 20 38 20 38 C 20 38 4 34 4 22 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arch" data-shape="arch" data-tooltip="Arco" aria-label="Arco">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 4 38 V 18 C 4 7 36 7 36 18 V 38 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-right-triangle" data-shape="right-triangle" data-tooltip="Triángulo rectángulo" aria-label="Triángulo rectángulo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,2 2,38 38,38" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-semicircle" data-shape="semicircle" data-tooltip="Semicírculo" aria-label="Semicírculo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 34 A 18 18 0 0 1 38 34 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-quarter-circle" data-shape="quarter-circle" data-tooltip="Cuarto de círculo" aria-label="Cuarto de círculo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 38 V 2 A 36 36 0 0 1 38 38 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-quarter-circle-arc" data-shape="quarter-circle-arc" data-tooltip="Banda de cuarto de círculo" aria-label="Banda de cuarto de círculo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 38 H 16 A 22 22 0 0 1 38 16 V 2 A 36 36 0 0 0 2 38 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-semicircle-arc" data-shape="semicircle-arc" data-tooltip="Arco puente" aria-label="Arco puente">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 34 H 14 A 6 6 0 0 1 26 34 H 38 A 18 18 0 0 0 2 34 Z" fill="#000000"></path></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="collaborative-shapes-section">
-            <span class="collaborative-shapes-section__title">Polígonos</span>
-            <div class="collaborative-shapes-grid" data-ref="shapes-grid-polygons">
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-pentagon" data-shape="pentagon" data-tooltip="Pentágono" aria-label="Pentágono">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 39,15 32,38 8,38 1,15" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-hexagon-vertical" data-shape="hexagon-vertical" data-tooltip="Hexágono vertical" aria-label="Hexágono vertical">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-hexagon" data-shape="hexagon" data-tooltip="Hexágono horizontal" aria-label="Hexágono horizontal">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="10,2 30,2 39,20 30,38 10,38 1,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-octagon" data-shape="octagon" data-tooltip="Octógono" aria-label="Octógono">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="12,2 28,2 38,12 38,28 28,38 12,38 2,28 2,12" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-chamfered-rect" data-shape="chamfered-rect" data-tooltip="Rectángulo achaflanado" aria-label="Rectángulo achaflanado">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="7,2 33,2 38,7 38,33 33,38 7,38 2,33 2,7" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-heptagon" data-shape="heptagon" data-tooltip="Heptágono" aria-label="Heptágono">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 36,9 39,27 28,38 12,38 1,27 4,9" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-decagon" data-shape="decagon" data-tooltip="Decágono" aria-label="Decágono">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 31,5 38,14 38,26 31,35 20,38 9,35 2,26 2,14 9,5" fill="#000000"></polygon></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="collaborative-shapes-section">
-            <span class="collaborative-shapes-section__title">Estrellas y sellos</span>
-            <div class="collaborative-shapes-grid" data-ref="shapes-grid-stars">
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-4" data-shape="star-4" data-tooltip="Estrella de 4 puntas" aria-label="Estrella de 4 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 24,16 38,20 24,24 20,38 16,24 2,20 16,16" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-5" data-shape="star-5" data-tooltip="Estrella de 5 puntas" aria-label="Estrella de 5 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 24.5,14 38,15 27,24 31,38 20,29.5 9,38 13,24 2,15 15.5,14" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-6" data-shape="star-6" data-tooltip="Estrella de 6 puntas" aria-label="Estrella de 6 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 25,11 36,11 30,20 36,29 25,29 20,38 15,29 4,29 10,20 4,11 15,11" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-8" data-shape="star-8" data-tooltip="Estrella de 8 puntas" aria-label="Estrella de 8 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 24,9 33,5 31,14 38,20 31,26 33,35 24,31 20,38 16,31 7,35 9,26 2,20 9,14 7,5 16,9" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-10" data-shape="star-10" data-tooltip="Estrella de 10 puntas" aria-label="Estrella de 10 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 23,8 29,4 30,11 37,11 34,17 39,22 33,25 35,32 28,31 26,38 20,34 14,38 12,31 5,32 7,25 1,22 6,17 3,11 10,11 11,4 17,8" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-12" data-shape="star-12" data-tooltip="Estrella de 12 puntas" aria-label="Estrella de 12 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 23,7 29,4 30,10 36,9 34,15 39,17 35,22 38,26 33,28 34,34 29,33 27,38 22,35 20,38 18,35 13,38 11,33 6,34 7,28 2,26 5,22 1,17 6,15 4,9 10,10 11,4 17,7" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-16" data-shape="star-16" data-tooltip="Estrella de 16 puntas" aria-label="Estrella de 16 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 22,6 26,4 27,8 31,7 31,11 35,12 33,16 37,18 34,21 37,24 33,26 35,30 31,31 31,35 27,34 26,38 22,36 20,38 18,36 14,38 13,34 9,35 9,31 5,30 7,26 3,24 6,21 3,18 7,16 5,12 9,11 9,7 13,8 14,4 18,6" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-24" data-shape="star-24" data-tooltip="Estrella de 24 puntas" aria-label="Estrella de 24 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><circle cx="20" cy="20" r="18" fill="#000000" stroke-dasharray="2.35 2.35" stroke-width="4" stroke="#000000"></circle></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-32" data-shape="star-32" data-tooltip="Estrella de 32 puntas" aria-label="Estrella de 32 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><circle cx="20" cy="20" r="18" fill="#000000" stroke-dasharray="1.76 1.76" stroke-width="3" stroke="#000000"></circle></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-star-7" data-shape="star-7" data-tooltip="Estrella de 7 puntas" aria-label="Estrella de 7 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 23,12 34,7 30,17 39,23 29,26 31,37 22,31 18,37 20,26 10,23 19,17 15,7 26,12" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flare-8" data-shape="flare-8" data-tooltip="Destello de 8 puntas" aria-label="Destello de 8 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 21,17 32,7 22,19 38,20 22,21 32,33 21,23 20,38 19,23 8,33 18,21 2,20 18,19 8,7 19,17" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flare-10" data-shape="flare-10" data-tooltip="Destello de 10 puntas" aria-label="Destello de 10 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 21,17 29,6 23,18 36,13 24,20 38,20 24,21 36,27 23,22 29,34 21,23 20,38 19,23 11,34 17,22 4,27 16,21 2,20 16,20 4,13 17,18 11,6 19,17" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flare-12" data-shape="flare-12" data-tooltip="Destello de 12 puntas" aria-label="Destello de 12 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 21,17 27,6 22,18 33,10 23,19 37,17 24,20 38,20 24,21 37,23 23,21 33,30 22,22 27,34 21,23 20,38 19,23 13,34 18,22 7,30 17,21 3,23 16,21 2,20 16,20 3,17 17,19 7,10 18,18 13,6 19,17" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-badge-20" data-shape="badge-20" data-tooltip="Sello de 20 puntas" aria-label="Sello de 20 puntas">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><circle cx="20" cy="20" r="18" fill="#000000" stroke-dasharray="2.8 2.8" stroke-width="4.5" stroke="#000000"></circle></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="collaborative-shapes-section">
-            <span class="collaborative-shapes-section__title">Flechas</span>
-            <div class="collaborative-shapes-grid" data-ref="shapes-grid-arrows">
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-block-right" data-shape="arrow-block-right" data-tooltip="Flecha derecha" aria-label="Flecha derecha">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,13 22,13 22,3 38,20 22,37 22,27 2,27" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-block-left" data-shape="arrow-block-left" data-tooltip="Flecha izquierda" aria-label="Flecha izquierda">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="38,13 18,13 18,3 2,20 18,37 18,27 38,27" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-block-up" data-shape="arrow-block-up" data-tooltip="Flecha arriba" aria-label="Flecha arriba">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="13,38 13,18 3,18 20,2 37,18 27,18 27,38" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-block-down" data-shape="arrow-block-down" data-tooltip="Flecha abajo" aria-label="Flecha abajo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="13,2 13,22 3,22 20,38 37,22 27,22 27,2" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-double-horizontal" data-shape="arrow-double-horizontal" data-tooltip="Flecha doble horizontal" aria-label="Flecha doble horizontal">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="10,3 2,20 10,37 10,27 30,27 30,37 38,20 30,3 30,13 10,13" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-double-vertical" data-shape="arrow-double-vertical" data-tooltip="Flecha doble vertical" aria-label="Flecha doble vertical">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="3,10 20,2 37,10 27,10 27,30 37,30 20,38 3,30 13,30 13,10" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-pentagon-right" data-shape="arrow-pentagon-right" data-tooltip="Flecha pentagonal" aria-label="Flecha pentagonal">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 26,4 38,20 26,36 2,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-chevron-right" data-shape="arrow-chevron-right" data-tooltip="Flecha cheurón" aria-label="Flecha cheurón">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 26,4 38,20 26,36 2,36 14,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-notched-left" data-shape="arrow-notched-left" data-tooltip="Flecha con muesca" aria-label="Flecha con muesca">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="38,4 16,4 16,11 2,20 16,29 16,36 38,36 28,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-arrow-bidirectional-bold" data-shape="arrow-bidirectional-bold" data-tooltip="Flecha bidireccional ancha" aria-label="Flecha bidireccional ancha">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="11,6 2,20 11,34 11,26 29,26 29,34 38,20 29,6 29,14 11,14" fill="#000000"></polygon></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="collaborative-shapes-section">
-            <span class="collaborative-shapes-section__title">Diagrama de flujo</span>
-            <div class="collaborative-shapes-grid" data-ref="shapes-grid-flowchart">
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-preparation" data-shape="flowchart-preparation" data-tooltip="Preparación" aria-label="Preparación">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="9,4 31,4 38,20 31,36 9,36 2,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-terminator" data-shape="flowchart-terminator" data-tooltip="Terminador" aria-label="Terminador">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><rect x="2" y="7" width="36" height="26" rx="13" fill="#000000"></rect></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-process-rounded" data-shape="flowchart-process-rounded" data-tooltip="Proceso redondeado" aria-label="Proceso redondeado">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><rect x="2" y="6" width="36" height="28" rx="6" fill="#000000"></rect></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-decision" data-shape="flowchart-decision" data-tooltip="Decisión" aria-label="Decisión">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="20,2 38,20 20,38 2,20" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-document" data-shape="flowchart-document" data-tooltip="Documento" aria-label="Documento">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 4 H 38 V 28 C 30 34 26 24 18 30 C 12 34 6 30 2 32 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-data" data-shape="flowchart-data" data-tooltip="Entrada / Salida de datos" aria-label="Entrada / Salida de datos">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="9,4 38,4 31,36 2,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-manual" data-shape="flowchart-manual" data-tooltip="Operación manual" aria-label="Operación manual">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 38,4 32,36 8,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-delay" data-shape="flowchart-delay" data-tooltip="Retardo" aria-label="Retardo">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 2 4 H 22 A 16 16 0 0 1 22 36 H 2 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-merge" data-shape="flowchart-merge" data-tooltip="Fusión" aria-label="Fusión">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="2,4 38,4 20,36" fill="#000000"></polygon></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-display" data-shape="flowchart-display" data-tooltip="Pantalla / Tarjeta" aria-label="Pantalla / Tarjeta">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><path d="M 11 4 H 38 V 36 H 11 L 2 20 Z" fill="#000000"></path></svg>
-              </button>
-              <button type="button" class="collaborative-shape-card" data-ref="btn-panel-shape-flowchart-offpage" data-shape="flowchart-offpage" data-tooltip="Conector fuera de página" aria-label="Conector fuera de página">
-                <svg class="collaborative-shape-card__svg" viewBox="0 0 40 40" width="32" height="32"><polygon points="4,2 36,2 36,24 20,38 4,24" fill="#000000"></polygon></svg>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

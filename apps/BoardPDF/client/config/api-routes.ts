@@ -15,9 +15,13 @@ export const API_ROUTES = {
   avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
   avatarBase: '/api/avatar',
   collaborativeDocs: {
+    accessLevel: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/access-level`,
     base: '/api/collaborative-docs',
     byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
+    memberDelete: (id: string, userId: number) => `/api/collaborative-docs/${encodeURIComponent(id)}/members/${userId}`,
+    members: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/members`,
     pdf: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/pdf`,
+    searchUsers: (query: string, docId?: string) => `/api/collaborative-docs/users/search?q=${encodeURIComponent(query)}${docId ? `&docId=${encodeURIComponent(docId)}` : ''}`,
     upload: '/api/collaborative-docs/upload',
     uploads: '/api/collaborative-docs/uploads',
   },
