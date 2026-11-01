@@ -66,12 +66,14 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
   const isCollaborative = cleanPath.startsWith('/d/') || cleanPath.startsWith('/tools/collaborative-pdf');
+  const railTop = sidebar.querySelector<HTMLElement>('[data-ref="rail-top"]');
   const defaultTop = sidebar.querySelector<HTMLElement>('[data-ref="rail-top-default"]');
   const defaultCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
   const collabCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
   const railDivider = sidebar.querySelector<HTMLElement>('[data-ref="rail-divider"]');
 
   if (isCollaborative) {
+    if (railTop) railTop.style.display = 'none';
     if (defaultTop) defaultTop.style.display = 'none';
     if (defaultCenter) defaultCenter.style.display = 'none';
     if (railDivider) railDivider.style.display = 'none';
@@ -80,6 +82,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
       collabCenter.style.flexDirection = 'column';
     }
   } else {
+    if (railTop) railTop.style.display = '';
     if (defaultTop) defaultTop.style.display = '';
     if (defaultCenter) defaultCenter.style.display = '';
     if (railDivider) railDivider.style.display = '';

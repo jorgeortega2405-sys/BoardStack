@@ -7,6 +7,7 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { hideElement, showElement, withButtonLoading } from '../../utils/dom.util.js';
+import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 
 interface ElementText {
   backgroundColor?: string;
@@ -102,6 +103,8 @@ export class CollaborativePdfEditorController implements ViewController {
   private drawMode: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
   private drawThickness = 2;
   private drawer: HTMLElement | null = null;
+  private drawerAbortController: AbortController | null = null;
+  private drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
   private elements: EditorElement[] = [];
   private isModified = false;
   private lockedPages = new Set<number>();
@@ -134,7 +137,6 @@ export class CollaborativePdfEditorController implements ViewController {
       window.history.replaceState({}, '', `/d/${encodeURIComponent(this.docId)}`);
     }
 
-    await this.setupDrawer();
     this.setupRailNavigation();
     await this.loadDocument();
     this.renderPages();
@@ -142,12 +144,17 @@ export class CollaborativePdfEditorController implements ViewController {
     void this.loadUploadedAssets();
     this.updateFooterPageInfo();
     renderIcons(this.container);
-    if (this.drawer) {
-      renderIcons(this.drawer);
-    }
   }
 
   destroy(): void {
+    if (this.drawerRemovalTimer) {
+      clearTimeout(this.drawerRemovalTimer);
+      this.drawerRemovalTimer = null;
+    }
+    if (this.drawerAbortController) {
+      this.drawerAbortController.abort();
+      this.drawerAbortController = null;
+    }
     if (this.drawer) {
       this.drawer.classList.remove('is-open');
       this.drawer.remove();
@@ -176,34 +183,234 @@ export class CollaborativePdfEditorController implements ViewController {
     return this.container.querySelectorAll<T>(selector);
   }
 
-  private async setupDrawer(): Promise<void> {
+  private ensureDrawerMounted(): void {
+    if (this.drawerRemovalTimer) {
+      clearTimeout(this.drawerRemovalTimer);
+      this.drawerRemovalTimer = null;
+    }
+
+    if (this.drawer && document.body.contains(this.drawer)) {
+      return;
+    }
+
     const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
     if (!sidebar) return;
 
     const existingDrawers = sidebar.querySelectorAll<HTMLElement>('[data-ref="layout-drawer"]');
     existingDrawers.forEach((d) => d.remove());
 
-    const drawerTemplate = await loadTemplate('/views/collaborative-pdf/collaborative-pdf-drawer.html');
-    this.drawer = drawerTemplate;
-    sidebar.appendChild(drawerTemplate);
-    translateElement(drawerTemplate);
-    renderIcons(drawerTemplate);
+    if (this.drawerAbortController) {
+      this.drawerAbortController.abort();
+      this.drawerAbortController = null;
+    }
+    this.drawerAbortController = new AbortController();
+
+    this.drawer = createCollaborativeDrawerElement();
+    sidebar.appendChild(this.drawer);
+    translateElement(this.drawer);
+    renderIcons(this.drawer);
+    this.bindDrawerEvents();
+  }
+
+  private bindDrawerEvents(): void {
+    const { signal } = this.drawerAbortController || {};
+
+    const closeSidePanelBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-close-side-panel"]');
+    closeSidePanelBtn?.addEventListener('click', () => {
+      this.closeSidePanel();
+    }, { signal });
+
+    const btnAddTextBox = this.queryPanel<HTMLButtonElement>('[data-ref="btn-add-text-box"]');
+    btnAddTextBox?.addEventListener('click', () => this.addTextElement('body'), { signal });
+
+    const btnPresetTitle = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-title"]');
+    btnPresetTitle?.addEventListener('click', () => this.addTextElement('title'), { signal });
+
+    const btnPresetSubtitle = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-subtitle"]');
+    btnPresetSubtitle?.addEventListener('click', () => this.addTextElement('subtitle'), { signal });
+
+    const btnPresetBody = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-body"]');
+    btnPresetBody?.addEventListener('click', () => this.addTextElement('body'), { signal });
+
+    const elemConfigs: Array<{ handler: () => void; ref: string }> = [
+      { handler: () => showToast('Función de tablas próximamente', 'info'), ref: 'btn-elem-tables' },
+      { handler: () => this.handleRailTabClick('uploads'), ref: 'btn-elem-photos' },
+      { handler: () => showToast('Gráficas estadísticas próximamente', 'info'), ref: 'btn-elem-charts' },
+    ];
+
+    elemConfigs.forEach(({ handler, ref }) => {
+      this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
+    });
+
+    const btnElemShapes = this.queryPanel<HTMLButtonElement>('[data-ref="btn-elem-shapes"]');
+    btnElemShapes?.addEventListener('click', () => {
+      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
+      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
+      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
+      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
+      if (mainView) hideElement(mainView);
+      if (shapesView) showElement(shapesView);
+      if (backBtn) showElement(backBtn);
+      if (titleEl) titleEl.textContent = 'Formas';
+    }, { signal });
+
+    const goBackToElements = () => {
+      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
+      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
+      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
+      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
+      if (mainView) showElement(mainView);
+      if (shapesView) hideElement(shapesView);
+      if (backBtn) hideElement(backBtn);
+      if (titleEl) titleEl.textContent = 'Elementos';
+    };
+
+    const btnShapesBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]');
+    btnShapesBack?.addEventListener('click', goBackToElements, { signal });
+
+    const btnDrawerBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-drawer-back"]');
+    btnDrawerBack?.addEventListener('click', () => {
+      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
+      const pdfApplyPanel = this.queryPanel<HTMLElement>('[data-ref="pdf-apply-panel"]');
+      if (shapesView && !shapesView.classList.contains('is-hidden')) {
+        goBackToElements();
+      } else if (pdfApplyPanel && !pdfApplyPanel.classList.contains('is-hidden')) {
+        this.closePdfApplyPanel();
+      }
+    }, { signal });
+
+    const panelShapeBtns = this.queryPanelAll<HTMLButtonElement>('.collaborative-shape-card');
+    panelShapeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const shape = btn.getAttribute('data-shape') as ElementShape['shapeType'];
+        if (shape) {
+          this.addShapeElement(shape);
+        }
+      }, { signal });
+    });
+
+    const colorSwatches = this.queryPanelAll<HTMLButtonElement>('[data-ref="swatch-color"]');
+    colorSwatches.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        if (color) {
+          this.applyColorToCurrentTarget(color);
+        }
+      }, { signal });
+    });
+
+    const btnCustomPicker = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-custom-picker"]');
+    const inputCustomColor = this.queryPanel<HTMLInputElement>('[data-ref="input-custom-color"]');
+    btnCustomPicker?.addEventListener('click', () => {
+      inputCustomColor?.click();
+    }, { signal });
+
+    inputCustomColor?.addEventListener('input', () => {
+      if (inputCustomColor.value) {
+        this.applyColorToCurrentTarget(inputCustomColor.value);
+      }
+    }, { signal });
+
+    const btnEyedropper = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-eyedropper"]');
+    btnEyedropper?.addEventListener('click', () => {
+      void this.activateZoomEyeDropper();
+    }, { signal });
+
+    const btnUpload = this.queryPanel<HTMLButtonElement>('[data-ref="btn-upload-file"]');
+    const fileInput = this.queryPanel<HTMLInputElement>('[data-ref="input-file-upload"]');
+
+    btnUpload?.addEventListener('click', () => {
+      fileInput?.click();
+    }, { signal });
+
+    fileInput?.addEventListener('change', async () => {
+      const files = fileInput.files;
+      if (!files || files.length === 0) return;
+
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const progress = this.queryPanel<HTMLElement>('[data-ref="upload-progress-indicator"]');
+      if (progress) showElement(progress);
+
+      try {
+        const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
+        if (res.ok) {
+          const data = await res.json();
+          const newFiles: UploadedAsset[] = data.files || (data.file ? [data.file] : []);
+          this.uploadedAssets = [...newFiles, ...this.uploadedAssets];
+          this.renderUploadsGrid();
+          showToast(newFiles.length === 1 ? 'Archivo subido con éxito' : `${newFiles.length} archivos subidos con éxito`, 'success');
+        } else {
+          showToast('No se pudo subir el archivo.', 'error');
+        }
+      } catch {
+        showToast('Error de red al subir archivo.', 'error');
+      } finally {
+        if (progress) hideElement(progress);
+        fileInput.value = '';
+      }
+    }, { signal });
+
+    const tabAll = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-all"]');
+    const tabImages = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-images"]');
+    const tabPdfs = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-pdfs"]');
+
+    const updateTabs = (active: 'all' | 'images' | 'pdfs') => {
+      this.activeUploadFilter = active;
+      tabAll?.classList.toggle('is-active', active === 'all');
+      tabImages?.classList.toggle('is-active', active === 'images');
+      tabPdfs?.classList.toggle('is-active', active === 'pdfs');
+      this.renderUploadsGrid();
+    };
+
+    tabAll?.addEventListener('click', () => updateTabs('all'), { signal });
+    tabImages?.addEventListener('click', () => updateTabs('images'), { signal });
+    tabPdfs?.addEventListener('click', () => updateTabs('pdfs'), { signal });
+
+    const btnBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-pdf-apply-back"]');
+    btnBack?.addEventListener('click', () => {
+      this.closePdfApplyPanel();
+    }, { signal });
+
+    const btnApplyAll = this.queryPanel<HTMLButtonElement>('[data-ref="btn-apply-all-pages"]');
+    btnApplyAll?.addEventListener('click', () => {
+      if (!this.selectedPdfAsset) return;
+      const count = Math.max(1, this.selectedPdfAsset.pageCount || 1);
+      this.pageCount = count;
+      this.pagePdfSources = [];
+      for (let i = 0; i < count; i++) {
+        this.pagePdfSources.push({
+          pageNumber: i + 1,
+          pdfUrl: this.selectedPdfAsset.url,
+        });
+      }
+      this.pageTitles = Array(count).fill('').map((_, idx) => `Página ${idx + 1}`);
+      this.pageBackgrounds = Array(count).fill('#ffffff');
+      this.selectedPageIndex = 0;
+      this.activePageIndex = 0;
+      this.renderPages();
+      this.setModified(true);
+      showToast(`Se han aplicado las ${count} páginas del PDF al documento`, 'success');
+    }, { signal });
   }
 
   private setupRailNavigation(): void {
-    const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
-    const defaultTop = document.querySelector<HTMLElement>('[data-ref="rail-top-default"]');
-    const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
+    const railTop = document.querySelector<HTMLElement>('[data-ref="rail-top"]');
     const railDivider = document.querySelector<HTMLElement>('[data-ref="rail-divider"]');
+    const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
+    const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
-    if (defaultCenter) {
-      defaultCenter.style.display = 'none';
-    }
-    if (defaultTop) {
-      defaultTop.style.display = 'none';
+    if (railTop) {
+      railTop.style.display = 'none';
     }
     if (railDivider) {
       railDivider.style.display = 'none';
+    }
+    if (defaultCenter) {
+      defaultCenter.style.display = 'none';
     }
     if (collabCenter) {
       collabCenter.style.display = 'flex';
@@ -213,19 +420,19 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private teardownRailNavigation(): void {
-    const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
-    const defaultTop = document.querySelector<HTMLElement>('[data-ref="rail-top-default"]');
-    const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
+    const railTop = document.querySelector<HTMLElement>('[data-ref="rail-top"]');
     const railDivider = document.querySelector<HTMLElement>('[data-ref="rail-divider"]');
+    const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
+    const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
-    if (defaultCenter) {
-      defaultCenter.style.display = '';
-    }
-    if (defaultTop) {
-      defaultTop.style.display = '';
+    if (railTop) {
+      railTop.style.display = '';
     }
     if (railDivider) {
       railDivider.style.display = '';
+    }
+    if (defaultCenter) {
+      defaultCenter.style.display = '';
     }
     if (collabCenter) {
       collabCenter.style.display = 'none';
@@ -236,7 +443,6 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private handleRailTabClick(tab: 'colors' | 'elements' | 'text' | 'tools' | 'uploads'): void {
     const toolsToolbar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-tools-toolbar"]');
-    const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
     if (tab === 'tools') {
@@ -263,11 +469,14 @@ export class CollaborativePdfEditorController implements ViewController {
       return;
     }
 
+    this.ensureDrawerMounted();
+
     this.activePanelTab = tab;
     if (this.drawer) {
       this.drawer.classList.add('is-open');
     }
 
+    const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
     const titles: Record<string, string> = {
       colors: 'Color',
       elements: 'Elementos',
@@ -301,6 +510,10 @@ export class CollaborativePdfEditorController implements ViewController {
       if (shapesView) hideElement(shapesView);
     }
 
+    if (tab === 'uploads') {
+      this.renderUploadsGrid();
+    }
+
     if (collabCenter) {
       const btns = collabCenter.querySelectorAll<HTMLElement>('[data-panel-tab]:not([data-panel-tab="tools"])');
       btns.forEach((btn) => {
@@ -317,6 +530,18 @@ export class CollaborativePdfEditorController implements ViewController {
   private closeSidePanel(): void {
     if (this.drawer) {
       this.drawer.classList.remove('is-open');
+      if (this.drawerRemovalTimer) {
+        clearTimeout(this.drawerRemovalTimer);
+      }
+      this.drawerRemovalTimer = setTimeout(() => {
+        if (this.drawerAbortController) {
+          this.drawerAbortController.abort();
+          this.drawerAbortController = null;
+        }
+        this.drawer?.remove();
+        this.drawer = null;
+        this.drawerRemovalTimer = null;
+      }, 280);
     }
     this.activePanelTab = null;
     this.currentColorTarget = null;
@@ -374,19 +599,19 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private addTextElement(preset: 'body' | 'subtitle' | 'title'): void {
     const id = `txt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-    let text = 'Texto';
+    let text = 'Agregar algo de texto';
     let fontSize = 16;
     let isBold = false;
     let color = '#000000';
     let yOffset = 180;
 
     if (preset === 'title') {
-      text = 'Título';
+      text = 'Agregar un título';
       fontSize = 32;
       isBold = true;
       yOffset = 120;
     } else if (preset === 'subtitle') {
-      text = 'Subtítulo';
+      text = 'Agregar un subtítulo';
       fontSize = 22;
       isBold = true;
       yOffset = 160;
@@ -2365,6 +2590,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private openColorMenu(target: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'text-color'): void {
     this.currentColorTarget = target;
+    this.ensureDrawerMounted();
     const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
 
     const titles: Record<string, string> = {
@@ -2378,6 +2604,19 @@ export class CollaborativePdfEditorController implements ViewController {
 
     if (titleEl) {
       titleEl.textContent = titles[target] || 'Color';
+    }
+
+    const firstCategoryTitleEl = this.queryPanel<HTMLElement>('[data-ref="txt-color-section-first-title"]');
+    if (firstCategoryTitleEl) {
+      const categoryTitles: Record<string, string> = {
+        'draw-color': 'Colores de trazo',
+        'page-bg': 'Colores del fondo',
+        'shape-fill': 'Colores de la forma',
+        'shape-stroke': 'Colores de la forma',
+        'sticky-bg': 'Colores de la nota',
+        'text-color': 'Colores del texto',
+      };
+      firstCategoryTitleEl.textContent = categoryTitles[target] || 'Colores';
     }
 
     this.activePanelTab = 'colors';
@@ -2738,11 +2977,6 @@ export class CollaborativePdfEditorController implements ViewController {
       });
     }, { signal });
 
-    const closeSidePanelBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-close-side-panel"]');
-    closeSidePanelBtn?.addEventListener('click', () => {
-      this.closeSidePanel();
-    }, { signal });
-
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
     if (collabCenter) {
       const tabBtns = collabCenter.querySelectorAll<HTMLElement>('[data-panel-tab]');
@@ -2756,101 +2990,6 @@ export class CollaborativePdfEditorController implements ViewController {
         }, { signal });
       });
     }
-
-    const btnAddTextBox = this.queryPanel<HTMLButtonElement>('[data-ref="btn-add-text-box"]');
-    btnAddTextBox?.addEventListener('click', () => this.addTextElement('body'), { signal });
-
-    const btnPresetTitle = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-title"]');
-    btnPresetTitle?.addEventListener('click', () => this.addTextElement('title'), { signal });
-
-    const btnPresetSubtitle = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-subtitle"]');
-    btnPresetSubtitle?.addEventListener('click', () => this.addTextElement('subtitle'), { signal });
-
-    const btnPresetBody = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-body"]');
-    btnPresetBody?.addEventListener('click', () => this.addTextElement('body'), { signal });
-
-    const elemConfigs: Array<{ handler: () => void; ref: string }> = [
-      { handler: () => showToast('Función de tablas próximamente', 'info'), ref: 'btn-elem-tables' },
-      { handler: () => this.handleRailTabClick('uploads'), ref: 'btn-elem-photos' },
-      { handler: () => showToast('Gráficas estadísticas próximamente', 'info'), ref: 'btn-elem-charts' },
-    ];
-
-    elemConfigs.forEach(({ handler, ref }) => {
-      this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
-    });
-
-    const btnElemShapes = this.queryPanel<HTMLButtonElement>('[data-ref="btn-elem-shapes"]');
-    btnElemShapes?.addEventListener('click', () => {
-      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
-      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
-      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
-      if (mainView) hideElement(mainView);
-      if (shapesView) showElement(shapesView);
-      if (backBtn) showElement(backBtn);
-      if (titleEl) titleEl.textContent = 'Formas';
-    }, { signal });
-
-    const goBackToElements = () => {
-      const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
-      const backBtn = this.queryPanel<HTMLElement>('[data-ref="btn-drawer-back"]');
-      const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
-      if (mainView) showElement(mainView);
-      if (shapesView) hideElement(shapesView);
-      if (backBtn) hideElement(backBtn);
-      if (titleEl) titleEl.textContent = 'Elementos';
-    };
-
-    const btnShapesBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]');
-    btnShapesBack?.addEventListener('click', goBackToElements, { signal });
-
-    const btnDrawerBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-drawer-back"]');
-    btnDrawerBack?.addEventListener('click', () => {
-      const shapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
-      const pdfApplyPanel = this.queryPanel<HTMLElement>('[data-ref="pdf-apply-panel"]');
-      if (shapesView && !shapesView.classList.contains('is-hidden')) {
-        goBackToElements();
-      } else if (pdfApplyPanel && !pdfApplyPanel.classList.contains('is-hidden')) {
-        this.closePdfApplyPanel();
-      }
-    }, { signal });
-
-    const categoryTitles: Record<string, string> = {
-      arrows: 'Flechas',
-      basic: 'Formas básicas',
-      flowchart: 'Formas de diagrama de flujo',
-      polygons: 'Polígonos',
-      stars: 'Estrellas',
-    };
-    const catTabs = this.queryPanelAll<HTMLButtonElement>('.collaborative-shapes-tab');
-    catTabs.forEach((tabBtn) => {
-      tabBtn.addEventListener('click', () => {
-        const cat = tabBtn.getAttribute('data-cat');
-        catTabs.forEach((b) => b.classList.toggle('is-active', b === tabBtn));
-        const titleEl = this.queryPanel<HTMLElement>('[data-ref="txt-shapes-category-title"]');
-        if (titleEl && cat && categoryTitles[cat]) {
-          titleEl.textContent = categoryTitles[cat];
-        }
-        const grids = this.queryPanelAll<HTMLElement>('[data-ref^="shapes-grid-"]');
-        grids.forEach((g) => {
-          const gRef = g.getAttribute('data-ref');
-          g.classList.toggle('is-hidden', gRef !== `shapes-grid-${cat}`);
-        });
-      }, { signal });
-    });
-
-    const panelShapeBtns = this.queryPanelAll<HTMLButtonElement>('.collaborative-shape-card');
-    panelShapeBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const shape = btn.getAttribute('data-shape') as ElementShape['shapeType'];
-        if (shape) {
-          this.addShapeElement(shape);
-        }
-      }, { signal });
-    });
-
-    this.bindUploadEvents();
 
     const toolbarButtons = this.container.querySelectorAll<HTMLButtonElement>('.collaborative-toolbar-btn');
     toolbarButtons.forEach((btn) => {
@@ -3024,33 +3163,6 @@ export class CollaborativePdfEditorController implements ViewController {
       this.openColorMenu('page-bg');
     }, { signal });
 
-    const colorSwatches = this.queryPanelAll<HTMLButtonElement>('[data-ref="swatch-color"]');
-    colorSwatches.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const color = btn.getAttribute('data-color');
-        if (color) {
-          this.applyColorToCurrentTarget(color);
-        }
-      }, { signal });
-    });
-
-    const btnCustomPicker = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-custom-picker"]');
-    const inputCustomColor = this.queryPanel<HTMLInputElement>('[data-ref="input-custom-color"]');
-    btnCustomPicker?.addEventListener('click', () => {
-      inputCustomColor?.click();
-    }, { signal });
-
-    inputCustomColor?.addEventListener('input', () => {
-      if (inputCustomColor.value) {
-        this.applyColorToCurrentTarget(inputCustomColor.value);
-      }
-    }, { signal });
-
-    const btnEyedropper = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-eyedropper"]');
-    btnEyedropper?.addEventListener('click', () => {
-      void this.activateZoomEyeDropper();
-    }, { signal });
-
     const btnShapeStrokeWidth = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-strokewidth"]');
     const strokeWidths = [0, 1, 2, 4, 8];
     btnShapeStrokeWidth?.addEventListener('click', () => {
@@ -3090,6 +3202,23 @@ export class CollaborativePdfEditorController implements ViewController {
         this.selectPage(null);
       }
     }, { signal });
+
+    const sliderZoom = this.container.querySelector<HTMLInputElement>('[data-ref="slider-zoom"]');
+    sliderZoom?.addEventListener('input', () => {
+      const val = parseFloat(sliderZoom.value);
+      this.setZoom(val / 100);
+    }, { signal });
+
+    const btnZoomReset = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-reset"]');
+    btnZoomReset?.addEventListener('click', () => this.setZoom(1.0), { signal });
+
+    workspace?.addEventListener('wheel', (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        this.setZoom(this.zoomLevel + delta);
+      }
+    }, { passive: false, signal });
   }
 
   private async loadUploadedAssets(): Promise<void> {
@@ -3101,108 +3230,6 @@ export class CollaborativePdfEditorController implements ViewController {
         this.renderUploadsGrid();
       }
     } catch {}
-  }
-
-  private bindUploadEvents(): void {
-    const { signal } = this.abortController || {};
-
-    const btnUpload = this.queryPanel<HTMLButtonElement>('[data-ref="btn-upload-file"]');
-    const fileInput = this.queryPanel<HTMLInputElement>('[data-ref="input-file-upload"]');
-
-    btnUpload?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
-    fileInput?.addEventListener('change', async () => {
-      const files = fileInput.files;
-      if (!files || files.length === 0) return;
-
-      const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append('files', files[i]);
-      }
-
-      const progress = this.queryPanel<HTMLElement>('[data-ref="upload-progress-indicator"]');
-      if (progress) showElement(progress);
-
-      try {
-        const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
-        if (res.ok) {
-          const data = await res.json();
-          const newFiles: UploadedAsset[] = data.files || (data.file ? [data.file] : []);
-          this.uploadedAssets = [...newFiles, ...this.uploadedAssets];
-          this.renderUploadsGrid();
-          showToast(newFiles.length === 1 ? 'Archivo subido con éxito' : `${newFiles.length} archivos subidos con éxito`, 'success');
-        } else {
-          showToast('No se pudo subir el archivo.', 'error');
-        }
-      } catch {
-        showToast('Error de red al subir archivo.', 'error');
-      } finally {
-        if (progress) hideElement(progress);
-        fileInput.value = '';
-      }
-    }, { signal });
-
-    const tabAll = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-all"]');
-    const tabImages = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-images"]');
-    const tabPdfs = this.queryPanel<HTMLButtonElement>('[data-ref="tab-upload-pdfs"]');
-
-    const updateTabs = (active: 'all' | 'images' | 'pdfs') => {
-      this.activeUploadFilter = active;
-      tabAll?.classList.toggle('is-active', active === 'all');
-      tabImages?.classList.toggle('is-active', active === 'images');
-      tabPdfs?.classList.toggle('is-active', active === 'pdfs');
-      this.renderUploadsGrid();
-    };
-
-    tabAll?.addEventListener('click', () => updateTabs('all'), { signal });
-    tabImages?.addEventListener('click', () => updateTabs('images'), { signal });
-    tabPdfs?.addEventListener('click', () => updateTabs('pdfs'), { signal });
-
-    const btnBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-pdf-apply-back"]');
-    btnBack?.addEventListener('click', () => {
-      this.closePdfApplyPanel();
-    }, { signal });
-
-    const btnApplyAll = this.queryPanel<HTMLButtonElement>('[data-ref="btn-apply-all-pages"]');
-    btnApplyAll?.addEventListener('click', () => {
-      if (!this.selectedPdfAsset) return;
-      const count = Math.max(1, this.selectedPdfAsset.pageCount || 1);
-      this.pageCount = count;
-      this.pagePdfSources = [];
-      for (let i = 0; i < count; i++) {
-        this.pagePdfSources.push({
-          pageNumber: i + 1,
-          pdfUrl: this.selectedPdfAsset.url,
-        });
-      }
-      this.pageTitles = Array(count).fill('').map((_, idx) => `Página ${idx + 1}`);
-      this.pageBackgrounds = Array(count).fill('#ffffff');
-      this.selectedPageIndex = 0;
-      this.activePageIndex = 0;
-      this.renderPages();
-      this.setModified(true);
-      showToast(`Se han aplicado las ${count} páginas del PDF al documento`, 'success');
-    }, { signal });
-
-    const sliderZoom = this.container.querySelector<HTMLInputElement>('[data-ref="slider-zoom"]');
-    sliderZoom?.addEventListener('input', () => {
-      const val = parseFloat(sliderZoom.value);
-      this.setZoom(val / 100);
-    }, { signal });
-
-    const btnZoomReset = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-reset"]');
-    btnZoomReset?.addEventListener('click', () => this.setZoom(1.0), { signal });
-
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
-    workspace?.addEventListener('wheel', (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = e.deltaY < 0 ? 0.08 : -0.08;
-        this.setZoom(this.zoomLevel + delta);
-      }
-    }, { passive: false, signal });
   }
 
   private setZoom(level: number): void {
@@ -3300,20 +3327,52 @@ export class CollaborativePdfEditorController implements ViewController {
             <span class="collaborative-upload-card__name" title="${asset.name}">${asset.name}</span>
           </div>
         `;
+
+        const img = card.querySelector<HTMLImageElement>('.collaborative-upload-card__img');
+        if (img) {
+          const applyRatioClass = (w: number, h: number) => {
+            if (!w || !h) return;
+            const ratio = w / h;
+            if (ratio >= 2.2) {
+              card.classList.add('collaborative-upload-card--full');
+            } else if (ratio >= 1.3) {
+              card.classList.add('collaborative-upload-card--wide');
+            } else if (ratio <= 0.72) {
+              card.classList.add('collaborative-upload-card--tall');
+            }
+          };
+
+          if (img.complete && img.naturalWidth) {
+            applyRatioClass(img.naturalWidth, img.naturalHeight);
+          } else {
+            img.addEventListener('load', () => {
+              applyRatioClass(img.naturalWidth, img.naturalHeight);
+            });
+          }
+        }
+
         card.addEventListener('click', () => {
           this.addImageElement(asset);
         });
       } else {
-        const pageLabel = `${asset.pageCount || 1} ${(asset.pageCount || 1) === 1 ? 'página' : 'páginas'}`;
+        card.classList.add('collaborative-upload-card--tall');
+        const pageLabel = `${asset.pageCount || 1} ${(asset.pageCount || 1) === 1 ? 'pág' : 'págs'}`;
         card.innerHTML = `
           <div class="collaborative-upload-card__thumb">
-            <div class="collaborative-upload-card__pdf-icon">
-              <svg class="component-icon" style="width: 32px; height: 32px;" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-              <span class="collaborative-upload-card__meta">${pageLabel}</span>
-            </div>
+            <canvas class="collaborative-upload-card__canvas" data-ref="pdf-card-canvas-${asset.id}"></canvas>
+            <span class="collaborative-upload-card__badge">PDF · ${pageLabel}</span>
             <span class="collaborative-upload-card__name" title="${asset.name}">${asset.name}</span>
           </div>
         `;
+
+        const canvas = card.querySelector<HTMLCanvasElement>('canvas');
+        if (canvas) {
+          void renderPdfThumbnail(asset.url, canvas, {
+            pageNum: 1,
+            targetWidth: 160,
+          });
+        }
+
         card.addEventListener('click', () => {
           this.openPdfApplyPanel(asset);
         });

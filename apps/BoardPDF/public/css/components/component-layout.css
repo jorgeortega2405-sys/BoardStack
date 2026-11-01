@@ -323,6 +323,7 @@ html, body {
   width: 100%;
 }
 
+.layout-content:has([data-ref="collaborative-editor-wrapper"]) .layout-rail__top,
 .layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-top-default,
 .layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-center-default,
 .layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-divider {
@@ -521,7 +522,7 @@ html, body {
   z-index: 51;
   flex-shrink: 0;
   box-sizing: border-box;
-  padding: 8px 6px 20px 0;
+  padding: 0;
 }
 
 .layout-drawer.is-open {
@@ -533,6 +534,7 @@ html, body {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+  padding: 8px 6px 20px 0;
 }
 
 .layout-drawer.is-hidden {
