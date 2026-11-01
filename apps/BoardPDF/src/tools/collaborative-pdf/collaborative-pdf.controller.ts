@@ -77,7 +77,7 @@ export async function getCollaborativeDocHandler(req: Request, res: Response): P
 export async function saveCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
-    const id = req.params.id || req.body.id || `doc_${crypto.randomBytes(8).toString('hex')}`;
+    const id = req.params.id || req.body.id || (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `doc_${crypto.randomBytes(8).toString('hex')}`);
     const title = typeof req.body.title === 'string' && req.body.title.trim().length > 0 ? req.body.title.trim() : 'Documento sin título';
     const content = req.body.content && typeof req.body.content === 'object' ? req.body.content : { elements: [], pageCount: 1 };
 

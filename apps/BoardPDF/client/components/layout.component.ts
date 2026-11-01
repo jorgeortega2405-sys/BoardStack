@@ -65,6 +65,27 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isSettings = cleanPath.startsWith('/settings');
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
+  const isCollaborative = cleanPath.startsWith('/d/') || cleanPath.startsWith('/tools/collaborative-pdf');
+  const defaultTop = sidebar.querySelector<HTMLElement>('[data-ref="rail-top-default"]');
+  const defaultCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
+  const collabCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
+  const railDivider = sidebar.querySelector<HTMLElement>('[data-ref="rail-divider"]');
+
+  if (isCollaborative) {
+    if (defaultTop) defaultTop.style.display = 'none';
+    if (defaultCenter) defaultCenter.style.display = 'none';
+    if (railDivider) railDivider.style.display = 'none';
+    if (collabCenter) {
+      collabCenter.style.display = 'flex';
+      collabCenter.style.flexDirection = 'column';
+    }
+  } else {
+    if (defaultTop) defaultTop.style.display = '';
+    if (defaultCenter) defaultCenter.style.display = '';
+    if (railDivider) railDivider.style.display = '';
+    if (collabCenter) collabCenter.style.display = 'none';
+  }
+
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
   const itemApps = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');

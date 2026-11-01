@@ -323,6 +323,17 @@ html, body {
   width: 100%;
 }
 
+.layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-top-default,
+.layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-center-default,
+.layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-divider {
+  display: none !important;
+}
+
+.layout-content:has([data-ref="collaborative-editor-wrapper"]) .rail-center-collaborative {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 .rail-divider {
   width: 36px;
   height: 1px;
@@ -757,6 +768,11 @@ html, body {
   z-index: 40;
   box-sizing: border-box;
   transition: border-bottom-color var(--sl-transition-fast), background-color var(--sl-transition-fast);
+}
+
+.component-top .component-button,
+.component-top button {
+  min-height: 40px;
 }
 
 .component-wrapper:has(.tool-bottom) > .component-top,

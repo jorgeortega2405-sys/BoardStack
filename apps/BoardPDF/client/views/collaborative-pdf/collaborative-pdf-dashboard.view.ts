@@ -119,7 +119,8 @@ export class CollaborativePdfDashboardController implements ViewController {
         const createCard = target.closest<HTMLElement>('[data-ref="card-create-doc"]');
         if (createCard) {
           e.preventDefault();
-          navigate('/collaborative-pdf/editor?new=1');
+          const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+          navigate(`/d/${encodeURIComponent(newDocId)}`);
           return;
         }
 
@@ -129,7 +130,7 @@ export class CollaborativePdfDashboardController implements ViewController {
           e.stopPropagation();
           const docId = shareBtn.getAttribute('data-id');
           if (docId) {
-            const url = `${window.location.origin}/collaborative-pdf/editor?id=${encodeURIComponent(docId)}`;
+            const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
             void navigator.clipboard.writeText(url).then(() => {
               showToast('Enlace de documento copiado al portapapeles', 'info');
             });
@@ -164,7 +165,7 @@ export class CollaborativePdfDashboardController implements ViewController {
           e.preventDefault();
           const docId = docCard.getAttribute('data-doc-id');
           if (docId) {
-            navigate(`/collaborative-pdf/editor?id=${encodeURIComponent(docId)}`);
+            navigate(`/d/${encodeURIComponent(docId)}`);
           }
         }
       },

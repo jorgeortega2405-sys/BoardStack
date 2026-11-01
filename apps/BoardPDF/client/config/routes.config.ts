@@ -317,13 +317,20 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
-    handler: async ({ query }) => {
+    handler: async ({ params, query }) => {
       await loadStylesheet('/css/tools/collaborative-pdf.css');
       const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
-      return await createCollaborativePdfEditorView(query.get('id') || '');
+      const docId = params.id || query.get('id') || '';
+      return await createCollaborativePdfEditorView(docId);
     },
     id: 'collaborative-pdf-editor',
-    match: (path) => path === '/collaborative-pdf/editor' || path.startsWith('/collaborative-pdf/editor'),
+    match: (path) => {
+      const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)\/?$/);
+      if (match) return { id: match[1] };
+      if (path === '/d' || path === '/d/') return { id: '' };
+      if (path === '/collaborative-pdf/editor' || path.startsWith('/collaborative-pdf/editor')) return true;
+      return false;
+    },
   },
   {
     handler: async () => {
