@@ -18,6 +18,8 @@ export const API_ROUTES = {
     base: '/api/collaborative-docs',
     byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
     pdf: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/pdf`,
+    upload: '/api/collaborative-docs/upload',
+    uploads: '/api/collaborative-docs/uploads',
   },
   download: {
     delete: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,

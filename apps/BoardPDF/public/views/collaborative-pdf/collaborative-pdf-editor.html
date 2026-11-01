@@ -1,13 +1,12 @@
 <div class="component-wrapper component-wrapper--full view-wrapper collaborative-editor-wrapper" data-ref="collaborative-editor-wrapper">
   <header class="collaborative-top-bar" data-ref="collaborative-top-bar">
-    <div class="collaborative-top-bar__left">
-      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" placeholder="Nombre del documento" />
-      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" aria-label="Guardar cambios">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-      </button>
-    </div>
+    <div class="collaborative-top-bar__left"></div>
 
     <div class="collaborative-top-bar__right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" placeholder="Nombre del documento" />
+      <button type="button" class="component-button component-button--icon-only component-button--h36 collaborative-cloud-btn" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" aria-label="Guardar cambios">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+      </button>
       <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-share-link">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
         <span class="component-button__text">Compartir</span>
@@ -16,8 +15,9 @@
   </header>
 
   <div class="collaborative-main-body" data-ref="collaborative-main-body">
-    <aside class="collaborative-side-panel is-hidden" data-ref="collaborative-side-panel">
-      <div class="collaborative-side-panel__header" data-ref="side-panel-header">
+    <div class="collaborative-side-panel-container is-hidden" data-ref="collaborative-side-panel">
+      <aside class="collaborative-side-panel" data-ref="collaborative-side-panel-card">
+        <div class="collaborative-side-panel__header" data-ref="side-panel-header">
         <span class="collaborative-side-panel__title" data-ref="side-panel-title">Elementos</span>
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32" data-ref="btn-close-side-panel" aria-label="Cerrar panel">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
@@ -27,17 +27,74 @@
       <div class="collaborative-side-panel__body" data-ref="side-panel-body">
         <div class="collaborative-panel-section" data-ref="panel-section-elements">
           <div class="collaborative-panel-grid collaborative-panel-grid--3" data-ref="grid-elements">
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-elem-tables">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
-              <span class="collaborative-item-card__text">Tablas</span>
+            <button type="button" class="collaborative-element-card" data-ref="btn-elem-tables">
+              <div class="collaborative-element-card__icon-wrap">
+                <svg class="collaborative-element-svg" viewBox="0 0 68 68" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="7" y="10" width="54" height="54" rx="16" fill="#f97316" opacity="0.35" transform="rotate(3 34 37)"></rect>
+                  <rect x="6" y="6" width="56" height="56" rx="16" fill="url(#elem-grad-table)"></rect>
+                  <rect x="14" y="14" width="40" height="40" rx="6" fill="#ffffff"></rect>
+                  <path d="M14 20C14 16.6863 16.6863 14 20 14H48C51.3137 14 54 16.6863 54 20V24H14V20Z" fill="#fb923c"></path>
+                  <line x1="27" y1="14" x2="27" y2="54" stroke="#fdba74" stroke-width="1.5"></line>
+                  <line x1="41" y1="14" x2="41" y2="54" stroke="#fdba74" stroke-width="1.5"></line>
+                  <line x1="14" y1="34" x2="54" y2="34" stroke="#fdba74" stroke-width="1.5"></line>
+                  <line x1="14" y1="44" x2="54" y2="44" stroke="#fdba74" stroke-width="1.5"></line>
+                  <defs>
+                    <linearGradient id="elem-grad-table" x1="6" y1="6" x2="62" y2="62" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#fb923c"></stop>
+                      <stop offset="1" stop-color="#ea580c"></stop>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <span class="collaborative-element-card__text">Tablas</span>
             </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-elem-photos">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
-              <span class="collaborative-item-card__text">Fotos</span>
+
+            <button type="button" class="collaborative-element-card" data-ref="btn-elem-photos">
+              <div class="collaborative-element-card__icon-wrap">
+                <svg class="collaborative-element-svg" viewBox="0 0 68 68" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="7" y="10" width="54" height="54" rx="16" fill="#0284c7" opacity="0.35" transform="rotate(-3 34 37)"></rect>
+                  <rect x="6" y="6" width="56" height="56" rx="16" fill="url(#elem-grad-photos)"></rect>
+                  <rect x="14" y="14" width="40" height="40" rx="8" fill="#ffffff"></rect>
+                  <rect x="17" y="17" width="34" height="28" rx="5" fill="#38bdf8"></rect>
+                  <circle cx="24" cy="23" r="3" fill="#fef08a"></circle>
+                  <path d="M17 37L26 27L33 34L39 29L51 41H17V37Z" fill="#0284c7"></path>
+                  <path d="M28 39L34 32L41 38L51 45H24L28 39Z" fill="#0369a1"></path>
+                  <defs>
+                    <linearGradient id="elem-grad-photos" x1="6" y1="6" x2="62" y2="62" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#38bdf8"></stop>
+                      <stop offset="1" stop-color="#0284c7"></stop>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <span class="collaborative-element-card__text">Fotos</span>
             </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-elem-charts">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#view_column"></use></svg>
-              <span class="collaborative-item-card__text">Gráficas</span>
+
+            <button type="button" class="collaborative-element-card" data-ref="btn-elem-charts">
+              <div class="collaborative-element-card__icon-wrap">
+                <svg class="collaborative-element-svg" viewBox="0 0 68 68" width="56" height="56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="7" y="10" width="54" height="54" rx="16" fill="#4f46e5" opacity="0.35" transform="rotate(3 34 37)"></rect>
+                  <rect x="6" y="6" width="56" height="56" rx="16" fill="url(#elem-grad-charts)"></rect>
+                  <rect x="14" y="14" width="40" height="40" rx="6" fill="#ffffff"></rect>
+                  <line x1="22" y1="16" x2="22" y2="52" stroke="#e0e7ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                  <line x1="34" y1="16" x2="34" y2="52" stroke="#e0e7ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                  <line x1="46" y1="16" x2="46" y2="52" stroke="#e0e7ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                  <line x1="16" y1="28" x2="52" y2="28" stroke="#e0e7ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                  <line x1="16" y1="40" x2="52" y2="40" stroke="#e0e7ff" stroke-width="1" stroke-dasharray="2 2"></line>
+                  <path d="M16 46C20 40 24 43 28 37C32 31 36 38 42 32C46 28 49 33 52 26V52H16V46Z" fill="#c084fc" fill-opacity="0.5"></path>
+                  <path d="M16 49C22 45 26 48 31 41C36 34 40 42 46 35C49 32 50 36 52 30V52H16V49Z" fill="#818cf8" fill-opacity="0.6"></path>
+                  <circle cx="28" cy="37" r="2" fill="#9333ea"></circle>
+                  <circle cx="42" cy="32" r="2" fill="#9333ea"></circle>
+                  <circle cx="52" cy="26" r="2" fill="#9333ea"></circle>
+                  <defs>
+                    <linearGradient id="elem-grad-charts" x1="6" y1="6" x2="62" y2="62" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#818cf8"></stop>
+                      <stop offset="1" stop-color="#4f46e5"></stop>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <span class="collaborative-element-card__text">Gráficas</span>
             </button>
           </div>
         </div>
@@ -62,43 +119,206 @@
         </div>
 
         <div class="collaborative-panel-section is-hidden" data-ref="panel-section-uploads">
-          <div class="collaborative-empty-state" data-ref="empty-uploads">
-            <svg class="component-icon collaborative-empty-state__icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
-            <span class="collaborative-empty-state__title">Sin archivos subidos</span>
-            <span class="collaborative-empty-state__subtitle">Aquí aparecerán tus imágenes y recursos</span>
-          </div>
-        </div>
+          <div class="collaborative-uploads-main" data-ref="uploads-main-view">
+            <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-upload-file">
+              <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+              <span class="component-button__text">Subir archivos</span>
+            </button>
+            <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
 
-        <div class="collaborative-panel-section is-hidden" data-ref="panel-section-tools">
-          <div class="collaborative-panel-grid collaborative-panel-grid--2" data-ref="grid-tools">
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-select">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-              <span class="collaborative-item-card__text">Seleccionar</span>
-            </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-draw">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-              <span class="collaborative-item-card__text">Dibujar</span>
-            </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-shapes">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-              <span class="collaborative-item-card__text">Formas</span>
-            </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-lines">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
-              <span class="collaborative-item-card__text">Líneas</span>
-            </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-stickynotes">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-              <span class="collaborative-item-card__text">Notas adhesivas</span>
-            </button>
-            <button type="button" class="component-button component-button--ghost component-button--card collaborative-item-card" data-ref="btn-tool-text">
-              <svg class="component-icon collaborative-item-card__icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
-              <span class="collaborative-item-card__text">Texto</span>
-            </button>
+            <div class="collaborative-upload-tabs" data-ref="upload-tabs">
+              <button type="button" class="collaborative-upload-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
+              <button type="button" class="collaborative-upload-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
+              <button type="button" class="collaborative-upload-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+            </div>
+
+            <div class="collaborative-upload-progress is-hidden" data-ref="upload-progress-indicator">
+              <div class="collaborative-upload-spinner"></div>
+              <span class="collaborative-upload-progress__text">Subiendo archivos...</span>
+            </div>
+
+            <div class="collaborative-uploads-grid" data-ref="uploads-grid"></div>
+
+            <div class="collaborative-empty-state" data-ref="empty-uploads">
+              <svg class="component-icon collaborative-empty-state__icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+              <span class="collaborative-empty-state__title">Sin archivos subidos</span>
+              <span class="collaborative-empty-state__subtitle">Sube imágenes o documentos PDF para usarlos aquí</span>
+            </div>
+          </div>
+
+          <div class="collaborative-pdf-apply-panel is-hidden" data-ref="pdf-apply-panel">
+            <div class="collaborative-pdf-apply-header">
+              <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-pdf-back-btn" data-ref="btn-pdf-apply-back" data-tooltip="Volver a subidos" aria-label="Volver">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+              </button>
+              <span class="collaborative-pdf-apply-title" data-ref="txt-pdf-apply-name">documento.pdf</span>
+            </div>
+
+            <div class="collaborative-pdf-apply-actions">
+              <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full is-disabled" data-ref="btn-embed-design" disabled data-tooltip="Próximamente">
+                <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                <span class="component-button__text">Incrustar diseño</span>
+              </button>
+              <button type="button" class="component-button component-button--black component-button--h40 component-button--w-full" data-ref="btn-apply-all-pages">
+                <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
+                <span class="component-button__text" data-ref="txt-apply-all-pages">Aplicar todas las páginas</span>
+              </button>
+            </div>
+
+            <div class="collaborative-pdf-pages-hint">
+              <span>O haz clic en una página para aplicarla a la actual:</span>
+            </div>
+
+            <div class="collaborative-pdf-pages-grid" data-ref="pdf-pages-thumbnails-grid"></div>
           </div>
         </div>
       </div>
     </aside>
+  </div>
+
+    <div class="collaborative-tools-toolbar is-hidden" data-ref="collaborative-tools-toolbar">
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn is-active" data-ref="btn-tool-select" data-tool="select" data-tooltip="Seleccionar" aria-label="Seleccionar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-draw" data-tool="draw" data-tooltip="Dibujar" aria-label="Dibujar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-shapes" data-tool="shapes" data-tooltip="Formas" aria-label="Formas">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-lines" data-tool="lines" data-tooltip="Líneas" aria-label="Líneas">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-stickynotes" data-tool="stickynotes" data-tooltip="Notas adhesivas" aria-label="Notas adhesivas">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-text" data-tool="text" data-tooltip="Texto" aria-label="Texto">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+      </button>
+
+      <div class="collaborative-subtoolbar-flyout is-hidden" data-ref="collaborative-subtoolbar-flyout">
+        <div class="collaborative-subtoolbar is-hidden" data-ref="subtoolbar-draw">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn is-active" data-ref="btn-draw-pen" data-draw-mode="pen" data-tooltip="Pluma" aria-label="Pluma">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-draw-marker" data-draw-mode="marker" data-tooltip="Plumón" aria-label="Plumón">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-draw-highlighter" data-draw-mode="highlighter" data-tooltip="Resaltador" aria-label="Resaltador">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#ink_highlighter"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-draw-eraser" data-draw-mode="eraser" data-tooltip="Borrador" aria-label="Borrador">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#ink_eraser"></use></svg>
+          </button>
+          <div class="collaborative-subtoolbar__divider"></div>
+          <label class="collaborative-color-picker-label" data-ref="label-draw-color" data-tooltip="Color de trazo">
+            <div class="collaborative-color-picker-preview" data-ref="preview-draw-color" style="background-color: #000000;"></div>
+            <input class="is-hidden" data-ref="input-draw-color" type="color" value="#000000" />
+          </label>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-draw-thickness" data-tooltip="Grosor de trazo" aria-label="Grosor de trazo">
+            <span class="collaborative-thickness-dot" data-ref="dot-thickness" style="width: 4px; height: 4px;"></span>
+          </button>
+        </div>
+
+        <div class="collaborative-subtoolbar is-hidden" data-ref="subtoolbar-shapes">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-rect" data-shape="rect" data-tooltip="Cuadrado" aria-label="Cuadrado">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-circle" data-shape="circle" data-tooltip="Círculo" aria-label="Círculo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#radio_button_unchecked"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-triangle" data-shape="triangle" data-tooltip="Triángulo" aria-label="Triángulo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#change_history"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-diamond" data-shape="diamond" data-tooltip="Rombo" aria-label="Rombo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#diamond"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-arrow" data-shape="arrow" data-tooltip="Flecha" aria-label="Flecha">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-shape-star" data-shape="star" data-tooltip="Estrella" aria-label="Estrella">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+          </button>
+        </div>
+
+        <div class="collaborative-subtoolbar is-hidden" data-ref="subtoolbar-lines">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-line-straight" data-line-type="straight" data-tooltip="Línea recta" aria-label="Línea recta">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-line-flexible" data-line-type="flexible" data-tooltip="Línea flexible / curva" aria-label="Línea flexible">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#show_chart"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-subtoolbar-btn" data-ref="btn-line-multiconnect" data-line-type="multiconnect" data-tooltip="Línea de múltiple conexión" aria-label="Línea múltiple">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_split"></use></svg>
+          </button>
+        </div>
+
+        <div class="collaborative-subtoolbar is-hidden" data-ref="subtoolbar-stickynotes">
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-yellow" data-color="#fef08a" data-tooltip="Nota amarilla" aria-label="Nota amarilla" style="background-color: #fef08a; border-color: #facc15;"></button>
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-orange" data-color="#fed7aa" data-tooltip="Nota naranja" aria-label="Nota naranja" style="background-color: #fed7aa; border-color: #fb923c;"></button>
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-green" data-color="#bbf7d0" data-tooltip="Nota verde" aria-label="Nota verde" style="background-color: #bbf7d0; border-color: #4ade80;"></button>
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-blue" data-color="#bfdbfe" data-tooltip="Nota azul" aria-label="Nota azul" style="background-color: #bfdbfe; border-color: #60a5fa;"></button>
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-pink" data-color="#fbcfe8" data-tooltip="Nota rosa" aria-label="Nota rosa" style="background-color: #fbcfe8; border-color: #f472b6;"></button>
+          <button type="button" class="collaborative-sticky-swatch" data-ref="btn-sticky-purple" data-color="#e9d5ff" data-tooltip="Nota morada" aria-label="Nota morada" style="background-color: #e9d5ff; border-color: #c084fc;"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="collaborative-context-toolbar is-hidden" data-ref="collaborative-context-toolbar">
+      <div class="collaborative-context-group is-hidden" data-ref="context-group-text">
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-font-decrease" data-tooltip="Reducir tamaño" aria-label="Reducir tamaño">
+          <span class="collaborative-font-step-icon">-</span>
+        </button>
+        <span class="collaborative-context-value" data-ref="txt-font-size">14</span>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-font-increase" data-tooltip="Aumentar tamaño" aria-label="Aumentar tamaño">
+          <span class="collaborative-font-step-icon">+</span>
+        </button>
+        <div class="collaborative-subtoolbar__divider"></div>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-bold" data-tooltip="Negrita" aria-label="Negrita">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+        </button>
+        <label class="collaborative-color-picker-label" data-ref="label-text-color" data-tooltip="Color de texto">
+          <div class="collaborative-color-picker-preview" data-ref="preview-text-color" style="background-color: #000000;"></div>
+          <input class="is-hidden" data-ref="input-text-color" type="color" value="#000000" />
+        </label>
+        <label class="collaborative-color-picker-label is-hidden" data-ref="label-sticky-bg" data-tooltip="Color de fondo">
+          <div class="collaborative-color-picker-preview" data-ref="preview-sticky-bg" style="background-color: #fef08a;"></div>
+          <input class="is-hidden" data-ref="input-sticky-bg" type="color" value="#fef08a" />
+        </label>
+      </div>
+
+      <div class="collaborative-context-group is-hidden" data-ref="context-group-shape">
+        <label class="collaborative-color-picker-label" data-ref="label-shape-fill" data-tooltip="Color de relleno">
+          <div class="collaborative-color-picker-preview" data-ref="preview-shape-fill" style="background-color: #4f46e5;"></div>
+          <input class="is-hidden" data-ref="input-shape-fill" type="color" value="#4f46e5" />
+        </label>
+        <label class="collaborative-color-picker-label" data-ref="label-shape-stroke" data-tooltip="Color de borde">
+          <div class="collaborative-color-picker-preview" data-ref="preview-shape-stroke" style="background-color: #000000;"></div>
+          <input class="is-hidden" data-ref="input-shape-stroke" type="color" value="#000000" />
+        </label>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-strokewidth" data-tooltip="Grosor de borde" aria-label="Grosor de borde">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+        </button>
+      </div>
+
+      <div class="collaborative-context-group is-hidden" data-ref="context-group-page">
+        <span class="collaborative-context-badge" data-ref="txt-selected-page">Color de fondo:</span>
+        <label class="collaborative-color-picker-label" data-ref="label-page-bg-color" data-tooltip="Color de fondo de página">
+          <div class="collaborative-color-picker-preview" data-ref="preview-page-bg-color" style="background-color: #ffffff;"></div>
+          <input class="is-hidden" data-ref="input-page-bg-color" type="color" value="#ffffff" />
+        </label>
+      </div>
+
+      <div class="collaborative-context-group" data-ref="context-group-actions">
+        <div class="collaborative-subtoolbar__divider"></div>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-context-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h36 collaborative-toolbar-btn" data-ref="btn-context-delete" data-tooltip="Eliminar" aria-label="Eliminar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+        </button>
+      </div>
+    </div>
 
     <main class="collaborative-workspace" data-ref="collaborative-workspace">
       <div class="collaborative-pages-container" data-ref="pages-container"></div>

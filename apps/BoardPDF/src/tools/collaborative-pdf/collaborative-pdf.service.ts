@@ -36,13 +36,51 @@ export async function renderCollaborativePdf(
     return fontHelvetica;
   };
 
-  const pageWidth = content.pageSize?.width || 595.28;
-  const pageHeight = content.pageSize?.height || 841.89;
+  const targetWidth = 595.28;
+  const targetHeight = 841.89;
+  const screenWidth = content.pageSize?.width || 794;
+  const scale = targetWidth / screenWidth;
   const pageCount = Math.max(1, content.pageCount || 1);
 
   const pages = [];
   for (let i = 0; i < pageCount; i++) {
-    pages.push(pdfDoc.addPage([pageWidth, pageHeight]));
+    const page = pdfDoc.addPage([targetWidth, targetHeight]);
+    if (content.pageBackgrounds && content.pageBackgrounds[i] && content.pageBackgrounds[i] !== '#ffffff') {
+      const bg = parseHexColor(content.pageBackgrounds[i]);
+      page.drawRectangle({
+        color: rgb(bg.r, bg.g, bg.b),
+        height: targetHeight,
+        width: targetWidth,
+        x: 0,
+        y: 0,
+      });
+    }
+
+    const pageSource = content.pagePdfSources?.[i];
+    if (pageSource && pageSource.pdfUrl) {
+      try {
+        const localRel = pageSource.pdfUrl.replace(/^\//, '');
+        const localPath = path.resolve(process.cwd(), 'public', localRel);
+        if (fs.existsSync(localPath)) {
+          const sourceBytes = fs.readFileSync(localPath);
+          const sourceDoc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+          const sourcePageIdx = Math.max(0, (pageSource.pageNumber || 1) - 1);
+          if (sourcePageIdx < sourceDoc.getPageCount()) {
+            const [embeddedPage] = await pdfDoc.embedPdf(sourceDoc, [sourcePageIdx]);
+            page.drawPage(embeddedPage, {
+              height: targetHeight,
+              width: targetWidth,
+              x: 0,
+              y: 0,
+            });
+          }
+        }
+      } catch (pageErr) {
+        logger.app.warn('Error al incrustar página de PDF de fondo en renderCollaborativePdf', pageErr);
+      }
+    }
+
+    pages.push(page);
   }
 
   for (const el of content.elements || []) {
@@ -52,12 +90,27 @@ export async function renderCollaborativePdf(
 
     if (el.type === 'text') {
       const clean = cleanTextForWinAnsi(el.text || '');
+      const scaledW = (el.width || 140) * scale;
+      const scaledH = (el.height || 140) * scale;
+      const scaledX = el.x * scale;
+      const scaledY = el.y * scale;
+
+      if (el.isStickyNote && el.backgroundColor) {
+        const bg = parseHexColor(el.backgroundColor);
+        page.drawRectangle({
+          color: rgb(bg.r, bg.g, bg.b),
+          height: scaledH,
+          width: scaledW,
+          x: scaledX,
+          y: targetHeight - scaledY - scaledH,
+        });
+      }
       if (!clean.trim()) continue;
       const { r, g, b } = parseHexColor(el.color || '#000000');
       const font = resolveFont(el.fontFamily, el.isBold);
-      const fontSize = el.fontSize || 14;
-      const pdfX = Math.max(0, el.x);
-      const pdfY = Math.max(0, pageHeight - el.y - fontSize);
+      const fontSize = Math.max(6, (el.fontSize || 16) * scale);
+      const pdfX = Math.max(0, el.isStickyNote ? scaledX + 8 * scale : scaledX);
+      const pdfY = Math.max(0, targetHeight - scaledY - (el.isStickyNote ? 24 * scale : fontSize));
       page.drawText(clean, {
         color: rgb(r, g, b),
         font,
@@ -73,30 +126,30 @@ export async function renderCollaborativePdf(
         const fill = parseHexColor(el.fillColor);
         fillRgb = rgb(fill.r, fill.g, fill.b);
       }
-      const borderWidth = el.strokeWidth || 1;
+      const borderWidth = (el.strokeWidth || 0) * scale;
+      const scaledX = el.x * scale;
+      const scaledY = el.y * scale;
+      const scaledW = Math.max(2, (el.width || 50) * scale);
+      const scaledH = Math.max(2, (el.height || 50) * scale);
 
       if (el.shapeType === 'rect') {
-        const w = Math.max(1, el.width || 50);
-        const h = Math.max(1, el.height || 50);
-        const pdfY = pageHeight - el.y - h;
+        const pdfY = targetHeight - scaledY - scaledH;
         page.drawRectangle({
-          borderColor: strokeRgb,
+          borderColor: el.strokeWidth ? strokeRgb : undefined,
           borderWidth,
           color: fillRgb,
-          height: h,
-          width: w,
-          x: el.x,
+          height: scaledH,
+          width: scaledW,
+          x: scaledX,
           y: pdfY,
         });
       } else if (el.shapeType === 'circle') {
-        const w = Math.max(1, el.width || 50);
-        const h = Math.max(1, el.height || 50);
-        const radiusX = Math.abs(w / 2);
-        const radiusY = Math.abs(h / 2);
-        const centerX = el.x + radiusX;
-        const centerY = pageHeight - el.y - radiusY;
+        const radiusX = Math.abs(scaledW / 2);
+        const radiusY = Math.abs(scaledH / 2);
+        const centerX = scaledX + radiusX;
+        const centerY = targetHeight - scaledY - radiusY;
         page.drawEllipse({
-          borderColor: strokeRgb,
+          borderColor: el.strokeWidth ? strokeRgb : undefined,
           borderWidth,
           color: fillRgb,
           x: centerX,
@@ -104,29 +157,75 @@ export async function renderCollaborativePdf(
           y: centerY,
           yScale: radiusY,
         });
-      } else if (el.shapeType === 'line') {
-        const x2 = el.x2 !== undefined ? el.x2 : el.x + (el.width || 50);
-        const y2 = el.y2 !== undefined ? el.y2 : el.y + (el.height || 0);
+      } else if (el.shapeType === 'line' || el.shapeType === 'line-flexible' || el.shapeType === 'line-multiconnect') {
+        const x2 = (el.x2 !== undefined ? el.x2 : el.x + (el.width || 50)) * scale;
+        const y2 = (el.y2 !== undefined ? el.y2 : el.y + (el.height || 0)) * scale;
         page.drawLine({
           color: strokeRgb,
-          end: { x: x2, y: pageHeight - y2 },
-          start: { x: el.x, y: pageHeight - el.y },
-          thickness: borderWidth,
+          end: { x: x2, y: targetHeight - y2 },
+          start: { x: scaledX, y: targetHeight - scaledY },
+          thickness: Math.max(1, (el.strokeWidth || 2) * scale),
+        });
+      } else {
+        const pdfY = targetHeight - scaledY - scaledH;
+        page.drawRectangle({
+          borderColor: el.strokeWidth ? strokeRgb : undefined,
+          borderWidth,
+          color: fillRgb,
+          height: scaledH,
+          width: scaledW,
+          x: scaledX,
+          y: pdfY,
         });
       }
     } else if (el.type === 'drawing' && Array.isArray(el.points) && el.points.length > 1) {
       const stroke = parseHexColor(el.color || '#000000');
       const strokeRgb = rgb(stroke.r, stroke.g, stroke.b);
-      const thickness = el.width || 2;
+      const thickness = Math.max(1, (el.width || 2) * scale);
       for (let p = 0; p < el.points.length - 1; p++) {
         const p1 = el.points[p];
         const p2 = el.points[p + 1];
         page.drawLine({
           color: strokeRgb,
-          end: { x: p2.x, y: pageHeight - p2.y },
-          start: { x: p1.x, y: pageHeight - p1.y },
+          end: { x: p2.x * scale, y: targetHeight - p2.y * scale },
+          start: { x: p1.x * scale, y: targetHeight - p1.y * scale },
           thickness,
         });
+      }
+    } else if (el.type === 'image' && el.url) {
+      try {
+        const localRel = el.url.replace(/^\//, '');
+        const localPath = path.resolve(process.cwd(), 'public', localRel);
+        if (fs.existsSync(localPath)) {
+          const imgBytes = fs.readFileSync(localPath);
+          let embeddedImg: any = null;
+          const lowerUrl = el.url.toLowerCase();
+          if (lowerUrl.endsWith('.png')) {
+            embeddedImg = await pdfDoc.embedPng(imgBytes);
+          } else if (lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg')) {
+            embeddedImg = await pdfDoc.embedJpg(imgBytes);
+          } else {
+            try {
+              embeddedImg = await pdfDoc.embedPng(imgBytes);
+            } catch {
+              embeddedImg = await pdfDoc.embedJpg(imgBytes);
+            }
+          }
+          if (embeddedImg) {
+            const scaledW = (el.width || 200) * scale;
+            const scaledH = (el.height || 150) * scale;
+            const scaledX = el.x * scale;
+            const scaledY = el.y * scale;
+            page.drawImage(embeddedImg, {
+              height: scaledH,
+              width: scaledW,
+              x: scaledX,
+              y: targetHeight - scaledY - scaledH,
+            });
+          }
+        }
+      } catch (imgErr) {
+        logger.app.warn('Error al incrustar imagen en renderCollaborativePdf', imgErr);
       }
     }
   }
