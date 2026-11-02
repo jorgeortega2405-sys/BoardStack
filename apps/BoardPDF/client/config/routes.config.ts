@@ -321,7 +321,7 @@ export const APP_ROUTES: RouteDefinition[] = [
       await loadStylesheet('/css/tools/collaborative-pdf.css');
       const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
       const docId = params.id || query.get('id') || '';
-      return await createCollaborativePdfEditorView(docId);
+      return await createCollaborativePdfEditorView(docId, query);
     },
     id: 'collaborative-pdf-editor',
     match: (path) => {

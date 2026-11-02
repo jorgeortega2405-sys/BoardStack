@@ -147,21 +147,25 @@ export class CollaborativePdfEditorController implements ViewController {
   private selectedPdfAsset: UploadedAsset | null = null;
   private shareModalElement: HTMLElement | null = null;
   private uploadedAssets: UploadedAsset[] = [];
+  private queryParams?: URLSearchParams;
   private zoomLevel = 1.0;
 
-  constructor(container: HTMLElement, docId?: string) {
+  constructor(container: HTMLElement, docId?: string, queryParams?: URLSearchParams) {
     this.container = container;
     this.docId = docId || '';
+    this.queryParams = queryParams;
   }
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
 
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = this.queryParams || new URLSearchParams(window.location.search);
     const queryW = parseInt(urlParams.get('w') || '0', 10);
     const queryH = parseInt(urlParams.get('h') || '0', 10);
     if (queryW > 0 && queryH > 0) {
       this.initialUrlDimensions = { height: queryH, width: queryW };
+      this.docDefaultPageSize = { height: queryH, width: queryW };
+      this.pageSizes = [{ height: queryH, width: queryW }];
     }
 
     if (!this.docId) {
@@ -172,8 +176,9 @@ export class CollaborativePdfEditorController implements ViewController {
 
     console.log('[Collab Diagnóstico][Editor] init() start. docId:', this.docId, 'initialUrlDimensions:', this.initialUrlDimensions, 'currentUser:', currentUser);
 
+    const currentSearch = window.location.search || (this.queryParams ? `?${this.queryParams.toString()}` : '');
     if (window.location.pathname !== `/d/${this.docId}`) {
-      window.history.replaceState({}, '', `/d/${encodeURIComponent(this.docId)}`);
+      window.history.replaceState({}, '', `/d/${encodeURIComponent(this.docId)}${currentSearch}`);
     }
 
     this.setupRailNavigation();
@@ -4908,9 +4913,9 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 }
 
-export async function createCollaborativePdfEditorView(docId?: string): Promise<HTMLElement> {
+export async function createCollaborativePdfEditorView(docId?: string, query?: URLSearchParams): Promise<HTMLElement> {
   const container = await loadTemplate('/views/collaborative-pdf/collaborative-pdf-editor.html');
-  const controller = new CollaborativePdfEditorController(container, docId);
+  const controller = new CollaborativePdfEditorController(container, docId, query);
   (container as any).__controller = controller;
   await controller.init();
   return container;
