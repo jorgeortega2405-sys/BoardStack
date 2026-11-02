@@ -104,7 +104,70 @@ interface ElementTable {
   y: number;
 }
 
-type EditorElement = ElementDrawing | ElementImage | ElementShape | ElementTable | ElementText;
+type ChartType =
+  | 'area-overlap'
+  | 'area-stacked'
+  | 'bar-grouped'
+  | 'bar-horizontal'
+  | 'bar-stacked'
+  | 'bar-vertical'
+  | 'donut'
+  | 'line'
+  | 'line-multi'
+  | 'pie'
+  | 'progress-bar'
+  | 'progress-gauge'
+  | 'progress-ring'
+  | 'scatter';
+
+interface ElementChartDataSeries {
+  color?: string;
+  name: string;
+  values: number[];
+}
+
+interface ElementChartOptions {
+  colorPalette?: string[];
+  colorScheme?: 'amber' | 'blue' | 'coral' | 'emerald' | 'gray' | 'purple';
+  currencyOrUnit?: string;
+  dataLabelDecimals?: number;
+  dataLabelPrefix?: string;
+  dataLabelSuffix?: string;
+  donutHolePercent?: number;
+  labelColumnName?: string;
+  legendPosition?: 'bottom' | 'right' | 'top';
+  orientation?: 'horizontal' | 'vertical';
+  percentageValue?: number;
+  showDataLabels?: boolean;
+  showGridLines?: boolean;
+  showLegend?: boolean;
+  showXLabels?: boolean;
+  showYLabels?: boolean;
+  stackedMode?: 'grouped' | 'normal' | 'percent';
+  subtitle?: string;
+  title?: string;
+  xAxisTitle?: string;
+  yAxisMax?: number | null;
+  yAxisMin?: number | null;
+  yAxisTitle?: string;
+}
+
+interface ElementChart {
+  chartType: ChartType;
+  height: number;
+  id: string;
+  labels: string[];
+  options: ElementChartOptions;
+  pageIndex?: number;
+  rotation?: number;
+  series: ElementChartDataSeries[];
+  type: 'chart';
+  width: number;
+  x: number;
+  y: number;
+}
+
+type EditorElement = ElementChart | ElementDrawing | ElementChart | ElementImage | ElementShape | ElementTable | ElementText;
 
 interface PagePdfSource {
   pageNumber: number;
@@ -121,6 +184,15 @@ interface UploadedAsset {
   type: 'image' | 'pdf';
   url: string;
 }
+
+const CHART_PALETTES: Record<string, string[]> = {
+  amber: ['#d97706', '#f59e0b', '#fbbf24', '#fde68a'],
+  blue: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'],
+  coral: ['#e11d48', '#f43f5e', '#fb7185', '#fecdd3'],
+  emerald: ['#059669', '#10b981', '#34d399', '#a7f3d0'],
+  gray: ['#374151', '#4b5563', '#9ca3af', '#d1d5db'],
+  purple: ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd'],
+};
 
 const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
@@ -352,9 +424,19 @@ export class CollaborativePdfEditorController implements ViewController {
       if (elemTablesView) showElement(elemTablesView);
     };
 
-    const restoreElementsMain = () => {
+    const elemChartsView = this.queryPanel<HTMLElement>('[data-ref="elements-charts-view"]');
+
+    const showChartsView = () => {
+      if (elemMainView) hideElement(elemMainView);
       if (elemShapesView) hideElement(elemShapesView);
       if (elemTablesView) hideElement(elemTablesView);
+      if (elemChartsView) showElement(elemChartsView);
+    };
+
+    const restoreAllElementsMain = () => {
+      if (elemShapesView) hideElement(elemShapesView);
+      if (elemTablesView) hideElement(elemTablesView);
+      if (elemChartsView) hideElement(elemChartsView);
       if (elemMainView) showElement(elemMainView);
     };
 
@@ -362,15 +444,28 @@ export class CollaborativePdfEditorController implements ViewController {
       { handler: showShapesView, ref: 'btn-elem-shapes' },
       { handler: showTablesView, ref: 'btn-elem-tables' },
       { handler: () => this.handleRailTabClick('uploads'), ref: 'btn-elem-photos' },
-      { handler: () => showToast('Gráficas estadísticas próximamente', 'info'), ref: 'btn-elem-charts' },
+      { handler: showChartsView, ref: 'btn-elem-charts' },
     ];
 
     elemConfigs.forEach(({ handler, ref }) => {
       this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
     });
 
-    this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreElementsMain, { signal });
-    this.queryPanel<HTMLButtonElement>('[data-ref="btn-tables-back"]')?.addEventListener('click', restoreElementsMain, { signal });
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-tables-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-charts-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
+
+    const chartCards = this.queryPanelAll<HTMLButtonElement>('[data-ref="btn-chart-card"]');
+    chartCards.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cType = btn.getAttribute('data-chart-type') as ChartType;
+        if (cType) {
+          this.addChartElement(cType);
+        }
+      }, { signal });
+    });
+
+    this.bindChartInspectorEvents(signal, restoreAllElementsMain);
 
     const tablePresetButtons = this.queryPanelAll<HTMLButtonElement>('[data-table-preset]');
     tablePresetButtons.forEach((btn) => {
@@ -995,6 +1090,53 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.selectElement(id);
     this.activateSelectTool();
+  }
+
+  private addChartElement(chartType: ChartType): void {
+    const defaultLabels = ['Invierno', 'Primavera', 'Verano', 'Otoño'];
+    const palette = CHART_PALETTES.blue;
+    const defaultSeries: ElementChartDataSeries[] = [
+      { color: palette[0], name: 'Ventas', values: [60, 45, 78, 30] },
+    ];
+
+    if (chartType === 'bar-grouped' || chartType === 'bar-stacked' || chartType === 'line-multi' || chartType === 'area-stacked' || chartType === 'area-overlap') {
+      defaultSeries.push({ color: palette[1], name: 'Objetivo', values: [50, 55, 70, 40] });
+    }
+
+    const isProgress = chartType === 'progress-bar' || chartType === 'progress-ring' || chartType === 'progress-gauge';
+    const width = isProgress ? 320 : 480;
+    const height = isProgress ? 220 : 320;
+
+    const id = `chart_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const newChart: ElementChart = {
+      chartType,
+      height,
+      id,
+      labels: defaultLabels,
+      options: {
+        colorScheme: 'blue',
+        percentageValue: 72,
+        showDataLabels: false,
+        showGridLines: true,
+        showLegend: !isProgress,
+        showXLabels: true,
+        showYLabels: true,
+        title: '',
+      },
+      pageIndex: this.activePageIndex,
+      rotation: 0,
+      series: defaultSeries,
+      type: 'chart',
+      width,
+      x: 120 + (this.elements.length % 5) * 20,
+      y: 160 + (this.elements.length % 5) * 20,
+    };
+
+    this.pushElement(newChart);
+    this.renderPages();
+    this.selectElement(id);
+    this.activateSelectTool();
+    this.openChartInspector(newChart, 'data');
   }
 
   private getPageDimensions(pageIndex: number): PageDimension {
@@ -1957,6 +2099,8 @@ export class CollaborativePdfEditorController implements ViewController {
           sheet.appendChild(this.createImageElement(el));
         } else if (el.type === 'table') {
           sheet.appendChild(this.createTableElement(el));
+        } else if (el.type === 'chart') {
+          sheet.appendChild(this.createChartElement(el));
         }
       }
 
@@ -2032,7 +2176,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
           const right = left + width;
           const bottom = top + height;
-          const pageElements = this.elements.filter((el): el is ElementImage | ElementShape | ElementTable | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
+          const pageElements = this.elements.filter((el): el is ElementChart | ElementImage | ElementShape | ElementTable | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
 
           for (const el of pageElements) {
             const elW = el.width || 60;
@@ -2098,6 +2242,13 @@ export class CollaborativePdfEditorController implements ViewController {
     this.updateSelection();
     this.renderTransformBox();
     this.updateContextToolbar();
+
+    if (this.selectedElementId) {
+      const selected = this.elements.find((e) => e.id === this.selectedElementId);
+      if (selected && selected.type === 'chart') {
+        this.syncChartInspector(selected);
+      }
+    }
     this.updateFooterPageInfo();
     renderIcons(this.container);
   }
@@ -2394,6 +2545,672 @@ export class CollaborativePdfEditorController implements ViewController {
 
     this.makeDraggable(div, el);
     return div;
+  }
+
+  private applyChartPalette(el: ElementChart): void {
+    const scheme = el.options.colorScheme || 'blue';
+    const palette = CHART_PALETTES[scheme] || CHART_PALETTES.blue;
+    el.series.forEach((s, i) => {
+      s.color = palette[i % palette.length];
+    });
+  }
+
+  private renderChartSvg(el: ElementChart): string {
+    const W = el.width || 480;
+    const H = el.height || 320;
+    const scheme = el.options.colorScheme || 'blue';
+    const palette = el.options.colorPalette || CHART_PALETTES[scheme] || CHART_PALETTES.blue;
+    const hasTitle = !!el.options.title;
+    const hasSubtitle = !!el.options.subtitle;
+    const isProgress = el.chartType === 'progress-bar' || el.chartType === 'progress-ring' || el.chartType === 'progress-gauge';
+
+    let titleSvg = '';
+    if (hasTitle) {
+      titleSvg += `<text x="${W / 2}" y="22" font-size="14" font-weight="700" text-anchor="middle" fill="#1e293b">${escapeHtml(el.options.title || '')}</text>`;
+    }
+    if (hasSubtitle) {
+      titleSvg += `<text x="${W / 2}" y="${hasTitle ? 37 : 20}" font-size="11" fill="#64748b" text-anchor="middle">${escapeHtml(el.options.subtitle || '')}</text>`;
+    }
+
+    if (isProgress) {
+      const pct = Math.max(0, Math.min(100, Math.round(el.options.percentageValue ?? 72)));
+      let content = '';
+
+      if (el.chartType === 'progress-ring') {
+        const cx = W / 2;
+        const cy = hasTitle ? H / 2 + 10 : H / 2;
+        const r = Math.min(W, H) / 2 - 24;
+        const circ = 2 * Math.PI * r;
+        const offset = circ * (1 - pct / 100);
+        content = `
+          <circle cx="${cx}" cy="${cy}" r="${r}" stroke="#e2e8f0" stroke-width="14" fill="none"></circle>
+          <circle cx="${cx}" cy="${cy}" r="${r}" stroke="${palette[0]}" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})"></circle>
+          <text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="28" font-weight="700" fill="#1e293b">${pct}%</text>
+        `;
+      } else if (el.chartType === 'progress-bar') {
+        const barW = Math.max(80, W - 48);
+        const barH = 24;
+        const x = (W - barW) / 2;
+        const y = hasTitle ? H / 2 - 4 : H / 2 - 12;
+        const fillW = Math.max(8, barW * (pct / 100));
+        content = `
+          <rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="12" fill="#e2e8f0"></rect>
+          <rect x="${x}" y="${y}" width="${fillW}" height="${barH}" rx="12" fill="${palette[0]}"></rect>
+          <text x="${W / 2}" y="${y + 42}" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">${pct}%</text>
+        `;
+      } else if (el.chartType === 'progress-gauge') {
+        const cx = W / 2;
+        const cy = hasTitle ? H - 28 : H - 24;
+        const r = Math.min(W / 2 - 28, H - (hasTitle ? 50 : 36));
+        const angle = -Math.PI + (pct / 100) * Math.PI;
+        const needleX = cx + Math.cos(angle) * (r - 10);
+        const needleY = cy + Math.sin(angle) * (r - 10);
+        content = `
+          <path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" stroke="#e2e8f0" stroke-width="14" fill="none" stroke-linecap="round"></path>
+          <path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${needleX} ${needleY}" stroke="${palette[0]}" stroke-width="14" fill="none" stroke-linecap="round"></path>
+          <line x1="${cx}" y1="${cy}" x2="${needleX}" y2="${needleY}" stroke="#1e293b" stroke-width="3" stroke-linecap="round"></line>
+          <circle cx="${cx}" cy="${cy}" r="6" fill="#1e293b"></circle>
+          <text x="${cx}" y="${cy - 20}" text-anchor="middle" font-size="24" font-weight="700" fill="#1e293b">${pct}%</text>
+        `;
+      }
+
+      return `<svg class="collaborative-chart-svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%">${titleSvg}${content}</svg>`;
+    }
+
+    if (el.chartType === 'pie' || el.chartType === 'donut') {
+      const cx = W / 2;
+      const cy = hasTitle ? (H - (hasSubtitle ? 44 : 32)) / 2 + (hasSubtitle ? 44 : 32) : H / 2;
+      const r = Math.min(W / 2 - 36, H / 2 - (hasTitle ? 32 : 20));
+      const s0 = el.series[0] || { name: 'Valores', values: [40, 30, 20, 10] };
+      const vals = s0.values.length > 0 ? s0.values : [1];
+      const total = vals.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+
+      let currentAngle = -Math.PI / 2;
+      let slicesSvg = '';
+
+      vals.forEach((v, idx) => {
+        const sliceAngle = ((Number(v) || 0) / total) * 2 * Math.PI;
+        if (sliceAngle <= 0) return;
+        const x1 = cx + r * Math.cos(currentAngle);
+        const y1 = cy + r * Math.sin(currentAngle);
+        const x2 = cx + r * Math.cos(currentAngle + sliceAngle);
+        const y2 = cy + r * Math.sin(currentAngle + sliceAngle);
+        const largeArc = sliceAngle > Math.PI ? 1 : 0;
+        const col = palette[idx % palette.length];
+
+        slicesSvg += `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${col}" stroke="#ffffff" stroke-width="1.5"></path>`;
+        currentAngle += sliceAngle;
+      });
+
+      let innerHole = '';
+      if (el.chartType === 'donut') {
+        const innerR = r * 0.58;
+        innerHole = `
+          <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="#ffffff"></circle>
+          <text x="${cx}" y="${cy + 5}" text-anchor="middle" font-size="16" font-weight="700" fill="#1e293b">${total}</text>
+        `;
+      }
+
+      let legendSvg = '';
+      if (el.options.showLegend !== false) {
+        let legX = 20;
+        const legY = H - 12;
+        el.labels.forEach((lbl, idx) => {
+          const col = palette[idx % palette.length];
+          legendSvg += `
+            <rect x="${legX}" y="${legY - 9}" width="10" height="10" rx="2" fill="${col}"></rect>
+            <text x="${legX + 14}" y="${legY}" font-size="11" fill="#475569">${escapeHtml(lbl)}</text>
+          `;
+          legX += Math.max(60, lbl.length * 7 + 24);
+        });
+      }
+
+      return `<svg class="collaborative-chart-svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%">${titleSvg}${slicesSvg}${innerHole}${legendSvg}</svg>`;
+    }
+
+    const showX = el.options.showXLabels !== false;
+    const showY = el.options.showYLabels !== false;
+    const showGrid = el.options.showGridLines !== false;
+    const showLegend = el.options.showLegend !== false && el.series.length > 0;
+    const pfx = el.options.dataLabelPrefix || '';
+    const sfx = el.options.dataLabelSuffix || '';
+
+    const marginLeft = showY ? 46 : 16;
+    const marginRight = 20;
+    const marginTop = hasTitle ? (hasSubtitle ? 50 : 38) : (showLegend ? 32 : 18);
+    const marginBottom = showX ? 36 : 16;
+    const plotW = Math.max(60, W - marginLeft - marginRight);
+    const plotH = Math.max(40, H - marginTop - marginBottom);
+
+    let allVals: number[] = [];
+    el.series.forEach((s) => {
+      s.values.forEach((v) => allVals.push(Number(v) || 0));
+    });
+    if (allVals.length === 0) allVals = [0, 10];
+    const maxVal = el.options.yAxisMax ?? Math.max(10, Math.ceil(Math.max(...allVals) * 1.15));
+    const minVal = el.options.yAxisMin ?? 0;
+    const valRange = Math.max(1, maxVal - minVal);
+
+    const getY = (v: number) => marginTop + plotH - ((v - minVal) / valRange) * plotH;
+
+    let gridSvg = '';
+    const gridSteps = 4;
+    for (let i = 0; i <= gridSteps; i++) {
+      const stepVal = Math.round(minVal + (valRange / gridSteps) * i);
+      const y = getY(stepVal);
+      if (showGrid) {
+        gridSvg += `<line x1="${marginLeft}" y1="${y}" x2="${marginLeft + plotW}" y2="${y}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="${i === 0 ? 'none' : '3 3'}"></line>`;
+      }
+      if (showY) {
+        gridSvg += `<text x="${marginLeft - 8}" y="${y + 4}" font-size="10" fill="#94a3b8" text-anchor="end">${pfx}${stepVal}${sfx}</text>`;
+      }
+    }
+
+    const numCategories = Math.max(1, el.labels.length);
+    const slotW = plotW / numCategories;
+    let xAxisSvg = '';
+    let seriesSvg = '';
+
+    if (showX) {
+      el.labels.forEach((lbl, i) => {
+        const x = marginLeft + i * slotW + slotW / 2;
+        xAxisSvg += `<text x="${x}" y="${marginTop + plotH + 18}" font-size="11" fill="#64748b" text-anchor="middle">${escapeHtml(lbl)}</text>`;
+      });
+    }
+
+    if (el.chartType === 'bar-vertical') {
+      const s0 = el.series[0] || { color: palette[0], name: 'Serie 1', values: [20, 40, 60, 30] };
+      const barW = Math.min(48, Math.max(12, slotW * 0.55));
+      s0.values.forEach((v, i) => {
+        const num = Number(v) || 0;
+        const bx = marginLeft + i * slotW + (slotW - barW) / 2;
+        const by = getY(num);
+        const bh = Math.max(2, marginTop + plotH - by);
+        const col = s0.color || palette[i % palette.length];
+        seriesSvg += `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" rx="3" fill="${col}"></rect>`;
+        if (el.options.showDataLabels) {
+          seriesSvg += `<text x="${bx + barW / 2}" y="${by - 4}" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">${pfx}${num}${sfx}</text>`;
+        }
+      });
+    } else if (el.chartType === 'bar-horizontal') {
+      const s0 = el.series[0] || { color: palette[0], name: 'Serie 1', values: [20, 40, 60, 30] };
+      const rowH = plotH / numCategories;
+      const barH = Math.min(28, Math.max(8, rowH * 0.6));
+      s0.values.forEach((v, i) => {
+        const num = Number(v) || 0;
+        const by = marginTop + i * rowH + (rowH - barH) / 2;
+        const bw = Math.max(2, (num / maxVal) * plotW);
+        const col = s0.color || palette[i % palette.length];
+        seriesSvg += `<rect x="${marginLeft}" y="${by}" width="${bw}" height="${barH}" rx="3" fill="${col}"></rect>`;
+        if (el.options.showDataLabels) {
+          seriesSvg += `<text x="${marginLeft + bw + 6}" y="${by + barH / 2 + 4}" font-size="10" font-weight="600" fill="#334155">${pfx}${num}${sfx}</text>`;
+        }
+      });
+    } else if (el.chartType === 'bar-grouped') {
+      const numSeries = Math.max(1, el.series.length);
+      const groupPad = slotW * 0.15;
+      const totalBarW = slotW - groupPad * 2;
+      const barW = Math.max(4, totalBarW / numSeries);
+
+      el.labels.forEach((_, cIdx) => {
+        el.series.forEach((s, sIdx) => {
+          const num = Number(s.values[cIdx]) || 0;
+          const bx = marginLeft + cIdx * slotW + groupPad + sIdx * barW;
+          const by = getY(num);
+          const bh = Math.max(2, marginTop + plotH - by);
+          const col = s.color || palette[sIdx % palette.length];
+          seriesSvg += `<rect x="${bx}" y="${by}" width="${barW - 2}" height="${bh}" rx="2" fill="${col}"></rect>`;
+          if (el.options.showDataLabels) {
+            seriesSvg += `<text x="${bx + barW / 2}" y="${by - 4}" text-anchor="middle" font-size="9" font-weight="600" fill="#334155">${num}</text>`;
+          }
+        });
+      });
+    } else if (el.chartType === 'bar-stacked') {
+      const barW = Math.min(48, Math.max(12, slotW * 0.55));
+      el.labels.forEach((_, cIdx) => {
+        let acc = 0;
+        const bx = marginLeft + cIdx * slotW + (slotW - barW) / 2;
+        el.series.forEach((s, sIdx) => {
+          const num = Number(s.values[cIdx]) || 0;
+          const by = getY(acc + num);
+          const bh = Math.max(2, (num / valRange) * plotH);
+          const col = s.color || palette[sIdx % palette.length];
+          seriesSvg += `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" rx="2" fill="${col}"></rect>`;
+          acc += num;
+        });
+      });
+    } else if (el.chartType === 'line' || el.chartType === 'line-multi') {
+      el.series.forEach((s, sIdx) => {
+        const col = s.color || palette[sIdx % palette.length];
+        const points = s.values.map((v, cIdx) => {
+          const px = marginLeft + cIdx * slotW + slotW / 2;
+          const py = getY(Number(v) || 0);
+          return `${px},${py}`;
+        }).join(' ');
+
+        seriesSvg += `<polyline points="${points}" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+        s.values.forEach((v, cIdx) => {
+          const px = marginLeft + cIdx * slotW + slotW / 2;
+          const py = getY(Number(v) || 0);
+          seriesSvg += `<circle cx="${px}" cy="${py}" r="4" fill="${col}" stroke="#ffffff" stroke-width="2"></circle>`;
+          if (el.options.showDataLabels) {
+            seriesSvg += `<text x="${px}" y="${py - 7}" text-anchor="middle" font-size="10" font-weight="600" fill="#334155">${pfx}${v}${sfx}</text>`;
+          }
+        });
+      });
+    } else if (el.chartType === 'area-stacked' || el.chartType === 'area-overlap') {
+      el.series.forEach((s, sIdx) => {
+        const col = s.color || palette[sIdx % palette.length];
+        const pts = s.values.map((v, cIdx) => {
+          const px = marginLeft + cIdx * slotW + slotW / 2;
+          const py = getY(Number(v) || 0);
+          return { x: px, y: py };
+        });
+        if (pts.length > 0) {
+          const firstX = pts[0].x;
+          const lastX = pts[pts.length - 1].x;
+          const base = marginTop + plotH;
+          const polyPoints = `${firstX},${base} ` + pts.map((p) => `${p.x},${p.y}`).join(' ') + ` ${lastX},${base}`;
+          seriesSvg += `<polygon points="${polyPoints}" fill="${col}" fill-opacity="0.45"></polygon>`;
+          seriesSvg += `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(' ')}" fill="none" stroke="${col}" stroke-width="2.5"></polyline>`;
+        }
+      });
+    } else if (el.chartType === 'scatter') {
+      const s0 = el.series[0] || { color: palette[0], values: [10, 35, 60, 80] };
+      s0.values.forEach((v, i) => {
+        const px = marginLeft + i * slotW + slotW / 2;
+        const py = getY(Number(v) || 0);
+        seriesSvg += `<circle cx="${px}" cy="${py}" r="6" fill="${s0.color || palette[0]}" opacity="0.85"></circle>`;
+      });
+    }
+
+    let legendSvg = '';
+    if (showLegend) {
+      let legX = marginLeft;
+      const legY = marginTop - 12;
+      el.series.forEach((s, idx) => {
+        const col = s.color || palette[idx % palette.length];
+        legendSvg += `
+          <rect x="${legX}" y="${legY - 8}" width="10" height="10" rx="2" fill="${col}"></rect>
+          <text x="${legX + 14}" y="${legY}" font-size="11" fill="#475569">${escapeHtml(s.name)}</text>
+        `;
+        legX += Math.max(60, s.name.length * 7 + 28);
+      });
+    }
+
+    return `
+      <svg class="collaborative-chart-svg" viewBox="0 0 ${W} ${H}" width="100%" height="100%">
+        ${titleSvg}
+        ${legendSvg}
+        ${gridSvg}
+        ${xAxisSvg}
+        ${seriesSvg}
+      </svg>
+    `;
+  }
+
+  private createChartElement(el: ElementChart): HTMLElement {
+    const div = document.createElement('div');
+    div.className = 'collaborative-chart-item';
+    div.setAttribute('data-ref', `chart-element-${el.id}`);
+    div.setAttribute('data-element-id', el.id);
+    div.style.left = `${el.x}px`;
+    div.style.top = `${el.y}px`;
+    div.style.width = `${el.width}px`;
+    div.style.height = `${el.height}px`;
+    div.style.transform = `rotate(${el.rotation || 0}deg)`;
+    div.style.transformOrigin = 'center center';
+
+    div.innerHTML = this.renderChartSvg(el);
+
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.selectElement(el.id);
+    });
+
+    div.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      this.selectElement(el.id);
+      this.openChartInspector(el, 'data');
+    });
+
+    this.makeDraggable(div, el);
+    return div;
+  }
+
+  private openChartInspector(el?: ElementChart, tab: 'customize' | 'data' = 'data'): void {
+    const inspector = this.queryPanel<HTMLElement>('[data-ref="panel-section-chart-inspector"]');
+    if (!inspector) return;
+
+    const sections = this.queryPanelAll<HTMLElement>('.collaborative-panel-section');
+    sections.forEach((sec) => hideElement(sec));
+    showElement(inspector);
+
+    const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
+    if (titleEl) titleEl.textContent = 'Gráfica';
+
+    const targetEl = el || (this.selectedElementId ? (this.elements.find((e) => e.id === this.selectedElementId && e.type === 'chart') as ElementChart) : undefined);
+    if (targetEl) {
+      this.syncChartInspector(targetEl);
+      this.switchChartInspectorTab(tab);
+    }
+  }
+
+  private switchChartInspectorTab(tab: 'customize' | 'data'): void {
+    const tabToggle = this.queryPanel<HTMLElement>('[data-ref="chart-tabs-toggle"]');
+    const tabData = this.queryPanel<HTMLElement>('[data-ref="chart-tab-content-data"]');
+    const tabCust = this.queryPanel<HTMLElement>('[data-ref="chart-tab-content-customize"]');
+    const btnData = this.queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-data"]');
+    const btnCust = this.queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-customize"]');
+
+    if (tab === 'data') {
+      if (tabToggle) tabToggle.setAttribute('data-active', '0');
+      if (tabData) showElement(tabData);
+      if (tabCust) hideElement(tabCust);
+      btnData?.classList.add('is-active');
+      btnCust?.classList.remove('is-active');
+    } else {
+      if (tabToggle) tabToggle.setAttribute('data-active', '1');
+      if (tabData) hideElement(tabData);
+      if (tabCust) showElement(tabCust);
+      btnCust?.classList.add('is-active');
+      btnData?.classList.remove('is-active');
+    }
+  }
+
+  private syncChartInspector(el: ElementChart): void {
+    const lblType = this.queryPanel<HTMLElement>('[data-ref="label-current-chart-type"]');
+    const typeNames: Record<ChartType, string> = {
+      'area-overlap': 'Área sin apilar',
+      'area-stacked': 'Área apilada',
+      'bar-grouped': 'Columnas agrupadas',
+      'bar-horizontal': 'Barras horizontales',
+      'bar-stacked': 'Barras apiladas',
+      'bar-vertical': 'Barras verticales',
+      'donut': 'Anillos',
+      'line': 'Líneas',
+      'line-multi': 'Varias líneas',
+      'pie': 'Pastel',
+      'progress-bar': 'Barra de progreso',
+      'progress-gauge': 'Indicador radial',
+      'progress-ring': 'Anillo de progreso',
+      'scatter': 'Dispersión',
+    };
+    if (lblType) lblType.textContent = typeNames[el.chartType] || 'Barras verticales';
+
+    const pickBtns = this.queryPanelAll<HTMLButtonElement>('[data-ref="btn-pick-chart-type"]');
+    pickBtns.forEach((btn) => {
+      btn.classList.toggle('is-selected', btn.getAttribute('data-chart-type') === el.chartType);
+    });
+
+    const paletteBtns = this.queryPanelAll<HTMLButtonElement>('[data-ref="btn-chart-palette-opt"]');
+    paletteBtns.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-palette') === (el.options.colorScheme || 'blue'));
+    });
+
+    const setInput = (ref: string, val: string | number | null | undefined) => {
+      const inp = this.queryPanel<HTMLInputElement>(`[data-ref="${ref}"]`);
+      if (inp) inp.value = val !== undefined && val !== null ? String(val) : '';
+    };
+
+    const setCheckbox = (ref: string, checked: boolean) => {
+      const chk = this.queryPanel<HTMLInputElement>(`[data-ref="${ref}"]`);
+      if (chk) chk.checked = checked;
+    };
+
+    setInput('input-chart-title', el.options.title);
+    setInput('input-chart-subtitle', el.options.subtitle);
+    setInput('input-chart-xaxis-title', el.options.xAxisTitle);
+    setInput('input-chart-yaxis-title', el.options.yAxisTitle);
+    setInput('input-chart-prefix', el.options.dataLabelPrefix);
+    setInput('input-chart-suffix', el.options.dataLabelSuffix);
+    setInput('input-chart-min', el.options.yAxisMin);
+    setInput('input-chart-max', el.options.yAxisMax);
+
+    setCheckbox('input-chart-legend', el.options.showLegend !== false);
+    setCheckbox('input-chart-datalabels', !!el.options.showDataLabels);
+    setCheckbox('input-chart-xlabels', el.options.showXLabels !== false);
+    setCheckbox('input-chart-ylabels', el.options.showYLabels !== false);
+    setCheckbox('input-chart-gridlines', el.options.showGridLines !== false);
+
+    this.renderChartSpreadsheet(el);
+  }
+
+  private renderChartSpreadsheet(el: ElementChart): void {
+    const tableHead = this.queryPanel<HTMLTableSectionElement>('[data-ref="chart-table-head"]');
+    const tableBody = this.queryPanel<HTMLTableSectionElement>('[data-ref="chart-table-body"]');
+    if (!tableHead || !tableBody) return;
+
+    const scheme = el.options.colorScheme || 'blue';
+    const palette = CHART_PALETTES[scheme] || CHART_PALETTES.blue;
+
+    tableHead.innerHTML = '';
+    tableBody.innerHTML = '';
+
+    const trH = document.createElement('tr');
+    trH.innerHTML = `
+      <th style="width: 24px; text-align: center;">#</th>
+      <th style="min-width: 90px;">Categoría</th>
+    `;
+
+    el.series.forEach((s, sIdx) => {
+      const th = document.createElement('th');
+      th.style.minWidth = '75px';
+      const col = s.color || palette[sIdx % palette.length];
+      th.innerHTML = `<span style="color: ${col}; font-weight: 700;">●</span> ${escapeHtml(s.name || `Serie ${sIdx + 1}`)}`;
+      trH.appendChild(th);
+    });
+    tableHead.appendChild(trH);
+
+    el.labels.forEach((lbl, rIdx) => {
+      const tr = document.createElement('tr');
+      const dotCol = palette[rIdx % palette.length];
+
+      const tdDot = document.createElement('td');
+      tdDot.style.textAlign = 'center';
+      tdDot.innerHTML = `<span class="collaborative-chart-row-dot" style="background-color: ${dotCol};"></span>`;
+      tr.appendChild(tdDot);
+
+      const tdCat = document.createElement('td');
+      const inpCat = document.createElement('input');
+      inpCat.type = 'text';
+      inpCat.value = lbl;
+      inpCat.addEventListener('input', () => {
+        el.labels[rIdx] = inpCat.value;
+        this.updateChartSvgOnCanvas(el);
+      });
+      tdCat.appendChild(inpCat);
+      tr.appendChild(tdCat);
+
+      el.series.forEach((s) => {
+        const tdVal = document.createElement('td');
+        const inpVal = document.createElement('input');
+        inpVal.type = 'number';
+        inpVal.value = String(s.values[rIdx] ?? 0);
+        inpVal.addEventListener('input', () => {
+          s.values[rIdx] = parseFloat(inpVal.value) || 0;
+          this.updateChartSvgOnCanvas(el);
+        });
+        tdVal.appendChild(inpVal);
+        tr.appendChild(tdVal);
+      });
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  private updateChartSvgOnCanvas(el: ElementChart): void {
+    const node = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+    if (node) {
+      node.innerHTML = this.renderChartSvg(el);
+    }
+    this.setModified(true);
+    this.broadcastElementUpdate(el);
+  }
+
+  private bindChartInspectorEvents(signal: AbortSignal | undefined, restoreElementsMain: () => void): void {
+    const btnBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-inspector-back"]');
+    const btnClose = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-inspector-close"]');
+    btnBack?.addEventListener('click', restoreElementsMain, { signal });
+    btnClose?.addEventListener('click', restoreElementsMain, { signal });
+
+    const btnTypeDropdown = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-type-dropdown"]');
+    const typePopup = this.queryPanel<HTMLElement>('[data-ref="chart-type-popup"]');
+    btnTypeDropdown?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (typePopup) typePopup.classList.toggle('is-hidden');
+    }, { signal });
+
+    document.addEventListener('click', () => {
+      if (typePopup) typePopup.classList.add('is-hidden');
+    }, { signal });
+
+    const typeItems = this.queryPanelAll<HTMLButtonElement>('[data-ref="btn-pick-chart-type"]');
+    typeItems.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newType = btn.getAttribute('data-chart-type') as ChartType;
+        if (!newType || !this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'chart') {
+          el.chartType = newType;
+          this.updateChartSvgOnCanvas(el);
+          this.syncChartInspector(el);
+        }
+        if (typePopup) typePopup.classList.add('is-hidden');
+      }, { signal });
+    });
+
+    const btnTabData = this.queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-data"]');
+    const btnTabCust = this.queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-customize"]');
+    btnTabData?.addEventListener('click', () => this.switchChartInspectorTab('data'), { signal });
+    btnTabCust?.addEventListener('click', () => this.switchChartInspectorTab('customize'), { signal });
+
+    const btnAddRow = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-add-row"]');
+    btnAddRow?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        const nextIdx = el.labels.length + 1;
+        el.labels.push(`Elemento ${nextIdx}`);
+        el.series.forEach((s) => s.values.push(20 + Math.round(Math.random() * 50)));
+        this.renderChartSpreadsheet(el);
+        this.updateChartSvgOnCanvas(el);
+      }
+    }, { signal });
+
+    const btnAddCol = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-add-col"]');
+    btnAddCol?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        const sIdx = el.series.length;
+        const scheme = el.options.colorScheme || 'blue';
+        const pal = CHART_PALETTES[scheme] || CHART_PALETTES.blue;
+        el.series.push({
+          color: pal[sIdx % pal.length],
+          name: `Serie ${sIdx + 1}`,
+          values: el.labels.map(() => 15 + Math.round(Math.random() * 60)),
+        });
+        this.renderChartSpreadsheet(el);
+        this.updateChartSvgOnCanvas(el);
+      }
+    }, { signal });
+
+    const btnTranspose = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-transpose"]');
+    btnTranspose?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart' && el.series.length > 0) {
+        const oldLabels = [...el.labels];
+        const oldSeries = [...el.series];
+        const newLabels = oldSeries.map((s) => s.name);
+        const newSeries: ElementChartDataSeries[] = oldLabels.map((lbl, r) => ({
+          color: CHART_PALETTES[el.options.colorScheme || 'blue'][r % 5],
+          name: lbl,
+          values: oldSeries.map((s) => s.values[r] ?? 0),
+        }));
+        el.labels = newLabels;
+        el.series = newSeries;
+        this.renderChartSpreadsheet(el);
+        this.updateChartSvgOnCanvas(el);
+      }
+    }, { signal });
+
+    const btnClear = this.queryPanel<HTMLButtonElement>('[data-ref="btn-chart-clear-data"]');
+    btnClear?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        el.series.forEach((s) => {
+          s.values = s.values.map(() => 0);
+        });
+        this.renderChartSpreadsheet(el);
+        this.updateChartSvgOnCanvas(el);
+      }
+    }, { signal });
+
+    const paletteBtns = this.queryPanelAll<HTMLButtonElement>('[data-ref="btn-chart-palette-opt"]');
+    paletteBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const scheme = btn.getAttribute('data-palette') as ElementChartOptions['colorScheme'];
+        if (!scheme || !this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'chart') {
+          el.options.colorScheme = scheme;
+          this.applyChartPalette(el);
+          this.syncChartInspector(el);
+          this.updateChartSvgOnCanvas(el);
+        }
+      }, { signal });
+    });
+
+    const accordions = this.queryPanelAll<HTMLElement>('.collaborative-accordion');
+    accordions.forEach((acc) => {
+      const hBtn = acc.querySelector<HTMLButtonElement>('[data-ref="btn-accordion-toggle"]');
+      hBtn?.addEventListener('click', () => {
+        acc.classList.toggle('is-open');
+      }, { signal });
+    });
+
+    const bindOptInput = (ref: string, key: keyof ElementChartOptions, isNum = false) => {
+      const inp = this.queryPanel<HTMLInputElement>(`[data-ref="${ref}"]`);
+      inp?.addEventListener('input', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'chart') {
+          (el.options as any)[key] = isNum ? (inp.value ? parseFloat(inp.value) : null) : inp.value;
+          this.updateChartSvgOnCanvas(el);
+        }
+      }, { signal });
+    };
+
+    const bindOptSwitch = (ref: string, key: keyof ElementChartOptions) => {
+      const chk = this.queryPanel<HTMLInputElement>(`[data-ref="${ref}"]`);
+      chk?.addEventListener('change', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'chart') {
+          (el.options as any)[key] = chk.checked;
+          this.updateChartSvgOnCanvas(el);
+        }
+      }, { signal });
+    };
+
+    bindOptInput('input-chart-title', 'title');
+    bindOptInput('input-chart-subtitle', 'subtitle');
+    bindOptInput('input-chart-xaxis-title', 'xAxisTitle');
+    bindOptInput('input-chart-yaxis-title', 'yAxisTitle');
+    bindOptInput('input-chart-prefix', 'dataLabelPrefix');
+    bindOptInput('input-chart-suffix', 'dataLabelSuffix');
+    bindOptInput('input-chart-min', 'yAxisMin', true);
+    bindOptInput('input-chart-max', 'yAxisMax', true);
+
+    bindOptSwitch('input-chart-legend', 'showLegend');
+    bindOptSwitch('input-chart-datalabels', 'showDataLabels');
+    bindOptSwitch('input-chart-xlabels', 'showXLabels');
+    bindOptSwitch('input-chart-ylabels', 'showYLabels');
+    bindOptSwitch('input-chart-gridlines', 'showGridLines');
   }
 
   private renderShapeInner(el: ElementShape): string {
@@ -3006,7 +3823,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.setModified(true);
   }
 
-  private makeDraggable(element: HTMLElement, item: ElementImage | ElementShape | ElementTable | ElementText): void {
+  private makeDraggable(element: HTMLElement, item: ElementChart | ElementImage | ElementShape | ElementTable | ElementText): void {
     let startX = 0;
     let startY = 0;
     let initialX = 0;
@@ -3142,7 +3959,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private updateSelection(): void {
-    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note, .collaborative-table-item');
+    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note, .collaborative-table-item, .collaborative-chart-item');
     allEls.forEach((el) => {
       const elId = el.getAttribute('data-element-id');
       const isSelected = (elId && this.selectedElementIds.has(elId)) || elId === this.selectedElementId;
@@ -3219,7 +4036,7 @@ export class CollaborativePdfEditorController implements ViewController {
     box.classList.toggle('is-narrow', isNarrow);
   }
 
-  private bindTransformHandles(box: HTMLElement, el: ElementImage | ElementShape | ElementTable | ElementText): void {
+  private bindTransformHandles(box: HTMLElement, el: ElementChart | ElementImage | ElementShape | ElementTable | ElementText): void {
     const handles = box.querySelectorAll<HTMLElement>('.collaborative-transform-handle');
     handles.forEach((handle) => {
       handle.addEventListener('mousedown', (e) => {
@@ -3234,7 +4051,7 @@ export class CollaborativePdfEditorController implements ViewController {
     });
   }
 
-  private startRotating(e: MouseEvent, el: ElementImage | ElementShape | ElementTable | ElementText): void {
+  private startRotating(e: MouseEvent, el: ElementChart | ElementImage | ElementShape | ElementTable | ElementText): void {
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
     if (!elNode) return;
 
@@ -3263,7 +4080,7 @@ export class CollaborativePdfEditorController implements ViewController {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  private startResizing(e: MouseEvent, el: ElementImage | ElementShape | ElementTable | ElementText, handleType: string): void {
+  private startResizing(e: MouseEvent, el: ElementChart | ElementImage | ElementShape | ElementTable | ElementText, handleType: string): void {
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
     if (!elNode) return;
 
@@ -3393,6 +4210,10 @@ export class CollaborativePdfEditorController implements ViewController {
       elNode.style.left = `${el.x}px`;
       elNode.style.top = `${el.y}px`;
 
+      if (el.type === 'chart') {
+        elNode.innerHTML = this.renderChartSvg(el);
+      }
+
       if (el.type === 'shape') {
         const svgNode = elNode.querySelector('svg');
         if (svgNode) {
@@ -3402,7 +4223,7 @@ export class CollaborativePdfEditorController implements ViewController {
       }
 
       const otherElements = this.elements.filter(
-        (e): e is ElementImage | ElementShape | ElementTable | ElementText =>
+        (e): e is ElementChart | ElementImage | ElementShape | ElementTable | ElementText =>
           e.id !== el.id && (e.pageIndex ?? 0) === (el.pageIndex ?? 0) && e.type !== 'drawing'
       );
       this.renderActiveSmartGuides(el, el.pageIndex ?? 0, el.x, el.y, el.width ?? 100, el.height ?? 40, otherElements);
@@ -3435,7 +4256,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const threshold = 6;
 
     const otherElements = this.elements.filter(
-      (el): el is ElementImage | ElementShape | ElementTable | ElementText =>
+      (el): el is ElementChart | ElementImage | ElementShape | ElementTable | ElementText =>
         el.id !== item.id && (el.pageIndex ?? 0) === pageIndex && el.type !== 'drawing'
     );
 
@@ -3532,7 +4353,7 @@ export class CollaborativePdfEditorController implements ViewController {
     y: number,
     width: number,
     height: number,
-    otherElements: Array<ElementImage | ElementShape | ElementTable | ElementText>
+    otherElements: Array<ElementChart | ElementImage | ElementShape | ElementTable | ElementText>
   ): void {
     const guidesSvg = this.container.querySelector<SVGElement>(`[data-ref="guides-svg-${pageIndex}"]`);
     if (!guidesSvg) return;
@@ -3574,7 +4395,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const vCoords = [myLeft, myCenter, myRight];
     for (const vX of vCoords) {
-      const matchingOthers: Array<ElementImage | ElementShape | ElementTable | ElementText> = [];
+      const matchingOthers: Array<ElementChart | ElementImage | ElementShape | ElementTable | ElementText> = [];
       for (const other of otherElements) {
         const oW = other.width || 100;
         const oLeft = other.x;
@@ -3605,7 +4426,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const hCoords = [myTop, myMiddle, myBottom];
     for (const hY of hCoords) {
-      const matchingOthers: Array<ElementImage | ElementShape | ElementTable | ElementText> = [];
+      const matchingOthers: Array<ElementChart | ElementImage | ElementShape | ElementTable | ElementText> = [];
       for (const other of otherElements) {
         const oH = other.height || 40;
         const oTop = other.y;
@@ -3736,7 +4557,15 @@ export class CollaborativePdfEditorController implements ViewController {
         const btnStrokeWidth = toolbar.querySelector<HTMLElement>('[data-ref="btn-shape-strokewidth"]');
         if (btnStrokeWidth) btnStrokeWidth.setAttribute('data-tooltip', `Grosor de borde: ${el.strokeWidth || 0}px`);
         if (tableGroup) hideElement(tableGroup);
+      } else if (el.type === 'chart') {
+        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
+        if (chartGroup) showElement(chartGroup);
+        hideElement(textGroup);
+        hideElement(shapeGroup);
+        if (tableGroup) hideElement(tableGroup);
       } else if (el.type === 'table') {
+        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
+        if (chartGroup) hideElement(chartGroup);
         if (tableGroup) showElement(tableGroup);
         hideElement(textGroup);
         hideElement(shapeGroup);
@@ -3759,6 +4588,8 @@ export class CollaborativePdfEditorController implements ViewController {
         const btnPadding = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-padding"]');
         if (btnPadding) btnPadding.setAttribute('data-tooltip', `Relleno de celdas: ${el.cellPadding || 8}px`);
       } else {
+        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
+        if (chartGroup) hideElement(chartGroup);
         hideElement(textGroup);
         hideElement(shapeGroup);
         if (tableGroup) hideElement(tableGroup);
@@ -4675,6 +5506,41 @@ export class CollaborativePdfEditorController implements ViewController {
         el.width += 120;
         this.renderPages();
         this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const btnChartEditData = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-chart-edit-data"]');
+    btnChartEditData?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        this.openChartInspector(el, 'data');
+      }
+    }, { signal });
+
+    const btnChartEditStyle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-chart-edit-style"]');
+    btnChartEditStyle?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        this.openChartInspector(el, 'customize');
+      }
+    }, { signal });
+
+    const btnChartPalette = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-chart-palette"]');
+    btnChartPalette?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'chart') {
+        const schemes: Array<ElementChartOptions['colorScheme']> = ['blue', 'purple', 'coral', 'amber', 'emerald', 'gray'];
+        const currentIdx = schemes.indexOf(el.options.colorScheme || 'blue');
+        el.options.colorScheme = schemes[(currentIdx + 1) % schemes.length];
+        this.applyChartPalette(el);
+        this.syncChartInspector(el);
+        const node = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (node) node.innerHTML = this.renderChartSvg(el);
         this.setModified(true);
         this.broadcastElementUpdate(el);
       }

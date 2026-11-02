@@ -86,12 +86,76 @@ export interface CollaborativeElementTable {
   y: number;
 }
 
+export type ChartType =
+  | 'area-overlap'
+  | 'area-stacked'
+  | 'bar-grouped'
+  | 'bar-horizontal'
+  | 'bar-stacked'
+  | 'bar-vertical'
+  | 'donut'
+  | 'line'
+  | 'line-multi'
+  | 'pie'
+  | 'progress-bar'
+  | 'progress-gauge'
+  | 'progress-ring'
+  | 'scatter';
+
+export interface ChartDataSeries {
+  color?: string;
+  name: string;
+  values: number[];
+}
+
+export interface ChartOptions {
+  colorPalette?: string[];
+  colorScheme?: 'amber' | 'blue' | 'emerald' | 'gray' | 'purple' | 'red';
+  currencyOrUnit?: string;
+  dataLabelDecimals?: number;
+  dataLabelPrefix?: string;
+  dataLabelSuffix?: string;
+  donutHolePercent?: number;
+  labelColumnName?: string;
+  legendPosition?: 'bottom' | 'right' | 'top';
+  orientation?: 'horizontal' | 'vertical';
+  percentageValue?: number;
+  showDataLabels?: boolean;
+  showGridLines?: boolean;
+  showLegend?: boolean;
+  showXLabels?: boolean;
+  showYLabels?: boolean;
+  stackedMode?: 'grouped' | 'normal' | 'percent';
+  subtitle?: string;
+  title?: string;
+  xAxisTitle?: string;
+  yAxisMax?: number | null;
+  yAxisMin?: number | null;
+  yAxisTitle?: string;
+}
+
+export interface CollaborativeElementChart {
+  chartType: ChartType;
+  height: number;
+  id: string;
+  labels: string[];
+  options: ChartOptions;
+  pageIndex: number;
+  rotation?: number;
+  series: ChartDataSeries[];
+  type: 'chart';
+  width: number;
+  x: number;
+  y: number;
+}
+
 export type CollaborativeElement =
-  | CollaborativeElementText
-  | CollaborativeElementShape
+  | CollaborativeElementChart
   | CollaborativeElementDrawing
   | CollaborativeElementImage
-  | CollaborativeElementTable;
+  | CollaborativeElementShape
+  | CollaborativeElementTable
+  | CollaborativeElementText;
 
 export interface CollaborativePdfPageSource {
   pageNumber: number;

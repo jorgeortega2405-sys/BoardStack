@@ -284,6 +284,63 @@ export async function renderCollaborativePdf(
         }
         curY += rowH + spacing;
       }
+    } else if (el.type === 'chart') {
+      const startX = el.x * scale;
+      const startY = targetHeight - (el.y * scale) - (el.height * scale);
+      const chartW = el.width * scale;
+      const chartH = el.height * scale;
+
+      const title = cleanTextForWinAnsi(el.options?.title || '');
+      if (title) {
+        const titleFont = resolveFont('Helvetica', true);
+        const titleSize = Math.max(8, 14 * scale);
+        page.drawText(title, {
+          color: rgb(0.12, 0.16, 0.23),
+          font: titleFont,
+          size: titleSize,
+          x: startX + 10 * scale,
+          y: startY + chartH - 20 * scale,
+        });
+      }
+
+      const numCats = Math.max(1, el.labels?.length || 1);
+      const s0 = el.series?.[0];
+      if (s0 && Array.isArray(s0.values)) {
+        const slotW = (chartW - 40 * scale) / numCats;
+        const maxVal = Math.max(1, ...s0.values.map(Number));
+        const plotBottom = startY + 24 * scale;
+        const plotHeight = chartH - 54 * scale;
+
+        s0.values.forEach((v, idx) => {
+          const num = Number(v) || 0;
+          const barH = Math.max(2, (num / maxVal) * plotHeight);
+          const barW = Math.min(36 * scale, slotW * 0.6);
+          const bx = startX + 24 * scale + idx * slotW + (slotW - barW) / 2;
+          const by = plotBottom;
+
+          const col = parseHexColor(s0.color || '#3b82f6');
+          page.drawRectangle({
+            color: rgb(col.r, col.g, col.b),
+            height: barH,
+            width: barW,
+            x: bx,
+            y: by,
+          });
+
+          const lbl = cleanTextForWinAnsi(el.labels?.[idx] || '');
+          if (lbl) {
+            const font = resolveFont('Helvetica', false);
+            const size = Math.max(6, 9 * scale);
+            page.drawText(lbl, {
+              color: rgb(0.39, 0.45, 0.55),
+              font,
+              size,
+              x: bx + barW / 2 - (lbl.length * size) / 4,
+              y: by - 14 * scale,
+            });
+          }
+        });
+      }
     }
   }
 

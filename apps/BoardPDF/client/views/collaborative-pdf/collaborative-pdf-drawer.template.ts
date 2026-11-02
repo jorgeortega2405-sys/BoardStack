@@ -424,6 +424,170 @@ export function createCollaborativeDrawerElement(): HTMLElement {
           </div>
         </div>
       </div>
+
+      <div class="collaborative-charts-view is-hidden" data-ref="elements-charts-view">
+        <div class="collaborative-shapes-header">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-charts-back" data-tooltip="Volver a elementos" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <span class="collaborative-shapes-title">Gráficas</span>
+        </div>
+
+        <div class="collaborative-charts-content" data-ref="charts-content">
+          <div class="collaborative-charts-section">
+            <span class="collaborative-charts-section__title">Gráficas de barras</span>
+            <div class="collaborative-charts-grid">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-vertical" data-tooltip="Barras verticales" aria-label="Barras verticales">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <rect x="8" y="24" width="10" height="32" rx="2" fill="#3b82f6"></rect>
+                  <rect x="23" y="14" width="10" height="42" rx="2" fill="#3b82f6"></rect>
+                  <rect x="38" y="32" width="10" height="24" rx="2" fill="#3b82f6"></rect>
+                  <rect x="53" y="20" width="10" height="36" rx="2" fill="#3b82f6"></rect>
+                </svg>
+                <span class="collaborative-chart-card__label">Barras verticales</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-horizontal" data-tooltip="Barras horizontales" aria-label="Barras horizontales">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <rect x="6" y="8" width="46" height="9" rx="2" fill="#3b82f6"></rect>
+                  <rect x="6" y="22" width="36" height="9" rx="2" fill="#3b82f6"></rect>
+                  <rect x="6" y="36" width="50" height="9" rx="2" fill="#3b82f6"></rect>
+                  <rect x="6" y="50" width="26" height="9" rx="2" fill="#3b82f6"></rect>
+                </svg>
+                <span class="collaborative-chart-card__label">Barras horizontales</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-grouped" data-tooltip="Columnas agrupadas" aria-label="Columnas agrupadas">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <rect x="6" y="26" width="6" height="30" rx="1.5" fill="#3b82f6"></rect>
+                  <rect x="13" y="16" width="6" height="40" rx="1.5" fill="#a855f7"></rect>
+                  <rect x="20" y="34" width="6" height="22" rx="1.5" fill="#f59e0b"></rect>
+                  <rect x="34" y="20" width="6" height="36" rx="1.5" fill="#3b82f6"></rect>
+                  <rect x="41" y="28" width="6" height="28" rx="1.5" fill="#a855f7"></rect>
+                  <rect x="48" y="12" width="6" height="44" rx="1.5" fill="#f59e0b"></rect>
+                </svg>
+                <span class="collaborative-chart-card__label">Columnas agrupadas</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-stacked" data-tooltip="Barras apiladas" aria-label="Barras apiladas">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <rect x="12" y="38" width="14" height="18" rx="2" fill="#3b82f6"></rect>
+                  <rect x="12" y="22" width="14" height="14" rx="2" fill="#a855f7"></rect>
+                  <rect x="12" y="10" width="14" height="10" rx="2" fill="#f59e0b"></rect>
+                  <rect x="38" y="32" width="14" height="24" rx="2" fill="#3b82f6"></rect>
+                  <rect x="38" y="18" width="14" height="12" rx="2" fill="#a855f7"></rect>
+                  <rect x="38" y="6" width="14" height="10" rx="2" fill="#f59e0b"></rect>
+                </svg>
+                <span class="collaborative-chart-card__label">Barras apiladas</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="collaborative-charts-section">
+            <span class="collaborative-charts-section__title">Líneas y tendencias</span>
+            <div class="collaborative-charts-grid">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line" data-tooltip="Líneas" aria-label="Líneas">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <polyline points="8,48 22,34 36,40 54,14" stroke="#3b82f6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  <circle cx="8" cy="48" r="3.5" fill="#3b82f6"></circle>
+                  <circle cx="22" cy="34" r="3.5" fill="#3b82f6"></circle>
+                  <circle cx="36" cy="40" r="3.5" fill="#3b82f6"></circle>
+                  <circle cx="54" cy="14" r="3.5" fill="#3b82f6"></circle>
+                </svg>
+                <span class="collaborative-chart-card__label">Líneas</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line-multi" data-tooltip="Varias líneas" aria-label="Varias líneas">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <polyline points="8,44 24,38 40,24 56,12" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  <polyline points="8,50 24,30 40,34 56,22" stroke="#a855f7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  <polyline points="8,54 24,52 40,40 56,32" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+                <span class="collaborative-chart-card__label">Varias líneas</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="collaborative-charts-section">
+            <span class="collaborative-charts-section__title">Pastel y anillos</span>
+            <div class="collaborative-charts-grid">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="pie" data-tooltip="Pastel" aria-label="Pastel">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <circle cx="32" cy="32" r="26" fill="#3b82f6"></circle>
+                  <path d="M 32 32 L 32 6 A 26 26 0 0 0 7 24 Z" fill="#f59e0b"></path>
+                  <path d="M 32 32 L 7 24 A 26 26 0 0 0 16 52 Z" fill="#a855f7"></path>
+                </svg>
+                <span class="collaborative-chart-card__label">Pastel</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="donut" data-tooltip="Anillos" aria-label="Anillos">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <circle cx="32" cy="32" r="26" fill="#3b82f6"></circle>
+                  <path d="M 32 32 L 32 6 A 26 26 0 0 0 7 24 Z" fill="#f59e0b"></path>
+                  <path d="M 32 32 L 7 24 A 26 26 0 0 0 16 52 Z" fill="#a855f7"></path>
+                  <circle cx="32" cy="32" r="14" fill="var(--bg-surface, #ffffff)"></circle>
+                </svg>
+                <span class="collaborative-chart-card__label">Anillos</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="collaborative-charts-section">
+            <span class="collaborative-charts-section__title">Gráficas de área</span>
+            <div class="collaborative-charts-grid">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-stacked" data-tooltip="Área apilada" aria-label="Área apilada">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <path d="M 8 52 L 24 38 L 40 44 L 56 22 L 56 52 Z" fill="#3b82f6" opacity="0.85"></path>
+                  <path d="M 8 38 L 24 24 L 40 30 L 56 12 L 56 22 L 40 44 L 24 38 L 8 52 Z" fill="#a855f7" opacity="0.85"></path>
+                </svg>
+                <span class="collaborative-chart-card__label">Área apilada</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-overlap" data-tooltip="Área sin apilar" aria-label="Área sin apilar">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <path d="M 8 52 L 20 22 L 36 34 L 56 16 L 56 52 Z" fill="#3b82f6" fill-opacity="0.65"></path>
+                  <path d="M 8 52 L 24 34 L 42 18 L 56 28 L 56 52 Z" fill="#a855f7" fill-opacity="0.65"></path>
+                </svg>
+                <span class="collaborative-chart-card__label">Área sin apilar</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="collaborative-charts-section">
+            <span class="collaborative-charts-section__title">Dispersión e infografía</span>
+            <div class="collaborative-charts-grid">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="scatter" data-tooltip="Dispersión" aria-label="Dispersión">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <circle cx="12" cy="46" r="4.5" fill="#3b82f6"></circle>
+                  <circle cx="24" cy="34" r="4.5" fill="#3b82f6"></circle>
+                  <circle cx="28" cy="44" r="3.5" fill="#3b82f6"></circle>
+                  <circle cx="36" cy="22" r="5" fill="#3b82f6"></circle>
+                  <circle cx="44" cy="30" r="4" fill="#3b82f6"></circle>
+                  <circle cx="52" cy="14" r="4.5" fill="#3b82f6"></circle>
+                </svg>
+                <span class="collaborative-chart-card__label">Dispersión</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-ring" data-tooltip="Anillo de progreso" aria-label="Anillo de progreso">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <circle cx="32" cy="32" r="22" stroke="#e2e8f0" stroke-width="8"></circle>
+                  <circle cx="32" cy="32" r="22" stroke="#3b82f6" stroke-width="8" stroke-dasharray="138" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 32 32)"></circle>
+                </svg>
+                <span class="collaborative-chart-card__label">Progreso circular</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-bar" data-tooltip="Barra de progreso" aria-label="Barra de progreso">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <rect x="6" y="24" width="52" height="16" rx="8" fill="#e2e8f0"></rect>
+                  <rect x="6" y="24" width="36" height="16" rx="8" fill="#3b82f6"></rect>
+                </svg>
+                <span class="collaborative-chart-card__label">Barra progreso</span>
+              </button>
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-gauge" data-tooltip="Indicador radial" aria-label="Indicador radial">
+                <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
+                  <path d="M 10 44 A 24 24 0 0 1 54 44" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round"></path>
+                  <path d="M 10 44 A 24 24 0 0 1 44 20" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"></path>
+                  <line x1="32" y1="44" x2="42" y2="24" stroke="#1e293b" stroke-width="3" stroke-linecap="round"></line>
+                  <circle cx="32" cy="44" r="4" fill="#1e293b"></circle>
+                </svg>
+                <span class="collaborative-chart-card__label">Indicador radial</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="collaborative-panel-section is-hidden" data-ref="panel-section-colors">
       <div class="collaborative-colors-container" data-ref="colors-container">
@@ -550,6 +714,245 @@ export function createCollaborativeDrawerElement(): HTMLElement {
         </div>
 
         <div class="collaborative-pdf-pages-grid" data-ref="pdf-pages-thumbnails-grid"></div>
+      </div>
+    </div>
+
+    <div class="collaborative-panel-section is-hidden" data-ref="panel-section-chart-inspector">
+      <div class="collaborative-chart-inspector-header">
+        <div class="collaborative-chart-inspector-header__left">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-chart-inspector-back-btn" data-ref="btn-chart-inspector-back" data-tooltip="Volver a elementos" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <span class="collaborative-drawer-header__title">Gráfica</span>
+        </div>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32" data-ref="btn-chart-inspector-close" data-tooltip="Cerrar inspector" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="collaborative-chart-type-selector-wrap">
+        <button type="button" class="collaborative-chart-type-btn" data-ref="btn-chart-type-dropdown">
+          <span class="collaborative-chart-type-btn__current" data-ref="txt-current-chart-type">
+            <svg class="component-icon collaborative-chart-type-btn__icon" data-ref="icon-current-chart-type" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+            <span data-ref="label-current-chart-type">Barras verticales</span>
+          </span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+
+        <div class="collaborative-chart-type-popup is-hidden" data-ref="chart-type-popup">
+          <div class="collaborative-chart-type-popup__grid">
+            <button type="button" class="collaborative-chart-type-item is-selected" data-ref="btn-pick-chart-type" data-chart-type="bar-vertical" data-tooltip="Barras verticales" aria-label="Barras verticales">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><rect x="4" y="14" width="6" height="14" rx="1.5"></rect><rect x="13" y="6" width="6" height="22" rx="1.5"></rect><rect x="22" y="10" width="6" height="18" rx="1.5"></rect></svg>
+              <span>Barras vert.</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="bar-horizontal" data-tooltip="Barras horizontales" aria-label="Barras horizontales">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><rect x="4" y="4" width="18" height="6" rx="1.5"></rect><rect x="4" y="13" width="24" height="6" rx="1.5"></rect><rect x="4" y="22" width="14" height="6" rx="1.5"></rect></svg>
+              <span>Barras horiz.</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="bar-grouped" data-tooltip="Columnas agrupadas" aria-label="Columnas agrupadas">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><rect x="4" y="12" width="4" height="16" rx="1"></rect><rect x="9" y="8" width="4" height="20" rx="1" opacity="0.6"></rect><rect x="18" y="6" width="4" height="22" rx="1"></rect><rect x="23" y="14" width="4" height="14" rx="1" opacity="0.6"></rect></svg>
+              <span>Agrupadas</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="bar-stacked" data-tooltip="Barras apiladas" aria-label="Barras apiladas">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><rect x="6" y="18" width="7" height="10" rx="1"></rect><rect x="6" y="10" width="7" height="7" rx="1" opacity="0.6"></rect><rect x="6" y="4" width="7" height="5" rx="1" opacity="0.3"></rect><rect x="18" y="14" width="7" height="14" rx="1"></rect><rect x="18" y="6" width="7" height="7" rx="1" opacity="0.6"></rect></svg>
+              <span>Apiladas</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="line" data-tooltip="Líneas" aria-label="Líneas">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,24 12,16 20,20 28,8"></polyline><circle cx="12" cy="16" r="2" fill="currentColor"></circle><circle cx="20" cy="20" r="2" fill="currentColor"></circle></svg>
+              <span>Líneas</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="line-multi" data-tooltip="Varias líneas" aria-label="Varias líneas">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,22 12,18 20,10 28,6"></polyline><polyline points="4,26 12,24 20,16 28,14" opacity="0.6"></polyline></svg>
+              <span>Varias líneas</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="pie" data-tooltip="Pastel" aria-label="Pastel">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"></circle><path d="M 16 16 L 16 4 A 12 12 0 0 1 27 21 Z" fill="currentColor" opacity="0.5"></path><path d="M 16 16 L 27 21 A 12 12 0 0 1 7 22 Z" fill="currentColor"></path></svg>
+              <span>Pastel</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="donut" data-tooltip="Anillos" aria-label="Anillos">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="5"><circle cx="16" cy="16" r="10"></circle><path d="M 16 6 A 10 10 0 0 1 26 16" stroke="currentColor" opacity="0.4"></path></svg>
+              <span>Anillos</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="area-stacked" data-tooltip="Área apilada" aria-label="Área apilada">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><path d="M 4 26 L 12 18 L 20 22 L 28 12 L 28 26 Z" opacity="0.8"></path><path d="M 4 26 L 12 22 L 20 24 L 28 18 L 28 26 Z" opacity="0.4"></path></svg>
+              <span>Área</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="scatter" data-tooltip="Dispersión" aria-label="Dispersión">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor"><circle cx="8" cy="22" r="2.5"></circle><circle cx="14" cy="16" r="2.5"></circle><circle cx="18" cy="24" r="2"></circle><circle cx="20" cy="12" r="3"></circle><circle cx="26" cy="8" r="2.5"></circle></svg>
+              <span>Dispersión</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="progress-ring" data-tooltip="Anillo de progreso" aria-label="Anillo de progreso">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="4"><circle cx="16" cy="16" r="11" stroke-dasharray="69" stroke-dashoffset="20" stroke-linecap="round"></circle></svg>
+              <span>Progreso</span>
+            </button>
+            <button type="button" class="collaborative-chart-type-item" data-ref="btn-pick-chart-type" data-chart-type="progress-bar" data-tooltip="Barra de progreso" aria-label="Barra de progreso">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none"><rect x="4" y="12" width="24" height="8" rx="4" fill="currentColor" opacity="0.25"></rect><rect x="4" y="12" width="16" height="8" rx="4" fill="currentColor"></rect></svg>
+              <span>Barra progr.</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collaborative-chart-tabs-nav">
+        <div class="component-toggle-pill component-toggle-pill--2" data-ref="chart-tabs-toggle" data-active="0">
+          <div class="component-toggle-pill-glider"></div>
+          <button type="button" class="component-button is-active" data-ref="btn-tab-chart-data">Datos</button>
+          <button type="button" class="component-button" data-ref="btn-tab-chart-customize">Personalizar</button>
+        </div>
+      </div>
+
+      <div class="collaborative-chart-tab-content" data-ref="chart-tab-content-data">
+        <div class="collaborative-chart-spreadsheet-wrap" data-ref="chart-spreadsheet-container">
+          <table class="collaborative-chart-table" data-ref="chart-data-table">
+            <thead data-ref="chart-table-head"></thead>
+            <tbody data-ref="chart-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="collaborative-chart-sheet-actions">
+          <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-chart-add-row">
+            <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span class="component-button__text">Fila</span>
+          </button>
+          <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-chart-add-col">
+            <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span class="component-button__text">Columna</span>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32" data-ref="btn-chart-transpose" data-tooltip="Transponer filas y columnas" aria-label="Transponer">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32" data-ref="btn-chart-clear-data" data-tooltip="Limpiar datos" aria-label="Limpiar datos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+
+        <div class="collaborative-drawer-subheading">
+          <span class="collaborative-drawer-subheading__title">Configuración de la gráfica</span>
+        </div>
+
+        <div class="collaborative-chart-config-group">
+          <span class="collaborative-chart-field-label">Paleta de colores</span>
+          <div class="collaborative-chart-palettes-grid" data-ref="chart-palettes-grid">
+            <button type="button" class="collaborative-chart-palette-btn is-active" data-ref="btn-chart-palette-opt" data-palette="blue" data-tooltip="Azul corporativo" aria-label="Azul">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);"></span>
+            </button>
+            <button type="button" class="collaborative-chart-palette-btn" data-ref="btn-chart-palette-opt" data-palette="purple" data-tooltip="Púrpura creativo" aria-label="Púrpura">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #8b5cf6, #a78bfa, #c4b5fd);"></span>
+            </button>
+            <button type="button" class="collaborative-chart-palette-btn" data-ref="btn-chart-palette-opt" data-palette="coral" data-tooltip="Coral cálido" aria-label="Coral">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #ef4444, #f87171, #fca5a5);"></span>
+            </button>
+            <button type="button" class="collaborative-chart-palette-btn" data-ref="btn-chart-palette-opt" data-palette="amber" data-tooltip="Ámbar / Dorado" aria-label="Ámbar">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #f59e0b, #fbbf24, #fcd34d);"></span>
+            </button>
+            <button type="button" class="collaborative-chart-palette-btn" data-ref="btn-chart-palette-opt" data-palette="emerald" data-tooltip="Esmeralda / Menta" aria-label="Esmeralda">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);"></span>
+            </button>
+            <button type="button" class="collaborative-chart-palette-btn" data-ref="btn-chart-palette-opt" data-palette="gray" data-tooltip="Carbón sobrio" aria-label="Carbón">
+              <span class="collaborative-chart-palette-preview" style="background: linear-gradient(90deg, #4b5563, #6b7280, #9ca3af);"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="collaborative-chart-tab-content is-hidden" data-ref="chart-tab-content-customize">
+        <div class="collaborative-accordion is-open" data-ref="accordion-chart-text">
+          <button type="button" class="collaborative-accordion__header" data-ref="btn-accordion-toggle">
+            <span class="collaborative-accordion__title">Texto y etiquetas</span>
+            <svg class="component-icon collaborative-accordion__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="collaborative-accordion__content">
+            <div class="collaborative-switch-row">
+              <span class="collaborative-switch-row__label">Mostrar leyenda</span>
+              <label class="component-switch" data-ref="switch-chart-legend">
+                <input class="component-switch__input" data-ref="input-chart-legend" type="checkbox" checked />
+                <span class="component-switch__slider"></span>
+              </label>
+            </div>
+            <div class="collaborative-switch-row">
+              <span class="collaborative-switch-row__label">Etiquetas de datos en gráfica</span>
+              <label class="component-switch" data-ref="switch-chart-datalabels">
+                <input class="component-switch__input" data-ref="input-chart-datalabels" type="checkbox" />
+                <span class="component-switch__slider"></span>
+              </label>
+            </div>
+            <label class="field" data-ref="field-chart-title">
+              <input class="field__input" data-ref="input-chart-title" type="text" placeholder=" " />
+              <span class="field__label">Título de la gráfica</span>
+            </label>
+            <label class="field" data-ref="field-chart-subtitle">
+              <input class="field__input" data-ref="input-chart-subtitle" type="text" placeholder=" " />
+              <span class="field__label">Subtítulo</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="collaborative-accordion" data-ref="accordion-chart-xaxis">
+          <button type="button" class="collaborative-accordion__header" data-ref="btn-accordion-toggle">
+            <span class="collaborative-accordion__title">Eje X</span>
+            <svg class="component-icon collaborative-accordion__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="collaborative-accordion__content">
+            <label class="field" data-ref="field-chart-xaxis-title">
+              <input class="field__input" data-ref="input-chart-xaxis-title" type="text" placeholder=" " />
+              <span class="field__label">Título del eje X</span>
+            </label>
+            <div class="collaborative-switch-row">
+              <span class="collaborative-switch-row__label">Etiquetas del eje X</span>
+              <label class="component-switch" data-ref="switch-chart-xlabels">
+                <input class="component-switch__input" data-ref="input-chart-xlabels" type="checkbox" checked />
+                <span class="component-switch__slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="collaborative-accordion" data-ref="accordion-chart-yaxis">
+          <button type="button" class="collaborative-accordion__header" data-ref="btn-accordion-toggle">
+            <span class="collaborative-accordion__title">Eje Y y escalas</span>
+            <svg class="component-icon collaborative-accordion__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="collaborative-accordion__content">
+            <label class="field" data-ref="field-chart-yaxis-title">
+              <input class="field__input" data-ref="input-chart-yaxis-title" type="text" placeholder=" " />
+              <span class="field__label">Título del eje Y</span>
+            </label>
+            <div class="collaborative-switch-row">
+              <span class="collaborative-switch-row__label">Etiquetas del eje Y</span>
+              <label class="component-switch" data-ref="switch-chart-ylabels">
+                <input class="component-switch__input" data-ref="input-chart-ylabels" type="checkbox" checked />
+                <span class="component-switch__slider"></span>
+              </label>
+            </div>
+            <div class="collaborative-switch-row">
+              <span class="collaborative-switch-row__label">Líneas de cuadrícula</span>
+              <label class="component-switch" data-ref="switch-chart-gridlines">
+                <input class="component-switch__input" data-ref="input-chart-gridlines" type="checkbox" checked />
+                <span class="component-switch__slider"></span>
+              </label>
+            </div>
+            <div class="collaborative-field-row">
+              <label class="field" data-ref="field-chart-prefix">
+                <input class="field__input" data-ref="input-chart-prefix" type="text" placeholder=" " />
+                <span class="field__label">Prefijo (ej. $)</span>
+              </label>
+              <label class="field" data-ref="field-chart-suffix">
+                <input class="field__input" data-ref="input-chart-suffix" type="text" placeholder=" " />
+                <span class="field__label">Sufijo (ej. %)</span>
+              </label>
+            </div>
+            <div class="collaborative-field-row">
+              <label class="field" data-ref="field-chart-min">
+                <input class="field__input" data-ref="input-chart-min" type="number" placeholder=" " />
+                <span class="field__label">Mínimo</span>
+              </label>
+              <label class="field" data-ref="field-chart-max">
+                <input class="field__input" data-ref="input-chart-max" type="number" placeholder=" " />
+                <span class="field__label">Máximo</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
