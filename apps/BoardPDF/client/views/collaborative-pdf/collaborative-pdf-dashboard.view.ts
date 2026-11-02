@@ -546,7 +546,6 @@ export class CollaborativePdfDashboardController implements ViewController {
       if (txtSummary) {
         txtSummary.textContent = `${w} × ${h} px (${currentOrientation === 'landscape' ? 'Horizontal' : 'Vertical'})`;
       }
-      console.log('[Collab Diagnóstico][Modal] Dimensiones calculadas:', { currentOrientation, height: h, selectedPresetId, width: w });
       return { height: h, width: w };
     };
 
@@ -555,7 +554,6 @@ export class CollaborativePdfDashboardController implements ViewController {
         cards.forEach((c) => c.classList.remove('is-selected'));
         card.classList.add('is-selected');
         selectedPresetId = card.getAttribute('data-preset-id') || 'a4';
-        console.log('[Collab Diagnóstico][Modal] Preset seleccionado:', selectedPresetId);
 
         if (selectedPresetId === 'custom') {
           if (customWrapper) customWrapper.style.display = 'block';
@@ -581,7 +579,6 @@ export class CollaborativePdfDashboardController implements ViewController {
       currentOrientation = 'portrait';
       btnPortrait.classList.add('is-active');
       btnLandscape?.classList.remove('is-active');
-      console.log('[Collab Diagnóstico][Modal] Orientación cambiada a: portrait');
       updateSummary();
     });
 
@@ -589,7 +586,6 @@ export class CollaborativePdfDashboardController implements ViewController {
       currentOrientation = 'landscape';
       btnLandscape.classList.add('is-active');
       btnPortrait?.classList.remove('is-active');
-      console.log('[Collab Diagnóstico][Modal] Orientación cambiada a: landscape');
       updateSummary();
     });
 
@@ -625,8 +621,6 @@ export class CollaborativePdfDashboardController implements ViewController {
           pageTitles: [''],
         };
 
-        console.log('[Collab Diagnóstico][Dashboard] Creando nuevo documento:', { finalDimensions, initialContent, newDocId, titleVal });
-
         saveLocalDraft(newDocId, {
           content: initialContent,
           title: titleVal,
@@ -634,21 +628,17 @@ export class CollaborativePdfDashboardController implements ViewController {
 
         if (currentUser) {
           try {
-            console.log('[Collab Diagnóstico][Dashboard] Guardando en backend PUT:', API_ROUTES.collaborativeDocs.byId(newDocId));
             const putRes = await putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
               content: initialContent,
               id: newDocId,
               title: titleVal,
             });
-            console.log('[Collab Diagnóstico][Dashboard] Respuesta PUT backend:', putRes.status, putRes.ok);
           } catch (putErr) {
-            console.warn('[Collab Diagnóstico][Dashboard] Error en PUT backend:', putErr);
           }
         }
 
         modal.close();
         const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${finalDimensions.width}&h=${finalDimensions.height}`;
-        console.log('[Collab Diagnóstico][Dashboard] Navegando a:', navUrl);
         navigate(navUrl);
       },
       showCancel: true,

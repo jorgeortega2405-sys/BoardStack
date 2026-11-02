@@ -16,6 +16,7 @@ import { debounce, hideElement, showElement, withButtonLoading } from '../../uti
 import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 
 interface ElementText {
+  authorName?: string;
   backgroundColor?: string;
   color?: string;
   fontFamily?: string;
@@ -143,6 +144,9 @@ export class CollaborativePdfEditorController implements ViewController {
   private remoteCursorTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private remotePeers = new Map<string, { avatarUrl?: string | null; clientId: string; color: string; isGuest?: boolean; userId?: number | null; username: string }>();
   private selectedElementId: string | null = null;
+  private selectedElementIds = new Set<string>();
+  private sharePopoverElement: HTMLElement | null = null;
+  private cleanupSharePopover: (() => void) | null = null;
   private selectedPageIndex: number | null = null;
   private selectedPdfAsset: UploadedAsset | null = null;
   private shareModalElement: HTMLElement | null = null;
@@ -174,8 +178,6 @@ export class CollaborativePdfEditorController implements ViewController {
       this.docId = queryId || (pathMatch ? pathMatch[1] : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`));
     }
 
-    console.log('[Collab Diagnóstico][Editor] init() start. docId:', this.docId, 'initialUrlDimensions:', this.initialUrlDimensions, 'currentUser:', currentUser);
-
     const currentSearch = window.location.search || (this.queryParams ? `?${this.queryParams.toString()}` : '');
     if (window.location.pathname !== `/d/${this.docId}`) {
       window.history.replaceState({}, '', `/d/${encodeURIComponent(this.docId)}${currentSearch}`);
@@ -194,6 +196,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   destroy(): void {
+    this.closeSharePopover();
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
       this.autoSaveTimer = null;
@@ -304,6 +307,7 @@ export class CollaborativePdfEditorController implements ViewController {
     btnPresetBody?.addEventListener('click', () => this.addTextElement('body'), { signal });
 
     const elemConfigs: Array<{ handler: () => void; ref: string }> = [
+      { handler: () => this.activateTool('shapes'), ref: 'btn-elem-shapes' },
       { handler: () => showToast('Función de tablas próximamente', 'info'), ref: 'btn-elem-tables' },
       { handler: () => this.handleRailTabClick('uploads'), ref: 'btn-elem-photos' },
       { handler: () => showToast('Gráficas estadísticas próximamente', 'info'), ref: 'btn-elem-charts' },
@@ -311,6 +315,16 @@ export class CollaborativePdfEditorController implements ViewController {
 
     elemConfigs.forEach(({ handler, ref }) => {
       this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
+    });
+
+    const drawerShapeButtons = this.queryPanelAll<HTMLButtonElement>('[data-shape]');
+    drawerShapeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const shape = btn.getAttribute('data-shape') as any;
+        if (shape) {
+          this.addShapeElement(shape);
+        }
+      }, { signal });
     });
 
     const btnDrawerBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-drawer-back"]');
@@ -618,13 +632,22 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
-  private activateSelectTool(): void {
-    this.activeTool = 'select';
+  private activateTool(tool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text'): void {
     const toolbarButtons = this.container.querySelectorAll<HTMLButtonElement>('.collaborative-toolbar-btn');
-    toolbarButtons.forEach((btn) => {
-      btn.classList.toggle('is-active', btn.getAttribute('data-tool') === 'select');
-    });
-    this.closeSubtoolbars();
+    toolbarButtons.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-tool') === tool));
+    this.activeTool = tool;
+    if (tool === 'select') {
+      this.closeSubtoolbars();
+    } else if (tool === 'text') {
+      this.closeSubtoolbars();
+      this.addTextElement('body');
+    } else {
+      this.openSubtoolbar(tool);
+    }
+  }
+
+  private activateSelectTool(): void {
+    this.activateTool('select');
   }
 
   private addTextElement(preset: 'body' | 'subtitle' | 'title'): void {
@@ -807,18 +830,20 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private addStickyNoteElement(color: string): void {
     const id = `sticky_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const myName = currentUser?.username || this.guestIdentity?.username || 'Anónimo';
     const newSticky: ElementText = {
+      authorName: myName,
       backgroundColor: color,
       color: '#1e293b',
       fontSize: 15,
-      height: 140,
+      height: 200,
       id,
       isStickyNote: true,
       pageIndex: this.activePageIndex,
       rotation: 0,
-      text: 'Nota adhesiva',
+      text: '',
       type: 'text',
-      width: 140,
+      width: 200,
       x: 100 + (this.elements.length % 5) * 30,
       y: 150 + (this.elements.length % 5) * 30,
     };
@@ -829,7 +854,8 @@ export class CollaborativePdfEditorController implements ViewController {
     this.activateSelectTool();
 
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
-    elNode?.focus();
+    const bodyEl = elNode?.querySelector<HTMLElement>('[data-ref="sticky-body"]');
+    bodyEl?.focus();
   }
 
   private getPageDimensions(pageIndex: number): PageDimension {
@@ -837,7 +863,6 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private initPageSizesFromContent(content: any): void {
-    console.log('[Collab Diagnóstico][Editor] initPageSizesFromContent entrada:', content);
     if (content?.pageSize?.width && content?.pageSize?.height) {
       this.docDefaultPageSize = {
         height: content.pageSize.height,
@@ -855,7 +880,6 @@ export class CollaborativePdfEditorController implements ViewController {
     while (this.pageSizes.length < this.pageCount) {
       this.pageSizes.push({ ...this.docDefaultPageSize });
     }
-    console.log('[Collab Diagnóstico][Editor] initPageSizesFromContent salida:', { docDefaultPageSize: this.docDefaultPageSize, pageSizes: this.pageSizes });
   }
 
   private getContentPayload() {
@@ -1271,11 +1295,9 @@ export class CollaborativePdfEditorController implements ViewController {
     let serverDoc: any = null;
 
     try {
-      console.log('[Collab Diagnóstico][Editor] loadDocument() iniciando para docId:', this.docId, 'currentUser:', currentUser);
 
       if (!currentUser) {
         const localDraft = getLocalDraft(this.docId);
-        console.log('[Collab Diagnóstico][Editor] Modo invitado. localDraft:', localDraft);
 
         if (localDraft) {
           this.isLocalOnly = true;
@@ -1292,7 +1314,6 @@ export class CollaborativePdfEditorController implements ViewController {
           this.initPageSizesFromContent(localDraft.content);
 
           if (this.initialUrlDimensions && this.elements.length === 0) {
-            console.log('[Collab Diagnóstico][Editor] Aplicando initialUrlDimensions a localDraft:', this.initialUrlDimensions);
             this.docDefaultPageSize = { ...this.initialUrlDimensions };
             this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
           }
@@ -1391,9 +1412,7 @@ export class CollaborativePdfEditorController implements ViewController {
       } else {
         try {
           const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
-          console.log('[Collab Diagnóstico][Editor] Obteniendo documento GET:', getUrl);
           const res = await getApi(getUrl);
-          console.log('[Collab Diagnóstico][Editor] Respuesta GET:', res.status, res.ok);
 
           if (res.status === 403) {
             this.isRestrictedAccess = true;
@@ -1403,7 +1422,6 @@ export class CollaborativePdfEditorController implements ViewController {
           if (res.ok) {
             const data = await res.json();
             serverDoc = data.document;
-            console.log('[Collab Diagnóstico][Editor] Documento recibido del servidor:', data.document);
 
             if (data.document) {
               this.isLocalOnly = false;
@@ -1424,7 +1442,6 @@ export class CollaborativePdfEditorController implements ViewController {
               const targetPageSize = this.initialUrlDimensions || localDraft?.content?.pageSize;
 
               if (serverElements.length === 0 && targetPageSize?.width && targetPageSize?.height) {
-                console.log('[Collab Diagnóstico][Editor] Documento nuevo/vacío: aplicando dimensiones objetivo:', targetPageSize);
                 this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
                 this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
                 if (localDraft?.title) this.docTitle = localDraft.title;
@@ -1460,7 +1477,6 @@ export class CollaborativePdfEditorController implements ViewController {
             }
           }
         } catch (netErr) {
-          console.warn('[Collab Diagnóstico][Editor] Error en llamada GET:', netErr);
           return false;
         }
       }
@@ -1471,7 +1487,6 @@ export class CollaborativePdfEditorController implements ViewController {
           const wal = JSON.parse(walRaw);
           const serverTime = serverDoc?.updated_at ? new Date(serverDoc.updated_at).getTime() : 0;
           if (wal && Array.isArray(wal.elements) && wal.elements.length > 0 && (!serverDoc || wal.timestamp > serverTime)) {
-            console.log('[Collab Diagnóstico][Editor] Restaurando trabajo local no guardado desde WAL:', wal);
             this.elements = wal.elements;
             if (wal.title) this.docTitle = wal.title;
             if (Array.isArray(wal.pageTitles) && wal.pageTitles.length > 0) this.pageTitles = wal.pageTitles;
@@ -1484,7 +1499,6 @@ export class CollaborativePdfEditorController implements ViewController {
           }
         }
       } catch (walErr) {
-        console.warn('[Collab Diagnóstico][Editor] Error leyendo WAL:', walErr);
       }
 
       const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
@@ -1492,7 +1506,6 @@ export class CollaborativePdfEditorController implements ViewController {
         titleInput.value = this.docTitle;
       }
       this.setSaveStatus('saved');
-      console.log('[Collab Diagnóstico][Editor] Documento cargado completamente. Dimensiones finales:', { docDefaultPageSize: this.docDefaultPageSize, pageSizes: this.pageSizes });
       return true;
     } finally {
       this.isLoadingDocument = false;
@@ -1547,47 +1560,32 @@ export class CollaborativePdfEditorController implements ViewController {
     const cloudBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cloud-status"]');
     const footerStatus = this.container.querySelector<HTMLElement>('[data-ref="txt-footer-status"]');
 
-    if (this.isLocalOnly) {
-      if (cloudBtn) {
-        cloudBtn.classList.remove('is-saving', 'btn-cloud-status--dirty');
-        if (status === 'saving') {
-          cloudBtn.classList.add('is-saving');
-          cloudBtn.setAttribute('data-tooltip', 'Guardando borrador localmente...');
-          cloudBtn.setAttribute('aria-label', 'Guardando borrador local');
-        } else {
-          cloudBtn.classList.add('is-saved');
-          cloudBtn.setAttribute('data-tooltip', 'Guardado en tu navegador');
-          cloudBtn.setAttribute('aria-label', 'Guardado en tu navegador');
-        }
-      }
-      if (footerStatus) {
-        footerStatus.textContent = status === 'saving' ? 'Guardando local...' : 'Guardado en tu navegador';
-      }
-      return;
-    }
-
     if (cloudBtn) {
       cloudBtn.classList.remove('is-saving', 'is-saved', 'btn-cloud-status--dirty');
-      if (status === 'saving') {
-        cloudBtn.classList.add('is-saving');
-        cloudBtn.setAttribute('data-tooltip', 'Guardando cambios automáticamente...');
-        cloudBtn.setAttribute('aria-label', 'Guardando cambios...');
-      } else if (status === 'saved') {
-        cloudBtn.classList.add('is-saved');
-        cloudBtn.setAttribute('data-tooltip', 'Cambios guardados en la nube');
-        cloudBtn.setAttribute('aria-label', 'Documento guardado');
+      const iconUse = cloudBtn.querySelector('use');
+      if (status === 'error') {
+        cloudBtn.classList.add('is-error');
+        iconUse?.setAttribute('href', '/icons.svg#cloud_off');
+        cloudBtn.setAttribute('data-tooltip', 'Error al sincronizar. Clic para reintentar.');
+        cloudBtn.setAttribute('aria-label', 'Error al sincronizar');
       } else {
-        cloudBtn.classList.add('btn-cloud-status--dirty');
-        cloudBtn.setAttribute('data-tooltip', 'Guardado localmente. Reintentando sincronización...');
-        cloudBtn.setAttribute('aria-label', 'Guardado local');
+        cloudBtn.classList.remove('is-error');
+        iconUse?.setAttribute('href', '/icons.svg#cloud');
+        if (status === 'saving') {
+          cloudBtn.setAttribute('data-tooltip', 'Guardando cambios automáticamente...');
+          cloudBtn.setAttribute('aria-label', 'Guardando cambios...');
+        } else {
+          cloudBtn.setAttribute('data-tooltip', 'Cambios guardados');
+          cloudBtn.setAttribute('aria-label', 'Documento guardado');
+        }
       }
     }
 
     if (footerStatus) {
       footerStatus.textContent =
         status === 'saving' ? 'Guardando...' :
-        status === 'saved' ? 'Guardado en la nube' :
-        'Guardado local';
+        status === 'saved' ? 'Guardado' :
+        'Error de sincronización';
     }
   }
 
@@ -1658,11 +1656,8 @@ export class CollaborativePdfEditorController implements ViewController {
       title: this.docTitle,
     };
 
-    console.log('[Collab Diagnóstico][Editor] flushAutoSave() enviando payload:', { id: this.docId, pageSize: payload.content?.pageSize, pageSizes: payload.content?.pageSizes });
-
     try {
       const res = await putApi(API_ROUTES.collaborativeDocs.byId(this.docId), payload);
-      console.log('[Collab Diagnóstico][Editor] flushAutoSave() resultado:', res.status, res.ok);
       if (res.ok) {
         this.lastSavedTimestamp = Date.now();
         this.isModified = false;
@@ -1683,8 +1678,6 @@ export class CollaborativePdfEditorController implements ViewController {
   private renderPages(): void {
     const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="pages-container"]');
     if (!pagesContainer) return;
-
-    console.log('[Collab Diagnóstico][Editor] renderPages() start. pageCount:', this.pageCount, 'zoomLevel:', this.zoomLevel, 'docDefaultPageSize:', this.docDefaultPageSize, 'pageSizes:', this.pageSizes);
 
     pagesContainer.innerHTML = '';
 
@@ -1845,8 +1838,6 @@ export class CollaborativePdfEditorController implements ViewController {
       header.setAttribute('data-page-index', p.toString());
       header.style.width = `${Math.max(340, scaledW)}px`;
 
-      console.log(`[Collab Diagnóstico][Editor] renderPages() Página ${p + 1}:`, { curDim, scaledH, scaledW, zoomLevel: this.zoomLevel });
-
       wrapper.appendChild(header);
       wrapper.appendChild(scaler);
       pagesContainer.appendChild(wrapper);
@@ -1854,15 +1845,101 @@ export class CollaborativePdfEditorController implements ViewController {
       this.drawFreehandOnCanvas(canvas, p);
       this.bindCanvasDrawing(canvas, p);
 
-      sheet.addEventListener('click', (e) => {
-        if (e.target === sheet || e.target === canvas || e.target === svg) {
-          this.selectPage(p);
+      sheet.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        if (this.activeTool !== 'select') return;
+        const target = e.target as Element;
+        const isCanvasBackground = target === sheet || target === canvas || target === svg || target === guidesSvg;
+        if (!isCanvasBackground) return;
+
+        const startClientX = e.clientX;
+        const startClientY = e.clientY;
+        const sheetRect = sheet.getBoundingClientRect();
+        const zoom = this.zoomLevel || 1.0;
+        const startX = (e.clientX - sheetRect.left) / zoom;
+        const startY = (e.clientY - sheetRect.top) / zoom;
+
+        if (!e.shiftKey && !e.ctrlKey) {
+          this.selectedElementIds.clear();
+          this.selectElement(null);
         }
+
+        let marqueeBox: HTMLElement | null = null;
+        let isMarquee = false;
+
+        const onPointerMove = (moveEvt: PointerEvent) => {
+          const curX = (moveEvt.clientX - sheetRect.left) / zoom;
+          const curY = (moveEvt.clientY - sheetRect.top) / zoom;
+          const dist = Math.hypot(moveEvt.clientX - startClientX, moveEvt.clientY - startClientY);
+          if (!isMarquee && dist > 4) {
+            isMarquee = true;
+            marqueeBox = document.createElement('div');
+            marqueeBox.className = 'collaborative-marquee-box';
+            sheet.appendChild(marqueeBox);
+          }
+          if (!isMarquee || !marqueeBox) return;
+
+          const left = Math.min(startX, curX);
+          const top = Math.min(startY, curY);
+          const width = Math.abs(curX - startX);
+          const height = Math.abs(curY - startY);
+
+          marqueeBox.style.left = `${left}px`;
+          marqueeBox.style.top = `${top}px`;
+          marqueeBox.style.width = `${width}px`;
+          marqueeBox.style.height = `${height}px`;
+
+          const right = left + width;
+          const bottom = top + height;
+          const pageElements = this.elements.filter((el): el is ElementImage | ElementShape | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
+
+          for (const el of pageElements) {
+            const elW = el.width || 60;
+            const elH = el.height || 60;
+            const elR = el.x + elW;
+            const elB = el.y + elH;
+            const intersects = !(elR < left || el.x > right || elB < top || el.y > bottom);
+            if (intersects) {
+              this.selectedElementIds.add(el.id);
+            } else if (!moveEvt.shiftKey && !moveEvt.ctrlKey) {
+              this.selectedElementIds.delete(el.id);
+            }
+          }
+          this.updateSelection();
+        };
+
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          if (marqueeBox) {
+            marqueeBox.remove();
+            marqueeBox = null;
+          }
+          if (isMarquee) {
+            if (this.selectedElementIds.size === 1) {
+              const singleId = Array.from(this.selectedElementIds)[0];
+              this.selectElement(singleId);
+            } else if (this.selectedElementIds.size > 1) {
+              this.selectedElementId = null;
+              this.removeTransformBox();
+              this.updateSelection();
+              this.updateContextToolbar();
+            }
+          } else {
+            this.selectPage(p);
+          }
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
       });
     }
 
     const footer = document.createElement('div');
     footer.className = 'collaborative-pages-footer';
+    const lastPageDim = this.getPageDimensions(this.pageCount - 1);
+    const lastScaledW = Math.round(lastPageDim.width * this.zoomLevel);
+    footer.style.width = `${Math.max(340, lastScaledW)}px`;
     footer.setAttribute('data-ref', 'pages-footer');
     footer.innerHTML = `
       <button type="button" class="component-button component-button--ghost collaborative-add-page-btn" data-ref="btn-add-page-bottom">
@@ -2040,12 +2117,121 @@ export class CollaborativePdfEditorController implements ViewController {
       } else {
         div.style.backgroundColor = el.backgroundColor || '#fef08a';
       }
-      div.style.width = `${el.width || 140}px`;
-      div.style.height = `${el.height || 140}px`;
+      div.style.width = `${el.width || 200}px`;
+      div.style.height = `${el.height || 200}px`;
+
+      const author = el.authorName || currentUser?.username || this.guestIdentity?.username || 'Anónimo';
+      div.innerHTML = `
+        <div class="collaborative-sticky-note__body" data-ref="sticky-body" data-placeholder="Escribe una nota...">${escapeHtml(el.text || '')}</div>
+        <div class="collaborative-sticky-note__footer" data-ref="sticky-footer">
+          <span class="collaborative-sticky-note__author">${escapeHtml(author)}</span>
+        </div>
+      `;
+
+      const bodyEl = div.querySelector<HTMLElement>('[data-ref="sticky-body"]')!;
+      bodyEl.contentEditable = 'false';
+
+      bodyEl.addEventListener('input', () => {
+        el.text = bodyEl.innerText;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      });
+
+      bodyEl.addEventListener('blur', () => {
+        bodyEl.contentEditable = 'false';
+        div.classList.remove('is-editing');
+        el.text = bodyEl.innerText;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        void this.flushAutoSave();
+      });
+
+      bodyEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          bodyEl.blur();
+        }
+      });
+
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!div.classList.contains('is-editing')) {
+          this.selectElement(el.id);
+        }
+      });
+
+      div.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        this.selectElement(el.id);
+        bodyEl.contentEditable = 'true';
+        div.classList.add('is-editing');
+        bodyEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(bodyEl);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
     } else {
       div.className = 'collaborative-text-box';
       div.style.width = el.width ? `${el.width}px` : 'auto';
       div.style.height = el.height ? `${el.height}px` : 'auto';
+      div.contentEditable = 'false';
+      div.innerText = el.text || 'Texto';
+
+      div.addEventListener('input', () => {
+        el.text = div.innerText;
+        div.style.width = 'auto';
+        div.style.height = 'auto';
+        el.width = Math.ceil((div.offsetWidth || div.scrollWidth) + 8);
+        el.height = Math.ceil(div.offsetHeight || div.scrollHeight);
+        div.style.width = `${el.width}px`;
+        div.style.height = `${el.height}px`;
+        this.updateTransformBoxPosition();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      });
+
+      div.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!div.classList.contains('is-editing')) {
+          this.selectElement(el.id);
+        }
+      });
+
+      div.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        this.selectElement(el.id);
+        div.contentEditable = 'true';
+        div.classList.add('is-editing');
+        div.focus();
+        const range = document.createRange();
+        range.selectNodeContents(div);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      div.addEventListener('blur', () => {
+        div.contentEditable = 'false';
+        div.classList.remove('is-editing');
+        el.text = div.innerText;
+        div.style.width = 'auto';
+        div.style.height = 'auto';
+        el.width = Math.ceil((div.offsetWidth || div.scrollWidth) + 8);
+        el.height = Math.ceil(div.offsetHeight || div.scrollHeight);
+        div.style.width = `${el.width}px`;
+        div.style.height = `${el.height}px`;
+        this.updateTransformBoxPosition();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        void this.flushAutoSave();
+      });
+
+      div.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          div.blur();
+        }
+      });
     }
 
     div.setAttribute('data-ref', `text-element-${el.id}`);
@@ -2064,72 +2250,6 @@ export class CollaborativePdfEditorController implements ViewController {
     div.style.fontFamily = el.fontFamily || 'Helvetica, sans-serif';
     div.style.transform = `rotate(${el.rotation || 0}deg)`;
     div.style.transformOrigin = 'center center';
-    div.contentEditable = 'false';
-    div.innerText = el.text || 'Texto';
-
-    div.addEventListener('input', () => {
-      el.text = div.innerText;
-      if (!el.isStickyNote) {
-        div.style.width = 'auto';
-        div.style.height = 'auto';
-        el.width = Math.ceil((div.offsetWidth || div.scrollWidth) + 8);
-        el.height = Math.ceil(div.offsetHeight || div.scrollHeight);
-        div.style.width = `${el.width}px`;
-        div.style.height = `${el.height}px`;
-        this.updateTransformBoxPosition();
-      }
-      this.setModified(true);
-    });
-
-    div.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!div.classList.contains('is-editing')) {
-        this.selectElement(el.id);
-      }
-    });
-
-    div.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      this.selectElement(el.id);
-      div.contentEditable = 'true';
-      div.classList.add('is-editing');
-      div.focus();
-      const range = document.createRange();
-      range.selectNodeContents(div);
-      const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    });
-
-    div.addEventListener('input', () => {
-      el.text = div.innerText;
-      this.setModified(true);
-      this.broadcastElementUpdate(el);
-    });
-
-    div.addEventListener('blur', () => {
-      div.contentEditable = 'false';
-      div.classList.remove('is-editing');
-      el.text = div.innerText;
-      if (!el.isStickyNote) {
-        div.style.width = 'auto';
-        div.style.height = 'auto';
-        el.width = Math.ceil((div.offsetWidth || div.scrollWidth) + 8);
-        el.height = Math.ceil(div.offsetHeight || div.scrollHeight);
-        div.style.width = `${el.width}px`;
-        div.style.height = `${el.height}px`;
-        this.updateTransformBoxPosition();
-      }
-      this.setModified(true);
-      this.broadcastElementUpdate(el);
-      void this.flushAutoSave();
-    });
-
-    div.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        div.blur();
-      }
-    });
 
     this.makeDraggable(div, el);
     return div;
@@ -2637,6 +2757,11 @@ export class CollaborativePdfEditorController implements ViewController {
   private selectElement(id: string | null): void {
     this.selectedElementId = id;
     this.selectedPageIndex = null;
+    this.selectedElementIds.clear();
+    if (id) {
+      this.selectedElementIds.add(id);
+    }
+
     const pageSheets = this.container.querySelectorAll('.collaborative-page-sheet');
     pageSheets.forEach((s) => s.classList.remove('is-page-selected'));
 
@@ -2676,7 +2801,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note');
     allEls.forEach((el) => {
       const elId = el.getAttribute('data-element-id');
-      el.classList.toggle('is-selected', elId === this.selectedElementId);
+      const isSelected = (elId && this.selectedElementIds.has(elId)) || elId === this.selectedElementId;
+      el.classList.toggle('is-selected', !!isSelected);
     });
   }
 
@@ -3292,7 +3418,21 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private deleteSelectedElement(): void {
-    if (this.selectedElementId) {
+    if (this.selectedElementIds.size > 0) {
+      const targetIds = Array.from(this.selectedElementIds);
+      for (const id of targetIds) {
+        const targetEl = this.elements.find((el) => el.id === id);
+        const pIdx = targetEl?.pageIndex ?? 0;
+        this.elements = this.elements.filter((el) => el.id !== id);
+        this.broadcastElementDelete(id, pIdx);
+      }
+      this.selectedElementIds.clear();
+      this.selectedElementId = null;
+      this.removeTransformBox();
+      this.renderPages();
+      this.setModified(true);
+      void this.flushAutoSave();
+    } else if (this.selectedElementId) {
       const targetId = this.selectedElementId;
       const targetEl = this.elements.find((el) => el.id === targetId);
       const pIdx = targetEl?.pageIndex ?? 0;
@@ -3302,6 +3442,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.renderPages();
       this.setModified(true);
       this.broadcastElementDelete(targetId, pIdx);
+      void this.flushAutoSave();
     } else if (this.selectedPageIndex !== null) {
       this.deletePage(this.selectedPageIndex);
     }
@@ -4336,10 +4477,11 @@ export class CollaborativePdfEditorController implements ViewController {
     } else if (msg.type === 'userJoined') {
       if (msg.peer && msg.peer.clientId !== this.myClientId) {
         this.remotePeers.set(msg.peer.clientId, msg.peer);
-        this.renderPresenceList();
+        this.addPeerPresenceBubble(msg.peer);
         showToast(`${msg.peer.username} se unió al diseño`, 'info');
       }
     } else if (msg.type === 'userLeft') {
+      this.removePeerPresenceBubble(msg.clientId);
       this.remotePeers.delete(msg.clientId);
       const cursorEl = this.remoteCursorElements.get(msg.clientId);
       if (cursorEl) {
@@ -4351,7 +4493,6 @@ export class CollaborativePdfEditorController implements ViewController {
         clearTimeout(timer);
         this.remoteCursorTimers.delete(msg.clientId);
       }
-      this.renderPresenceList();
     } else if (msg.type === 'remoteCursor') {
       if (msg.clientId !== this.myClientId) {
         this.renderRemoteCursor(msg);
@@ -4391,6 +4532,41 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
+  private addPeerPresenceBubble(peer: { avatarUrl?: string | null; clientId: string; color: string; isGuest?: boolean; username: string }): void {
+    const presenceContainer = this.container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
+    if (!presenceContainer) return;
+
+    let bubble = presenceContainer.querySelector<HTMLElement>(`[data-client-id="${peer.clientId}"]`);
+    if (!bubble) {
+      bubble = document.createElement('div');
+      bubble.className = 'collab-presence-bubble collab-presence-bubble--enter';
+      bubble.setAttribute('data-client-id', peer.clientId);
+      bubble.style.backgroundColor = peer.color;
+      const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
+      bubble.setAttribute('data-tooltip', peerLabel);
+      bubble.setAttribute('aria-label', peerLabel);
+      if (peer.avatarUrl) {
+        bubble.innerHTML = `<img src="${peer.avatarUrl}" alt="${peer.username}" />`;
+      } else {
+        bubble.textContent = peer.username.substring(0, 2).toUpperCase();
+      }
+      presenceContainer.appendChild(bubble);
+    }
+  }
+
+  private removePeerPresenceBubble(clientId: string): void {
+    const presenceContainer = this.container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
+    if (!presenceContainer) return;
+    const bubble = presenceContainer.querySelector<HTMLElement>(`[data-client-id="${clientId}"]`);
+    if (bubble) {
+      bubble.classList.remove('collab-presence-bubble--enter');
+      bubble.classList.add('collab-presence-bubble--leave');
+      setTimeout(() => {
+        bubble.remove();
+      }, 360);
+    }
+  }
+
   private renderPresenceList(): void {
     const presenceContainer = this.container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
     if (!presenceContainer) return;
@@ -4406,6 +4582,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const myInitials = myName.substring(0, 2).toUpperCase();
     const myBubble = document.createElement('div');
     myBubble.className = 'collab-presence-bubble';
+    myBubble.setAttribute('data-client-id', 'me');
     myBubble.style.backgroundColor = this.myColor;
     const fullSuffix = this.isCollabRoomFull ? ' (Sala llena)' : '';
     myBubble.setAttribute('data-tooltip', `${myName} (Tú)${fullSuffix}`);
@@ -4420,6 +4597,7 @@ export class CollaborativePdfEditorController implements ViewController {
     for (const peer of this.remotePeers.values()) {
       const peerBubble = document.createElement('div');
       peerBubble.className = 'collab-presence-bubble';
+      peerBubble.setAttribute('data-client-id', peer.clientId);
       peerBubble.style.backgroundColor = peer.color;
       const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
       peerBubble.setAttribute('data-tooltip', peerLabel);
@@ -4495,20 +4673,30 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
+  private closeSharePopover(): void {
+    if (this.cleanupSharePopover) {
+      this.cleanupSharePopover();
+      this.cleanupSharePopover = null;
+    } else if (this.sharePopoverElement) {
+      this.sharePopoverElement.remove();
+      this.sharePopoverElement = null;
+    }
+  }
+
   private openShareModal(): void {
     if (this.isLocalOnly) {
       this.openLocalAuthModal();
       return;
     }
 
-    if (this.shareModalElement) {
-      this.shareModalElement.remove();
-      this.shareModalElement = null;
+    if (this.sharePopoverElement) {
+      this.closeSharePopover();
+      return;
     }
 
-    const modal = document.createElement('div');
-    modal.className = 'modal-backdrop collab-share-backdrop';
-    modal.setAttribute('data-ref', 'collab-share-backdrop');
+    const popover = document.createElement('div');
+    popover.className = 'collab-share-popover';
+    popover.setAttribute('data-ref', 'collab-share-popover');
 
     const canManagePermissions = this.isDocOwner && !!currentUser;
     const isLinkMode = this.docAccessLevel === 'anyone_with_link';
@@ -4516,9 +4704,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const ownerAvatar = currentUser?.avatar_url || null;
     const ownerInitials = ownerName.substring(0, 2).toUpperCase();
 
-    modal.innerHTML = `
-      <div class="modal-container collab-share-container" data-ref="collab-share-container">
-        <div class="collab-share-card" data-ref="collab-share-card">
+    popover.innerHTML = `
+      <div class="collab-share-card" data-ref="collab-share-card">
           <div class="collab-share-header">
             <h2 class="collab-share-title">Compartir el diseño</h2>
             <button type="button" class="collab-share-close-btn" data-ref="btn-collab-share-close" aria-label="Cerrar">
@@ -4615,32 +4802,49 @@ export class CollaborativePdfEditorController implements ViewController {
       </div>
     `;
 
-    document.body.appendChild(modal);
-    this.shareModalElement = modal;
-    renderIcons(modal);
+    document.body.appendChild(popover);
+    this.sharePopoverElement = popover;
+    renderIcons(popover);
 
-    const closeModal = () => {
-      modal.remove();
-      this.shareModalElement = null;
+    const closePopover = () => {
+      this.closeSharePopover();
     };
 
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal || (e.target as HTMLElement).getAttribute('data-ref') === 'collab-share-container') {
-        closeModal();
+    const closeBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-share-close"]');
+    closeBtn?.addEventListener('click', () => closePopover());
+
+    const onOutsidePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (popover && !popover.contains(target) && !target.closest('[data-ref="btn-share-link"]')) {
+        closePopover();
       }
-    });
+    };
+    setTimeout(() => {
+      document.addEventListener('pointerdown', onOutsidePointerDown);
+    }, 10);
 
-    const closeBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-share-close"]');
-    closeBtn?.addEventListener('click', () => closeModal());
+    const onEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closePopover();
+      }
+    };
+    document.addEventListener('keydown', onEscapeKey);
 
-    const searchInput = modal.querySelector<HTMLInputElement>('[data-ref="input-share-search-user"]');
-    const searchDropdown = modal.querySelector<HTMLElement>('[data-ref="collab-share-search-dropdown"]');
-    const focusAddBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-focus-search-user"]');
+    this.cleanupSharePopover = () => {
+      document.removeEventListener('pointerdown', onOutsidePointerDown);
+      document.removeEventListener('keydown', onEscapeKey);
+      popover.remove();
+      this.sharePopoverElement = null;
+    };
+
+    const searchInput = popover.querySelector<HTMLInputElement>('[data-ref="input-share-search-user"]');
+    const searchDropdown = popover.querySelector<HTMLElement>('[data-ref="collab-share-search-dropdown"]');
+    const focusAddBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-focus-search-user"]');
     focusAddBtn?.addEventListener('click', () => searchInput?.focus());
 
     const renderAvatars = () => {
-      const avatarsList = modal.querySelector<HTMLElement>('[data-ref="collab-share-avatars-list"]');
-      const detailsList = modal.querySelector<HTMLElement>('[data-ref="collab-share-members-details"]');
+      const avatarsList = popover.querySelector<HTMLElement>('[data-ref="collab-share-avatars-list"]');
+      const detailsList = popover.querySelector<HTMLElement>('[data-ref="collab-share-members-details"]');
       if (!avatarsList) return;
 
       avatarsList.innerHTML = '';
@@ -4701,7 +4905,7 @@ export class CollaborativePdfEditorController implements ViewController {
           detailsList.appendChild(row);
         }
       }
-      renderIcons(modal);
+      renderIcons(popover);
     };
 
     renderAvatars();
@@ -4759,14 +4963,14 @@ export class CollaborativePdfEditorController implements ViewController {
       void doSearch(searchInput.value);
     });
 
-    const accessTrigger = modal.querySelector<HTMLButtonElement>('[data-ref="btn-access-trigger"]');
-    const accessMenu = modal.querySelector<HTMLElement>('[data-ref="collab-access-menu"]');
-    const optRestricted = modal.querySelector<HTMLButtonElement>('[data-ref="option-access-restricted"]');
-    const optLink = modal.querySelector<HTMLButtonElement>('[data-ref="option-access-link"]');
-    const triggerLabel = modal.querySelector<HTMLElement>('[data-ref="access-trigger-label"]');
-    const triggerIcon = modal.querySelector<HTMLElement>('[data-ref="access-trigger-icon"]');
-    const checkRestricted = modal.querySelector<HTMLElement>('[data-ref="check-access-restricted"]');
-    const checkLink = modal.querySelector<HTMLElement>('[data-ref="check-access-link"]');
+    const accessTrigger = popover.querySelector<HTMLButtonElement>('[data-ref="btn-access-trigger"]');
+    const accessMenu = popover.querySelector<HTMLElement>('[data-ref="collab-access-menu"]');
+    const optRestricted = popover.querySelector<HTMLButtonElement>('[data-ref="option-access-restricted"]');
+    const optLink = popover.querySelector<HTMLButtonElement>('[data-ref="option-access-link"]');
+    const triggerLabel = popover.querySelector<HTMLElement>('[data-ref="access-trigger-label"]');
+    const triggerIcon = popover.querySelector<HTMLElement>('[data-ref="access-trigger-icon"]');
+    const checkRestricted = popover.querySelector<HTMLElement>('[data-ref="check-access-restricted"]');
+    const checkLink = popover.querySelector<HTMLElement>('[data-ref="check-access-link"]');
 
     if (canManagePermissions) {
       accessTrigger?.addEventListener('click', () => {
@@ -4787,7 +4991,7 @@ export class CollaborativePdfEditorController implements ViewController {
         optLink?.classList.toggle('is-selected', isL);
         checkRestricted?.classList.toggle('is-hidden', isL);
         checkLink?.classList.toggle('is-hidden', !isL);
-        renderIcons(modal);
+        renderIcons(popover);
 
         try {
           await patchApi(API_ROUTES.collaborativeDocs.accessLevel(this.docId), { accessLevel: level });
@@ -4799,8 +5003,8 @@ export class CollaborativePdfEditorController implements ViewController {
       optLink?.addEventListener('click', () => void selectAccess('anyone_with_link'));
     }
 
-    const copyBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-copy-link"]');
-    const copyTxt = modal.querySelector<HTMLElement>('[data-ref="txt-copy-link"]');
+    const copyBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-copy-link"]');
+    const copyTxt = popover.querySelector<HTMLElement>('[data-ref="txt-copy-link"]');
     copyBtn?.addEventListener('click', () => {
       const url = `${window.location.origin}/d/${encodeURIComponent(this.docId)}`;
       void navigator.clipboard.writeText(url).then(() => {
@@ -4812,7 +5016,7 @@ export class CollaborativePdfEditorController implements ViewController {
       });
     });
 
-    const downloadBtn = modal.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
+    const downloadBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
     downloadBtn?.addEventListener('click', () => {
       const downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
       const a = document.createElement('a');
