@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settings.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
+import { startColdStorageCron } from './services/storage-quota.service.js';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
@@ -243,6 +244,7 @@ async function startServer(): Promise<void> {
   const port = config.port;
   server.listen(port, () => {
     logger.app.info(`Servidor BoardPDF iniciado en http://localhost:${port}`);
+    startColdStorageCron();
   });
 }
 

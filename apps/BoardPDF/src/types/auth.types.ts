@@ -6,6 +6,8 @@ export interface UserPayload {
   last_accessed?: number;
   role?: string;
   roles?: string[];
+  storage_limit_bytes?: number;
+  storage_used_bytes?: number;
   subscription_tier?: string;
   two_factor_enabled?: boolean;
   username: string;
@@ -19,6 +21,8 @@ export interface SessionAccount {
   role?: string;
   roles?: string[];
   sessionId?: string;
+  storage_limit_bytes?: number;
+  storage_used_bytes?: number;
   subscription_tier?: string;
   two_factor_enabled?: boolean;
   username: string;

@@ -1,5 +1,6 @@
 import { getDbPool } from '../../config/database.config.js';
 import { logger } from '../../services/logger.service.js';
+import { reclaimDocumentStorage, syncDocumentStorage } from '../../services/storage-quota.service.js';
 import { cleanTextForWinAnsi, parseHexColor } from '../../utils/pdf.util.js';
 import { CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeMember } from './collaborative-pdf.types.js';
 import fs from 'fs';
@@ -36,14 +37,19 @@ export async function renderCollaborativePdf(
     return fontHelvetica;
   };
 
-  const targetWidth = 595.28;
-  const targetHeight = 841.89;
-  const screenWidth = content.pageSize?.width || 794;
-  const scale = targetWidth / screenWidth;
+  const defaultW = content.pageSize?.width || 794;
+  const defaultH = content.pageSize?.height || 1123;
+  const scale = 72 / 96;
   const pageCount = Math.max(1, content.pageCount || 1);
 
   const pages = [];
+  const pageHeights: number[] = [];
   for (let i = 0; i < pageCount; i++) {
+    const pageW = content.pageSizes?.[i]?.width || defaultW;
+    const pageH = content.pageSizes?.[i]?.height || defaultH;
+    const targetWidth = (pageW / 96) * 72;
+    const targetHeight = (pageH / 96) * 72;
+    pageHeights.push(targetHeight);
     const page = pdfDoc.addPage([targetWidth, targetHeight]);
     if (content.pageBackgrounds && content.pageBackgrounds[i] && content.pageBackgrounds[i] !== '#ffffff') {
       const bg = parseHexColor(content.pageBackgrounds[i]);
@@ -87,6 +93,7 @@ export async function renderCollaborativePdf(
     const pageIndex = el.pageIndex ?? 0;
     if (pageIndex < 0 || pageIndex >= pages.length) continue;
     const page = pages[pageIndex];
+    const targetHeight = pageHeights[pageIndex] || (defaultH / 96) * 72;
 
     if (el.type === 'text') {
       const clean = cleanTextForWinAnsi(el.text || '');
@@ -370,11 +377,16 @@ export async function saveCollaborativeDocument(payload: {
     logger.db.warn('No se pudo guardar documento colaborativo en MySQL, guardado en disco con éxito', err);
   }
 
+  if (existingUserId) {
+    const jsonBytes = Buffer.byteLength(JSON.stringify(payload.content), 'utf-8');
+    void syncDocumentStorage(payload.id, Number(existingUserId), jsonBytes, 0);
+  }
+
   record.members = await getCollaborativeDocMembers(payload.id);
   return record;
 }
 
-export async function deleteCollaborativeDocument(id: string): Promise<boolean> {
+export async function deleteCollaborativeDocument(id: string, userId?: number | null): Promise<boolean> {
   ensureStorageDir();
   try {
     const pool = getDbPool();
@@ -383,6 +395,8 @@ export async function deleteCollaborativeDocument(id: string): Promise<boolean> 
   } catch (err) {
     logger.db.warn('Error al eliminar documento colaborativo de MySQL', err);
   }
+
+  await reclaimDocumentStorage(id, userId);
 
   const jsonPath = path.join(STORAGE_DIR, `${id}.json`);
   const membersPath = path.join(STORAGE_DIR, `${id}.members.json`);

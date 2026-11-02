@@ -2,6 +2,7 @@ import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { deleteAvatar, deleteUserAccount, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, updateAvatar, updateEmail, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
+import { getUserStorageStats } from '../services/storage-quota.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { disableUser2FA, enableUser2FA, findUserById, getUser2FASecret, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';
@@ -570,5 +571,20 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
     });
   } catch (error) {
     sendInternalError(res, 'Error al eliminar cuenta', error, 'No se pudo eliminar tu cuenta. Por favor intenta más tarde.');
+  }
+}
+
+export async function handleGetStorageStats(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+    const stats = await getUserStorageStats(currentUser.id);
+    sendSuccess(res, stats);
+  } catch (error) {
+    logger.app.error('Error al obtener estadísticas de almacenamiento de usuario', error);
+    sendInternalError(res, 'Error al obtener almacenamiento', error, 'Ha ocurrido un error inesperado al procesar la solicitud.');
   }
 }

@@ -41,6 +41,7 @@ export const API_ROUTES = {
     passwordStatus: '/api/settings/password/status',
     passwordVerify: '/api/settings/password/verify',
     preferences: '/api/settings/preferences',
+    storage: '/api/settings/storage',
     twoFactorDisable: '/api/settings/2fa/disable',
     twoFactorEnable: '/api/settings/2fa/enable',
     twoFactorGenerate: '/api/settings/2fa/generate',

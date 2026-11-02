@@ -1,4 +1,6 @@
+import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { COLLAB_PAGE_PRESETS, inToPx, mmToPx, PageDimension, PagePreset } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -106,9 +108,13 @@ export class CollaborativePdfEditorController implements ViewController {
   private collabCleanup: (() => void) | null = null;
   private container: HTMLElement;
   private docAccessLevel: 'anyone_with_link' | 'restricted' = 'restricted';
+  private docDefaultPageSize: PageDimension = { height: 1123, width: 794 };
+  private initialUrlDimensions: PageDimension | null = null;
+  private isLoadingDocument = false;
   private docId = '';
   private docMembers: Array<{ avatar_url?: string | null; email?: string; id?: number; role: 'editor' | 'viewer'; user_id: number; username: string }> = [];
   private docTitle = 'Documento sin título';
+  private pageSizes: PageDimension[] = [];
   private drawColor = '#000000';
   private drawMode: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
   private drawThickness = 2;
@@ -151,12 +157,20 @@ export class CollaborativePdfEditorController implements ViewController {
   async init(): Promise<void> {
     this.abortController = new AbortController();
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryW = parseInt(urlParams.get('w') || '0', 10);
+    const queryH = parseInt(urlParams.get('h') || '0', 10);
+    if (queryW > 0 && queryH > 0) {
+      this.initialUrlDimensions = { height: queryH, width: queryW };
+    }
+
     if (!this.docId) {
-      const urlParams = new URLSearchParams(window.location.search);
       const queryId = urlParams.get('id');
       const pathMatch = window.location.pathname.match(/^\/d\/([a-zA-Z0-9_-]+)\/?$/);
       this.docId = queryId || (pathMatch ? pathMatch[1] : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`));
     }
+
+    console.log('[Collab Diagnóstico][Editor] init() start. docId:', this.docId, 'initialUrlDimensions:', this.initialUrlDimensions, 'currentUser:', currentUser);
 
     if (window.location.pathname !== `/d/${this.docId}`) {
       window.history.replaceState({}, '', `/d/${encodeURIComponent(this.docId)}`);
@@ -813,13 +827,68 @@ export class CollaborativePdfEditorController implements ViewController {
     elNode?.focus();
   }
 
-  private addPage(afterIndex?: number): void {
+  private getPageDimensions(pageIndex: number): PageDimension {
+    return this.pageSizes[pageIndex] || this.docDefaultPageSize;
+  }
+
+  private initPageSizesFromContent(content: any): void {
+    console.log('[Collab Diagnóstico][Editor] initPageSizesFromContent entrada:', content);
+    if (content?.pageSize?.width && content?.pageSize?.height) {
+      this.docDefaultPageSize = {
+        height: content.pageSize.height,
+        width: content.pageSize.width,
+      };
+    }
+    if (Array.isArray(content?.pageSizes) && content.pageSizes.length > 0) {
+      this.pageSizes = content.pageSizes.map((s: any) => ({
+        height: s.height || this.docDefaultPageSize.height,
+        width: s.width || this.docDefaultPageSize.width,
+      }));
+    } else {
+      this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
+    }
+    while (this.pageSizes.length < this.pageCount) {
+      this.pageSizes.push({ ...this.docDefaultPageSize });
+    }
+    console.log('[Collab Diagnóstico][Editor] initPageSizesFromContent salida:', { docDefaultPageSize: this.docDefaultPageSize, pageSizes: this.pageSizes });
+  }
+
+  private getContentPayload() {
+    while (this.pageSizes.length < this.pageCount) {
+      this.pageSizes.push({ ...this.docDefaultPageSize });
+    }
+    while (this.pageBackgrounds.length < this.pageCount) {
+      this.pageBackgrounds.push('#ffffff');
+    }
+    while (this.pagePdfSources.length < this.pageCount) {
+      this.pagePdfSources.push(null);
+    }
+    while (this.pageTitles.length < this.pageCount) {
+      this.pageTitles.push('');
+    }
+    return {
+      elements: this.elements,
+      pageBackgrounds: this.pageBackgrounds,
+      pageCount: this.pageCount,
+      pagePdfSources: this.pagePdfSources,
+      pageSize: this.docDefaultPageSize,
+      pageSizes: this.pageSizes,
+      pageTitles: this.pageTitles,
+    };
+  }
+
+  private addPage(afterIndex?: number, customDim?: PageDimension): void {
     const targetIndex = afterIndex !== undefined ? afterIndex + 1 : this.pageCount;
     this.elements.forEach((el) => {
       if ((el.pageIndex ?? 0) >= targetIndex) {
         el.pageIndex = (el.pageIndex ?? 0) + 1;
       }
     });
+
+    const inheritedDim = afterIndex !== undefined && this.pageSizes[afterIndex]
+      ? { ...this.pageSizes[afterIndex] }
+      : { ...this.docDefaultPageSize };
+    this.pageSizes.splice(targetIndex, 0, customDim ? { ...customDim } : inheritedDim);
 
     this.pageTitles.splice(targetIndex, 0, '');
     this.pageBackgrounds.splice(targetIndex, 0, '#ffffff');
@@ -860,6 +929,11 @@ export class CollaborativePdfEditorController implements ViewController {
       this.elements.push(clone);
     }
 
+    const copyDim = this.pageSizes[pageIndex]
+      ? { ...this.pageSizes[pageIndex] }
+      : { ...this.docDefaultPageSize };
+    this.pageSizes.splice(targetIndex, 0, copyDim);
+
     this.pageTitles.splice(targetIndex, 0, this.pageTitles[pageIndex] ? `${this.pageTitles[pageIndex]} (Copia)` : '');
     this.pageBackgrounds.splice(targetIndex, 0, this.pageBackgrounds[pageIndex] || '#ffffff');
     const sourcePdf = this.pagePdfSources[pageIndex];
@@ -886,6 +960,7 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     });
 
+    this.pageSizes.splice(pageIndex, 1);
     this.pageTitles.splice(pageIndex, 1);
     this.pageBackgrounds.splice(pageIndex, 1);
     this.pagePdfSources.splice(pageIndex, 1);
@@ -909,6 +984,10 @@ export class CollaborativePdfEditorController implements ViewController {
         el.pageIndex = pageIndex;
       }
     });
+
+    const tmpSize = this.pageSizes[pageIndex];
+    this.pageSizes[pageIndex] = this.pageSizes[prev];
+    this.pageSizes[prev] = tmpSize;
 
     const tmpTitle = this.pageTitles[pageIndex];
     this.pageTitles[pageIndex] = this.pageTitles[prev];
@@ -941,6 +1020,10 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     });
 
+    const tmpSize = this.pageSizes[pageIndex];
+    this.pageSizes[pageIndex] = this.pageSizes[next];
+    this.pageSizes[next] = tmpSize;
+
     const tmpTitle = this.pageTitles[pageIndex];
     this.pageTitles[pageIndex] = this.pageTitles[next];
     this.pageTitles[next] = tmpTitle;
@@ -960,49 +1043,331 @@ export class CollaborativePdfEditorController implements ViewController {
     this.broadcastDocSync();
   }
 
+  private rotatePage(pageIndex: number): void {
+    const cur = this.getPageDimensions(pageIndex);
+    this.pageSizes[pageIndex] = { height: cur.width, width: cur.height };
+    this.renderPages();
+    this.selectPage(pageIndex);
+    this.setModified(true);
+    this.broadcastDocSync();
+    const isLandscape = this.pageSizes[pageIndex].width > this.pageSizes[pageIndex].height;
+    showToast(`Página ${pageIndex + 1} cambiada a ${isLandscape ? 'horizontal' : 'vertical'}`, 'info');
+  }
+
+  private openResizePageModal(pageIndex: number): void {
+    const curDim = this.getPageDimensions(pageIndex);
+    let selectedPresetId = 'custom';
+    let currentOrientation: 'landscape' | 'portrait' = curDim.width > curDim.height ? 'landscape' : 'portrait';
+    let customUnit: 'in' | 'mm' | 'px' = 'px';
+
+    const matchingPreset = COLLAB_PAGE_PRESETS.find(
+      (p) => (p.width === curDim.width && p.height === curDim.height) ||
+             (p.width === curDim.height && p.height === curDim.width)
+    );
+    if (matchingPreset && matchingPreset.id !== 'custom') {
+      selectedPresetId = matchingPreset.id;
+    }
+
+    const modalBody = document.createElement('div');
+    modalBody.className = 'collab-size-modal';
+    modalBody.setAttribute('data-ref', 'collab-resize-modal-body');
+
+    modalBody.innerHTML = `
+      <div class="collab-size-modal__section" data-ref="section-presets">
+        <h4 class="collab-size-modal__section-title">Plantillas de tamaño</h4>
+        <div class="collab-size-grid" data-ref="grid-presets">
+          ${COLLAB_PAGE_PRESETS.map((p) => `
+            <div class="collab-size-card${p.id === selectedPresetId ? ' is-selected' : ''}" data-ref="preset-card-${p.id}" data-preset-id="${p.id}">
+              <div class="collab-size-card__icon-box" data-ref="icon-box-${p.id}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${p.icon}"></use></svg>
+              </div>
+              <div class="collab-size-card__info" data-ref="info-${p.id}">
+                <span class="collab-size-card__name">${p.name}</span>
+                <span class="collab-size-card__desc">${p.description}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="collab-orientation-wrapper" data-ref="wrapper-orientation">
+        <span class="collab-size-modal__section-title">Orientación</span>
+        <div class="collab-orientation-toggle" data-ref="toggle-orientation">
+          <button type="button" class="collab-orientation-btn${currentOrientation === 'portrait' ? ' is-active' : ''}" data-ref="btn-orient-portrait" data-orient="portrait">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+            <span>Vertical</span>
+          </button>
+          <button type="button" class="collab-orientation-btn${currentOrientation === 'landscape' ? ' is-active' : ''}" data-ref="btn-orient-landscape" data-orient="landscape">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+            <span>Horizontal</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="collab-custom-wrapper" data-ref="wrapper-custom" style="${selectedPresetId === 'custom' ? '' : 'display: none;'}">
+        <span class="collab-size-modal__section-title">Dimensiones personalizadas</span>
+        <div class="collab-custom-inputs" data-ref="custom-inputs">
+          <label class="field" data-ref="field-custom-w">
+            <input class="field__input field__input--h36" data-ref="input-custom-w" type="number" min="50" max="8000" value="${curDim.width}" />
+            <span class="field__label">Ancho</span>
+          </label>
+          <label class="field" data-ref="field-custom-h">
+            <input class="field__input field__input--h36" data-ref="input-custom-h" type="number" min="50" max="8000" value="${curDim.height}" />
+            <span class="field__label">Alto</span>
+          </label>
+          <div class="field" data-ref="field-custom-unit">
+            <select class="collab-custom-unit-select" data-ref="select-custom-unit">
+              <option value="px" selected>Píxeles (px)</option>
+              <option value="mm">Milímetros (mm)</option>
+              <option value="in">Pulgadas (in)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="collab-size-summary" data-ref="size-summary">
+        <span>Dimensiones resultantes:</span>
+        <span class="collab-size-summary__strong" data-ref="txt-size-summary">${curDim.width} × ${curDim.height} px</span>
+      </div>
+
+      <label class="collab-resize-checkbox-label" data-ref="label-apply-all">
+        <input type="checkbox" data-ref="chk-apply-all" />
+        <span>Aplicar este tamaño a todas las páginas del documento</span>
+      </label>
+    `;
+
+    renderIcons(modalBody);
+
+    const cards = modalBody.querySelectorAll<HTMLElement>('[data-preset-id]');
+    const customWrapper = modalBody.querySelector<HTMLElement>('[data-ref="wrapper-custom"]');
+    const inputCustomW = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-w"]');
+    const inputCustomH = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-h"]');
+    const selectUnit = modalBody.querySelector<HTMLSelectElement>('[data-ref="select-custom-unit"]');
+    const txtSummary = modalBody.querySelector<HTMLElement>('[data-ref="txt-size-summary"]');
+    const btnPortrait = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-portrait"]');
+    const btnLandscape = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-landscape"]');
+    const chkApplyAll = modalBody.querySelector<HTMLInputElement>('[data-ref="chk-apply-all"]');
+
+    const updateSummary = () => {
+      let w = curDim.width;
+      let h = curDim.height;
+      if (selectedPresetId === 'custom') {
+        const rawW = parseFloat(inputCustomW?.value || '800') || 800;
+        const rawH = parseFloat(inputCustomH?.value || '600') || 600;
+        if (customUnit === 'mm') {
+          w = mmToPx(rawW);
+          h = mmToPx(rawH);
+        } else if (customUnit === 'in') {
+          w = inToPx(rawW);
+          h = inToPx(rawH);
+        } else {
+          w = Math.round(rawW);
+          h = Math.round(rawH);
+        }
+      } else {
+        const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
+        if (p) {
+          if (currentOrientation === 'landscape') {
+            w = Math.max(p.width, p.height);
+            h = Math.min(p.width, p.height);
+          } else {
+            w = Math.min(p.width, p.height);
+            h = Math.max(p.width, p.height);
+          }
+        }
+      }
+      if (txtSummary) {
+        txtSummary.textContent = `${w} × ${h} px (${currentOrientation === 'landscape' ? 'Horizontal' : 'Vertical'})`;
+      }
+      return { height: h, width: w };
+    };
+
+    cards.forEach((card) => {
+      card.addEventListener('click', () => {
+        cards.forEach((c) => c.classList.remove('is-selected'));
+        card.classList.add('is-selected');
+        selectedPresetId = card.getAttribute('data-preset-id') || 'a4';
+
+        if (selectedPresetId === 'custom') {
+          if (customWrapper) customWrapper.style.display = 'block';
+        } else {
+          if (customWrapper) customWrapper.style.display = 'none';
+          const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
+          if (p?.defaultOrientation) {
+            currentOrientation = p.defaultOrientation;
+            if (currentOrientation === 'landscape') {
+              btnLandscape?.classList.add('is-active');
+              btnPortrait?.classList.remove('is-active');
+            } else {
+              btnPortrait?.classList.add('is-active');
+              btnLandscape?.classList.remove('is-active');
+            }
+          }
+        }
+        updateSummary();
+      });
+    });
+
+    btnPortrait?.addEventListener('click', () => {
+      currentOrientation = 'portrait';
+      btnPortrait.classList.add('is-active');
+      btnLandscape?.classList.remove('is-active');
+      updateSummary();
+    });
+
+    btnLandscape?.addEventListener('click', () => {
+      currentOrientation = 'landscape';
+      btnLandscape.classList.add('is-active');
+      btnPortrait?.classList.remove('is-active');
+      updateSummary();
+    });
+
+    inputCustomW?.addEventListener('input', updateSummary);
+    inputCustomH?.addEventListener('input', updateSummary);
+    selectUnit?.addEventListener('change', () => {
+      customUnit = (selectUnit.value as 'in' | 'mm' | 'px') || 'px';
+      updateSummary();
+    });
+
+    const modal = openModal({
+      bodyHtml: modalBody,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Aplicar tamaño',
+      description: `Modifica el formato o dimensiones de la página ${pageIndex + 1}.`,
+      onConfirm: () => {
+        const finalDimensions = updateSummary();
+        const applyToAll = !!chkApplyAll?.checked;
+
+        if (applyToAll) {
+          this.docDefaultPageSize = { ...finalDimensions };
+          this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...finalDimensions }));
+        } else {
+          this.pageSizes[pageIndex] = { ...finalDimensions };
+        }
+
+        this.renderPages();
+        this.selectPage(pageIndex);
+        this.setModified(true);
+        this.broadcastDocSync();
+        modal.close();
+        showToast(applyToAll ? 'Tamaño aplicado a todas las páginas' : `Tamaño de página ${pageIndex + 1} actualizado`, 'success');
+      },
+      showCancel: true,
+      showConfirm: true,
+      size: 'md',
+      title: `Tamaño de Página ${pageIndex + 1}`,
+    });
+  }
+
   private async loadDocument(): Promise<boolean> {
     if (!this.docId) return false;
+    this.isLoadingDocument = true;
     let serverDoc: any = null;
 
-    if (!currentUser) {
-      const localDraft = getLocalDraft(this.docId);
-      if (localDraft) {
-        this.isLocalOnly = true;
-        this.docTitle = localDraft.title;
-        this.docAccessLevel = 'restricted';
-        this.isDocOwner = true;
-        this.canEditDoc = true;
-        this.docMembers = [];
-        this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
-        this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
-        this.pageTitles = Array.isArray(localDraft.content?.pageTitles) ? localDraft.content.pageTitles : [];
-        this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) ? localDraft.content.pageBackgrounds : [];
-        this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) ? localDraft.content.pagePdfSources : [];
-      } else {
-        try {
-          const res = await getApi(API_ROUTES.collaborativeDocs.byId(this.docId));
-          if (res.ok) {
-            const data = await res.json();
-            serverDoc = data.document;
-            if (data.document) {
-              this.isLocalOnly = false;
-              this.docTitle = data.document.title || 'Documento sin título';
-              this.docAccessLevel = data.document.access_level || 'restricted';
-              this.isDocOwner = data.isOwner ?? false;
-              this.canEditDoc = data.canEdit ?? true;
-              this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
-              this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
-              this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
-              this.pageTitles = Array.isArray(data.document.content?.pageTitles) ? data.document.content.pageTitles : [];
-              this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) ? data.document.content.pageBackgrounds : [];
-              this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) ? data.document.content.pagePdfSources : [];
+    try {
+      console.log('[Collab Diagnóstico][Editor] loadDocument() iniciando para docId:', this.docId, 'currentUser:', currentUser);
+
+      if (!currentUser) {
+        const localDraft = getLocalDraft(this.docId);
+        console.log('[Collab Diagnóstico][Editor] Modo invitado. localDraft:', localDraft);
+
+        if (localDraft) {
+          this.isLocalOnly = true;
+          this.docTitle = localDraft.title;
+          this.docAccessLevel = 'restricted';
+          this.isDocOwner = true;
+          this.canEditDoc = true;
+          this.docMembers = [];
+          this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
+          this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
+          this.pageTitles = Array.isArray(localDraft.content?.pageTitles) && localDraft.content.pageTitles.length > 0 ? localDraft.content.pageTitles : [''];
+          this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) && localDraft.content.pageBackgrounds.length > 0 ? localDraft.content.pageBackgrounds : ['#ffffff'];
+          this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) && localDraft.content.pagePdfSources.length > 0 ? localDraft.content.pagePdfSources : [null];
+          this.initPageSizesFromContent(localDraft.content);
+
+          if (this.initialUrlDimensions && this.elements.length === 0) {
+            console.log('[Collab Diagnóstico][Editor] Aplicando initialUrlDimensions a localDraft:', this.initialUrlDimensions);
+            this.docDefaultPageSize = { ...this.initialUrlDimensions };
+            this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
+          }
+        } else {
+          try {
+            const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
+            const res = await getApi(getUrl);
+            if (res.ok) {
+              const data = await res.json();
+              serverDoc = data.document;
+              if (data.document) {
+                this.isLocalOnly = false;
+                this.docTitle = data.document.title || 'Documento sin título';
+                this.docAccessLevel = data.document.access_level || 'restricted';
+                this.isDocOwner = data.isOwner ?? false;
+                this.canEditDoc = data.canEdit ?? true;
+                this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+                this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+                this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+                this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
+                this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
+                this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
+                this.initPageSizesFromContent(data.document.content);
+
+                const serverElements = data.document.content?.elements || [];
+                const freshDraft = getLocalDraft(this.docId);
+                const targetPageSize = this.initialUrlDimensions || freshDraft?.content?.pageSize;
+                if (serverElements.length === 0 && targetPageSize?.width && targetPageSize?.height) {
+                  this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
+                  this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
+                  if (freshDraft?.title) this.docTitle = freshDraft.title;
+                  this.scheduleAutoSave(500);
+                }
+              }
+            } else if (res.status === 403) {
+              this.isRestrictedAccess = true;
+              this.renderRestrictedScreen();
+              return false;
+            } else {
+              const initialDim = this.initialUrlDimensions || { height: 1123, width: 794 };
+              const newDraft = saveLocalDraft(this.docId, {
+                content: {
+                  elements: [],
+                  pageBackgrounds: ['#ffffff'],
+                  pageCount: 1,
+                  pagePdfSources: [null],
+                  pageSize: initialDim,
+                  pageSizes: [initialDim],
+                  pageTitles: [''],
+                },
+                title: 'Documento sin título',
+              });
+              this.isLocalOnly = true;
+              this.docTitle = newDraft.title;
+              this.docAccessLevel = 'restricted';
+              this.isDocOwner = true;
+              this.canEditDoc = true;
+              this.docMembers = [];
+              this.pageCount = 1;
+              this.elements = [];
+              this.pageTitles = [''];
+              this.pageBackgrounds = ['#ffffff'];
+              this.pagePdfSources = [null];
+              this.docDefaultPageSize = { ...initialDim };
+              this.pageSizes = [{ ...initialDim }];
             }
-          } else if (res.status === 403) {
-            this.isRestrictedAccess = true;
-            this.renderRestrictedScreen();
-            return false;
-          } else {
-            const newDraft = saveLocalDraft(this.docId, { title: 'Documento sin título' });
+          } catch {
+            const initialDim = this.initialUrlDimensions || { height: 1123, width: 794 };
+            const newDraft = saveLocalDraft(this.docId, {
+              content: {
+                elements: [],
+                pageBackgrounds: ['#ffffff'],
+                pageCount: 1,
+                pagePdfSources: [null],
+                pageSize: initialDim,
+                pageSizes: [initialDim],
+                pageTitles: [''],
+              },
+              title: 'Documento sin título',
+            });
             this.isLocalOnly = true;
             this.docTitle = newDraft.title;
             this.docAccessLevel = 'restricted';
@@ -1014,95 +1379,119 @@ export class CollaborativePdfEditorController implements ViewController {
             this.pageTitles = [''];
             this.pageBackgrounds = ['#ffffff'];
             this.pagePdfSources = [null];
+            this.docDefaultPageSize = { ...initialDim };
+            this.pageSizes = [{ ...initialDim }];
           }
-        } catch {
-          const newDraft = saveLocalDraft(this.docId, { title: 'Documento sin título' });
-          this.isLocalOnly = true;
-          this.docTitle = newDraft.title;
-          this.docAccessLevel = 'restricted';
-          this.isDocOwner = true;
-          this.canEditDoc = true;
-          this.docMembers = [];
-          this.pageCount = 1;
-          this.elements = [];
-          this.pageTitles = [''];
-          this.pageBackgrounds = ['#ffffff'];
-          this.pagePdfSources = [null];
         }
-      }
-    } else {
-      try {
-        const res = await getApi(API_ROUTES.collaborativeDocs.byId(this.docId));
-        if (res.status === 403) {
-          this.isRestrictedAccess = true;
-          this.renderRestrictedScreen();
-          return false;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          serverDoc = data.document;
-          if (data.document) {
-            this.isLocalOnly = false;
-            this.docTitle = data.document.title || 'Documento sin título';
-            this.docAccessLevel = data.document.access_level || 'restricted';
-            this.isDocOwner = data.isOwner ?? true;
-            this.canEditDoc = data.canEdit ?? true;
-            this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
-            this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
-            this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
-            this.pageTitles = Array.isArray(data.document.content?.pageTitles) ? data.document.content.pageTitles : [];
-            this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) ? data.document.content.pageBackgrounds : [];
-            this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) ? data.document.content.pagePdfSources : [];
-          }
-        } else {
-          const localDraft = getLocalDraft(this.docId);
-          if (localDraft) {
-            this.isLocalOnly = true;
-            this.docTitle = localDraft.title;
-            this.docAccessLevel = 'restricted';
-            this.isDocOwner = true;
-            this.canEditDoc = true;
-            this.docMembers = [];
-            this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
-            this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
-            this.pageTitles = Array.isArray(localDraft.content?.pageTitles) ? localDraft.content.pageTitles : [];
-            this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) ? localDraft.content.pageBackgrounds : [];
-            this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) ? localDraft.content.pagePdfSources : [];
-            this.scheduleAutoSave(50);
-          } else {
-            showToast('El documento colaborativo no existe o fue eliminado.', 'danger');
-            navigate('/collaborative-pdf');
+      } else {
+        try {
+          const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
+          console.log('[Collab Diagnóstico][Editor] Obteniendo documento GET:', getUrl);
+          const res = await getApi(getUrl);
+          console.log('[Collab Diagnóstico][Editor] Respuesta GET:', res.status, res.ok);
+
+          if (res.status === 403) {
+            this.isRestrictedAccess = true;
+            this.renderRestrictedScreen();
             return false;
           }
-        }
-      } catch {
-        return false;
-      }
-    }
+          if (res.ok) {
+            const data = await res.json();
+            serverDoc = data.document;
+            console.log('[Collab Diagnóstico][Editor] Documento recibido del servidor:', data.document);
 
-    try {
-      const walRaw = localStorage.getItem(`boardpdf_wal_${this.docId}`);
-      if (walRaw) {
-        const wal = JSON.parse(walRaw);
-        const serverTime = serverDoc?.updated_at ? new Date(serverDoc.updated_at).getTime() : 0;
-        if (wal && wal.elements && Array.isArray(wal.elements) && (!serverDoc || wal.timestamp > serverTime)) {
-          this.elements = wal.elements;
-          if (wal.title) this.docTitle = wal.title;
-          if (Array.isArray(wal.pageTitles)) this.pageTitles = wal.pageTitles;
-          if (Array.isArray(wal.pageBackgrounds)) this.pageBackgrounds = wal.pageBackgrounds;
-          if (Array.isArray(wal.pagePdfSources)) this.pagePdfSources = wal.pagePdfSources;
-          if (typeof wal.pageCount === 'number') this.pageCount = wal.pageCount;
-          this.scheduleAutoSave(100);
+            if (data.document) {
+              this.isLocalOnly = false;
+              this.docTitle = data.document.title || 'Documento sin título';
+              this.docAccessLevel = data.document.access_level || 'restricted';
+              this.isDocOwner = data.isOwner ?? true;
+              this.canEditDoc = data.canEdit ?? true;
+              this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+              this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+              this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+              this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
+              this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
+              this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
+              this.initPageSizesFromContent(data.document.content);
+
+              const localDraft = getLocalDraft(this.docId);
+              const serverElements = data.document.content?.elements || [];
+              const targetPageSize = this.initialUrlDimensions || localDraft?.content?.pageSize;
+
+              if (serverElements.length === 0 && targetPageSize?.width && targetPageSize?.height) {
+                console.log('[Collab Diagnóstico][Editor] Documento nuevo/vacío: aplicando dimensiones objetivo:', targetPageSize);
+                this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
+                this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
+                if (localDraft?.title) this.docTitle = localDraft.title;
+                this.scheduleAutoSave(500);
+              }
+            }
+          } else {
+            const localDraft = getLocalDraft(this.docId);
+            if (localDraft) {
+              this.isLocalOnly = true;
+              this.docTitle = localDraft.title;
+              this.docAccessLevel = 'restricted';
+              this.isDocOwner = true;
+              this.canEditDoc = true;
+              this.docMembers = [];
+              this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
+              this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
+              this.pageTitles = Array.isArray(localDraft.content?.pageTitles) && localDraft.content.pageTitles.length > 0 ? localDraft.content.pageTitles : [''];
+              this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) && localDraft.content.pageBackgrounds.length > 0 ? localDraft.content.pageBackgrounds : ['#ffffff'];
+              this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) && localDraft.content.pagePdfSources.length > 0 ? localDraft.content.pagePdfSources : [null];
+              this.initPageSizesFromContent(localDraft.content);
+
+              const targetPageSize = this.initialUrlDimensions || localDraft.content?.pageSize;
+              if (targetPageSize?.width && targetPageSize?.height) {
+                this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
+                this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
+              }
+              this.scheduleAutoSave(500);
+            } else {
+              showToast('El documento colaborativo no existe o fue eliminado.', 'danger');
+              navigate('/collaborative-pdf');
+              return false;
+            }
+          }
+        } catch (netErr) {
+          console.warn('[Collab Diagnóstico][Editor] Error en llamada GET:', netErr);
+          return false;
         }
       }
-    } catch {}
 
-    const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
-    if (titleInput) {
-      titleInput.value = this.docTitle;
+      try {
+        const walRaw = localStorage.getItem(`boardpdf_wal_${this.docId}`);
+        if (walRaw) {
+          const wal = JSON.parse(walRaw);
+          const serverTime = serverDoc?.updated_at ? new Date(serverDoc.updated_at).getTime() : 0;
+          if (wal && Array.isArray(wal.elements) && wal.elements.length > 0 && (!serverDoc || wal.timestamp > serverTime)) {
+            console.log('[Collab Diagnóstico][Editor] Restaurando trabajo local no guardado desde WAL:', wal);
+            this.elements = wal.elements;
+            if (wal.title) this.docTitle = wal.title;
+            if (Array.isArray(wal.pageTitles) && wal.pageTitles.length > 0) this.pageTitles = wal.pageTitles;
+            if (Array.isArray(wal.pageBackgrounds) && wal.pageBackgrounds.length > 0) this.pageBackgrounds = wal.pageBackgrounds;
+            if (Array.isArray(wal.pagePdfSources) && wal.pagePdfSources.length > 0) this.pagePdfSources = wal.pagePdfSources;
+            if (typeof wal.pageCount === 'number') this.pageCount = Math.max(1, wal.pageCount);
+            if (Array.isArray(wal.pageSizes) && wal.pageSizes.length > 0) this.pageSizes = wal.pageSizes;
+            if (wal.pageSize?.width && wal.pageSize?.height) this.docDefaultPageSize = wal.pageSize;
+            this.scheduleAutoSave(500);
+          }
+        }
+      } catch (walErr) {
+        console.warn('[Collab Diagnóstico][Editor] Error leyendo WAL:', walErr);
+      }
+
+      const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+      if (titleInput) {
+        titleInput.value = this.docTitle;
+      }
+      this.setSaveStatus('saved');
+      console.log('[Collab Diagnóstico][Editor] Documento cargado completamente. Dimensiones finales:', { docDefaultPageSize: this.docDefaultPageSize, pageSizes: this.pageSizes });
+      return true;
+    } finally {
+      this.isLoadingDocument = false;
     }
-    this.setSaveStatus('saved');
-    return true;
   }
 
   private renderRestrictedScreen(): void {
@@ -1122,13 +1511,15 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private writeLocalWal(): void {
-    if (!this.docId) return;
+    if (this.isLoadingDocument || !this.docId) return;
     try {
       const walData = {
         elements: this.elements,
         pageBackgrounds: this.pageBackgrounds,
         pageCount: this.pageCount,
         pagePdfSources: this.pagePdfSources,
+        pageSize: this.docDefaultPageSize,
+        pageSizes: this.pageSizes,
         pageTitles: this.pageTitles,
         timestamp: Date.now(),
         title: this.docTitle,
@@ -1243,14 +1634,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     if (this.isLocalOnly) {
       saveLocalDraft(this.docId, {
-        content: {
-          elements: this.elements,
-          pageBackgrounds: this.pageBackgrounds,
-          pageCount: this.pageCount,
-          pagePdfSources: this.pagePdfSources,
-          pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-          pageTitles: this.pageTitles,
-        },
+        content: this.getContentPayload(),
         title: this.docTitle,
       });
       this.lastSavedTimestamp = Date.now();
@@ -1264,20 +1648,16 @@ export class CollaborativePdfEditorController implements ViewController {
     }
 
     const payload = {
-      content: {
-        elements: this.elements,
-        pageBackgrounds: this.pageBackgrounds,
-        pageCount: this.pageCount,
-        pagePdfSources: this.pagePdfSources,
-        pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-        pageTitles: this.pageTitles,
-      },
+      content: this.getContentPayload(),
       id: this.docId,
       title: this.docTitle,
     };
 
+    console.log('[Collab Diagnóstico][Editor] flushAutoSave() enviando payload:', { id: this.docId, pageSize: payload.content?.pageSize, pageSizes: payload.content?.pageSizes });
+
     try {
       const res = await putApi(API_ROUTES.collaborativeDocs.byId(this.docId), payload);
+      console.log('[Collab Diagnóstico][Editor] flushAutoSave() resultado:', res.status, res.ok);
       if (res.ok) {
         this.lastSavedTimestamp = Date.now();
         this.isModified = false;
@@ -1298,6 +1678,8 @@ export class CollaborativePdfEditorController implements ViewController {
   private renderPages(): void {
     const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="pages-container"]');
     if (!pagesContainer) return;
+
+    console.log('[Collab Diagnóstico][Editor] renderPages() start. pageCount:', this.pageCount, 'zoomLevel:', this.zoomLevel, 'docDefaultPageSize:', this.docDefaultPageSize, 'pageSizes:', this.pageSizes);
 
     pagesContainer.innerHTML = '';
 
@@ -1360,6 +1742,12 @@ export class CollaborativePdfEditorController implements ViewController {
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn${isOnlyOne ? ' is-disabled' : ''}" data-ref="btn-page-del-${p}" data-page-action="del" data-page-index="${p}" data-tooltip="Eliminar página" aria-label="Eliminar página"${isOnlyOne ? ' disabled' : ''}>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
         </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn" data-ref="btn-page-rotate-${p}" data-page-action="rotate" data-page-index="${p}" data-tooltip="Rotar orientación" aria-label="Rotar orientación">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn" data-ref="btn-page-resize-${p}" data-page-action="resize" data-page-index="${p}" data-tooltip="Tamaño de página" aria-label="Tamaño de página">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        </button>
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn" data-ref="btn-page-add-${p}" data-page-action="add" data-page-index="${p}" data-tooltip="Añadir página" aria-label="Añadir página">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#note_add"></use></svg>
         </button>
@@ -1367,6 +1755,10 @@ export class CollaborativePdfEditorController implements ViewController {
 
       header.appendChild(left);
       header.appendChild(actions);
+
+      const curDim = this.getPageDimensions(p);
+      const curPageW = curDim.width;
+      const curPageH = curDim.height;
 
       const sheet = document.createElement('div');
       sheet.className = `collaborative-page-sheet${this.selectedPageIndex === p ? ' is-page-selected' : ''}${this.lockedPages.has(p) ? ' is-page-locked' : ''}`;
@@ -1390,25 +1782,25 @@ export class CollaborativePdfEditorController implements ViewController {
         void renderPdfThumbnail(this.pagePdfSources[p]!.pdfUrl, bgCanvas, {
           dpr: true,
           pageNum: this.pagePdfSources[p]!.pageNumber,
-          targetWidth: PAGE_WIDTH,
+          targetWidth: curPageW,
         });
       }
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'collaborative-shapes-svg');
       svg.setAttribute('data-ref', `shapes-svg-${p}`);
-      svg.setAttribute('viewBox', `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}`);
+      svg.setAttribute('viewBox', `0 0 ${curPageW} ${curPageH}`);
 
       const canvas = document.createElement('canvas');
       canvas.className = 'collaborative-drawing-canvas';
       canvas.setAttribute('data-ref', `drawing-canvas-${p}`);
-      canvas.width = PAGE_WIDTH;
-      canvas.height = PAGE_HEIGHT;
+      canvas.width = curPageW;
+      canvas.height = curPageH;
 
       const guidesSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       guidesSvg.setAttribute('class', 'collaborative-guides-svg');
       guidesSvg.setAttribute('data-ref', `guides-svg-${p}`);
-      guidesSvg.setAttribute('viewBox', `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}`);
+      guidesSvg.setAttribute('viewBox', `0 0 ${curPageW} ${curPageH}`);
 
       sheet.appendChild(svg);
       sheet.appendChild(canvas);
@@ -1432,19 +1824,23 @@ export class CollaborativePdfEditorController implements ViewController {
       const scaler = document.createElement('div');
       scaler.className = 'collaborative-page-sheet-scaler';
       scaler.setAttribute('data-ref', `page-sheet-scaler-${p}`);
-      const scaledW = Math.round(PAGE_WIDTH * this.zoomLevel);
-      const scaledH = Math.round(PAGE_HEIGHT * this.zoomLevel);
+      scaler.setAttribute('data-page-index', p.toString());
+      const scaledW = Math.round(curPageW * this.zoomLevel);
+      const scaledH = Math.round(curPageH * this.zoomLevel);
       scaler.style.width = `${scaledW}px`;
       scaler.style.height = `${scaledH}px`;
 
-      sheet.style.width = `${PAGE_WIDTH}px`;
-      sheet.style.height = `${PAGE_HEIGHT}px`;
+      sheet.style.width = `${curPageW}px`;
+      sheet.style.height = `${curPageH}px`;
       sheet.style.transform = `scale(${this.zoomLevel})`;
       sheet.style.transformOrigin = 'top left';
 
       scaler.appendChild(sheet);
 
+      header.setAttribute('data-page-index', p.toString());
       header.style.width = `${Math.max(340, scaledW)}px`;
+
+      console.log(`[Collab Diagnóstico][Editor] renderPages() Página ${p + 1}:`, { curDim, scaledH, scaledW, zoomLevel: this.zoomLevel });
 
       wrapper.appendChild(header);
       wrapper.appendChild(scaler);
@@ -1496,6 +1892,8 @@ export class CollaborativePdfEditorController implements ViewController {
         else if (action === 'dup') this.duplicatePage(p);
         else if (action === 'del') this.deletePage(p);
         else if (action === 'add') this.addPage(p);
+        else if (action === 'rotate') this.rotatePage(p);
+        else if (action === 'resize') this.openResizePageModal(p);
       });
     });
   }
@@ -2562,6 +2960,9 @@ export class CollaborativePdfEditorController implements ViewController {
         el.id !== item.id && (el.pageIndex ?? 0) === pageIndex && el.type !== 'drawing'
     );
 
+    const pageDim = this.getPageDimensions(pageIndex);
+    const pageW = pageDim.width;
+    const pageH = pageDim.height;
     let bestDiffX: number | null = null;
     let snappedX = rawX;
 
@@ -2574,9 +2975,9 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     };
 
-    checkSnapX(rawX + width / 2, PAGE_WIDTH / 2);
+    checkSnapX(rawX + width / 2, pageW / 2);
     checkSnapX(rawX, 0);
-    checkSnapX(rawX + width, PAGE_WIDTH);
+    checkSnapX(rawX + width, pageW);
 
     for (const other of otherElements) {
       const oW = other.width || 100;
@@ -2613,9 +3014,9 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     };
 
-    checkSnapY(rawY + height / 2, PAGE_HEIGHT / 2);
+    checkSnapY(rawY + height / 2, pageH / 2);
     checkSnapY(rawY, 0);
-    checkSnapY(rawY + height, PAGE_HEIGHT);
+    checkSnapY(rawY + height, pageH);
 
     for (const other of otherElements) {
       const oH = other.height || 40;
@@ -2659,6 +3060,9 @@ export class CollaborativePdfEditorController implements ViewController {
 
     guidesSvg.innerHTML = '';
 
+    const pageDim = this.getPageDimensions(pageIndex);
+    const pageW = pageDim.width;
+    const pageH = pageDim.height;
     const linesToDraw: Array<{ x1: number; x2: number; y1: number; y2: number }> = [];
 
     const myLeft = x;
@@ -2671,21 +3075,21 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const isClose = (a: number, b: number) => Math.abs(a - b) < 1.5;
 
-    if (isClose(myCenter, PAGE_WIDTH / 2)) {
+    if (isClose(myCenter, pageW / 2)) {
       linesToDraw.push({
-        x1: PAGE_WIDTH / 2,
-        x2: PAGE_WIDTH / 2,
+        x1: pageW / 2,
+        x2: pageW / 2,
         y1: 0,
-        y2: PAGE_HEIGHT,
+        y2: pageH,
       });
     }
 
-    if (isClose(myMiddle, PAGE_HEIGHT / 2)) {
+    if (isClose(myMiddle, pageH / 2)) {
       linesToDraw.push({
         x1: 0,
-        x2: PAGE_WIDTH,
-        y1: PAGE_HEIGHT / 2,
-        y2: PAGE_HEIGHT / 2,
+        x2: pageW,
+        y1: pageH / 2,
+        y2: pageH / 2,
       });
     }
 
@@ -2715,7 +3119,7 @@ export class CollaborativePdfEditorController implements ViewController {
           x1: Math.round(vX),
           x2: Math.round(vX),
           y1: Math.max(0, minY - 14),
-          y2: Math.min(PAGE_HEIGHT, maxY + 14),
+          y2: Math.min(pageH, maxY + 14),
         });
       }
     }
@@ -2744,7 +3148,7 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         linesToDraw.push({
           x1: Math.max(0, minX - 14),
-          x2: Math.min(PAGE_WIDTH, maxX + 14),
+          x2: Math.min(pageW, maxX + 14),
           y1: Math.round(hY),
           y2: Math.round(hY),
         });
@@ -3329,28 +3733,14 @@ export class CollaborativePdfEditorController implements ViewController {
       this.writeLocalWal();
       if (this.isLocalOnly) {
         saveLocalDraft(this.docId, {
-          content: {
-            elements: this.elements,
-            pageBackgrounds: this.pageBackgrounds,
-            pageCount: this.pageCount,
-            pagePdfSources: this.pagePdfSources,
-            pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-            pageTitles: this.pageTitles,
-          },
+          content: this.getContentPayload(),
           title: this.docTitle,
         });
         return;
       }
       if (this.hasPendingSave || this.autoSaveTimer) {
         const payload = JSON.stringify({
-          content: {
-            elements: this.elements,
-            pageBackgrounds: this.pageBackgrounds,
-            pageCount: this.pageCount,
-            pagePdfSources: this.pagePdfSources,
-            pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-            pageTitles: this.pageTitles,
-          },
+          content: this.getContentPayload(),
           id: this.docId,
           title: this.docTitle,
         });
@@ -3641,12 +4031,12 @@ export class CollaborativePdfEditorController implements ViewController {
       sliderZoom.style.setProperty('--slider-pct', `${pct}%`);
     }
 
-    const scaledW = Math.round(PAGE_WIDTH * this.zoomLevel);
-    const scaledH = Math.round(PAGE_HEIGHT * this.zoomLevel);
-    const headerW = Math.max(340, scaledW);
-
     const scalers = this.container.querySelectorAll<HTMLElement>('.collaborative-page-sheet-scaler');
     scalers.forEach((s) => {
+      const pIdx = parseInt(s.getAttribute('data-page-index') || '0', 10);
+      const dim = this.getPageDimensions(pIdx);
+      const scaledW = Math.round(dim.width * this.zoomLevel);
+      const scaledH = Math.round(dim.height * this.zoomLevel);
       s.style.width = `${scaledW}px`;
       s.style.height = `${scaledH}px`;
     });
@@ -3659,7 +4049,10 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const headers = this.container.querySelectorAll<HTMLElement>('.collaborative-page-header');
     headers.forEach((h) => {
-      h.style.width = `${headerW}px`;
+      const pIdx = parseInt(h.getAttribute('data-page-index') || '0', 10);
+      const dim = this.getPageDimensions(pIdx);
+      const scaledW = Math.round(dim.width * this.zoomLevel);
+      h.style.width = `${Math.max(340, scaledW)}px`;
     });
 
     this.updateTransformBoxPosition();
@@ -3677,7 +4070,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
     if (!workspace) return;
     const availableW = workspace.clientWidth - 64;
-    const fitLevel = Math.max(0.10, Math.min(2.0, availableW / PAGE_WIDTH));
+    const curDim = this.getPageDimensions(this.selectedPageIndex ?? this.activePageIndex ?? 0);
+    const fitLevel = Math.max(0.10, Math.min(2.0, availableW / curDim.width));
     this.setZoom(fitLevel);
   }
 
@@ -3886,6 +4280,8 @@ export class CollaborativePdfEditorController implements ViewController {
       elements: this.elements,
       pageBackgrounds: this.pageBackgrounds,
       pageCount: this.pageCount,
+      pageSize: this.docDefaultPageSize,
+      pageSizes: this.pageSizes,
       title: this.docTitle,
       type: 'docSync',
     });
@@ -3964,6 +4360,8 @@ export class CollaborativePdfEditorController implements ViewController {
         if (Array.isArray(msg.elements)) this.elements = msg.elements;
         if (Array.isArray(msg.pageBackgrounds)) this.pageBackgrounds = msg.pageBackgrounds;
         if (typeof msg.pageCount === 'number') this.pageCount = msg.pageCount;
+        if (Array.isArray(msg.pageSizes)) this.pageSizes = msg.pageSizes;
+        if (msg.pageSize) this.docDefaultPageSize = msg.pageSize;
         if (typeof msg.title === 'string') {
           this.docTitle = msg.title;
           const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
@@ -4467,14 +4865,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const storeCurrentAsPending = () => {
       const draft = saveLocalDraft(this.docId, {
-        content: {
-          elements: this.elements,
-          pageBackgrounds: this.pageBackgrounds,
-          pageCount: this.pageCount,
-          pagePdfSources: this.pagePdfSources,
-          pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-          pageTitles: this.pageTitles,
-        },
+        content: this.getContentPayload(),
         title: this.docTitle,
       });
       setPendingCloudSyncDraft(draft);

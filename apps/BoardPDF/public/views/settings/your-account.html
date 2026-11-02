@@ -88,6 +88,30 @@
         <div class="banner banner--danger" data-ref="email-error" style="display: none; margin: 0 24px 16px 24px;"></div>
       </div>
 
+      <div class="settings-group" data-ref="group-storage">
+        <div class="settings-item settings-item--stacked" data-ref="item-storage">
+          <div class="settings-item__content" data-ref="item-storage-content">
+            <div class="settings-item__text" data-ref="item-storage-text" style="width: 100%;">
+              <h2 class="settings-item__title" data-ref="item-storage-title">Almacenamiento de tu cuenta</h2>
+              <p class="settings-item__desc" data-ref="item-storage-desc">Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.</p>
+
+              <div class="storage-meter" data-ref="storage-meter-box" style="margin-top: 14px; width: 100%;">
+                <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
+                  <span class="settings-item__value" data-ref="storage-text-used" style="font-size: 13px; font-weight: 600;">0.0 MB de 5.0 GB utilizados</span>
+                  <span class="component-badge component-badge--neutral" data-ref="storage-badge-percent" style="font-size: 11px;">0%</span>
+                </div>
+                <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
+                  <div data-ref="storage-bar-fill" style="background-color: var(--primary, #0f172a); border-radius: 9999px; height: 100%; transition: width 0.3s ease; width: 0%;"></div>
+                </div>
+                <div style="color: var(--text-tertiary); font-size: 12px; margin-top: 6px;" data-ref="storage-available-text">
+                  5.0 GB disponibles
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="settings-group" data-ref="group-language">
         <div class="settings-item settings-item--stacked" data-ref="item-language">
           <div class="settings-item__content" data-ref="item-language-content">

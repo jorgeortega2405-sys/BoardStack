@@ -25,6 +25,8 @@ export function sanitizeUser(user: any): UserPayload {
     id: user.id,
     role: user.role || 'USER',
     roles: user.roles || (user.role ? [user.role] : ['USER']),
+    storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
+    storage_used_bytes: Number(user.storage_used_bytes) || 0,
     subscription_tier: user.subscription_tier || 'free',
     username: user.username,
   };

@@ -26,6 +26,18 @@
   max-width: 100%;
 }
 
+.menu-panel--w-200 {
+  width: 200px;
+}
+
+.menu-panel--w-220 {
+  width: 220px;
+}
+
+.menu-panel--w-240 {
+  width: 240px;
+}
+
 .menu-panel--w-325 {
   width: 325px;
 }

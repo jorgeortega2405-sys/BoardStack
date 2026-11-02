@@ -115,6 +115,8 @@ export async function addAccountToSession(
     last_accessed: now,
     role: user.role || 'USER',
     roles: user.roles || (user.role ? [user.role] : ['USER']),
+    storage_limit_bytes: user.storage_limit_bytes || 5368709120,
+    storage_used_bytes: user.storage_used_bytes || 0,
     subscription_tier: user.subscription_tier || 'free',
     username: user.username,
   };

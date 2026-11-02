@@ -2,6 +2,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
 import { getCurrentUser } from '../../middlewares/auth.middleware.js';
 import { logger } from '../../services/logger.service.js';
+import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
@@ -55,6 +56,12 @@ export async function getCollaborativeDocHandler(req: Request, res: Response): P
         });
         return;
       }
+      const queryW = parseInt(req.query.w as string, 10);
+      const queryH = parseInt(req.query.h as string, 10);
+      const initialPageSize = queryW > 0 && queryH > 0
+        ? { height: queryH, width: queryW }
+        : { height: 1123, width: 794 };
+
       document = await saveCollaborativeDocument({
         accessLevel: 'restricted',
         content: {
@@ -62,7 +69,8 @@ export async function getCollaborativeDocHandler(req: Request, res: Response): P
           pageBackgrounds: ['#ffffff'],
           pageCount: 1,
           pagePdfSources: [null],
-          pageSize: { height: 1123, width: 794 },
+          pageSize: initialPageSize,
+          pageSizes: [initialPageSize],
           pageTitles: [''],
         },
         id,
@@ -280,7 +288,8 @@ export async function deleteCollaborativeDocHandler(req: Request, res: Response)
       });
       return;
     }
-    await deleteCollaborativeDocument(id);
+    const user = getCurrentUser(req);
+    await deleteCollaborativeDocument(id, user?.id);
     res.json({
       success: true,
     });
@@ -344,6 +353,20 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
       return;
     }
 
+    const user = getCurrentUser(req);
+    const totalIncomingBytes = targetFiles.reduce((acc, f) => acc + (f.size || f.buffer?.length || 0), 0);
+
+    if (user?.id) {
+      const { allowed } = await canUserAllocateStorage(Number(user.id), totalIncomingBytes);
+      if (!allowed) {
+        res.status(413).json({
+          error: 'Has alcanzado el límite de almacenamiento disponible (5 GB). Por favor elimina documentos o archivos para liberar espacio.',
+          success: false,
+        });
+        return;
+      }
+    }
+
     const uploadedRecords: Array<{
       createdAt: string;
       id: string;
@@ -353,6 +376,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
       size: number;
       type: 'image' | 'pdf';
       url: string;
+      userId?: number | null;
     }> = [];
 
     for (const item of targetFiles) {
@@ -391,6 +415,22 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
         }
       }
 
+      if (user?.id) {
+        try {
+          await recordUserAsset({
+            assetType: isPdf ? 'upload_pdf' : 'upload_image',
+            byteSize: item.size || item.buffer?.length || 0,
+            fileName: item.originalname,
+            filePath,
+            mimeType: item.mimetype || (isPdf ? 'application/pdf' : 'image/png'),
+            s3Key: isS3Configured() ? `uploads/collaborative/${uniqueFilename}` : null,
+            userId: Number(user.id),
+          });
+        } catch (quotaErr) {
+          logger.db.warn('No se pudo registrar asset en cuota de almacenamiento', quotaErr);
+        }
+      }
+
       const record = {
         createdAt: new Date().toISOString(),
         id: `upl_${randomId}`,
@@ -400,6 +440,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
         size: item.size,
         type: (isPdf ? 'pdf' : 'image') as 'image' | 'pdf',
         url: `/uploads/collaborative/${uniqueFilename}`,
+        userId: user?.id ? Number(user.id) : null,
       };
 
       const metaPath = path.join(UPLOADS_DIR, `${uniqueFilename}.meta.json`);
@@ -421,9 +462,11 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
   }
 }
 
-export async function listCollaborativeUploadsHandler(_req: Request, res: Response): Promise<void> {
+export async function listCollaborativeUploadsHandler(req: Request, res: Response): Promise<void> {
   try {
     ensureUploadsDir();
+    const user = getCurrentUser(req);
+    const userId = user?.id ? Number(user.id) : null;
     const files = fs.readdirSync(UPLOADS_DIR);
     const metaFiles = files.filter((f) => f.endsWith('.meta.json'));
     const records = [];
@@ -432,7 +475,9 @@ export async function listCollaborativeUploadsHandler(_req: Request, res: Respon
       try {
         const content = fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8');
         const parsed = JSON.parse(content);
-        records.push(parsed);
+        if (!userId || !parsed.userId || parsed.userId === userId) {
+          records.push(parsed);
+        }
       } catch {}
     }
 

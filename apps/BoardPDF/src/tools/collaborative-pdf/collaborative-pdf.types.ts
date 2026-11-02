@@ -73,6 +73,7 @@ export interface CollaborativeDocumentContent {
   pageCount: number;
   pagePdfSources?: Array<CollaborativePdfPageSource | null>;
   pageSize?: { height: number; width: number };
+  pageSizes?: Array<{ height: number; width: number }>;
   pageTitles?: string[];
 }
 

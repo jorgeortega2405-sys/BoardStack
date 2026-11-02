@@ -5,6 +5,7 @@ export interface LocalCollabDraft {
     pageCount: number;
     pagePdfSources: any[];
     pageSize?: { height: number; width: number };
+    pageSizes?: Array<{ height: number; width: number }>;
     pageTitles: string[];
   };
   createdAt: string;

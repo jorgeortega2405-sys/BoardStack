@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS users (
   stripe_subscription_id VARCHAR(255) NULL,
   subscription_status VARCHAR(50) NOT NULL DEFAULT 'inactive',
   subscription_period_end TIMESTAMP NULL,
+  storage_used_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  storage_limit_bytes BIGINT UNSIGNED NOT NULL DEFAULT 5368709120,
   two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   two_factor_secret VARCHAR(255) NULL,
   two_factor_recovery_codes TEXT NULL,
@@ -54,7 +56,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_email (email),
-  INDEX idx_user_username (username)
+  INDEX idx_user_username (username),
+  INDEX idx_user_storage (storage_used_bytes)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -122,5 +125,24 @@ CREATE TABLE IF NOT EXISTS collaborative_document_members (
   UNIQUE KEY uq_doc_user (document_id, user_id),
   INDEX idx_doc_members (document_id),
   INDEX idx_user_members (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_storage_assets (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id INT NOT NULL,
+  document_id VARCHAR(64) NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(512) NOT NULL,
+  s3_key VARCHAR(512) NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  byte_size BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  asset_type ENUM('document_json', 'document_pdf', 'upload_image', 'upload_pdf') NOT NULL,
+  is_cold BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_user_assets (user_id),
+  INDEX idx_document_assets (document_id),
+  INDEX idx_cold_assets (is_cold),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
