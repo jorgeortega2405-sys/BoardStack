@@ -365,6 +365,13 @@ export async function saveCollaborativeDocument(payload: {
 
   fs.writeFileSync(path.join(STORAGE_DIR, `${payload.id}.json`), JSON.stringify(record, null, 2));
 
+  const stalePdfPath = path.join(STORAGE_DIR, `${payload.id}.pdf`);
+  if (fs.existsSync(stalePdfPath)) {
+    try {
+      fs.unlinkSync(stalePdfPath);
+    } catch {}
+  }
+
   try {
     const pool = getDbPool();
     await pool.query(

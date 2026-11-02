@@ -271,53 +271,28 @@ export class CollaborativePdfDashboardController implements ViewController {
     canvas.classList.remove('is-hidden');
     if (placeholder) placeholder.classList.add('is-hidden');
 
-    try {
-      if (doc.pdf_filename) {
-        try {
-          await renderPdfThumbnail(API_ROUTES.collaborativeDocs.pdf(doc.id), canvas, { targetWidth: paperSize.width });
-          this.adjustCanvasSize(canvas, doc);
-          return;
-        } catch {
-        }
+    const pdfBgUrl = doc.content?.pagePdfSources?.[0]?.pdfUrl;
+    if (pdfBgUrl) {
+      try {
+        const pageNum = doc.content.pagePdfSources[0].pageNumber || 1;
+        await renderPdfThumbnail(pdfBgUrl, canvas, { pageNum, targetWidth: paperSize.width });
+        this.adjustCanvasSize(canvas, doc);
+      } catch {
       }
-
-      if (doc.content?.pagePdfSources?.[0]?.pdfUrl) {
-        try {
-          const pageNum = doc.content.pagePdfSources[0].pageNumber || 1;
-          await renderPdfThumbnail(doc.content.pagePdfSources[0].pdfUrl, canvas, { pageNum, targetWidth: paperSize.width });
-          this.adjustCanvasSize(canvas, doc);
-          return;
-        } catch {
-        }
-      }
-    } catch {
     }
   }
 
   private adjustCanvasSize(canvas: HTMLCanvasElement, doc: DocItem): void {
-    if (!canvas.width || !canvas.height) return;
-    const aspect = canvas.width / canvas.height;
-    const maxW = 196;
-    const maxH = 156;
+    const dim = this.getDocDimensions(doc);
+    const paperSize = this.computePaperSize(dim.width, dim.height);
 
-    let targetW: number;
-    let targetH: number;
-
-    if (aspect >= maxW / maxH) {
-      targetW = maxW;
-      targetH = Math.max(40, Math.round(targetW / aspect));
-    } else {
-      targetH = maxH;
-      targetW = Math.max(40, Math.round(targetH * aspect));
-    }
-
-    canvas.style.width = `${targetW}px`;
-    canvas.style.height = `${targetH}px`;
+    canvas.style.width = `${paperSize.width}px`;
+    canvas.style.height = `${paperSize.height}px`;
 
     const paper = this.container.querySelector<HTMLElement>(`[data-ref="paper-${doc.id}"]`);
     if (paper) {
-      paper.style.width = `${targetW}px`;
-      paper.style.height = `${targetH}px`;
+      paper.style.width = `${paperSize.width}px`;
+      paper.style.height = `${paperSize.height}px`;
     }
   }
 
