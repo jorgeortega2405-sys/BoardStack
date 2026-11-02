@@ -74,7 +74,37 @@ interface ElementImage {
   y: number;
 }
 
-type EditorElement = ElementDrawing | ElementImage | ElementShape | ElementText;
+interface ElementTableCell {
+  align?: 'center' | 'left' | 'right';
+  backgroundColor?: string;
+  color?: string;
+  isBold?: boolean;
+  text: string;
+}
+
+interface ElementTable {
+  borderColor: string;
+  borderWidth: number;
+  cellPadding: number;
+  cellSpacing: number;
+  cells: ElementTableCell[][];
+  cols: number;
+  headerColor: string;
+  height: number;
+  id: string;
+  pageIndex?: number;
+  rotation?: number;
+  rowHeights: number[];
+  rows: number;
+  tableStyle: 'cards' | 'grid' | 'header-accent';
+  themeColor: string;
+  type: 'table';
+  width: number;
+  x: number;
+  y: number;
+}
+
+type EditorElement = ElementDrawing | ElementImage | ElementShape | ElementTable | ElementText;
 
 interface PagePdfSource {
   pageNumber: number;
@@ -101,7 +131,7 @@ export class CollaborativePdfEditorController implements ViewController {
   private activePanelTab: 'colors' | 'elements' | 'text' | 'tools' | 'uploads' | null = null;
   private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'text-color' | null = null;
+  private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color' | null = null;
   private recentColors: string[] = [];
   private activeTool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text' = 'select';
   private activeUploadFilter: 'all' | 'images' | 'pdfs' = 'all';
@@ -306,15 +336,51 @@ export class CollaborativePdfEditorController implements ViewController {
     const btnPresetBody = this.queryPanel<HTMLButtonElement>('[data-ref="btn-preset-body"]');
     btnPresetBody?.addEventListener('click', () => this.addTextElement('body'), { signal });
 
+    const elemMainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
+    const elemShapesView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-view"]');
+    const elemTablesView = this.queryPanel<HTMLElement>('[data-ref="elements-tables-view"]');
+
+    const showShapesView = () => {
+      if (elemMainView) hideElement(elemMainView);
+      if (elemTablesView) hideElement(elemTablesView);
+      if (elemShapesView) showElement(elemShapesView);
+    };
+
+    const showTablesView = () => {
+      if (elemMainView) hideElement(elemMainView);
+      if (elemShapesView) hideElement(elemShapesView);
+      if (elemTablesView) showElement(elemTablesView);
+    };
+
+    const restoreElementsMain = () => {
+      if (elemShapesView) hideElement(elemShapesView);
+      if (elemTablesView) hideElement(elemTablesView);
+      if (elemMainView) showElement(elemMainView);
+    };
+
     const elemConfigs: Array<{ handler: () => void; ref: string }> = [
-      { handler: () => this.activateTool('shapes'), ref: 'btn-elem-shapes' },
-      { handler: () => showToast('Función de tablas próximamente', 'info'), ref: 'btn-elem-tables' },
+      { handler: showShapesView, ref: 'btn-elem-shapes' },
+      { handler: showTablesView, ref: 'btn-elem-tables' },
       { handler: () => this.handleRailTabClick('uploads'), ref: 'btn-elem-photos' },
       { handler: () => showToast('Gráficas estadísticas próximamente', 'info'), ref: 'btn-elem-charts' },
     ];
 
     elemConfigs.forEach(({ handler, ref }) => {
       this.queryPanel<HTMLButtonElement>(`[data-ref="${ref}"]`)?.addEventListener('click', handler, { signal });
+    });
+
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreElementsMain, { signal });
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-tables-back"]')?.addEventListener('click', restoreElementsMain, { signal });
+
+    const tablePresetButtons = this.queryPanelAll<HTMLButtonElement>('[data-table-preset]');
+    tablePresetButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-table-preset') as 'cards' | 'grid' | 'header-accent';
+        const color = btn.getAttribute('data-table-color') || 'gray';
+        if (preset) {
+          this.addTableElement(preset, color);
+        }
+      }, { signal });
     });
 
     const drawerShapeButtons = this.queryPanelAll<HTMLButtonElement>('[data-shape]');
@@ -856,6 +922,79 @@ export class CollaborativePdfEditorController implements ViewController {
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
     const bodyEl = elNode?.querySelector<HTMLElement>('[data-ref="sticky-body"]');
     bodyEl?.focus();
+  }
+
+  private addTableElement(style: 'cards' | 'grid' | 'header-accent', colorTheme: string): void {
+    const themeMap: Record<string, { accent: string; tint: string }> = {
+      amber: { accent: '#f59e0b', tint: '#fef3c7' },
+      blue: { accent: '#3b82f6', tint: '#dbeafe' },
+      gray: { accent: '#4b5563', tint: '#f3f4f6' },
+      purple: { accent: '#8b5cf6', tint: '#ede9fe' },
+      red: { accent: '#ef4444', tint: '#fee2e2' },
+    };
+
+    const theme = themeMap[colorTheme] || themeMap.gray;
+    const cols = 3;
+    const rows = 4;
+    const rowHeights = [44, 40, 40, 40];
+    const cellSpacing = style === 'cards' ? 6 : 0;
+    const cellPadding = 8;
+    const borderWidth = style === 'cards' ? 0 : 1.5;
+    const borderColor = style === 'cards' ? 'transparent' : theme.accent;
+    const headerColor = style === 'grid' ? 'transparent' : theme.accent;
+    const width = 450;
+    const height = rowHeights.reduce((s, h) => s + h, 0) + (rows + 1) * cellSpacing;
+
+    const cells: ElementTableCell[][] = [];
+    cells.push(
+      Array.from({ length: cols }, (_, c) => ({
+        align: 'left' as const,
+        backgroundColor: style === 'grid' ? 'transparent' : theme.accent,
+        color: style === 'grid' ? '#1e293b' : '#ffffff',
+        isBold: true,
+        text: `Encabezado ${c + 1}`,
+      }))
+    );
+
+    for (let r = 1; r < rows; r++) {
+      cells.push(
+        Array.from({ length: cols }, (_, c) => ({
+          align: 'left' as const,
+          backgroundColor: style === 'cards' ? theme.tint : 'transparent',
+          color: '#334155',
+          isBold: false,
+          text: `Dato ${r}.${c + 1}`,
+        }))
+      );
+    }
+
+    const id = `table_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const newTable: ElementTable = {
+      borderColor,
+      borderWidth,
+      cellPadding,
+      cellSpacing,
+      cells,
+      cols,
+      headerColor,
+      height,
+      id,
+      pageIndex: this.activePageIndex,
+      rotation: 0,
+      rowHeights,
+      rows,
+      tableStyle: style,
+      themeColor: theme.accent,
+      type: 'table',
+      width,
+      x: 120 + (this.elements.length % 5) * 25,
+      y: 160 + (this.elements.length % 5) * 25,
+    };
+
+    this.pushElement(newTable);
+    this.renderPages();
+    this.selectElement(id);
+    this.activateSelectTool();
   }
 
   private getPageDimensions(pageIndex: number): PageDimension {
@@ -1816,6 +1955,8 @@ export class CollaborativePdfEditorController implements ViewController {
           }
         } else if (el.type === 'image') {
           sheet.appendChild(this.createImageElement(el));
+        } else if (el.type === 'table') {
+          sheet.appendChild(this.createTableElement(el));
         }
       }
 
@@ -1891,7 +2032,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
           const right = left + width;
           const bottom = top + height;
-          const pageElements = this.elements.filter((el): el is ElementImage | ElementShape | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
+          const pageElements = this.elements.filter((el): el is ElementImage | ElementShape | ElementTable | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
 
           for (const el of pageElements) {
             const elW = el.width || 60;
@@ -2559,7 +2700,9 @@ export class CollaborativePdfEditorController implements ViewController {
 
     div.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.selectElement(el.id);
+      if (!div.classList.contains('is-editing')) {
+        this.selectElement(el.id);
+      }
     });
 
     this.makeDraggable(div, el);
@@ -2643,6 +2786,203 @@ export class CollaborativePdfEditorController implements ViewController {
     return div;
   }
 
+  private createTableElement(el: ElementTable): HTMLElement {
+    const div = document.createElement('div');
+    div.className = 'collaborative-table-item';
+    div.setAttribute('data-ref', `table-element-${el.id}`);
+    div.setAttribute('data-element-id', el.id);
+    div.style.left = `${el.x}px`;
+    div.style.top = `${el.y}px`;
+    div.style.width = `${el.width}px`;
+    div.style.height = `${el.height}px`;
+    div.style.transform = `rotate(${el.rotation || 0}deg)`;
+    div.style.transformOrigin = 'center center';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'collaborative-table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'collaborative-table-node';
+    table.style.borderSpacing = `${el.cellSpacing}px`;
+    table.style.borderCollapse = el.cellSpacing > 0 ? 'separate' : 'collapse';
+
+    const setupCell = (cellEl: HTMLTableCellElement, cellData: ElementTableCell) => {
+      cellEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!div.classList.contains('is-editing')) {
+          this.selectElement(el.id);
+        }
+      });
+
+      cellEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (cellEl.isContentEditable) return;
+        this.selectElement(el.id);
+        div.classList.add('is-editing');
+        cellEl.classList.add('is-editing');
+        cellEl.contentEditable = 'true';
+        cellEl.focus();
+        const range = document.createRange();
+        range.selectNodeContents(cellEl);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      });
+
+      cellEl.addEventListener('input', () => {
+        cellData.text = cellEl.innerText;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      });
+
+      cellEl.addEventListener('blur', () => {
+        cellEl.contentEditable = 'false';
+        cellEl.classList.remove('is-editing');
+        div.classList.remove('is-editing');
+        cellData.text = cellEl.innerText;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        void this.flushAutoSave();
+      });
+
+      cellEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+          e.preventDefault();
+          cellEl.blur();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          cellEl.blur();
+          const allCells = Array.from(div.querySelectorAll<HTMLElement>('.collaborative-table-cell'));
+          const idx = allCells.indexOf(cellEl);
+          const next = e.shiftKey ? allCells[idx - 1] : allCells[idx + 1];
+          if (next) {
+            next.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+          }
+        }
+      });
+    };
+
+    const thead = document.createElement('thead');
+    const trHead = document.createElement('tr');
+    trHead.style.height = `${el.rowHeights[0] || 44}px`;
+
+    const headCells = el.cells[0] || [];
+    headCells.forEach((cell) => {
+      const th = document.createElement('th');
+      th.className = 'collaborative-table-cell';
+      th.style.padding = `${el.cellPadding}px`;
+      th.style.border = el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
+      if (el.tableStyle === 'cards') th.style.borderRadius = '4px';
+      th.style.backgroundColor = cell.backgroundColor || el.headerColor || 'transparent';
+      th.style.color = cell.color || (el.tableStyle === 'grid' ? '#1e293b' : '#ffffff');
+      th.style.fontWeight = cell.isBold !== false ? '700' : '400';
+      th.style.textAlign = cell.align || 'left';
+      th.innerText = cell.text;
+
+      setupCell(th, cell);
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    const allTrs: HTMLTableRowElement[] = [trHead];
+
+    for (let r = 1; r < el.rows; r++) {
+      const tr = document.createElement('tr');
+      tr.style.height = `${el.rowHeights[r] || 40}px`;
+      const rowCells = el.cells[r] || [];
+      rowCells.forEach((cell) => {
+        const td = document.createElement('td');
+        td.className = 'collaborative-table-cell';
+        td.style.padding = `${el.cellPadding}px`;
+        td.style.border = el.borderWidth > 0 ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
+        if (el.tableStyle === 'cards') td.style.borderRadius = '4px';
+        td.style.backgroundColor = cell.backgroundColor || 'transparent';
+        td.style.color = cell.color || '#334155';
+        td.style.textAlign = cell.align || 'left';
+        td.innerText = cell.text;
+
+        setupCell(td, cell);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+      allTrs.push(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    div.appendChild(wrap);
+
+    const dividersContainer = document.createElement('div');
+    dividersContainer.className = 'collaborative-table-dividers';
+
+    const dividerElements: HTMLElement[] = [];
+    const repositionDividers = () => {
+      let cumY = el.cellSpacing;
+      for (let r = 0; r < el.rows - 1; r++) {
+        cumY += (el.rowHeights[r] || 40) + el.cellSpacing;
+        if (dividerElements[r]) {
+          dividerElements[r].style.top = `${cumY - (el.cellSpacing > 0 ? el.cellSpacing / 2 : 0)}px`;
+        }
+      }
+    };
+
+    for (let r = 0; r < el.rows - 1; r++) {
+      const divider = document.createElement('div');
+      divider.className = 'collaborative-table-row-divider';
+      divider.setAttribute('data-row-index', r.toString());
+
+      divider.addEventListener('pointerdown', (e: PointerEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        divider.classList.add('is-dragging');
+        const startY = e.clientY;
+        const startHeight = el.rowHeights[r] || 40;
+
+        const onPointerMove = (ev: PointerEvent) => {
+          const dy = (ev.clientY - startY) / (this.zoomLevel || 1);
+          const newH = Math.max(24, Math.round(startHeight + dy));
+          el.rowHeights[r] = newH;
+          if (allTrs[r]) allTrs[r].style.height = `${newH}px`;
+          const totalRowH = el.rowHeights.reduce((acc, h) => acc + h, 0);
+          el.height = totalRowH + (el.rows + 1) * el.cellSpacing;
+          div.style.height = `${el.height}px`;
+          wrap.style.height = `${el.height}px`;
+          repositionDividers();
+          this.updateTransformBoxPosition();
+        };
+
+        const onPointerUp = () => {
+          divider.classList.remove('is-dragging');
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          this.renderPages();
+          this.selectElement(el.id);
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          void this.flushAutoSave();
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp, { once: true });
+      });
+
+      dividersContainer.appendChild(divider);
+      dividerElements.push(divider);
+    }
+
+    div.appendChild(dividersContainer);
+    repositionDividers();
+
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.selectElement(el.id);
+    });
+
+    this.makeDraggable(div, el);
+    return div;
+  }
+
   private addImageElement(asset: UploadedAsset): void {
     const id = `img_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const pageIdx = this.selectedPageIndex !== null ? this.selectedPageIndex : this.activePageIndex;
@@ -2666,7 +3006,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.setModified(true);
   }
 
-  private makeDraggable(element: HTMLElement, item: ElementImage | ElementShape | ElementText): void {
+  private makeDraggable(element: HTMLElement, item: ElementImage | ElementShape | ElementTable | ElementText): void {
     let startX = 0;
     let startY = 0;
     let initialX = 0;
@@ -2674,6 +3014,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const onMouseMove = (e: MouseEvent) => {
       if (this.activeTool !== 'select') return;
+      e.preventDefault();
       const dx = (e.clientX - startX) / (this.zoomLevel || 1);
       const dy = (e.clientY - startY) / (this.zoomLevel || 1);
       const rawX = initialX + dx;
@@ -2699,6 +3040,9 @@ export class CollaborativePdfEditorController implements ViewController {
 
     element.addEventListener('mousedown', (e) => {
       if (element.classList.contains('is-editing')) return;
+      const target = e.target as HTMLElement;
+      if (target?.isContentEditable || target?.closest('.collaborative-table-row-divider') || target?.closest('.is-editing')) return;
+      if (e.button !== 0) return;
       this.activateSelectTool();
       this.selectElement(item.id);
       startX = e.clientX;
@@ -2798,7 +3142,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private updateSelection(): void {
-    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note');
+    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note, .collaborative-table-item');
     allEls.forEach((el) => {
       const elId = el.getAttribute('data-element-id');
       const isSelected = (elId && this.selectedElementIds.has(elId)) || elId === this.selectedElementId;
@@ -2875,7 +3219,7 @@ export class CollaborativePdfEditorController implements ViewController {
     box.classList.toggle('is-narrow', isNarrow);
   }
 
-  private bindTransformHandles(box: HTMLElement, el: ElementImage | ElementShape | ElementText): void {
+  private bindTransformHandles(box: HTMLElement, el: ElementImage | ElementShape | ElementTable | ElementText): void {
     const handles = box.querySelectorAll<HTMLElement>('.collaborative-transform-handle');
     handles.forEach((handle) => {
       handle.addEventListener('mousedown', (e) => {
@@ -2890,7 +3234,7 @@ export class CollaborativePdfEditorController implements ViewController {
     });
   }
 
-  private startRotating(e: MouseEvent, el: ElementImage | ElementShape | ElementText): void {
+  private startRotating(e: MouseEvent, el: ElementImage | ElementShape | ElementTable | ElementText): void {
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
     if (!elNode) return;
 
@@ -2919,7 +3263,7 @@ export class CollaborativePdfEditorController implements ViewController {
     document.addEventListener('mouseup', onMouseUp);
   }
 
-  private startResizing(e: MouseEvent, el: ElementImage | ElementShape | ElementText, handleType: string): void {
+  private startResizing(e: MouseEvent, el: ElementImage | ElementShape | ElementTable | ElementText, handleType: string): void {
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
     if (!elNode) return;
 
@@ -3040,6 +3384,10 @@ export class CollaborativePdfEditorController implements ViewController {
 
         elNode.style.width = `${el.width}px`;
         elNode.style.height = `${el.height}px`;
+        if (el.type === 'table') {
+          const scaleY = el.height / initialH;
+          el.rowHeights = el.rowHeights.map((h) => Math.max(20, Math.round(h * scaleY)));
+        }
       }
 
       elNode.style.left = `${el.x}px`;
@@ -3054,7 +3402,7 @@ export class CollaborativePdfEditorController implements ViewController {
       }
 
       const otherElements = this.elements.filter(
-        (e): e is ElementImage | ElementShape | ElementText =>
+        (e): e is ElementImage | ElementShape | ElementTable | ElementText =>
           e.id !== el.id && (e.pageIndex ?? 0) === (el.pageIndex ?? 0) && e.type !== 'drawing'
       );
       this.renderActiveSmartGuides(el, el.pageIndex ?? 0, el.x, el.y, el.width ?? 100, el.height ?? 40, otherElements);
@@ -3087,7 +3435,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const threshold = 6;
 
     const otherElements = this.elements.filter(
-      (el): el is ElementImage | ElementShape | ElementText =>
+      (el): el is ElementImage | ElementShape | ElementTable | ElementText =>
         el.id !== item.id && (el.pageIndex ?? 0) === pageIndex && el.type !== 'drawing'
     );
 
@@ -3184,7 +3532,7 @@ export class CollaborativePdfEditorController implements ViewController {
     y: number,
     width: number,
     height: number,
-    otherElements: Array<ElementImage | ElementShape | ElementText>
+    otherElements: Array<ElementImage | ElementShape | ElementTable | ElementText>
   ): void {
     const guidesSvg = this.container.querySelector<SVGElement>(`[data-ref="guides-svg-${pageIndex}"]`);
     if (!guidesSvg) return;
@@ -3226,7 +3574,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const vCoords = [myLeft, myCenter, myRight];
     for (const vX of vCoords) {
-      const matchingOthers: Array<ElementImage | ElementShape | ElementText> = [];
+      const matchingOthers: Array<ElementImage | ElementShape | ElementTable | ElementText> = [];
       for (const other of otherElements) {
         const oW = other.width || 100;
         const oLeft = other.x;
@@ -3257,7 +3605,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const hCoords = [myTop, myMiddle, myBottom];
     for (const hY of hCoords) {
-      const matchingOthers: Array<ElementImage | ElementShape | ElementText> = [];
+      const matchingOthers: Array<ElementImage | ElementShape | ElementTable | ElementText> = [];
       for (const other of otherElements) {
         const oH = other.height || 40;
         const oTop = other.y;
@@ -3315,6 +3663,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const textGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-text"]');
     const shapeGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-shape"]');
+    const tableGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-table"]');
     const pageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-page"]');
     const actionGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-actions"]');
 
@@ -3386,9 +3735,33 @@ export class CollaborativePdfEditorController implements ViewController {
 
         const btnStrokeWidth = toolbar.querySelector<HTMLElement>('[data-ref="btn-shape-strokewidth"]');
         if (btnStrokeWidth) btnStrokeWidth.setAttribute('data-tooltip', `Grosor de borde: ${el.strokeWidth || 0}px`);
+        if (tableGroup) hideElement(tableGroup);
+      } else if (el.type === 'table') {
+        if (tableGroup) showElement(tableGroup);
+        hideElement(textGroup);
+        hideElement(shapeGroup);
+
+        const previewHeader = toolbar.querySelector<HTMLElement>('[data-ref="preview-table-header-color"]');
+        if (previewHeader) previewHeader.style.backgroundColor = el.headerColor || el.themeColor || '#4b5563';
+
+        const previewBorder = toolbar.querySelector<HTMLElement>('[data-ref="preview-table-border-color"]');
+        if (previewBorder) previewBorder.style.backgroundColor = el.borderColor || '#4b5563';
+
+        const previewBg = toolbar.querySelector<HTMLElement>('[data-ref="preview-table-bg-color"]');
+        if (previewBg) previewBg.style.backgroundColor = el.cells[1]?.[0]?.backgroundColor || el.themeColor || '#f3f4f6';
+
+        const btnBorderWidth = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-border-width"]');
+        if (btnBorderWidth) btnBorderWidth.setAttribute('data-tooltip', `Grosor de borde: ${el.borderWidth || 0}px`);
+
+        const btnSpacing = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-spacing"]');
+        if (btnSpacing) btnSpacing.setAttribute('data-tooltip', `Espaciado de celdas: ${el.cellSpacing || 0}px`);
+
+        const btnPadding = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-padding"]');
+        if (btnPadding) btnPadding.setAttribute('data-tooltip', `Relleno de celdas: ${el.cellPadding || 8}px`);
       } else {
         hideElement(textGroup);
         hideElement(shapeGroup);
+        if (tableGroup) hideElement(tableGroup);
       }
     } else if (this.selectedPageIndex !== null) {
       showElement(toolbar);
@@ -3396,6 +3769,7 @@ export class CollaborativePdfEditorController implements ViewController {
       showElement(pageGroup);
       hideElement(textGroup);
       hideElement(shapeGroup);
+      if (tableGroup) hideElement(tableGroup);
 
       const previewPageBg = toolbar.querySelector<HTMLElement>('[data-ref="preview-page-bg-color"]');
       if (previewPageBg) {
@@ -3409,6 +3783,7 @@ export class CollaborativePdfEditorController implements ViewController {
         }
       }
     } else {
+      if (tableGroup) hideElement(tableGroup);
       hideElement(toolbar);
     }
 
@@ -3467,7 +3842,7 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
-  private openColorMenu(target: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'text-color'): void {
+  private openColorMenu(target: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color'): void {
     this.currentColorTarget = target;
     this.ensureDrawerMounted();
     const titleEl = this.queryPanel<HTMLElement>('[data-ref="side-panel-title"]');
@@ -3478,6 +3853,9 @@ export class CollaborativePdfEditorController implements ViewController {
       'shape-fill': 'Color de relleno',
       'shape-stroke': 'Color de borde',
       'sticky-bg': 'Color de nota',
+      'table-bg': 'Color de celdas',
+      'table-border': 'Color de borde',
+      'table-header': 'Color de encabezado',
       'text-color': 'Color de texto',
     };
 
@@ -3493,6 +3871,9 @@ export class CollaborativePdfEditorController implements ViewController {
         'shape-fill': 'Colores de la forma',
         'shape-stroke': 'Colores de la forma',
         'sticky-bg': 'Colores de la nota',
+        'table-bg': 'Colores de celdas',
+        'table-border': 'Colores de borde',
+        'table-header': 'Colores de encabezado',
         'text-color': 'Colores del texto',
       };
       firstCategoryTitleEl.textContent = categoryTitles[target] || 'Colores';
@@ -3668,6 +4049,52 @@ export class CollaborativePdfEditorController implements ViewController {
       this.drawColor = color;
       const preview = this.container.querySelector<HTMLElement>('[data-ref="preview-draw-color"]');
       if (preview) preview.style.backgroundColor = color;
+    } else if (this.currentColorTarget === 'table-header') {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        el.headerColor = color;
+        el.cells[0]?.forEach((c) => {
+          c.backgroundColor = color;
+          c.color = '#ffffff';
+        });
+        const preview = this.container.querySelector<HTMLElement>('[data-ref="preview-table-header-color"]');
+        if (preview) preview.style.backgroundColor = color;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    } else if (this.currentColorTarget === 'table-border') {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        el.borderColor = color;
+        if (!el.borderWidth) el.borderWidth = 1.5;
+        const preview = this.container.querySelector<HTMLElement>('[data-ref="preview-table-border-color"]');
+        if (preview) preview.style.backgroundColor = color;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    } else if (this.currentColorTarget === 'table-bg') {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        el.themeColor = color;
+        for (let r = 1; r < el.rows; r++) {
+          el.cells[r]?.forEach((c) => {
+            c.backgroundColor = color;
+          });
+        }
+        const preview = this.container.querySelector<HTMLElement>('[data-ref="preview-table-bg-color"]');
+        if (preview) preview.style.backgroundColor = color;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
     }
 
     this.highlightActiveColorSwatch();
@@ -3691,6 +4118,15 @@ export class CollaborativePdfEditorController implements ViewController {
       if (this.selectedPageIndex !== null) activeColor = this.pageBackgrounds[this.selectedPageIndex] || '#ffffff';
     } else if (this.currentColorTarget === 'draw-color') {
       activeColor = this.drawColor;
+    } else if (this.currentColorTarget === 'table-header') {
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') activeColor = el.headerColor || el.themeColor || '#4b5563';
+    } else if (this.currentColorTarget === 'table-border') {
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') activeColor = el.borderColor || '#4b5563';
+    } else if (this.currentColorTarget === 'table-bg') {
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') activeColor = el.cells[1]?.[0]?.backgroundColor || el.themeColor || '#f3f4f6';
     }
 
     const swatches = this.queryPanelAll<HTMLButtonElement>('[data-ref="swatch-color"]');
@@ -4102,6 +4538,162 @@ export class CollaborativePdfEditorController implements ViewController {
         this.renderPages();
         this.selectElement(el.id);
         this.setModified(true);
+      }
+    }, { signal });
+
+    const btnTableHeaderColor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-header-color"]');
+    btnTableHeaderColor?.addEventListener('click', () => {
+      this.openColorMenu('table-header');
+    }, { signal });
+
+    const btnTableBorderColor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-border-color"]');
+    btnTableBorderColor?.addEventListener('click', () => {
+      this.openColorMenu('table-border');
+    }, { signal });
+
+    const btnTableBgColor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-bg-color"]');
+    btnTableBgColor?.addEventListener('click', () => {
+      this.openColorMenu('table-bg');
+    }, { signal });
+
+    const tableBorderWidths = [0, 1, 2, 3, 4];
+    const btnTableBorderWidth = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-border-width"]');
+    btnTableBorderWidth?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        const curIdx = tableBorderWidths.indexOf(el.borderWidth || 0);
+        el.borderWidth = tableBorderWidths[(curIdx + 1) % tableBorderWidths.length];
+        if (el.borderWidth > 0 && (!el.borderColor || el.borderColor === 'transparent')) {
+          el.borderColor = el.headerColor || el.themeColor || '#4b5563';
+        }
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const tableSpacings = [0, 4, 8, 12, 16];
+    const btnTableSpacing = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-spacing"]');
+    btnTableSpacing?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        const curIdx = tableSpacings.indexOf(el.cellSpacing || 0);
+        el.cellSpacing = tableSpacings[(curIdx + 1) % tableSpacings.length];
+        const totalRowH = el.rowHeights.reduce((acc, h) => acc + h, 0);
+        el.height = totalRowH + (el.rows + 1) * el.cellSpacing;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const tablePaddings = [4, 8, 12, 16];
+    const btnTablePadding = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-padding"]');
+    btnTablePadding?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        const curIdx = tablePaddings.indexOf(el.cellPadding || 8);
+        el.cellPadding = tablePaddings[(curIdx + 1) % tablePaddings.length];
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const btnTableAddRow = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-add-row"]');
+    btnTableAddRow?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        const newRowIdx = el.rows;
+        el.rows++;
+        el.rowHeights.push(40);
+        el.cells.push(
+          Array.from({ length: el.cols }, (_, c) => ({
+            align: 'left' as const,
+            backgroundColor: el.tableStyle === 'cards' ? (el.cells[1]?.[0]?.backgroundColor || '#f3f4f6') : 'transparent',
+            color: '#334155',
+            isBold: false,
+            text: `Dato ${newRowIdx}.${c + 1}`,
+          }))
+        );
+        const totalRowH = el.rowHeights.reduce((acc, h) => acc + h, 0);
+        el.height = totalRowH + (el.rows + 1) * el.cellSpacing;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const btnTableDelRow = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-del-row"]');
+    btnTableDelRow?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table' && el.rows > 1) {
+        el.rows--;
+        el.rowHeights.pop();
+        el.cells.pop();
+        const totalRowH = el.rowHeights.reduce((acc, h) => acc + h, 0);
+        el.height = totalRowH + (el.rows + 1) * el.cellSpacing;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const btnTableAddCol = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-add-col"]');
+    btnTableAddCol?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table') {
+        const newColIdx = el.cols;
+        el.cols++;
+        el.cells[0]?.push({
+          align: 'left' as const,
+          backgroundColor: el.headerColor || el.themeColor || 'transparent',
+          color: el.tableStyle === 'grid' ? '#1e293b' : '#ffffff',
+          isBold: true,
+          text: `Encabezado ${newColIdx + 1}`,
+        });
+        for (let r = 1; r < el.rows; r++) {
+          el.cells[r]?.push({
+            align: 'left' as const,
+            backgroundColor: el.tableStyle === 'cards' ? (el.cells[1]?.[0]?.backgroundColor || '#f3f4f6') : 'transparent',
+            color: '#334155',
+            isBold: false,
+            text: `Dato ${r}.${newColIdx + 1}`,
+          });
+        }
+        el.width += 120;
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+
+    const btnTableDelCol = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-table-del-col"]');
+    btnTableDelCol?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'table' && el.cols > 1) {
+        el.cols--;
+        for (let r = 0; r < el.rows; r++) {
+          el.cells[r]?.pop();
+        }
+        el.width = Math.max(120, el.width - 120);
+        this.renderPages();
+        this.selectElement(el.id);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
       }
     }, { signal });
 

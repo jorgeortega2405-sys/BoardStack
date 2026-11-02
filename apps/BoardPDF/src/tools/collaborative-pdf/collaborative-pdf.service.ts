@@ -234,6 +234,56 @@ export async function renderCollaborativePdf(
       } catch (imgErr) {
         logger.app.warn('Error al incrustar imagen en renderCollaborativePdf', imgErr);
       }
+    } else if (el.type === 'table' && Array.isArray(el.cells) && el.rows > 0 && el.cols > 0) {
+      const spacing = (el.cellSpacing || 0) * scale;
+      const cellPad = (el.cellPadding || 8) * scale;
+      const borderWidth = (el.borderWidth || 0) * scale;
+      const bColor = parseHexColor(el.borderColor || '#4b5563');
+      const borderRgb = rgb(bColor.r, bColor.g, bColor.b);
+      const startX = el.x * scale;
+      const colW = ((el.width * scale) - spacing * (el.cols + 1)) / el.cols;
+      let curY = el.y * scale + spacing;
+
+      for (let r = 0; r < el.rows; r++) {
+        const rowH = (el.rowHeights?.[r] || 40) * scale;
+        for (let c = 0; c < el.cols; c++) {
+          const cell = el.cells[r]?.[c];
+          const cellX = startX + spacing + c * (colW + spacing);
+          const cellY = targetHeight - curY - rowH;
+          const bgHex = cell?.backgroundColor || (r === 0 ? el.headerColor : undefined);
+          let cellFillRgb = undefined;
+          if (bgHex && bgHex !== 'transparent') {
+            const fill = parseHexColor(bgHex);
+            cellFillRgb = rgb(fill.r, fill.g, fill.b);
+          }
+          page.drawRectangle({
+            borderColor: borderWidth > 0 ? borderRgb : undefined,
+            borderWidth: borderWidth > 0 ? borderWidth : 0,
+            color: cellFillRgb,
+            height: rowH,
+            width: colW,
+            x: cellX,
+            y: cellY,
+          });
+
+          const text = cleanTextForWinAnsi(cell?.text || '');
+          if (text) {
+            const isHead = r === 0;
+            const font = resolveFont('Helvetica', isHead || cell?.isBold);
+            const fontSize = Math.max(6, 12 * scale);
+            const txtHex = cell?.color || (isHead && el.tableStyle !== 'grid' ? '#ffffff' : '#1e293b');
+            const txtColor = parseHexColor(txtHex);
+            page.drawText(text, {
+              color: rgb(txtColor.r, txtColor.g, txtColor.b),
+              font,
+              size: fontSize,
+              x: cellX + cellPad,
+              y: cellY + rowH / 2 - fontSize / 3,
+            });
+          }
+        }
+        curY += rowH + spacing;
+      }
     }
   }
 

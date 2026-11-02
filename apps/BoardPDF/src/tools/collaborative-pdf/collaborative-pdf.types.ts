@@ -56,11 +56,42 @@ export interface CollaborativeElementImage {
   y: number;
 }
 
+export interface CollaborativeElementTableCell {
+  align?: 'center' | 'left' | 'right';
+  backgroundColor?: string;
+  color?: string;
+  isBold?: boolean;
+  text: string;
+}
+
+export interface CollaborativeElementTable {
+  borderColor?: string;
+  borderWidth?: number;
+  cellPadding?: number;
+  cellSpacing?: number;
+  cells: CollaborativeElementTableCell[][];
+  cols: number;
+  headerColor?: string;
+  height: number;
+  id: string;
+  pageIndex: number;
+  rotation?: number;
+  rowHeights?: number[];
+  rows: number;
+  tableStyle?: 'cards' | 'grid' | 'header-accent';
+  themeColor?: string;
+  type: 'table';
+  width: number;
+  x: number;
+  y: number;
+}
+
 export type CollaborativeElement =
   | CollaborativeElementText
   | CollaborativeElementShape
   | CollaborativeElementDrawing
-  | CollaborativeElementImage;
+  | CollaborativeElementImage
+  | CollaborativeElementTable;
 
 export interface CollaborativePdfPageSource {
   pageNumber: number;
