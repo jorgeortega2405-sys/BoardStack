@@ -114,6 +114,8 @@ export class CollaborativePdfDashboardController implements ViewController {
       const badgeIcon = isPublic ? 'lock_open' : 'lock';
       const badgeText = isPublic ? 'Público' : 'Privado';
       const relativeTime = this.formatRelativeTime(doc.updated_at);
+      const dim = this.getDocDimensions(doc);
+      const paperSize = this.computePaperSize(dim.width, dim.height);
 
       return `
         <div class="tool-card tool-card--collab-doc" data-ref="card-doc-${doc.id}" data-doc-id="${doc.id}">
@@ -158,8 +160,8 @@ export class CollaborativePdfDashboardController implements ViewController {
               </div>
             </div>
 
-            <div class="tool-card__paper" data-ref="paper-${doc.id}">
-              <canvas class="tool-card__canvas is-hidden" data-ref="canvas-doc-${doc.id}"></canvas>
+            <div class="tool-card__paper" data-ref="paper-${doc.id}" style="height: ${paperSize.height}px; width: ${paperSize.width}px;">
+              <canvas class="tool-card__canvas is-hidden" data-ref="canvas-doc-${doc.id}" style="height: ${paperSize.height}px; width: ${paperSize.width}px;"></canvas>
               <div class="tool-card__placeholder" data-ref="placeholder-doc-${doc.id}">
                 <svg class="component-icon tool-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
                 <div class="tool-card__placeholder-lines" data-ref="placeholder-lines-${doc.id}">
@@ -235,18 +237,45 @@ export class CollaborativePdfDashboardController implements ViewController {
     }
   }
 
+  private getDocDimensions(doc: DocItem): { height: number; width: number } {
+    const w = doc.content?.pageSizes?.[0]?.width || doc.content?.pageSize?.width || 794;
+    const h = doc.content?.pageSizes?.[0]?.height || doc.content?.pageSize?.height || 1123;
+    return { height: Math.max(50, Number(h) || 1123), width: Math.max(50, Number(w) || 794) };
+  }
+
+  private computePaperSize(docW: number, docH: number): { height: number; width: number } {
+    const maxW = 196;
+    const maxH = 156;
+    const scale = Math.min(maxW / docW, maxH / docH);
+    return {
+      height: Math.max(40, Math.round(docH * scale)),
+      width: Math.max(40, Math.round(docW * scale)),
+    };
+  }
+
   private async loadDocPreview(doc: DocItem): Promise<void> {
     const canvas = this.container.querySelector<HTMLCanvasElement>(`[data-ref="canvas-doc-${doc.id}"]`);
     const placeholder = this.container.querySelector<HTMLElement>(`[data-ref="placeholder-doc-${doc.id}"]`);
+    const paper = this.container.querySelector<HTMLElement>(`[data-ref="paper-${doc.id}"]`);
     if (!canvas) return;
+
+    const dim = this.getDocDimensions(doc);
+    const paperSize = this.computePaperSize(dim.width, dim.height);
+
+    if (paper) {
+      paper.style.width = `${paperSize.width}px`;
+      paper.style.height = `${paperSize.height}px`;
+    }
+
+    this.renderLocalCanvasPreview(doc, canvas);
+    canvas.classList.remove('is-hidden');
+    if (placeholder) placeholder.classList.add('is-hidden');
 
     try {
       if (doc.pdf_filename) {
         try {
-          await renderPdfThumbnail(API_ROUTES.collaborativeDocs.pdf(doc.id), canvas, { targetWidth: 240 });
-          this.adjustCanvasSize(canvas);
-          canvas.classList.remove('is-hidden');
-          if (placeholder) placeholder.classList.add('is-hidden');
+          await renderPdfThumbnail(API_ROUTES.collaborativeDocs.pdf(doc.id), canvas, { targetWidth: paperSize.width });
+          this.adjustCanvasSize(canvas, doc);
           return;
         } catch {
         }
@@ -255,51 +284,52 @@ export class CollaborativePdfDashboardController implements ViewController {
       if (doc.content?.pagePdfSources?.[0]?.pdfUrl) {
         try {
           const pageNum = doc.content.pagePdfSources[0].pageNumber || 1;
-          await renderPdfThumbnail(doc.content.pagePdfSources[0].pdfUrl, canvas, { pageNum, targetWidth: 240 });
-          this.adjustCanvasSize(canvas);
-          canvas.classList.remove('is-hidden');
-          if (placeholder) placeholder.classList.add('is-hidden');
+          await renderPdfThumbnail(doc.content.pagePdfSources[0].pdfUrl, canvas, { pageNum, targetWidth: paperSize.width });
+          this.adjustCanvasSize(canvas, doc);
           return;
         } catch {
         }
       }
-
-      this.renderLocalCanvasPreview(doc, canvas);
-      canvas.classList.remove('is-hidden');
-      if (placeholder) placeholder.classList.add('is-hidden');
     } catch {
     }
   }
 
-  private adjustCanvasSize(canvas: HTMLCanvasElement): void {
+  private adjustCanvasSize(canvas: HTMLCanvasElement, doc: DocItem): void {
     if (!canvas.width || !canvas.height) return;
     const aspect = canvas.width / canvas.height;
-    if (aspect < 1) {
-      const targetH = 156;
-      const targetW = Math.max(70, Math.round(targetH * aspect));
-      canvas.style.height = `${targetH}px`;
-      canvas.style.width = `${targetW}px`;
+    const maxW = 196;
+    const maxH = 156;
+
+    let targetW: number;
+    let targetH: number;
+
+    if (aspect >= maxW / maxH) {
+      targetW = maxW;
+      targetH = Math.max(40, Math.round(targetW / aspect));
     } else {
-      const targetW = 166;
-      const targetH = Math.max(60, Math.round(targetW / aspect));
-      canvas.style.width = `${targetW}px`;
-      canvas.style.height = `${targetH}px`;
+      targetH = maxH;
+      targetW = Math.max(40, Math.round(targetH * aspect));
+    }
+
+    canvas.style.width = `${targetW}px`;
+    canvas.style.height = `${targetH}px`;
+
+    const paper = this.container.querySelector<HTMLElement>(`[data-ref="paper-${doc.id}"]`);
+    if (paper) {
+      paper.style.width = `${targetW}px`;
+      paper.style.height = `${targetH}px`;
     }
   }
 
   private renderLocalCanvasPreview(doc: DocItem, canvas: HTMLCanvasElement): void {
-    const docW = doc.content?.pageSize?.width || 794;
-    const docH = doc.content?.pageSize?.height || 1123;
-    const isLandscape = docW > docH;
-
-    const targetH = isLandscape ? 116 : 156;
-    const targetW = isLandscape ? 166 : Math.max(70, Math.round(targetH * (docW / docH)));
+    const dim = this.getDocDimensions(doc);
+    const paperSize = this.computePaperSize(dim.width, dim.height);
     const dpr = window.devicePixelRatio || 1;
 
-    canvas.width = Math.floor(targetW * dpr);
-    canvas.height = Math.floor(targetH * dpr);
-    canvas.style.width = `${targetW}px`;
-    canvas.style.height = `${targetH}px`;
+    canvas.width = Math.floor(paperSize.width * dpr);
+    canvas.height = Math.floor(paperSize.height * dpr);
+    canvas.style.width = `${paperSize.width}px`;
+    canvas.style.height = `${paperSize.height}px`;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -309,10 +339,14 @@ export class CollaborativePdfDashboardController implements ViewController {
     }
 
     const bg = doc.content?.pageBackgrounds?.[0] || '#ffffff';
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, targetW, targetH);
+    if (bg.startsWith('#') || bg.startsWith('rgb')) {
+      ctx.fillStyle = bg;
+    } else {
+      ctx.fillStyle = '#ffffff';
+    }
+    ctx.fillRect(0, 0, paperSize.width, paperSize.height);
 
-    const scale = targetW / docW;
+    const scale = paperSize.width / dim.width;
     const elements = (doc.content?.elements || []).filter((el: any) => (el.pageIndex ?? 0) === 0);
 
     for (const el of elements) {
