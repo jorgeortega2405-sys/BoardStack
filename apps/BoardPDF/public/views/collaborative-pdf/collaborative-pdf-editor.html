@@ -1,13 +1,96 @@
 <div class="component-wrapper component-wrapper--full view-wrapper collaborative-editor-wrapper" data-ref="collaborative-editor-wrapper">
   <header class="component-top collaborative-top-bar" data-ref="collaborative-top-bar">
-    <div class="collaborative-top-bar__left"></div>
+    <div class="collaborative-top-bar__left">
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-file">
+        <button type="button" class="component-button component-button--h40 collaborative-top-btn" data-ref="btn-top-file" aria-label="Menú Archivo">
+          <span class="component-button__text">Archivo</span>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-file">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-260 menu-panel--h-auto" data-ref="dropdown-menu-file">
+            <div class="menu-panel__list" data-ref="dropdown-list-file">
+              <button type="button" class="menu-item" data-ref="btn-menu-file-new">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#note_add"></use></svg>
+                <span class="menu-item__text">Crear nuevo PDF</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-upload">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+                <span class="menu-item__text">Subir archivos</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-copy">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                <span class="menu-item__text">Crear una copia</span>
+              </button>
+              <div class="menu-panel__divider"></div>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-rulers">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+                <span class="menu-item__text">Reglas y guías</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-download">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                <span class="menu-item__text">Descargar</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-favorite">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+                <span class="menu-item__text">Agregar a favoritos</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-search">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <span class="menu-item__text">Encuentra y reemplaza texto</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-file-desktop">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#desktop_windows"></use></svg>
+                <span class="menu-item__text">Abrir en la app para escritorio</span>
+              </button>
+              <div class="menu-panel__divider"></div>
+              <button type="button" class="menu-item menu-item--danger" data-ref="btn-menu-file-trash">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                <span class="menu-item__text">Mover a la papelera</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-edit">
+        <button type="button" class="component-button component-button--h40 collaborative-top-btn" data-ref="btn-top-edit" aria-label="Menú Editar">
+          <span class="component-button__text">Editar</span>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-edit">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-edit">
+            <div class="menu-panel__list" data-ref="dropdown-list-edit">
+              <button type="button" class="menu-item" data-ref="btn-menu-edit-edit">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                <span class="menu-item__text">Editar</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-edit-comment">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat"></use></svg>
+                <span class="menu-item__text">Comentar</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-edit-view">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                <span class="menu-item__text">Ver</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-cloud-btn collaborative-top-icon-btn" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" aria-label="Guardar cambios">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+      </button>
+    </div>
 
     <div class="collaborative-top-bar__right">
       <div class="collab-presence-container" data-ref="collab-presence-container"></div>
       <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" placeholder="Nombre del documento" />
-      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-cloud-btn" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" aria-label="Guardar cambios">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-      </button>
       <button type="button" class="component-button component-button--h40 collaborative-share-btn" data-ref="btn-share-link">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
         <span class="component-button__text">Compartir</span>
@@ -105,6 +188,11 @@
 
     <div class="collaborative-context-toolbar is-hidden" data-ref="collaborative-context-toolbar">
       <div class="collaborative-context-group is-hidden" data-ref="context-group-text">
+        <button type="button" class="component-button component-button--ghost component-button--h36 collaborative-font-btn" data-ref="btn-font-family" data-tooltip="Cambiar fuente" aria-label="Cambiar fuente">
+          <span class="collaborative-font-btn__name" data-ref="txt-font-family">Helvetica</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+        <div class="collaborative-subtoolbar__divider"></div>
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-font-decrease" data-tooltip="Reducir tamaño" aria-label="Reducir tamaño">
           <span class="collaborative-font-step-icon">-</span>
         </button>
@@ -113,15 +201,143 @@
           <span class="collaborative-font-step-icon">+</span>
         </button>
         <div class="collaborative-subtoolbar__divider"></div>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-bold" data-tooltip="Negrita" aria-label="Negrita">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
-        </button>
         <button type="button" class="collaborative-color-picker-btn" data-ref="btn-text-color" data-tooltip="Color de texto" aria-label="Color de texto">
           <div class="collaborative-color-picker-preview" data-ref="preview-text-color" style="background-color: #000000;"></div>
         </button>
         <button type="button" class="collaborative-color-picker-btn is-hidden" data-ref="btn-sticky-bg" data-tooltip="Color de fondo de nota" aria-label="Color de fondo de nota">
           <div class="collaborative-color-picker-preview" data-ref="preview-sticky-bg" style="background-color: #fef08a;"></div>
         </button>
+        <div class="collaborative-subtoolbar__divider"></div>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-bold" data-tooltip="Negrita" aria-label="Negrita">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_bold"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-italic" data-tooltip="Itálica" aria-label="Itálica">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_italic"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-underline" data-tooltip="Subrayado" aria-label="Subrayado">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_underlined"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-strikethrough" data-tooltip="Tachado" aria-label="Tachado">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_strikethrough"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-toggle-uppercase" data-tooltip="Mayúsculas" aria-label="Mayúsculas">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#uppercase"></use></svg>
+        </button>
+        <div class="collaborative-subtoolbar__divider"></div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-text-align">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-text-align" data-tooltip="Alineación" aria-label="Alineación">
+            <svg class="component-icon" data-ref="icon-current-align" aria-hidden="true"><use href="/icons.svg#format_align_left"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-text-align">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="dropdown-menu-text-align">
+              <div class="menu-panel__list">
+                <button type="button" class="menu-item" data-ref="btn-align-left" data-align="left">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_left"></use></svg>
+                  <span class="menu-item__text">Izquierda</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-align-center" data-align="center">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_center"></use></svg>
+                  <span class="menu-item__text">Centrado</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-align-right" data-align="right">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_right"></use></svg>
+                  <span class="menu-item__text">Derecha</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-align-justify" data-align="justify">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_justify"></use></svg>
+                  <span class="menu-item__text">Justificado</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-text-list">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-text-list" data-tooltip="Lista" aria-label="Lista">
+            <svg class="component-icon" data-ref="icon-current-list" aria-hidden="true"><use href="/icons.svg#format_list_bulleted"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-text-list">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="dropdown-menu-text-list">
+              <div class="menu-panel__list">
+                <button type="button" class="menu-item" data-ref="btn-list-none" data-list="none">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+                  <span class="menu-item__text">Sin lista</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-list-bullet" data-list="bullet">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_list_bulleted"></use></svg>
+                  <span class="menu-item__text">Viñetas</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-list-numbered" data-list="numbered">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_list_numbered"></use></svg>
+                  <span class="menu-item__text">Numerada</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="collaborative-subtoolbar__divider"></div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-text-advanced">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-text-advanced" data-tooltip="Espaciado y alineación" aria-label="Configuración avanzada">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-text-advanced">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-260 menu-panel--h-auto" data-ref="dropdown-menu-text-advanced">
+              <div class="collab-popover-panel collab-popover-panel--wide">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Interletrado</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-letter-spacing" type="range" min="-4" max="20" value="0" />
+                    <span class="collab-popover-num-box" data-ref="num-letter-spacing">0</span>
+                  </div>
+                </div>
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Interlineado</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-line-height" type="range" min="8" max="30" value="14" />
+                    <span class="collab-popover-num-box" data-ref="num-line-height">1.4</span>
+                  </div>
+                </div>
+                <div class="collab-popover-divider"></div>
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Anclar la caja de texto</span>
+                  <div class="collab-valign-row" data-ref="valign-row">
+                    <button type="button" class="collab-valign-btn is-active" data-ref="btn-valign-top" data-valign="top" data-tooltip="Superior" aria-label="Anclar arriba">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vertical_align_top"></use></svg>
+                    </button>
+                    <button type="button" class="collab-valign-btn" data-ref="btn-valign-middle" data-valign="middle" data-tooltip="Medio" aria-label="Anclar al centro">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vertical_align_center"></use></svg>
+                    </button>
+                    <button type="button" class="collab-valign-btn" data-ref="btn-valign-bottom" data-valign="bottom" data-tooltip="Inferior" aria-label="Anclar abajo">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vertical_align_bottom"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-text-opacity">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-text-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#opacity"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-text-opacity">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-text-opacity">
+              <div class="collab-popover-panel">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Transparencia</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-text-opacity" type="range" min="0" max="100" value="100" />
+                    <span class="collab-popover-num-box" data-ref="num-text-opacity">100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="collaborative-context-group is-hidden" data-ref="context-group-shape">
@@ -131,9 +347,207 @@
         <button type="button" class="collaborative-color-picker-btn" data-ref="btn-shape-stroke" data-tooltip="Color de borde" aria-label="Color de borde">
           <div class="collaborative-color-picker-preview" data-ref="preview-shape-stroke" style="background-color: #000000;"></div>
         </button>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-strokewidth" data-tooltip="Grosor de borde" aria-label="Grosor de borde">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+        <div class="collaborative-subtoolbar__divider"></div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-shape-stroke">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-stroke-style" data-tooltip="Estilo de trazo" aria-label="Estilo de trazo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#border_style"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-shape-stroke">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-260 menu-panel--h-auto" data-ref="dropdown-menu-shape-stroke">
+              <div class="collab-popover-panel collab-popover-panel--wide">
+                <div class="collab-stroke-styles-row" data-ref="shape-stroke-styles-row">
+                  <button type="button" class="collab-stroke-style-btn is-active" data-ref="btn-shape-stroke-none" data-style="none" data-tooltip="Ninguno" aria-label="Sin borde">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-shape-stroke-solid" data-style="solid" data-tooltip="Sólido" aria-label="Borde sólido">
+                    <span class="collab-stroke-sample collab-stroke-sample--solid"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-shape-stroke-dashed" data-style="dashed" data-tooltip="Raya" aria-label="Borde raya">
+                    <span class="collab-stroke-sample collab-stroke-sample--dashed"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-shape-stroke-long-dash" data-style="long-dash" data-tooltip="Raya larga" aria-label="Borde raya larga">
+                    <span class="collab-stroke-sample collab-stroke-sample--long-dash"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-shape-stroke-dotted" data-style="dotted" data-tooltip="Puntos" aria-label="Borde punteado">
+                    <span class="collab-stroke-sample collab-stroke-sample--dotted"></span>
+                  </button>
+                </div>
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Grosor del trazo</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-shape-stroke-width" type="range" min="0" max="40" value="0" />
+                    <span class="collab-popover-num-box" data-ref="num-shape-stroke-width">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-shape-corner">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-corner-radius" data-tooltip="Redondear esquinas" aria-label="Redondear esquinas">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rounded_corner"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-shape-corner">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-shape-corner">
+              <div class="collab-popover-panel">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Redondear esquinas</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-shape-corner-radius" type="range" min="0" max="100" value="0" />
+                    <span class="collab-popover-num-box" data-ref="num-shape-corner-radius">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-shape-opacity">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#opacity"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-shape-opacity">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-shape-opacity">
+              <div class="collab-popover-panel">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Transparencia</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-shape-opacity" type="range" min="0" max="100" value="100" />
+                    <span class="collab-popover-num-box" data-ref="num-shape-opacity">100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-shape-flip">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-shape-flip" data-tooltip="Voltear" aria-label="Voltear">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-shape-flip">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-shape-flip">
+              <div class="menu-panel__list">
+                <button type="button" class="menu-item" data-ref="btn-shape-flip-h">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+                  <span class="menu-item__text">Voltear en sentido horizontal</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-shape-flip-v">
+                  <svg class="component-icon" style="transform: rotate(90deg);" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+                  <span class="menu-item__text">Voltear en sentido vertical</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="collaborative-context-group is-hidden" data-ref="context-group-image">
+        <button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-remove-bg" data-tooltip="Quitar fondos (Próximamente)" aria-label="Quitar fondos">
+          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_fix_high"></use></svg>
+          <span class="component-button__text">Quitar fondos</span>
         </button>
+        <div class="collaborative-subtoolbar__divider"></div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-image-stroke">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-stroke-style" data-tooltip="Estilo de trazo" aria-label="Estilo de trazo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#border_style"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-image-stroke">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-260 menu-panel--h-auto" data-ref="dropdown-menu-image-stroke">
+              <div class="collab-popover-panel collab-popover-panel--wide">
+                <div class="collab-stroke-styles-row" data-ref="image-stroke-styles-row">
+                  <button type="button" class="collab-stroke-style-btn is-active" data-ref="btn-image-stroke-none" data-style="none" data-tooltip="Ninguno" aria-label="Sin borde">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-image-stroke-solid" data-style="solid" data-tooltip="Sólido" aria-label="Borde sólido">
+                    <span class="collab-stroke-sample collab-stroke-sample--solid"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-image-stroke-dashed" data-style="dashed" data-tooltip="Raya" aria-label="Borde raya">
+                    <span class="collab-stroke-sample collab-stroke-sample--dashed"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-image-stroke-long-dash" data-style="long-dash" data-tooltip="Raya larga" aria-label="Borde raya larga">
+                    <span class="collab-stroke-sample collab-stroke-sample--long-dash"></span>
+                  </button>
+                  <button type="button" class="collab-stroke-style-btn" data-ref="btn-image-stroke-dotted" data-style="dotted" data-tooltip="Puntos" aria-label="Borde punteado">
+                    <span class="collab-stroke-sample collab-stroke-sample--dotted"></span>
+                  </button>
+                </div>
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Grosor del trazo</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-image-stroke-width" type="range" min="0" max="40" value="0" />
+                    <span class="collab-popover-num-box" data-ref="num-image-stroke-width">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-image-corner">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-corner-radius" data-tooltip="Redondear esquinas" aria-label="Redondear esquinas">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rounded_corner"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-image-corner">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-image-corner">
+              <div class="collab-popover-panel">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Redondear esquinas</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-image-corner-radius" type="range" min="0" max="100" value="0" />
+                    <span class="collab-popover-num-box" data-ref="num-image-corner-radius">0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-crop" data-tooltip="Recortar" aria-label="Recortar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+        </button>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-image-opacity">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#opacity"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-image-opacity">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-image-opacity">
+              <div class="collab-popover-panel">
+                <div class="collab-popover-field">
+                  <span class="collab-popover-label">Transparencia</span>
+                  <div class="collab-popover-slider-row">
+                    <input class="collab-popover-range" data-ref="range-image-opacity" type="range" min="0" max="100" value="100" />
+                    <span class="collab-popover-num-box" data-ref="num-image-opacity">100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-image-flip">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-image-flip" data-tooltip="Voltear" aria-label="Voltear">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-image-flip">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-image-flip">
+              <div class="menu-panel__list">
+                <button type="button" class="menu-item" data-ref="btn-image-flip-h">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+                  <span class="menu-item__text">Voltear en sentido horizontal</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-image-flip-v">
+                  <svg class="component-icon" style="transform: rotate(90deg);" aria-hidden="true"><use href="/icons.svg#flip"></use></svg>
+                  <span class="menu-item__text">Voltear en sentido vertical</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="collaborative-context-group is-hidden" data-ref="context-group-table">

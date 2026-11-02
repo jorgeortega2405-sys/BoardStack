@@ -12,36 +12,54 @@ import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
 import { getLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../utils/collab-local-draft.util.js';
-import { debounce, hideElement, showElement, withButtonLoading } from '../../utils/dom.util.js';
+import { debounce, hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
+import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABELS } from './collab-fonts.config.js';
+import { openCollabPageSizeModal } from './collab-page-size-modal.util.js';
 import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 
 interface ElementText {
+  align?: 'center' | 'justify' | 'left' | 'right';
   authorName?: string;
   backgroundColor?: string;
   color?: string;
   fontFamily?: string;
   fontSize: number;
+  fontStyle?: 'italic' | 'normal';
+  fontWeight?: number | string;
   height?: number;
   id: string;
   isBold?: boolean;
   isStickyNote?: boolean;
+  isStrikethrough?: boolean;
+  isUnderline?: boolean;
+  isUppercase?: boolean;
+  letterSpacing?: number;
+  lineHeight?: number;
+  listType?: 'bullet' | 'none' | 'numbered';
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   text: string;
   type: 'text';
+  verticalAlign?: 'bottom' | 'middle' | 'top';
   width?: number;
   x: number;
   y: number;
 }
 
 interface ElementShape {
+  borderRadius?: number;
   fillColor?: string;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
   height: number;
   id: string;
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   shapeType: 'arch' | 'arrow' | 'arrow-bidirectional-bold' | 'arrow-block-down' | 'arrow-block-left' | 'arrow-block-right' | 'arrow-block-up' | 'arrow-chevron-right' | 'arrow-double-horizontal' | 'arrow-double-vertical' | 'arrow-down' | 'arrow-left' | 'arrow-notched-left' | 'arrow-pentagon-right' | 'arrow-up' | 'badge' | 'badge-20' | 'callout' | 'chamfered-rect' | 'circle' | 'cloud' | 'cross' | 'decagon' | 'diamond' | 'flare-10' | 'flare-12' | 'flare-8' | 'flowchart-data' | 'flowchart-decision' | 'flowchart-delay' | 'flowchart-display' | 'flowchart-document' | 'flowchart-manual' | 'flowchart-merge' | 'flowchart-offpage' | 'flowchart-preparation' | 'flowchart-process-rounded' | 'flowchart-terminator' | 'heart' | 'heptagon' | 'hexagon' | 'hexagon-vertical' | 'lightning' | 'line' | 'line-flexible' | 'line-multiconnect' | 'octagon' | 'parallelogram-left' | 'parallelogram-right' | 'pentagon' | 'plaque' | 'quarter-circle' | 'quarter-circle-arc' | 'rect' | 'right-triangle' | 'rounded-rect' | 'scalloped-rect' | 'semicircle' | 'semicircle-arc' | 'shield' | 'star' | 'star-10' | 'star-12' | 'star-16' | 'star-24' | 'star-32' | 'star-4' | 'star-5' | 'star-6' | 'star-7' | 'star-8' | 'trapezoid' | 'trapezoid-inverted' | 'triangle' | 'triangle-down';
   strokeColor: string;
+  strokeStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
   strokeWidth: number;
   type: 'shape';
   width: number;
@@ -62,9 +80,16 @@ interface ElementDrawing {
 }
 
 interface ElementImage {
+  borderColor?: string;
+  borderRadius?: number;
+  borderStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
+  borderWidth?: number;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
   height: number;
   id: string;
   name?: string;
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   type: 'image';
@@ -194,13 +219,28 @@ const CHART_PALETTES: Record<string, string[]> = {
   purple: ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd'],
 };
 
+
+function applyListFormatting(text: string, type: 'bullet' | 'none' | 'numbered'): string {
+  const lines = text.split('\n');
+  return lines.map((line, idx) => {
+    const cleaned = line.replace(/^([•\-\*]|\d+[\.\)])\s*/, '').trim();
+    if (!cleaned) return '';
+    if (type === 'bullet') return `• ${cleaned}`;
+    if (type === 'numbered') return `${idx + 1}. ${cleaned}`;
+    return cleaned;
+  }).join('\n');
+}
+
 const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
 
 export class CollaborativePdfEditorController implements ViewController {
   private abortController: AbortController | null = null;
   private activePageIndex = 0;
-  private activePanelTab: 'colors' | 'elements' | 'text' | 'tools' | 'uploads' | null = null;
+  private activePanelTab: 'colors' | 'elements' | 'fonts' | 'text' | 'tools' | 'uploads' | null = null;
+  private fontActiveCategory = 'all';
+  private fontObserver: IntersectionObserver | null = null;
+  private fontSearchQuery = '';
   private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color' | null = null;
@@ -251,6 +291,13 @@ export class CollaborativePdfEditorController implements ViewController {
   private cleanupSharePopover: (() => void) | null = null;
   private selectedPageIndex: number | null = null;
   private selectedPdfAsset: UploadedAsset | null = null;
+  private activeContextDropdowns: Array<{ close: () => void; destroy: () => void }> = [];
+  private editDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  private fileDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  private isApplyingHistory = false;
+  private maxHistoryStates = 50;
+  private redoStack: string[] = [];
+  private undoStack: string[] = [];
   private shareModalElement: HTMLElement | null = null;
   private uploadedAssets: UploadedAsset[] = [];
   private queryParams?: URLSearchParams;
@@ -295,9 +342,29 @@ export class CollaborativePdfEditorController implements ViewController {
     this.updateFooterPageInfo();
     this.renderPresenceList();
     renderIcons(this.container);
+    this.undoStack = [
+      JSON.stringify({
+        elements: this.elements,
+        pageBackgrounds: this.pageBackgrounds,
+        pageCount: this.pageCount,
+        pageSizes: this.pageSizes,
+      }),
+    ];
+    this.redoStack = [];
+    this.updateUndoRedoButtons();
   }
 
   destroy(): void {
+    for (const d of this.activeContextDropdowns) {
+      d.destroy();
+    }
+    this.activeContextDropdowns = [];
+    this.fileDropdownCtrl?.destroy();
+    this.fileDropdownCtrl = null;
+    this.editDropdownCtrl?.destroy();
+    this.editDropdownCtrl = null;
+    this.undoStack = [];
+    this.redoStack = [];
     this.closeSharePopover();
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
@@ -330,6 +397,10 @@ export class CollaborativePdfEditorController implements ViewController {
     if (this.drawerAbortController) {
       this.drawerAbortController.abort();
       this.drawerAbortController = null;
+    }
+    if (this.fontObserver) {
+      this.fontObserver.disconnect();
+      this.fontObserver = null;
     }
     if (this.drawer) {
       this.drawer.classList.remove('is-open');
@@ -648,7 +719,7 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
-  private handleRailTabClick(tab: 'colors' | 'elements' | 'text' | 'tools' | 'uploads'): void {
+  private handleRailTabClick(tab: 'colors' | 'elements' | 'fonts' | 'text' | 'tools' | 'uploads'): void {
     const toolsToolbar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-tools-toolbar"]');
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
@@ -687,6 +758,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const titles: Record<string, string> = {
       colors: 'Color',
       elements: 'Elementos',
+      fonts: 'Fuentes',
       text: 'Escribir',
       uploads: 'Subidos',
     };
@@ -713,6 +785,10 @@ export class CollaborativePdfEditorController implements ViewController {
     if (tab === 'elements') {
       const mainView = this.queryPanel<HTMLElement>('[data-ref="elements-main-view"]');
       if (mainView) showElement(mainView);
+    }
+
+    if (tab === 'fonts') {
+      this.renderFontsPanel();
     }
 
     if (tab === 'uploads') {
@@ -1209,6 +1285,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.selectPage(targetIndex);
     this.setModified(true);
     this.broadcastDocSync();
+    this.recordHistory();
     showToast(`Página ${targetIndex + 1} añadida`, 'success');
   }
 
@@ -1254,6 +1331,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.selectPage(targetIndex);
     this.setModified(true);
     this.broadcastDocSync();
+    this.recordHistory();
     showToast(`Página ${targetIndex + 1} duplicada`, 'success');
   }
 
@@ -1280,6 +1358,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.selectPage(this.activePageIndex);
     this.setModified(true);
     this.broadcastDocSync();
+    this.recordHistory();
     showToast('Página eliminada', 'info');
   }
 
@@ -1366,207 +1445,24 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private openResizePageModal(pageIndex: number): void {
     const curDim = this.getPageDimensions(pageIndex);
-    let selectedPresetId = 'custom';
-    let currentOrientation: 'landscape' | 'portrait' = curDim.width > curDim.height ? 'landscape' : 'portrait';
-    let customUnit: 'in' | 'mm' | 'px' = 'px';
-
-    const matchingPreset = COLLAB_PAGE_PRESETS.find(
-      (p) => (p.width === curDim.width && p.height === curDim.height) ||
-             (p.width === curDim.height && p.height === curDim.width)
-    );
-    if (matchingPreset && matchingPreset.id !== 'custom') {
-      selectedPresetId = matchingPreset.id;
-    }
-
-    const modalBody = document.createElement('div');
-    modalBody.className = 'collab-size-modal';
-    modalBody.setAttribute('data-ref', 'collab-resize-modal-body');
-
-    modalBody.innerHTML = `
-      <div class="collab-size-modal__section" data-ref="section-presets">
-        <h4 class="collab-size-modal__section-title">Plantillas de tamaño</h4>
-        <div class="collab-size-grid" data-ref="grid-presets">
-          ${COLLAB_PAGE_PRESETS.map((p) => `
-            <div class="collab-size-card${p.id === selectedPresetId ? ' is-selected' : ''}" data-ref="preset-card-${p.id}" data-preset-id="${p.id}">
-              <div class="collab-size-card__icon-box" data-ref="icon-box-${p.id}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${p.icon}"></use></svg>
-              </div>
-              <div class="collab-size-card__info" data-ref="info-${p.id}">
-                <span class="collab-size-card__name">${p.name}</span>
-                <span class="collab-size-card__desc">${p.description}</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="collab-orientation-wrapper" data-ref="wrapper-orientation">
-        <span class="collab-size-modal__section-title">Orientación</span>
-        <div class="collab-orientation-toggle" data-ref="toggle-orientation">
-          <button type="button" class="collab-orientation-btn${currentOrientation === 'portrait' ? ' is-active' : ''}" data-ref="btn-orient-portrait" data-orient="portrait">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-            <span>Vertical</span>
-          </button>
-          <button type="button" class="collab-orientation-btn${currentOrientation === 'landscape' ? ' is-active' : ''}" data-ref="btn-orient-landscape" data-orient="landscape">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-            <span>Horizontal</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="collab-custom-wrapper" data-ref="wrapper-custom" style="${selectedPresetId === 'custom' ? '' : 'display: none;'}">
-        <span class="collab-size-modal__section-title">Dimensiones personalizadas</span>
-        <div class="collab-custom-inputs" data-ref="custom-inputs">
-          <label class="field" data-ref="field-custom-w">
-            <input class="field__input field__input--h36" data-ref="input-custom-w" type="number" min="50" max="8000" value="${curDim.width}" />
-            <span class="field__label">Ancho</span>
-          </label>
-          <label class="field" data-ref="field-custom-h">
-            <input class="field__input field__input--h36" data-ref="input-custom-h" type="number" min="50" max="8000" value="${curDim.height}" />
-            <span class="field__label">Alto</span>
-          </label>
-          <div class="field" data-ref="field-custom-unit">
-            <select class="collab-custom-unit-select" data-ref="select-custom-unit">
-              <option value="px" selected>Píxeles (px)</option>
-              <option value="mm">Milímetros (mm)</option>
-              <option value="in">Pulgadas (in)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="collab-size-summary" data-ref="size-summary">
-        <span>Dimensiones resultantes:</span>
-        <span class="collab-size-summary__strong" data-ref="txt-size-summary">${curDim.width} × ${curDim.height} px</span>
-      </div>
-
-      <label class="collab-resize-checkbox-label" data-ref="label-apply-all">
-        <input type="checkbox" data-ref="chk-apply-all" />
-        <span>Aplicar este tamaño a todas las páginas del documento</span>
-      </label>
-    `;
-
-    renderIcons(modalBody);
-
-    const cards = modalBody.querySelectorAll<HTMLElement>('[data-preset-id]');
-    const customWrapper = modalBody.querySelector<HTMLElement>('[data-ref="wrapper-custom"]');
-    const inputCustomW = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-w"]');
-    const inputCustomH = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-h"]');
-    const selectUnit = modalBody.querySelector<HTMLSelectElement>('[data-ref="select-custom-unit"]');
-    const txtSummary = modalBody.querySelector<HTMLElement>('[data-ref="txt-size-summary"]');
-    const btnPortrait = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-portrait"]');
-    const btnLandscape = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-landscape"]');
-    const chkApplyAll = modalBody.querySelector<HTMLInputElement>('[data-ref="chk-apply-all"]');
-
-    const updateSummary = () => {
-      let w = curDim.width;
-      let h = curDim.height;
-      if (selectedPresetId === 'custom') {
-        const rawW = parseFloat(inputCustomW?.value || '800') || 800;
-        const rawH = parseFloat(inputCustomH?.value || '600') || 600;
-        if (customUnit === 'mm') {
-          w = mmToPx(rawW);
-          h = mmToPx(rawH);
-        } else if (customUnit === 'in') {
-          w = inToPx(rawW);
-          h = inToPx(rawH);
-        } else {
-          w = Math.round(rawW);
-          h = Math.round(rawH);
-        }
-      } else {
-        const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
-        if (p) {
-          if (currentOrientation === 'landscape') {
-            w = Math.max(p.width, p.height);
-            h = Math.min(p.width, p.height);
-          } else {
-            w = Math.min(p.width, p.height);
-            h = Math.max(p.width, p.height);
-          }
-        }
-      }
-      if (txtSummary) {
-        txtSummary.textContent = `${w} × ${h} px (${currentOrientation === 'landscape' ? 'Horizontal' : 'Vertical'})`;
-      }
-      return { height: h, width: w };
-    };
-
-    cards.forEach((card) => {
-      card.addEventListener('click', () => {
-        cards.forEach((c) => c.classList.remove('is-selected'));
-        card.classList.add('is-selected');
-        selectedPresetId = card.getAttribute('data-preset-id') || 'a4';
-
-        if (selectedPresetId === 'custom') {
-          if (customWrapper) customWrapper.style.display = 'block';
-        } else {
-          if (customWrapper) customWrapper.style.display = 'none';
-          const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
-          if (p?.defaultOrientation) {
-            currentOrientation = p.defaultOrientation;
-            if (currentOrientation === 'landscape') {
-              btnLandscape?.classList.add('is-active');
-              btnPortrait?.classList.remove('is-active');
-            } else {
-              btnPortrait?.classList.add('is-active');
-              btnLandscape?.classList.remove('is-active');
-            }
-          }
-        }
-        updateSummary();
-      });
-    });
-
-    btnPortrait?.addEventListener('click', () => {
-      currentOrientation = 'portrait';
-      btnPortrait.classList.add('is-active');
-      btnLandscape?.classList.remove('is-active');
-      updateSummary();
-    });
-
-    btnLandscape?.addEventListener('click', () => {
-      currentOrientation = 'landscape';
-      btnLandscape.classList.add('is-active');
-      btnPortrait?.classList.remove('is-active');
-      updateSummary();
-    });
-
-    inputCustomW?.addEventListener('input', updateSummary);
-    inputCustomH?.addEventListener('input', updateSummary);
-    selectUnit?.addEventListener('change', () => {
-      customUnit = (selectUnit.value as 'in' | 'mm' | 'px') || 'px';
-      updateSummary();
-    });
-
-    const modal = openModal({
-      bodyHtml: modalBody,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--black',
-      confirmText: 'Aplicar tamaño',
-      description: `Modifica el formato o dimensiones de la página ${pageIndex + 1}.`,
-      onConfirm: () => {
-        const finalDimensions = updateSummary();
-        const applyToAll = !!chkApplyAll?.checked;
-
+    openCollabPageSizeModal({
+      currentDimensions: curDim,
+      mode: 'resize',
+      onConfirm: ({ applyToAll, dimensions }) => {
         if (applyToAll) {
-          this.docDefaultPageSize = { ...finalDimensions };
-          this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...finalDimensions }));
+          this.docDefaultPageSize = { ...dimensions };
+          this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...dimensions }));
         } else {
-          this.pageSizes[pageIndex] = { ...finalDimensions };
+          this.pageSizes[pageIndex] = { ...dimensions };
         }
 
         this.renderPages();
         this.selectPage(pageIndex);
         this.setModified(true);
         this.broadcastDocSync();
-        modal.close();
         showToast(applyToAll ? 'Tamaño aplicado a todas las páginas' : `Tamaño de página ${pageIndex + 1} actualizado`, 'success');
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'md',
-      title: `Tamaño de Página ${pageIndex + 1}`,
+      pageIndex,
     });
   }
 
@@ -2179,11 +2075,14 @@ export class CollaborativePdfEditorController implements ViewController {
           const pageElements = this.elements.filter((el): el is ElementChart | ElementImage | ElementShape | ElementTable | ElementText => (el.pageIndex ?? 0) === p && el.type !== 'drawing');
 
           for (const el of pageElements) {
-            const elW = el.width || 60;
-            const elH = el.height || 60;
-            const elR = el.x + elW;
-            const elB = el.y + elH;
-            const intersects = !(elR < left || el.x > right || elB < top || el.y > bottom);
+            const elNode = sheet.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+            const elX = elNode ? elNode.offsetLeft : el.x;
+            const elY = elNode ? elNode.offsetTop : el.y;
+            const elW = elNode ? (elNode.offsetWidth || el.width || 60) : (el.width || 60);
+            const elH = elNode ? (elNode.offsetHeight || el.height || 60) : (el.height || 60);
+            const elR = elX + elW;
+            const elB = elY + elH;
+            const intersects = !(elR < left || elX > right || elB < top || elY > bottom);
             if (intersects) {
               this.selectedElementIds.add(el.id);
             } else if (!moveEvt.shiftKey && !moveEvt.ctrlKey) {
@@ -2205,6 +2104,11 @@ export class CollaborativePdfEditorController implements ViewController {
               const singleId = Array.from(this.selectedElementIds)[0];
               this.selectElement(singleId);
             } else if (this.selectedElementIds.size > 1) {
+              this.selectedElementId = null;
+              this.removeTransformBox();
+              this.updateSelection();
+              this.updateContextToolbar();
+            } else {
               this.selectedElementId = null;
               this.removeTransformBox();
               this.updateSelection();
@@ -2435,6 +2339,7 @@ export class CollaborativePdfEditorController implements ViewController {
         el.text = bodyEl.innerText;
         this.setModified(true);
         this.broadcastElementUpdate(el);
+        this.recordHistory();
         void this.flushAutoSave();
       });
 
@@ -2516,6 +2421,7 @@ export class CollaborativePdfEditorController implements ViewController {
         this.updateTransformBoxPosition();
         this.setModified(true);
         this.broadcastElementUpdate(el);
+        this.recordHistory();
         void this.flushAutoSave();
       });
 
@@ -2538,8 +2444,31 @@ export class CollaborativePdfEditorController implements ViewController {
     } else {
       div.style.color = el.color || '#000000';
     }
-    div.style.fontWeight = el.isBold ? 'bold' : 'normal';
-    div.style.fontFamily = el.fontFamily || 'Helvetica, sans-serif';
+    div.style.fontWeight = el.fontWeight ? String(el.fontWeight) : (el.isBold ? 'bold' : 'normal');
+    div.style.fontFamily = el.fontFamily ? `"${el.fontFamily}", sans-serif` : 'Helvetica, sans-serif';
+    if (el.fontStyle) div.style.fontStyle = el.fontStyle;
+    if (el.isUnderline && el.isStrikethrough) {
+      div.style.textDecoration = 'underline line-through';
+    } else if (el.isUnderline) {
+      div.style.textDecoration = 'underline';
+    } else if (el.isStrikethrough) {
+      div.style.textDecoration = 'line-through';
+    } else {
+      div.style.textDecoration = 'none';
+    }
+    if (el.isUppercase) div.style.textTransform = 'uppercase';
+    if (el.align) div.style.textAlign = el.align;
+    if (el.letterSpacing !== undefined) div.style.letterSpacing = `${el.letterSpacing}px`;
+    if (el.lineHeight !== undefined) div.style.lineHeight = `${el.lineHeight}`;
+    if (el.opacity !== undefined) div.style.opacity = `${el.opacity}`;
+    if (el.verticalAlign) {
+      div.style.display = 'flex';
+      div.style.flexDirection = 'column';
+      div.style.justifyContent = el.verticalAlign === 'middle' ? 'center' : (el.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start');
+    }
+    if (el.fontFamily) {
+      void loadGoogleFont(el.fontFamily, [el.fontWeight ? Number(el.fontWeight) : (el.isBold ? 700 : 400)], el.fontStyle === 'italic');
+    }
     div.style.transform = `rotate(${el.rotation || 0}deg)`;
     div.style.transformOrigin = 'center center';
 
@@ -3230,11 +3159,19 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     }
 
-    const geom = this.renderShapeGeometry(el, fill, stroke, strokeWidth, w, h);
+    let strokeDash = '';
+    if (el.strokeStyle === 'dashed') strokeDash = 'stroke-dasharray="6,4"';
+    else if (el.strokeStyle === 'long-dash') strokeDash = 'stroke-dasharray="12,6"';
+    else if (el.strokeStyle === 'dotted') strokeDash = 'stroke-dasharray="2,3"';
+    else if (el.strokeStyle === 'none' || strokeWidth === 0) {
+      stroke = 'none';
+    }
+
+    const geom = this.renderShapeGeometry(el, fill, stroke, strokeWidth, w, h, strokeDash);
     return geom ? `${gradDef}${geom}` : '';
   }
 
-  private renderShapeGeometry(el: ElementShape, fill: string, stroke: string, strokeWidth: number, w: number, h: number): string {
+  private renderShapeGeometry(el: ElementShape, fill: string, stroke: string, strokeWidth: number, w: number, h: number, strokeDash = ''): string {
     const generateStarPolygon = (nPoints: number, innerRatio: number): string => {
       const cx = w / 2;
       const cy = h / 2;
@@ -3267,7 +3204,8 @@ export class CollaborativePdfEditorController implements ViewController {
     };
 
     if (el.shapeType === 'rect') {
-      return `<rect x="0" y="0" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+      const rx = el.borderRadius !== undefined ? el.borderRadius : 0;
+      return `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${strokeDash} />`;
     }
     if (el.shapeType === 'rounded-rect') {
       const rx = Math.min(w, h) * 0.18;
@@ -3510,8 +3448,15 @@ export class CollaborativePdfEditorController implements ViewController {
     div.style.top = `${el.y}px`;
     div.style.width = `${el.width}px`;
     div.style.height = `${el.height}px`;
-    div.style.transform = `rotate(${el.rotation || 0}deg)`;
+
+    const sx = el.flipHorizontal ? -1 : 1;
+    const sy = el.flipVertical ? -1 : 1;
+    div.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
     div.style.transformOrigin = 'center center';
+
+    if (el.opacity !== undefined) {
+      div.style.opacity = `${el.opacity}`;
+    }
 
     div.innerHTML = `<svg viewBox="0 0 ${el.width} ${el.height}" width="100%" height="100%" style="overflow: visible; display: block;">${this.renderShapeInner(el)}</svg>`;
 
@@ -3584,14 +3529,35 @@ export class CollaborativePdfEditorController implements ViewController {
     div.style.top = `${el.y}px`;
     div.style.width = `${el.width}px`;
     div.style.height = `${el.height}px`;
-    div.style.transform = `rotate(${el.rotation || 0}deg)`;
+
+    const sx = el.flipHorizontal ? -1 : 1;
+    const sy = el.flipVertical ? -1 : 1;
+    div.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
     div.style.transformOrigin = 'center center';
+
+    if (el.opacity !== undefined) {
+      div.style.opacity = `${el.opacity}`;
+    }
+
+    if (el.borderRadius !== undefined) {
+      div.style.borderRadius = `${el.borderRadius}px`;
+      div.style.overflow = el.borderRadius > 0 ? 'hidden' : '';
+    }
+
+    if (el.borderWidth && el.borderStyle && el.borderStyle !== 'none') {
+      const bs = el.borderStyle === 'long-dash' ? 'dashed' : el.borderStyle;
+      div.style.border = `${el.borderWidth}px ${bs} ${el.borderColor || '#000000'}`;
+      div.style.boxSizing = 'border-box';
+    }
 
     const img = document.createElement('img');
     img.className = 'collaborative-image-inner';
     img.src = el.url;
     img.alt = el.name || 'Imagen';
     img.draggable = false;
+    if (el.borderRadius !== undefined) {
+      img.style.borderRadius = `${el.borderRadius}px`;
+    }
     div.appendChild(img);
 
     div.addEventListener('click', (e) => {
@@ -3659,6 +3625,7 @@ export class CollaborativePdfEditorController implements ViewController {
         cellData.text = cellEl.innerText;
         this.setModified(true);
         this.broadcastElementUpdate(el);
+        this.recordHistory();
         void this.flushAutoSave();
       });
 
@@ -3828,30 +3795,54 @@ export class CollaborativePdfEditorController implements ViewController {
     let startY = 0;
     let initialX = 0;
     let initialY = 0;
+    const initialPositions = new Map<string, { x: number; y: number }>();
 
     const onMouseMove = (e: MouseEvent) => {
       if (this.activeTool !== 'select') return;
       e.preventDefault();
       const dx = (e.clientX - startX) / (this.zoomLevel || 1);
       const dy = (e.clientY - startY) / (this.zoomLevel || 1);
-      const rawX = initialX + dx;
-      const rawY = initialY + dy;
 
-      const snapped = this.applySmartGuides(item, rawX, rawY);
-
-      element.style.left = `${snapped.x}px`;
-      element.style.top = `${snapped.y}px`;
-      item.x = snapped.x;
-      item.y = snapped.y;
-      this.updateTransformBoxPosition();
-      this.setModified(true);
+      if (initialPositions.size > 1) {
+        for (const [selId, initPos] of initialPositions.entries()) {
+          const elObj = this.elements.find((el) => el.id === selId);
+          const domNode = this.container.querySelector<HTMLElement>(`[data-element-id="${selId}"]`);
+          if (elObj && 'x' in elObj && 'y' in elObj && domNode) {
+            const nextX = initPos.x + dx;
+            const nextY = initPos.y + dy;
+            domNode.style.left = `${nextX}px`;
+            domNode.style.top = `${nextY}px`;
+            elObj.x = nextX;
+            elObj.y = nextY;
+          }
+        }
+        this.setModified(true);
+      } else {
+        const rawX = initialX + dx;
+        const rawY = initialY + dy;
+        const snapped = this.applySmartGuides(item, rawX, rawY);
+        element.style.left = `${snapped.x}px`;
+        element.style.top = `${snapped.y}px`;
+        item.x = snapped.x;
+        item.y = snapped.y;
+        this.updateTransformBoxPosition();
+        this.setModified(true);
+      }
     };
 
     const onMouseUp = () => {
       this.clearSmartGuides(item.pageIndex ?? 0);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      this.broadcastElementUpdate(item);
+      if (initialPositions.size > 1) {
+        for (const selId of initialPositions.keys()) {
+          const elObj = this.elements.find((el) => el.id === selId);
+          if (elObj) this.broadcastElementUpdate(elObj);
+        }
+      } else {
+        this.broadcastElementUpdate(item);
+      }
+      this.recordHistory();
       void this.flushAutoSave();
     };
 
@@ -3861,11 +3852,22 @@ export class CollaborativePdfEditorController implements ViewController {
       if (target?.isContentEditable || target?.closest('.collaborative-table-row-divider') || target?.closest('.is-editing')) return;
       if (e.button !== 0) return;
       this.activateSelectTool();
-      this.selectElement(item.id);
+      if (!this.selectedElementIds.has(item.id)) {
+        this.selectElement(item.id);
+      }
       startX = e.clientX;
       startY = e.clientY;
       initialX = item.x;
       initialY = item.y;
+      initialPositions.clear();
+      if (this.selectedElementIds.size > 1 && this.selectedElementIds.has(item.id)) {
+        for (const selId of this.selectedElementIds) {
+          const elObj = this.elements.find((el) => el.id === selId);
+          if (elObj && 'x' in elObj && 'y' in elObj) {
+            initialPositions.set(selId, { x: elObj.x, y: elObj.y });
+          }
+        }
+      }
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     });
@@ -3900,6 +3902,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.renderPages();
       this.setModified(true);
       this.broadcastElementUpdate(item);
+      this.recordHistory();
       void this.flushAutoSave();
     };
 
@@ -3959,7 +3962,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private updateSelection(): void {
-    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note, .collaborative-table-item, .collaborative-chart-item');
+    const allEls = this.container.querySelectorAll('.collaborative-text-box, .collaborative-shape-item, .collaborative-sticky-note, .collaborative-table-item, .collaborative-chart-item, .collaborative-image-item, .collaborative-line-item');
     allEls.forEach((el) => {
       const elId = el.getAttribute('data-element-id');
       const isSelected = (elId && this.selectedElementIds.has(elId)) || elId === this.selectedElementId;
@@ -4073,6 +4076,7 @@ export class CollaborativePdfEditorController implements ViewController {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       this.broadcastElementUpdate(el);
+      this.recordHistory();
       void this.flushAutoSave();
     };
 
@@ -4238,6 +4242,7 @@ export class CollaborativePdfEditorController implements ViewController {
       document.removeEventListener('mouseup', onMouseUp);
       this.renderPages();
       this.broadcastElementUpdate(el);
+      this.recordHistory();
       void this.flushAutoSave();
     };
 
@@ -4464,6 +4469,110 @@ export class CollaborativePdfEditorController implements ViewController {
       line.setAttribute('y2', l.y2.toString());
       guidesSvg.appendChild(line);
     }
+
+    const renderBadge = (cx: number, cy: number, dist: number) => {
+      if (dist <= 0) return;
+      const textVal = `${Math.round(dist)} px`;
+      const badgeW = Math.max(38, textVal.length * 6.5 + 10);
+      const badgeH = 18;
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'collaborative-guide-badge-group');
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', (cx - badgeW / 2).toFixed(1));
+      rect.setAttribute('y', (cy - badgeH / 2).toFixed(1));
+      rect.setAttribute('width', badgeW.toFixed(1));
+      rect.setAttribute('height', badgeH.toFixed(1));
+      rect.setAttribute('rx', '4');
+      rect.setAttribute('fill', '#000000');
+      rect.setAttribute('opacity', '0.92');
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', cx.toFixed(1));
+      text.setAttribute('y', (cy + 1).toFixed(1));
+      text.setAttribute('fill', '#ffffff');
+      text.setAttribute('font-size', '10');
+      text.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+      text.setAttribute('font-weight', '600');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.textContent = textVal;
+
+      g.appendChild(rect);
+      g.appendChild(text);
+      guidesSvg.appendChild(g);
+    };
+
+    for (const other of otherElements) {
+      const oW = other.width || 100;
+      const oH = other.height || 40;
+      const oLeft = other.x;
+      const oRight = other.x + oW;
+      const oTop = other.y;
+      const oBottom = other.y + oH;
+
+      const yOverlap = Math.max(myTop, oTop) < Math.min(myBottom, oBottom);
+      if (yOverlap) {
+        if (oRight <= myLeft) {
+          const gap = myLeft - oRight;
+          if (gap >= 4 && gap <= 400) {
+            const cy = Math.max(myTop, oTop) + Math.min(myBottom - myTop, oBottom - oTop) / 2;
+            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tick.setAttribute('class', 'collaborative-guide-line');
+            tick.setAttribute('x1', oRight.toFixed(1));
+            tick.setAttribute('x2', myLeft.toFixed(1));
+            tick.setAttribute('y1', cy.toFixed(1));
+            tick.setAttribute('y2', cy.toFixed(1));
+            guidesSvg.appendChild(tick);
+            renderBadge((oRight + myLeft) / 2, cy, gap);
+          }
+        } else if (myRight <= oLeft) {
+          const gap = oLeft - myRight;
+          if (gap >= 4 && gap <= 400) {
+            const cy = Math.max(myTop, oTop) + Math.min(myBottom - myTop, oBottom - oTop) / 2;
+            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tick.setAttribute('class', 'collaborative-guide-line');
+            tick.setAttribute('x1', myRight.toFixed(1));
+            tick.setAttribute('x2', oLeft.toFixed(1));
+            tick.setAttribute('y1', cy.toFixed(1));
+            tick.setAttribute('y2', cy.toFixed(1));
+            guidesSvg.appendChild(tick);
+            renderBadge((myRight + oLeft) / 2, cy, gap);
+          }
+        }
+      }
+
+      const xOverlap = Math.max(myLeft, oLeft) < Math.min(myRight, oRight);
+      if (xOverlap) {
+        if (oBottom <= myTop) {
+          const gap = myTop - oBottom;
+          if (gap >= 4 && gap <= 400) {
+            const cx = Math.max(myLeft, oLeft) + Math.min(myRight - myLeft, oRight - oLeft) / 2;
+            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tick.setAttribute('class', 'collaborative-guide-line');
+            tick.setAttribute('x1', cx.toFixed(1));
+            tick.setAttribute('x2', cx.toFixed(1));
+            tick.setAttribute('y1', oBottom.toFixed(1));
+            tick.setAttribute('y2', myTop.toFixed(1));
+            guidesSvg.appendChild(tick);
+            renderBadge(cx, (oBottom + myTop) / 2, gap);
+          }
+        } else if (myBottom <= oTop) {
+          const gap = oTop - myBottom;
+          if (gap >= 4 && gap <= 400) {
+            const cx = Math.max(myLeft, oLeft) + Math.min(myRight - myLeft, oRight - oLeft) / 2;
+            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tick.setAttribute('class', 'collaborative-guide-line');
+            tick.setAttribute('x1', cx.toFixed(1));
+            tick.setAttribute('x2', cx.toFixed(1));
+            tick.setAttribute('y1', myBottom.toFixed(1));
+            tick.setAttribute('y2', oTop.toFixed(1));
+            guidesSvg.appendChild(tick);
+            renderBadge(cx, (myBottom + oTop) / 2, gap);
+          }
+        }
+      }
+    }
   }
 
   private clearSmartGuides(pageIndex?: number): void {
@@ -4475,6 +4584,76 @@ export class CollaborativePdfEditorController implements ViewController {
       svgs.forEach((svg) => {
         svg.innerHTML = '';
       });
+    }
+  }
+
+
+  private recordHistory(): void {
+    if (this.isApplyingHistory) return;
+    const snapshot = JSON.stringify({
+      elements: this.elements,
+      pageBackgrounds: this.pageBackgrounds,
+      pageCount: this.pageCount,
+      pageSizes: this.pageSizes,
+    });
+    if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1] === snapshot) {
+      return;
+    }
+    this.undoStack.push(snapshot);
+    if (this.undoStack.length > this.maxHistoryStates) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+    this.updateUndoRedoButtons();
+  }
+
+  private undo(): void {
+    if (this.undoStack.length <= 1) return;
+    const currentState = this.undoStack.pop()!;
+    this.redoStack.push(currentState);
+    const previousState = this.undoStack[this.undoStack.length - 1];
+    this.applyHistoryState(previousState);
+    this.updateUndoRedoButtons();
+  }
+
+  private redo(): void {
+    if (this.redoStack.length === 0) return;
+    const nextState = this.redoStack.pop()!;
+    this.undoStack.push(nextState);
+    this.applyHistoryState(nextState);
+    this.updateUndoRedoButtons();
+  }
+
+  private applyHistoryState(stateJson: string): void {
+    try {
+      this.isApplyingHistory = true;
+      const parsed = JSON.parse(stateJson);
+      this.elements = Array.isArray(parsed.elements) ? parsed.elements : [];
+      if (typeof parsed.pageCount === 'number') this.pageCount = parsed.pageCount;
+      if (Array.isArray(parsed.pageSizes)) this.pageSizes = parsed.pageSizes;
+      if (Array.isArray(parsed.pageBackgrounds)) this.pageBackgrounds = parsed.pageBackgrounds;
+
+      this.selectedElementId = null;
+      this.selectedElementIds.clear();
+      this.removeTransformBox();
+      this.renderPages();
+      this.updateContextToolbar();
+      this.setModified(true);
+      this.broadcastDocSync();
+      void this.flushAutoSave();
+    } finally {
+      this.isApplyingHistory = false;
+    }
+  }
+
+  private updateUndoRedoButtons(): void {
+    const btnUndo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-undo"]');
+    const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redo"]');
+    if (btnUndo) {
+      btnUndo.disabled = this.undoStack.length <= 1;
+    }
+    if (btnRedo) {
+      btnRedo.disabled = this.redoStack.length === 0;
     }
   }
 
@@ -4503,11 +4682,15 @@ export class CollaborativePdfEditorController implements ViewController {
         showElement(textGroup);
         hideElement(shapeGroup);
 
+        const txtFontFamily = toolbar.querySelector<HTMLElement>('[data-ref="txt-font-family"]');
+        if (txtFontFamily) txtFontFamily.textContent = el.fontFamily || 'Helvetica';
+
         const txtFontSize = toolbar.querySelector<HTMLElement>('[data-ref="txt-font-size"]');
         if (txtFontSize) txtFontSize.textContent = (el.fontSize || 16).toString();
 
+        const isBoldActive = !!(el.isBold || (typeof el.fontWeight === 'number' && el.fontWeight >= 600));
         const btnBold = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-bold"]');
-        btnBold?.classList.toggle('is-active', !!el.isBold);
+        btnBold?.classList.toggle('is-active', isBoldActive);
 
         const previewTextColor = toolbar.querySelector<HTMLElement>('[data-ref="preview-text-color"]');
         if (previewTextColor) {
@@ -4637,6 +4820,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.removeTransformBox();
       this.renderPages();
       this.setModified(true);
+      this.recordHistory();
       void this.flushAutoSave();
     } else if (this.selectedElementId) {
       const targetId = this.selectedElementId;
@@ -4648,6 +4832,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.renderPages();
       this.setModified(true);
       this.broadcastElementDelete(targetId, pIdx);
+      this.recordHistory();
       void this.flushAutoSave();
     } else if (this.selectedPageIndex !== null) {
       this.deletePage(this.selectedPageIndex);
@@ -4670,6 +4855,284 @@ export class CollaborativePdfEditorController implements ViewController {
       showToast('Elemento duplicado', 'info');
     } else if (this.selectedPageIndex !== null) {
       this.duplicatePage(this.selectedPageIndex);
+    }
+  }
+
+  private openFontMenu(): void {
+    this.handleRailTabClick('fonts');
+  }
+
+  private renderFontsPanel(): void {
+    this.ensureDrawerMounted();
+    if (!this.drawer) return;
+
+    const searchInput = this.queryPanel<HTMLInputElement>('[data-ref="input-search-fonts"]');
+    const clearSearchBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-clear-fonts-search"]');
+    const categoriesBar = this.queryPanel<HTMLElement>('[data-ref="font-categories-bar"]');
+
+    if (searchInput && !searchInput.dataset.hasFontListener) {
+      searchInput.dataset.hasFontListener = 'true';
+      searchInput.addEventListener('input', () => {
+        this.fontSearchQuery = searchInput.value.trim();
+        if (clearSearchBtn) {
+          clearSearchBtn.style.display = this.fontSearchQuery ? 'inline-flex' : 'none';
+        }
+        this.updateFontList();
+      });
+    }
+
+    if (clearSearchBtn && !clearSearchBtn.dataset.hasFontListener) {
+      clearSearchBtn.dataset.hasFontListener = 'true';
+      clearSearchBtn.addEventListener('click', () => {
+        if (searchInput) {
+          searchInput.value = '';
+          this.fontSearchQuery = '';
+          clearSearchBtn.style.display = 'none';
+          this.updateFontList();
+        }
+      });
+    }
+
+    if (categoriesBar && !categoriesBar.dataset.hasFontListener) {
+      categoriesBar.dataset.hasFontListener = 'true';
+      const pills = categoriesBar.querySelectorAll<HTMLButtonElement>('.category-pill');
+      pills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          pills.forEach((p) => p.classList.remove('is-active'));
+          pill.classList.add('is-active');
+          this.fontActiveCategory = pill.getAttribute('data-font-cat') || 'all';
+          this.updateFontList();
+        });
+      });
+    }
+
+    this.updateFontList();
+  }
+
+  private updateFontList(): void {
+    const listContainer = this.queryPanel<HTMLElement>('[data-ref="font-list-container"]');
+    if (!listContainer) return;
+
+    let activeEl: ElementText | undefined;
+    if (this.selectedElementId) {
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') activeEl = el;
+    }
+    const currentFamily = activeEl?.fontFamily || 'Helvetica';
+
+    this.renderFontVariations(currentFamily, activeEl);
+
+    let filtered = GOOGLE_FONTS_CATALOG;
+    if (this.fontActiveCategory !== 'all') {
+      filtered = filtered.filter((f) => f.category === this.fontActiveCategory);
+    }
+    if (this.fontSearchQuery) {
+      const q = this.fontSearchQuery.toLowerCase();
+      filtered = filtered.filter((f) => f.family.toLowerCase().includes(q));
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = '<div class="collaborative-panel-empty" style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px;">No se encontraron fuentes</div>';
+      return;
+    }
+
+    listContainer.innerHTML = filtered.map((f) => {
+      const isSelected = f.family.toLowerCase() === currentFamily.toLowerCase();
+      return `
+        <button type="button" class="collaborative-font-item${isSelected ? ' is-selected' : ''}" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
+          <div class="collaborative-font-item__info">
+            <span class="collaborative-font-item__name" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
+            <span class="collaborative-font-item__meta">${f.category} • ${f.weights.length} variantes</span>
+          </div>
+          <div class="collaborative-font-item__badge">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    renderIcons(listContainer);
+
+    if (this.fontObserver) {
+      this.fontObserver.disconnect();
+    }
+    this.fontObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const fam = entry.target.getAttribute('data-font-family');
+          if (fam) {
+            loadGoogleFontPreview(fam);
+            this.fontObserver?.unobserve(entry.target);
+          }
+        }
+      }
+    }, { root: listContainer, rootMargin: '80px' });
+
+    const fontButtons = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-item');
+    fontButtons.forEach((btn) => {
+      this.fontObserver?.observe(btn);
+      btn.addEventListener('click', () => {
+        const family = btn.getAttribute('data-font-family');
+        if (family) {
+          void this.applyFontFamily(family);
+        }
+      });
+    });
+  }
+
+  private async applyFontFamily(family: string): Promise<void> {
+    const fontItem = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
+    await loadGoogleFont(family, fontItem?.weights, fontItem?.hasItalic);
+
+    const targetIds = new Set<string>();
+    if (this.selectedElementIds.size > 0) {
+      for (const id of this.selectedElementIds) targetIds.add(id);
+    } else if (this.selectedElementId) {
+      targetIds.add(this.selectedElementId);
+    }
+
+    let updatedAny = false;
+    let lastActiveText: ElementText | undefined;
+
+    for (const id of targetIds) {
+      const el = this.elements.find((e) => e.id === id);
+      if (el && el.type === 'text') {
+        el.fontFamily = family;
+        if (fontItem && fontItem.weights.length > 0) {
+          const curW = Number(el.fontWeight || (el.isBold ? 700 : 400));
+          if (!fontItem.weights.includes(curW)) {
+            el.fontWeight = fontItem.weights.includes(400) ? 400 : fontItem.weights[0];
+            el.isBold = Number(el.fontWeight) >= 600;
+          }
+        }
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          elNode.style.fontFamily = `"${family}", sans-serif`;
+          if (el.fontWeight) elNode.style.fontWeight = String(el.fontWeight);
+          if (!el.isStickyNote) {
+            elNode.style.width = 'auto';
+            elNode.style.height = 'auto';
+            el.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+            el.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+            elNode.style.width = `${el.width}px`;
+            elNode.style.height = `${el.height}px`;
+          }
+        }
+        this.broadcastElementUpdate(el);
+        lastActiveText = el;
+        updatedAny = true;
+      }
+    }
+
+    if (updatedAny) {
+      this.updateTransformBoxPosition();
+      this.updateContextToolbar();
+      this.setModified(true);
+      this.recordHistory();
+      void this.flushAutoSave();
+    }
+
+    const listContainer = this.queryPanel<HTMLElement>('[data-ref="font-list-container"]');
+    if (listContainer) {
+      const items = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-item');
+      items.forEach((item) => {
+        const itemFam = item.getAttribute('data-font-family');
+        item.classList.toggle('is-selected', itemFam?.toLowerCase() === family.toLowerCase());
+      });
+    }
+
+    this.renderFontVariations(family, lastActiveText);
+  }
+
+  private renderFontVariations(family: string, activeEl?: ElementText): void {
+    const box = this.queryPanel<HTMLElement>('[data-ref="font-variations-box"]');
+    if (!box) return;
+
+    const fontItem = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
+    if (!fontItem || !activeEl) {
+      hideElement(box);
+      return;
+    }
+
+    showElement(box);
+    const titleEl = box.querySelector<HTMLElement>('[data-ref="font-variations-family-name"]');
+    if (titleEl) titleEl.textContent = `${fontItem.family} (${fontItem.weights.length} variantes)`;
+
+    const italicBtn = box.querySelector<HTMLButtonElement>('[data-ref="btn-font-variation-italic"]');
+    if (italicBtn) {
+      if (fontItem.hasItalic) {
+        showElement(italicBtn);
+        italicBtn.classList.toggle('is-active', activeEl.fontStyle === 'italic');
+        italicBtn.onclick = async () => {
+          const nextStyle = activeEl.fontStyle === 'italic' ? 'normal' : 'italic';
+          activeEl.fontStyle = nextStyle;
+          await loadGoogleFont(fontItem.family, fontItem.weights, true);
+          italicBtn.classList.toggle('is-active', nextStyle === 'italic');
+
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
+          if (elNode) {
+            elNode.style.fontStyle = nextStyle;
+            if (!activeEl.isStickyNote) {
+              elNode.style.width = 'auto';
+              elNode.style.height = 'auto';
+              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+              elNode.style.width = `${activeEl.width}px`;
+              elNode.style.height = `${activeEl.height}px`;
+            }
+          }
+          this.updateTransformBoxPosition();
+          this.setModified(true);
+          this.broadcastElementUpdate(activeEl);
+          void this.flushAutoSave();
+        };
+      } else {
+        hideElement(italicBtn);
+      }
+    }
+
+    const weightsGrid = box.querySelector<HTMLElement>('[data-ref="font-weights-grid"]');
+    if (weightsGrid) {
+      const curWeight = Number(activeEl.fontWeight || (activeEl.isBold ? 700 : 400));
+      weightsGrid.innerHTML = fontItem.weights.map((w) => {
+        const isAct = w === curWeight;
+        const label = WEIGHT_LABELS[w] || `${w}`;
+        return `<button type="button" class="collaborative-font-weight-pill${isAct ? ' is-active' : ''}" data-weight="${w}">${w} ${label}</button>`;
+      }).join('');
+
+      const pills = weightsGrid.querySelectorAll<HTMLButtonElement>('.collaborative-font-weight-pill');
+      pills.forEach((pill) => {
+        pill.addEventListener('click', async () => {
+          const weightNum = Number(pill.getAttribute('data-weight') || 400);
+          activeEl.fontWeight = weightNum;
+          activeEl.isBold = weightNum >= 600;
+
+          await loadGoogleFont(fontItem.family, [weightNum], activeEl.fontStyle === 'italic');
+
+          pills.forEach((p) => p.classList.remove('is-active'));
+          pill.classList.add('is-active');
+
+          const btnBold = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-bold"]');
+          btnBold?.classList.toggle('is-active', !!activeEl.isBold);
+
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
+          if (elNode) {
+            elNode.style.fontWeight = String(weightNum);
+            if (!activeEl.isStickyNote) {
+              elNode.style.width = 'auto';
+              elNode.style.height = 'auto';
+              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+              elNode.style.width = `${activeEl.width}px`;
+              elNode.style.height = `${activeEl.height}px`;
+            }
+          }
+          this.updateTransformBoxPosition();
+          this.setModified(true);
+          this.broadcastElementUpdate(activeEl);
+          void this.flushAutoSave();
+        });
+      });
     }
   }
 
@@ -4929,6 +5392,7 @@ export class CollaborativePdfEditorController implements ViewController {
     }
 
     this.highlightActiveColorSwatch();
+    this.recordHistory();
   }
 
   private highlightActiveColorSwatch(): void {
@@ -5101,6 +5565,34 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private bindEvents(): void {
     const { signal } = this.abortController || {};
+
+    const fileWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-file"]');
+    if (fileWrapper) {
+      this.fileDropdownCtrl = setupDropdown(fileWrapper, {
+        backdrop: fileWrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-file"]'),
+        menu: fileWrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-file"]'),
+      });
+    }
+
+    const editWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-edit"]');
+    if (editWrapper) {
+      this.editDropdownCtrl = setupDropdown(editWrapper, {
+        backdrop: editWrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-edit"]'),
+        menu: editWrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-edit"]'),
+      });
+    }
+
+    const btnUndo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-undo"]');
+    btnUndo?.addEventListener('click', () => {
+      this.undo();
+    }, { signal });
+
+    const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redo"]');
+    btnRedo?.addEventListener('click', () => {
+      this.redo();
+    }, { signal });
+
+    this.updateUndoRedoButtons();
 
     const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
     titleInput?.addEventListener('input', () => {
@@ -5282,7 +5774,13 @@ export class CollaborativePdfEditorController implements ViewController {
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
         this.setModified(true);
+        this.recordHistory();
       }
+    }, { signal });
+
+    const btnFontFamily = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-font-family"]');
+    btnFontFamily?.addEventListener('click', () => {
+      this.openFontMenu();
     }, { signal });
 
     const btnFontInc = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-font-increase"]');
@@ -5570,6 +6068,23 @@ export class CollaborativePdfEditorController implements ViewController {
     btnContextDel?.addEventListener('click', () => this.deleteSelectedElement(), { signal });
 
     window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const activeTag = document.activeElement?.tagName.toLowerCase();
+        const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+        if (!isEditing) {
+          if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            this.undo();
+            return;
+          }
+          if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+            e.preventDefault();
+            this.redo();
+            return;
+          }
+        }
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag === 'input' || (document.activeElement as HTMLElement)?.isContentEditable) return;
@@ -5848,6 +6363,7 @@ export class CollaborativePdfEditorController implements ViewController {
   private pushElement(el: EditorElement, broadcast = true): void {
     this.elements.push(el);
     this.setModified(true);
+    this.recordHistory();
     if (broadcast && !this.isCollabRoomFull) {
       wsService.send({
         action: 'add',
@@ -6164,98 +6680,92 @@ export class CollaborativePdfEditorController implements ViewController {
 
     popover.innerHTML = `
       <div class="collab-share-card" data-ref="collab-share-card">
-          <div class="collab-share-header">
-            <h2 class="collab-share-title">Compartir el diseño</h2>
-            <button type="button" class="collab-share-close-btn" data-ref="btn-collab-share-close" aria-label="Cerrar">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-            </button>
-          </div>
+        <div class="collab-share-header">
+          <h2 class="collab-share-title">Compartir el diseño</h2>
+        </div>
 
-          <div class="collab-share-section">
-            <div class="collab-share-section__title">Personas con acceso</div>
+        <div class="collab-share-section">
+          <div class="collab-share-section__title">Personas con acceso</div>
+          ${canManagePermissions ? `
+            <div class="collab-share-search-box">
+              <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
+            </div>
+            <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
+          ` : ''}
+
+          <div class="collab-share-members-row" data-ref="collab-share-members-row">
+            <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
             ${canManagePermissions ? `
-              <div class="collab-share-search-box">
-                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-                <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
-              </div>
-              <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
-            ` : ''}
-
-            <div class="collab-share-members-row" data-ref="collab-share-members-row">
-              <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
-              ${canManagePermissions ? `
-                <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                </button>
-              ` : ''}
-            </div>
-
-            <div class="collab-share-members-list is-hidden" data-ref="collab-share-members-details"></div>
-          </div>
-
-          <div class="collab-share-section">
-            <div class="collab-share-section__title">Nivel de acceso</div>
-            <div class="collab-access-select-wrapper" data-ref="collab-access-select-wrapper">
-              <button type="button" class="collab-access-trigger ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" ${!canManagePermissions ? 'disabled' : ''}>
-                <div class="collab-access-trigger__left">
-                  <div class="collab-access-icon-circle" data-ref="access-trigger-icon">
-                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
-                  </div>
-                  <span class="collab-access-trigger__label" data-ref="access-trigger-label">${isLinkMode ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues'}</span>
-                </div>
-                ${canManagePermissions ? `<svg class="component-icon collab-access-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
+              <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
               </button>
-
-              ${canManagePermissions ? `
-                <div class="collab-access-menu is-hidden" data-ref="collab-access-menu">
-                  <button type="button" class="collab-access-option ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
-                    <div class="collab-access-option__icon">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                    </div>
-                    <div class="collab-access-option__text">
-                      <div class="collab-access-option__title">Solo las personas que agregues</div>
-                      <div class="collab-access-option__desc">Solo las personas con acceso al diseño pueden usar este enlace.</div>
-                    </div>
-                    <div class="collab-access-option__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                    </div>
-                  </button>
-
-                  <button type="button" class="collab-access-option ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
-                    <div class="collab-access-option__icon">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
-                    </div>
-                    <div class="collab-access-option__text">
-                      <div class="collab-access-option__title">Cualquier persona que tenga el enlace</div>
-                      <div class="collab-access-option__desc">Cualquiera podrá acceder al diseño con el enlace. <strong>No es necesario iniciar sesión.</strong></div>
-                    </div>
-                    <div class="collab-access-option__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                    </div>
-                  </button>
-                </div>
-              ` : ''}
-            </div>
+            ` : ''}
           </div>
 
-          <div class="collab-share-actions">
-            <button type="button" class="component-button collab-share-copy-btn" data-ref="btn-collab-copy-link">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
-              <span data-ref="txt-copy-link">Copiar el enlace</span>
-            </button>
-            <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
-          </div>
+          <div class="collab-share-members-list is-hidden" data-ref="collab-share-members-details"></div>
+        </div>
 
-          <div class="collab-share-divider"></div>
-
-          <div class="collab-share-footer">
-            <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
-              <div class="collab-share-download-icon">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+        <div class="collab-share-section">
+          <div class="collab-share-section__title">Nivel de acceso</div>
+          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-access">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" aria-label="Nivel de acceso" ${!canManagePermissions ? 'disabled' : ''}>
+              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-access">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues'}</span>
               </div>
-              <span class="collab-share-download-text">Descargar</span>
+              ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
             </button>
+
+            ${canManagePermissions ? `
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="collab-access-menu">
+                  <div class="menu-panel__list" data-ref="list-access-options">
+                    <button type="button" class="menu-item ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
+                      <div class="menu-item__icon-wrapper">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                      </div>
+                      <div class="menu-item__text-group">
+                        <span class="menu-item__title">Solo las personas que agregues</span>
+                        <span class="menu-item__subtitle">Solo las personas con acceso al diseño pueden usar este enlace.</span>
+                      </div>
+                      <svg class="component-icon menu-item__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+
+                    <button type="button" class="menu-item ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
+                      <div class="menu-item__icon-wrapper">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                      </div>
+                      <div class="menu-item__text-group">
+                        <span class="menu-item__title">Cualquier persona que tenga el enlace</span>
+                        <span class="menu-item__subtitle">Cualquiera podrá acceder al diseño con el enlace.</span>
+                      </div>
+                      <svg class="component-icon menu-item__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
           </div>
+        </div>
+
+        <div class="collab-share-actions">
+          <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-collab-copy-link">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+            <span data-ref="txt-copy-link">Copiar el enlace</span>
+          </button>
+          <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
+        </div>
+
+        <div class="collab-share-divider"></div>
+
+        <div class="collab-share-footer">
+          <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
+            <div class="collab-share-download-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            </div>
+            <span class="collab-share-download-text">Descargar</span>
+          </button>
         </div>
       </div>
     `;
@@ -6264,12 +6774,19 @@ export class CollaborativePdfEditorController implements ViewController {
     this.sharePopoverElement = popover;
     renderIcons(popover);
 
+    const accessDropdown = popover.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-access"]');
+    let dropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+    if (accessDropdown && canManagePermissions) {
+      dropdownCtrl = setupDropdown(accessDropdown, {
+        backdrop: accessDropdown.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-access"]'),
+        menu: accessDropdown.querySelector<HTMLElement>('[data-ref="collab-access-menu"]'),
+      });
+    }
+
     const closePopover = () => {
+      dropdownCtrl?.destroy();
       this.closeSharePopover();
     };
-
-    const closeBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-share-close"]');
-    closeBtn?.addEventListener('click', () => closePopover());
 
     const onOutsidePointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
@@ -6289,35 +6806,34 @@ export class CollaborativePdfEditorController implements ViewController {
     document.addEventListener('keydown', onEscapeKey);
 
     this.cleanupSharePopover = () => {
+      dropdownCtrl?.destroy();
       document.removeEventListener('pointerdown', onOutsidePointerDown);
       document.removeEventListener('keydown', onEscapeKey);
       popover.remove();
       this.sharePopoverElement = null;
     };
 
+    const btnFocusSearch = popover.querySelector<HTMLButtonElement>('[data-ref="btn-focus-search-user"]');
     const searchInput = popover.querySelector<HTMLInputElement>('[data-ref="input-share-search-user"]');
     const searchDropdown = popover.querySelector<HTMLElement>('[data-ref="collab-share-search-dropdown"]');
-    const focusAddBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-focus-search-user"]');
-    focusAddBtn?.addEventListener('click', () => searchInput?.focus());
+    const detailsList = popover.querySelector<HTMLElement>('[data-ref="collab-share-members-details"]');
+
+    btnFocusSearch?.addEventListener('click', () => {
+      searchInput?.focus();
+      if (detailsList) {
+        detailsList.classList.toggle('is-hidden');
+      }
+    });
 
     const renderAvatars = () => {
       const avatarsList = popover.querySelector<HTMLElement>('[data-ref="collab-share-avatars-list"]');
-      const detailsList = popover.querySelector<HTMLElement>('[data-ref="collab-share-members-details"]');
       if (!avatarsList) return;
-
       avatarsList.innerHTML = '';
-      if (detailsList) {
-        detailsList.innerHTML = '';
-        if (this.docMembers.length === 0) {
-          detailsList.classList.add('is-hidden');
-        } else {
-          detailsList.classList.remove('is-hidden');
-        }
-      }
 
       const ownerBubble = document.createElement('div');
       ownerBubble.className = 'collab-avatar-bubble';
-      ownerBubble.setAttribute('data-tooltip', `${ownerName} (Tú)`);
+      ownerBubble.setAttribute('data-tooltip', `${ownerName} (Propietario)`);
+      ownerBubble.setAttribute('aria-label', `${ownerName} (Propietario)`);
       if (ownerAvatar) {
         ownerBubble.innerHTML = `<img src="${ownerAvatar}" alt="${ownerName}" />`;
       } else {
@@ -6328,8 +6844,8 @@ export class CollaborativePdfEditorController implements ViewController {
       for (const m of this.docMembers) {
         const bubble = document.createElement('div');
         bubble.className = 'collab-avatar-bubble';
-        bubble.style.backgroundColor = '#6366f1';
         bubble.setAttribute('data-tooltip', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
+        bubble.setAttribute('aria-label', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
         if (m.avatar_url) {
           bubble.innerHTML = `<img src="${m.avatar_url}" alt="${m.username}" />`;
         } else {
@@ -6421,8 +6937,6 @@ export class CollaborativePdfEditorController implements ViewController {
       void doSearch(searchInput.value);
     });
 
-    const accessTrigger = popover.querySelector<HTMLButtonElement>('[data-ref="btn-access-trigger"]');
-    const accessMenu = popover.querySelector<HTMLElement>('[data-ref="collab-access-menu"]');
     const optRestricted = popover.querySelector<HTMLButtonElement>('[data-ref="option-access-restricted"]');
     const optLink = popover.querySelector<HTMLButtonElement>('[data-ref="option-access-link"]');
     const triggerLabel = popover.querySelector<HTMLElement>('[data-ref="access-trigger-label"]');
@@ -6431,19 +6945,13 @@ export class CollaborativePdfEditorController implements ViewController {
     const checkLink = popover.querySelector<HTMLElement>('[data-ref="check-access-link"]');
 
     if (canManagePermissions) {
-      accessTrigger?.addEventListener('click', () => {
-        accessTrigger.classList.toggle('is-open');
-        accessMenu?.classList.toggle('is-hidden');
-      });
-
       const selectAccess = async (level: 'anyone_with_link' | 'restricted') => {
         this.docAccessLevel = level;
-        accessTrigger?.classList.remove('is-open');
-        accessMenu?.classList.add('is-hidden');
+        dropdownCtrl?.close();
 
         const isL = level === 'anyone_with_link';
         if (triggerLabel) triggerLabel.textContent = isL ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues';
-        if (triggerIcon) triggerIcon.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isL ? 'language' : 'groups'}"></use></svg>`;
+        if (triggerIcon) triggerIcon.innerHTML = `<svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isL ? 'language' : 'groups'}"></use></svg>`;
 
         optRestricted?.classList.toggle('is-selected', !isL);
         optLink?.classList.toggle('is-selected', isL);

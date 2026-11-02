@@ -791,6 +791,8 @@ html, body {
 .component-wrapper:has(.view-backdrop) > .component-top,
 .component-wrapper:has([class*="gradient"]) > .component-top,
 .view-wrapper:has(.view-backdrop) .component-top {
+  background: transparent;
+  background-color: transparent;
   border-bottom: none;
 }
 

@@ -1,6 +1,5 @@
-import { openModal } from '../../components/modal.component.js';
+import { openCollabPageSizeModal } from './collab-page-size-modal.util.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { COLLAB_PAGE_PRESETS, inToPx, mmToPx, PagePreset } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, putApi } from '../../services/api.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
@@ -432,181 +431,11 @@ export class CollaborativePdfDashboardController implements ViewController {
       }
     }
 
-    let selectedPresetId = 'a4';
-    let currentOrientation: 'landscape' | 'portrait' = 'portrait';
-    let customUnit: 'in' | 'mm' | 'px' = 'px';
-
-    const modalBody = document.createElement('div');
-    modalBody.className = 'collab-size-modal';
-    modalBody.setAttribute('data-ref', 'collab-create-modal-body');
-
-    modalBody.innerHTML = `
-      <label class="field" data-ref="field-new-doc-title">
-        <input class="field__input" data-ref="input-new-doc-title" type="text" placeholder=" " value="Documento sin título" />
-        <span class="field__label">Título del documento</span>
-      </label>
-
-      <div class="collab-size-modal__section" data-ref="section-presets">
-        <h4 class="collab-size-modal__section-title">Tamaño inicial</h4>
-        <div class="collab-size-grid" data-ref="grid-presets">
-          ${COLLAB_PAGE_PRESETS.map((p) => `
-            <div class="collab-size-card${p.id === 'a4' ? ' is-selected' : ''}" data-ref="preset-card-${p.id}" data-preset-id="${p.id}">
-              <div class="collab-size-card__icon-box" data-ref="icon-box-${p.id}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${p.icon}"></use></svg>
-              </div>
-              <div class="collab-size-card__info" data-ref="info-${p.id}">
-                <span class="collab-size-card__name">${p.name}</span>
-                <span class="collab-size-card__desc">${p.description}</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="collab-orientation-wrapper" data-ref="wrapper-orientation">
-        <span class="collab-size-modal__section-title">Orientación</span>
-        <div class="collab-orientation-toggle" data-ref="toggle-orientation">
-          <button type="button" class="collab-orientation-btn is-active" data-ref="btn-orient-portrait" data-orient="portrait">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-            <span>Vertical</span>
-          </button>
-          <button type="button" class="collab-orientation-btn" data-ref="btn-orient-landscape" data-orient="landscape">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-            <span>Horizontal</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="collab-custom-wrapper" data-ref="wrapper-custom" style="display: none;">
-        <span class="collab-size-modal__section-title">Dimensiones personalizadas</span>
-        <div class="collab-custom-inputs" data-ref="custom-inputs">
-          <label class="field" data-ref="field-custom-w">
-            <input class="field__input field__input--h36" data-ref="input-custom-w" type="number" min="50" max="8000" value="794" />
-            <span class="field__label">Ancho</span>
-          </label>
-          <label class="field" data-ref="field-custom-h">
-            <input class="field__input field__input--h36" data-ref="input-custom-h" type="number" min="50" max="8000" value="1123" />
-            <span class="field__label">Alto</span>
-          </label>
-          <div class="field" data-ref="field-custom-unit">
-            <select class="collab-custom-unit-select" data-ref="select-custom-unit">
-              <option value="px" selected>Píxeles (px)</option>
-              <option value="mm">Milímetros (mm)</option>
-              <option value="in">Pulgadas (in)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="collab-size-summary" data-ref="size-summary">
-        <span>Dimensiones resultantes:</span>
-        <span class="collab-size-summary__strong" data-ref="txt-size-summary">794 × 1123 px</span>
-      </div>
-    `;
-
-    renderIcons(modalBody);
-
-    const cards = modalBody.querySelectorAll<HTMLElement>('[data-preset-id]');
-    const customWrapper = modalBody.querySelector<HTMLElement>('[data-ref="wrapper-custom"]');
-    const inputCustomW = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-w"]');
-    const inputCustomH = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-h"]');
-    const selectUnit = modalBody.querySelector<HTMLSelectElement>('[data-ref="select-custom-unit"]');
-    const txtSummary = modalBody.querySelector<HTMLElement>('[data-ref="txt-size-summary"]');
-    const btnPortrait = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-portrait"]');
-    const btnLandscape = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-orient-landscape"]');
-
-    const updateSummary = () => {
-      let w = 794;
-      let h = 1123;
-      if (selectedPresetId === 'custom') {
-        const rawW = parseFloat(inputCustomW?.value || '800') || 800;
-        const rawH = parseFloat(inputCustomH?.value || '600') || 600;
-        if (customUnit === 'mm') {
-          w = mmToPx(rawW);
-          h = mmToPx(rawH);
-        } else if (customUnit === 'in') {
-          w = inToPx(rawW);
-          h = inToPx(rawH);
-        } else {
-          w = Math.round(rawW);
-          h = Math.round(rawH);
-        }
-      } else {
-        const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
-        if (p) {
-          if (currentOrientation === 'landscape') {
-            w = Math.max(p.width, p.height);
-            h = Math.min(p.width, p.height);
-          } else {
-            w = Math.min(p.width, p.height);
-            h = Math.max(p.width, p.height);
-          }
-        }
-      }
-      if (txtSummary) {
-        txtSummary.textContent = `${w} × ${h} px (${currentOrientation === 'landscape' ? 'Horizontal' : 'Vertical'})`;
-      }
-      return { height: h, width: w };
-    };
-
-    cards.forEach((card) => {
-      card.addEventListener('click', () => {
-        cards.forEach((c) => c.classList.remove('is-selected'));
-        card.classList.add('is-selected');
-        selectedPresetId = card.getAttribute('data-preset-id') || 'a4';
-
-        if (selectedPresetId === 'custom') {
-          if (customWrapper) customWrapper.style.display = 'block';
-        } else {
-          if (customWrapper) customWrapper.style.display = 'none';
-          const p = COLLAB_PAGE_PRESETS.find((item) => item.id === selectedPresetId);
-          if (p?.defaultOrientation) {
-            currentOrientation = p.defaultOrientation;
-            if (currentOrientation === 'landscape') {
-              btnLandscape?.classList.add('is-active');
-              btnPortrait?.classList.remove('is-active');
-            } else {
-              btnPortrait?.classList.add('is-active');
-              btnLandscape?.classList.remove('is-active');
-            }
-          }
-        }
-        updateSummary();
-      });
-    });
-
-    btnPortrait?.addEventListener('click', () => {
-      currentOrientation = 'portrait';
-      btnPortrait.classList.add('is-active');
-      btnLandscape?.classList.remove('is-active');
-      updateSummary();
-    });
-
-    btnLandscape?.addEventListener('click', () => {
-      currentOrientation = 'landscape';
-      btnLandscape.classList.add('is-active');
-      btnPortrait?.classList.remove('is-active');
-      updateSummary();
-    });
-
-    inputCustomW?.addEventListener('input', updateSummary);
-    inputCustomH?.addEventListener('input', updateSummary);
-    selectUnit?.addEventListener('change', () => {
-      customUnit = (selectUnit.value as 'in' | 'mm' | 'px') || 'px';
-      updateSummary();
-    });
-
-    const modal = openModal({
-      bodyHtml: modalBody,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--black',
-      confirmText: 'Crear documento',
-      description: 'Elige las dimensiones iniciales o personaliza el tamaño de tu documento.',
-      onConfirm: async () => {
-        const finalDimensions = updateSummary();
-        const inputTitle = modalBody.querySelector<HTMLInputElement>('[data-ref="input-new-doc-title"]');
-        const titleVal = inputTitle?.value?.trim() || 'Documento sin título';
-
+    openCollabPageSizeModal({
+      initialTitle: 'Documento sin título',
+      mode: 'create',
+      onConfirm: async ({ dimensions, title }) => {
+        const titleVal = title || 'Documento sin título';
         const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
           : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
@@ -616,8 +445,8 @@ export class CollaborativePdfDashboardController implements ViewController {
           pageBackgrounds: ['#ffffff'],
           pageCount: 1,
           pagePdfSources: [null],
-          pageSize: finalDimensions,
-          pageSizes: [finalDimensions],
+          pageSize: dimensions,
+          pageSizes: [dimensions],
           pageTitles: [''],
         };
 
@@ -628,23 +457,17 @@ export class CollaborativePdfDashboardController implements ViewController {
 
         if (currentUser) {
           try {
-            const putRes = await putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
+            await putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
               content: initialContent,
               id: newDocId,
               title: titleVal,
             });
-          } catch (putErr) {
-          }
+          } catch {}
         }
 
-        modal.close();
-        const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${finalDimensions.width}&h=${finalDimensions.height}`;
+        const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
         navigate(navUrl);
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'md',
-      title: 'Crear nuevo PDF',
     });
   }
 

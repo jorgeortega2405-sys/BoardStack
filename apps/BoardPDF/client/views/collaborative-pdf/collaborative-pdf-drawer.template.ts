@@ -86,99 +86,26 @@ export function createCollaborativeDrawerElement(): HTMLElement {
   <div class="layout-drawer__body" data-ref="side-panel-body">
     <div class="collaborative-panel-section" data-ref="panel-section-elements">
       <div class="collaborative-elements-main" data-ref="elements-main-view">
-        <div class="collaborative-panel-grid collaborative-panel-grid--4" data-ref="list-elements">
-          <button type="button" class="collaborative-element-card" data-ref="btn-elem-shapes" data-tooltip="Formas" aria-label="Formas">
-            <div class="collaborative-element-card__icon-wrap">
-              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-                <rect x="7" y="3" width="50" height="50" rx="14" fill="#c084fc" transform="rotate(-3 32 28)"></rect>
-                <rect x="7" y="7" width="50" height="50" rx="14" fill="#7e22ce"></rect>
-                <rect x="8" y="8" width="48" height="48" rx="13" fill="#9333ea"></rect>
-                <rect x="17" y="17" width="13" height="13" rx="3" fill="#38bdf8"></rect>
-                <circle cx="42" cy="23" r="7" fill="#fbbf24"></circle>
-                <polygon points="24,47 16,33 32,33" fill="#f43f5e"></polygon>
-                <path d="M42 35l2.2 4.4 4.8.7-3.5 3.4.8 4.8-4.3-2.3-4.3 2.3.8-4.8-3.5-3.4 4.8-.7z" fill="#34d399"></path>
-              </svg>
-            </div>
-            <span class="collaborative-element-card__text">Formas</span>
+        <div class="menu-list" data-ref="list-elements">
+          <button type="button" class="menu-item" data-ref="btn-elem-shapes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+            <span class="menu-item__text">Formas</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-          <button type="button" class="collaborative-element-card" data-ref="btn-elem-tables" data-tooltip="Tablas" aria-label="Tablas">
-            <div class="collaborative-element-card__icon-wrap">
-              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-                <rect x="7" y="3" width="50" height="50" rx="14" fill="#fb923c" transform="rotate(3 32 28)"></rect>
-                <rect x="7" y="7" width="50" height="50" rx="14" fill="#ea580c"></rect>
-                <rect x="8" y="8" width="48" height="48" rx="13" fill="#f97316"></rect>
-                <rect x="16" y="16" width="32" height="32" rx="4" fill="#fb923c" stroke="#ffffff" stroke-width="2.5"></rect>
-                <line x1="16" y1="25" x2="48" y2="25" stroke="#ffffff" stroke-width="2.5"></line>
-                <line x1="16" y1="35" x2="48" y2="35" stroke="#ffffff" stroke-width="2.5"></line>
-                <line x1="26" y1="16" x2="26" y2="48" stroke="#ffffff" stroke-width="2.5"></line>
-                <line x1="38" y1="16" x2="38" y2="48" stroke="#ffffff" stroke-width="2.5"></line>
-              </svg>
-            </div>
-            <span class="collaborative-element-card__text">Tablas</span>
+          <button type="button" class="menu-item" data-ref="btn-elem-tables">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+            <span class="menu-item__text">Tablas</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-
-          <button type="button" class="collaborative-element-card" data-ref="btn-elem-photos" data-tooltip="Fotos" aria-label="Fotos">
-            <div class="collaborative-element-card__icon-wrap">
-              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-                <rect x="7" y="3" width="50" height="50" rx="14" fill="#60a5fa" transform="rotate(-3 32 28)"></rect>
-                <rect x="7" y="7" width="50" height="50" rx="14" fill="#1d4ed8"></rect>
-                <rect x="8" y="8" width="48" height="48" rx="13" fill="#3b82f6"></rect>
-                <rect x="16" y="16" width="32" height="32" rx="5" fill="#ffffff"></rect>
-                <rect x="19" y="19" width="26" height="26" rx="3" fill="#38bdf8"></rect>
-                <circle cx="38" cy="24" r="3" fill="#facc15"></circle>
-                <polygon points="19,45 28,33 34,39 40,32 45,38 45,45" fill="#22c55e"></polygon>
-                <polygon points="26,45 33,37 40,45" fill="#15803d"></polygon>
-              </svg>
-            </div>
-            <span class="collaborative-element-card__text">Fotos</span>
+          <button type="button" class="menu-item" data-ref="btn-elem-photos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
+            <span class="menu-item__text">Fotos</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-
-          <button type="button" class="collaborative-element-card" data-ref="btn-elem-charts" data-tooltip="Gráficas" aria-label="Gráficas">
-            <div class="collaborative-element-card__icon-wrap">
-              <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-                <rect x="7" y="3" width="50" height="50" rx="14" fill="#2dd4bf" transform="rotate(3 32 28)"></rect>
-                <rect x="7" y="7" width="50" height="50" rx="14" fill="#0f766e"></rect>
-                <rect x="8" y="8" width="48" height="48" rx="13" fill="#14b8a6"></rect>
-                <rect x="16" y="16" width="32" height="32" rx="4" fill="#ffffff" fill-opacity="0.2"></rect>
-                <line x1="32" y1="18" x2="32" y2="46" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2"></line>
-                <path d="M 17 40 L 24 28 L 32 34 L 40 24 L 47 31 L 47 46 L 17 46 Z" fill="#c084fc" fill-opacity="0.7"></path>
-                <path d="M 17 46 L 23 36 L 31 40 L 39 31 L 47 37 L 47 46 Z" fill="#9333ea" fill-opacity="0.9"></path>
-                <polyline points="17,40 24,28 32,34 40,24 47,31" fill="none" stroke="#fdf4ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
-                <circle cx="24" cy="28" r="2.5" fill="#ffffff"></circle>
-                <circle cx="40" cy="24" r="2.5" fill="#ffffff"></circle>
-              </svg>
-            </div>
-            <span class="collaborative-element-card__text">Gráficas</span>
-          </button>
-        </div>
-
-        <div class="collaborative-drawer-subheading">
-          <span class="collaborative-drawer-subheading__title">Líneas y formas</span>
-        </div>
-        <div class="collaborative-shapes-grid" data-ref="drawer-shapes-grid">
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-rect" data-shape="rect" data-tooltip="Cuadrado" aria-label="Cuadrado">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-circle" data-shape="circle" data-tooltip="Círculo" aria-label="Círculo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#radio_button_unchecked"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-triangle" data-shape="triangle" data-tooltip="Triángulo" aria-label="Triángulo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#change_history"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-diamond" data-shape="diamond" data-tooltip="Rombo" aria-label="Rombo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#diamond"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-star" data-shape="star" data-tooltip="Estrella" aria-label="Estrella">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-arrow" data-shape="arrow" data-tooltip="Flecha" aria-label="Flecha">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-cloud" data-shape="cloud" data-tooltip="Nube" aria-label="Nube">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-          </button>
-          <button type="button" class="collaborative-shape-item-btn" data-ref="btn-shape-line" data-shape="line" data-tooltip="Línea recta" aria-label="Línea recta">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#horizontal_rule"></use></svg>
+          <button type="button" class="menu-item" data-ref="btn-elem-charts">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#show_chart"></use></svg>
+            <span class="menu-item__text">Gráficas</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
         </div>
       </div>
@@ -659,6 +586,46 @@ export function createCollaborativeDrawerElement(): HTMLElement {
         <button type="button" class="collaborative-text-preset collaborative-text-preset--body" data-ref="btn-preset-body">
           <span class="collaborative-preset-body">Agregar algo de texto</span>
         </button>
+      </div>
+    </div>
+
+    <div class="collaborative-panel-section is-hidden" data-ref="panel-section-fonts">
+      <div class="collaborative-fonts-panel" data-ref="fonts-panel-wrapper">
+        <div class="collaborative-fonts-search" data-ref="fonts-search-container">
+          <div class="component-search component-search--full" data-ref="fonts-search-box">
+            <div class="component-search__icon" data-ref="fonts-search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="fonts-search-input-box">
+              <input class="component-search__input" data-ref="input-search-fonts" placeholder="Buscar fuentes..." type="text" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-fonts-search" style="display: none;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="collaborative-font-categories" data-ref="font-categories-bar">
+          <button type="button" class="category-pill is-active" data-ref="font-pill-all" data-font-cat="all">Todas</button>
+          <button type="button" class="category-pill" data-ref="font-pill-sans" data-font-cat="sans-serif">Sans Serif</button>
+          <button type="button" class="category-pill" data-ref="font-pill-serif" data-font-cat="serif">Serif</button>
+          <button type="button" class="category-pill" data-ref="font-pill-display" data-font-cat="display">Display</button>
+          <button type="button" class="category-pill" data-ref="font-pill-handwriting" data-font-cat="handwriting">Cursiva</button>
+          <button type="button" class="category-pill" data-ref="font-pill-monospace" data-font-cat="monospace">Monospace</button>
+        </div>
+
+        <div class="collaborative-font-variations-box is-hidden" data-ref="font-variations-box">
+          <div class="collaborative-font-variations-header">
+            <span class="collaborative-font-variations-title" data-ref="font-variations-family-name">Roboto</span>
+            <button type="button" class="component-button component-button--ghost component-button--h28 collaborative-font-italic-btn" data-ref="btn-font-variation-italic" data-tooltip="Alternar cursiva" aria-label="Alternar cursiva">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_italic"></use></svg>
+              <span>Cursiva</span>
+            </button>
+          </div>
+          <div class="collaborative-font-weights-grid" data-ref="font-weights-grid"></div>
+        </div>
+
+        <div class="collaborative-font-list" data-ref="font-list-container"></div>
       </div>
     </div>
 
