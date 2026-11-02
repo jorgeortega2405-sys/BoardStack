@@ -15,6 +15,7 @@ import { getLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../u
 import { debounce, hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABELS } from './collab-fonts.config.js';
 import { openCollabPageSizeModal } from './collab-page-size-modal.util.js';
+import { SHAPES_CATALOG } from './collab-shapes.config.js';
 import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 
 interface ElementText {
@@ -29,6 +30,7 @@ interface ElementText {
   height?: number;
   id: string;
   isBold?: boolean;
+  isItalic?: boolean;
   isStickyNote?: boolean;
   isStrikethrough?: boolean;
   isUnderline?: boolean;
@@ -58,6 +60,7 @@ interface ElementShape {
   pageIndex: number;
   rotation?: number;
   shapeType: 'arch' | 'arrow' | 'arrow-bidirectional-bold' | 'arrow-block-down' | 'arrow-block-left' | 'arrow-block-right' | 'arrow-block-up' | 'arrow-chevron-right' | 'arrow-double-horizontal' | 'arrow-double-vertical' | 'arrow-down' | 'arrow-left' | 'arrow-notched-left' | 'arrow-pentagon-right' | 'arrow-up' | 'badge' | 'badge-20' | 'callout' | 'chamfered-rect' | 'circle' | 'cloud' | 'cross' | 'decagon' | 'diamond' | 'flare-10' | 'flare-12' | 'flare-8' | 'flowchart-data' | 'flowchart-decision' | 'flowchart-delay' | 'flowchart-display' | 'flowchart-document' | 'flowchart-manual' | 'flowchart-merge' | 'flowchart-offpage' | 'flowchart-preparation' | 'flowchart-process-rounded' | 'flowchart-terminator' | 'heart' | 'heptagon' | 'hexagon' | 'hexagon-vertical' | 'lightning' | 'line' | 'line-flexible' | 'line-multiconnect' | 'octagon' | 'parallelogram-left' | 'parallelogram-right' | 'pentagon' | 'plaque' | 'quarter-circle' | 'quarter-circle-arc' | 'rect' | 'right-triangle' | 'rounded-rect' | 'scalloped-rect' | 'semicircle' | 'semicircle-arc' | 'shield' | 'star' | 'star-10' | 'star-12' | 'star-16' | 'star-24' | 'star-32' | 'star-4' | 'star-5' | 'star-6' | 'star-7' | 'star-8' | 'trapezoid' | 'trapezoid-inverted' | 'triangle' | 'triangle-down';
+  sides?: number;
   strokeColor: string;
   strokeStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
   strokeWidth: number;
@@ -241,6 +244,7 @@ export class CollaborativePdfEditorController implements ViewController {
   private fontActiveCategory = 'all';
   private fontObserver: IntersectionObserver | null = null;
   private fontSearchQuery = '';
+  private expandedFontFamily: string | null = null;
   private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color' | null = null;
@@ -287,6 +291,9 @@ export class CollaborativePdfEditorController implements ViewController {
   private remotePeers = new Map<string, { avatarUrl?: string | null; clientId: string; color: string; isGuest?: boolean; userId?: number | null; username: string }>();
   private selectedElementId: string | null = null;
   private selectedElementIds = new Set<string>();
+  private consecutivePasteCount = 0;
+  private lastPasteTimestamp = 0;
+  private lastPastedTimestamp = 0;
   private sharePopoverElement: HTMLElement | null = null;
   private cleanupSharePopover: (() => void) | null = null;
   private selectedPageIndex: number | null = null;
@@ -462,6 +469,11 @@ export class CollaborativePdfEditorController implements ViewController {
   private bindDrawerEvents(): void {
     const { signal } = this.drawerAbortController || {};
 
+    const collapseBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-drawer-collapse"]');
+    collapseBtn?.addEventListener('click', () => {
+      this.closeSidePanel();
+    }, { signal });
+
     const closeSidePanelBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-close-side-panel"]');
     closeSidePanelBtn?.addEventListener('click', () => {
       this.closeSidePanel();
@@ -506,10 +518,16 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const restoreAllElementsMain = () => {
       if (elemShapesView) hideElement(elemShapesView);
+      const catView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-category-view"]');
+      if (catView) hideElement(catView);
       if (elemTablesView) hideElement(elemTablesView);
       if (elemChartsView) hideElement(elemChartsView);
       if (elemMainView) showElement(elemMainView);
     };
+
+    const elemShapesCatView = this.queryPanel<HTMLElement>('[data-ref="elements-shapes-category-view"]');
+    const shapesCatTitle = this.queryPanel<HTMLElement>('[data-ref="shapes-cat-title"]');
+    const shapesCatGrid = this.queryPanel<HTMLElement>('[data-ref="shapes-cat-grid"]');
 
     const elemConfigs: Array<{ handler: () => void; ref: string }> = [
       { handler: showShapesView, ref: 'btn-elem-shapes' },
@@ -523,6 +541,35 @@ export class CollaborativePdfEditorController implements ViewController {
     });
 
     this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
+
+    const shapeMoreBtns = this.queryPanelAll<HTMLButtonElement>('[data-shape-cat]');
+    shapeMoreBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const catKey = btn.getAttribute('data-shape-cat');
+        if (!catKey) return;
+        const catData = SHAPES_CATALOG[catKey];
+        if (!catData) return;
+
+        if (shapesCatTitle) shapesCatTitle.textContent = catData.title;
+        if (shapesCatGrid) {
+          shapesCatGrid.innerHTML = catData.shapes.map((s) => s.cardHtml).join('');
+          const catShapeButtons = shapesCatGrid.querySelectorAll<HTMLButtonElement>('[data-shape]');
+          catShapeButtons.forEach((sBtn) => {
+            sBtn.addEventListener('click', () => {
+              const shape = sBtn.getAttribute('data-shape') as any;
+              if (shape) this.addShapeElement(shape);
+            });
+          });
+        }
+        if (elemShapesView) hideElement(elemShapesView);
+        if (elemShapesCatView) showElement(elemShapesCatView);
+      }, { signal });
+    });
+
+    this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-cat-back"]')?.addEventListener('click', () => {
+      if (elemShapesCatView) hideElement(elemShapesCatView);
+      if (elemShapesView) showElement(elemShapesView);
+    }, { signal });
     this.queryPanel<HTMLButtonElement>('[data-ref="btn-tables-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
     this.queryPanel<HTMLButtonElement>('[data-ref="btn-charts-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
 
@@ -2446,7 +2493,8 @@ export class CollaborativePdfEditorController implements ViewController {
     }
     div.style.fontWeight = el.fontWeight ? String(el.fontWeight) : (el.isBold ? 'bold' : 'normal');
     div.style.fontFamily = el.fontFamily ? `"${el.fontFamily}", sans-serif` : 'Helvetica, sans-serif';
-    if (el.fontStyle) div.style.fontStyle = el.fontStyle;
+    if (el.isItalic) div.style.fontStyle = 'italic';
+    else if (el.fontStyle) div.style.fontStyle = el.fontStyle;
     if (el.isUnderline && el.isStrikethrough) {
       div.style.textDecoration = 'underline line-through';
     } else if (el.isUnderline) {
@@ -3144,7 +3192,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private renderShapeInner(el: ElementShape): string {
     let fill = el.fillColor && el.fillColor !== 'transparent' ? el.fillColor : '#000000';
-    const stroke = el.strokeColor && el.strokeColor !== 'transparent' ? el.strokeColor : 'none';
+    let stroke = el.strokeColor && el.strokeColor !== 'transparent' ? el.strokeColor : 'none';
     const strokeWidth = el.strokeWidth || 0;
     const w = el.width;
     const h = el.height;
@@ -3202,6 +3250,14 @@ export class CollaborativePdfEditorController implements ViewController {
       }
       return pts.join(' ');
     };
+
+    if (el.sides && el.sides >= 3 && el.shapeType !== 'circle') {
+      if (el.sides === 4 && (el.shapeType === 'rect' || el.shapeType === 'rounded-rect')) {
+        const rx = el.borderRadius !== undefined ? el.borderRadius : 0;
+        return `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${strokeDash} />`;
+      }
+      return `<polygon points="${generateRegularPolygon(el.sides)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${strokeDash} />`;
+    }
 
     if (el.shapeType === 'rect') {
       const rx = el.borderRadius !== undefined ? el.borderRadius : 0;
@@ -4663,7 +4719,9 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const textGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-text"]');
     const shapeGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-shape"]');
+    const imageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-image"]');
     const tableGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-table"]');
+    const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
     const pageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-page"]');
     const actionGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-actions"]');
 
@@ -4681,6 +4739,9 @@ export class CollaborativePdfEditorController implements ViewController {
       if (el.type === 'text') {
         showElement(textGroup);
         hideElement(shapeGroup);
+        if (imageGroup) hideElement(imageGroup);
+        if (tableGroup) hideElement(tableGroup);
+        if (chartGroup) hideElement(chartGroup);
 
         const txtFontFamily = toolbar.querySelector<HTMLElement>('[data-ref="txt-font-family"]');
         if (txtFontFamily) txtFontFamily.textContent = el.fontFamily || 'Helvetica';
@@ -4691,6 +4752,18 @@ export class CollaborativePdfEditorController implements ViewController {
         const isBoldActive = !!(el.isBold || (typeof el.fontWeight === 'number' && el.fontWeight >= 600));
         const btnBold = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-bold"]');
         btnBold?.classList.toggle('is-active', isBoldActive);
+
+        const btnItalic = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-italic"]');
+        btnItalic?.classList.toggle('is-active', !!el.isItalic);
+
+        const btnUnderline = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-underline"]');
+        btnUnderline?.classList.toggle('is-active', !!el.isUnderline);
+
+        const btnStrikethrough = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-strikethrough"]');
+        btnStrikethrough?.classList.toggle('is-active', !!el.isStrikethrough);
+
+        const btnUppercase = toolbar.querySelector<HTMLElement>('[data-ref="btn-toggle-uppercase"]');
+        btnUppercase?.classList.toggle('is-active', !!el.isUppercase);
 
         const previewTextColor = toolbar.querySelector<HTMLElement>('[data-ref="preview-text-color"]');
         if (previewTextColor) {
@@ -4719,9 +4792,49 @@ export class CollaborativePdfEditorController implements ViewController {
         } else {
           if (btnStickyBg) hideElement(btnStickyBg);
         }
+
+        const align = el.align || 'left';
+        const alignBtns = toolbar.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-text-align"] [data-align]');
+        alignBtns.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.align === align));
+        const iconAlign = toolbar.querySelector<SVGUseElement>('[data-ref="icon-current-align"] use');
+        if (iconAlign) iconAlign.setAttribute('href', `/icons.svg#format_align_${align}`);
+
+        const listType = el.listType || 'none';
+        const listBtns = toolbar.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-text-list"] [data-list]');
+        listBtns.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.list === listType));
+        const iconList = toolbar.querySelector<SVGUseElement>('[data-ref="icon-current-list"] use');
+        if (iconList) {
+          const iconName = listType === 'numbered' ? 'format_list_numbered' : 'format_list_bulleted';
+          iconList.setAttribute('href', `/icons.svg#${iconName}`);
+        }
+
+        const rangeLetter = toolbar.querySelector<HTMLInputElement>('[data-ref="range-letter-spacing"]');
+        const numLetter = toolbar.querySelector<HTMLElement>('[data-ref="num-letter-spacing"]');
+        const letterVal = el.letterSpacing ?? 0;
+        if (rangeLetter) rangeLetter.value = letterVal.toString();
+        if (numLetter) numLetter.textContent = letterVal.toString();
+
+        const rangeLine = toolbar.querySelector<HTMLInputElement>('[data-ref="range-line-height"]');
+        const numLine = toolbar.querySelector<HTMLElement>('[data-ref="num-line-height"]');
+        const lhVal = el.lineHeight ?? 1.4;
+        if (rangeLine) rangeLine.value = Math.round(lhVal * 10).toString();
+        if (numLine) numLine.textContent = lhVal.toFixed(1);
+
+        const vAlign = el.verticalAlign || 'top';
+        const vAlignBtns = toolbar.querySelectorAll<HTMLElement>('[data-ref="valign-row"] [data-valign]');
+        vAlignBtns.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.valign === vAlign));
+
+        const rangeTextOp = toolbar.querySelector<HTMLInputElement>('[data-ref="range-text-opacity"]');
+        const numTextOp = toolbar.querySelector<HTMLElement>('[data-ref="num-text-opacity"]');
+        const textOpVal = Math.round((el.opacity !== undefined ? el.opacity : 1) * 100);
+        if (rangeTextOp) rangeTextOp.value = textOpVal.toString();
+        if (numTextOp) numTextOp.textContent = textOpVal.toString();
       } else if (el.type === 'shape') {
         showElement(shapeGroup);
         hideElement(textGroup);
+        if (imageGroup) hideElement(imageGroup);
+        if (tableGroup) hideElement(tableGroup);
+        if (chartGroup) hideElement(chartGroup);
 
         const previewFill = toolbar.querySelector<HTMLElement>('[data-ref="preview-shape-fill"]');
         if (previewFill) {
@@ -4737,21 +4850,82 @@ export class CollaborativePdfEditorController implements ViewController {
         const previewStroke = toolbar.querySelector<HTMLElement>('[data-ref="preview-shape-stroke"]');
         if (previewStroke) previewStroke.style.backgroundColor = el.strokeColor || '#000000';
 
-        const btnStrokeWidth = toolbar.querySelector<HTMLElement>('[data-ref="btn-shape-strokewidth"]');
-        if (btnStrokeWidth) btnStrokeWidth.setAttribute('data-tooltip', `Grosor de borde: ${el.strokeWidth || 0}px`);
-        if (tableGroup) hideElement(tableGroup);
-      } else if (el.type === 'chart') {
-        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
-        if (chartGroup) showElement(chartGroup);
+        const strokeStyle = el.strokeStyle || ((el.strokeWidth ?? 0) > 0 ? 'solid' : 'none');
+        const strokeStyleBtns = toolbar.querySelectorAll<HTMLElement>('[data-ref="shape-stroke-styles-row"] [data-style]');
+        strokeStyleBtns.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.style === strokeStyle));
+
+        const rangeShapeStroke = toolbar.querySelector<HTMLInputElement>('[data-ref="range-shape-stroke-width"]');
+        const numShapeStroke = toolbar.querySelector<HTMLElement>('[data-ref="num-shape-stroke-width"]');
+        const swVal = el.strokeWidth ?? 0;
+        if (rangeShapeStroke) rangeShapeStroke.value = swVal.toString();
+        if (numShapeStroke) numShapeStroke.textContent = swVal.toString();
+
+        const rangeShapeCorner = toolbar.querySelector<HTMLInputElement>('[data-ref="range-shape-corner-radius"]');
+        const numShapeCorner = toolbar.querySelector<HTMLElement>('[data-ref="num-shape-corner-radius"]');
+        const crVal = el.borderRadius ?? 0;
+        if (rangeShapeCorner) rangeShapeCorner.value = crVal.toString();
+        if (numShapeCorner) numShapeCorner.textContent = crVal.toString();
+
+        const rangeShapeSides = toolbar.querySelector<HTMLInputElement>('[data-ref="range-shape-sides"]');
+        const numShapeSides = toolbar.querySelector<HTMLElement>('[data-ref="num-shape-sides"]');
+        let currentSides = el.sides;
+        if (!currentSides) {
+          if (el.shapeType === 'triangle' || el.shapeType === 'triangle-down' || el.shapeType === 'right-triangle') currentSides = 3;
+          else if (el.shapeType === 'pentagon') currentSides = 5;
+          else if (el.shapeType === 'hexagon' || el.shapeType === 'hexagon-vertical') currentSides = 6;
+          else if (el.shapeType === 'heptagon') currentSides = 7;
+          else if (el.shapeType === 'octagon') currentSides = 8;
+          else if (el.shapeType === 'decagon') currentSides = 10;
+          else currentSides = 4;
+        }
+        if (rangeShapeSides) rangeShapeSides.value = currentSides.toString();
+        if (numShapeSides) numShapeSides.textContent = currentSides.toString();
+
+        const rangeShapeOp = toolbar.querySelector<HTMLInputElement>('[data-ref="range-shape-opacity"]');
+        const numShapeOp = toolbar.querySelector<HTMLElement>('[data-ref="num-shape-opacity"]');
+        const shapeOpVal = Math.round((el.opacity !== undefined ? el.opacity : 1) * 100);
+        if (rangeShapeOp) rangeShapeOp.value = shapeOpVal.toString();
+        if (numShapeOp) numShapeOp.textContent = shapeOpVal.toString();
+      } else if (el.type === 'image') {
+        if (imageGroup) showElement(imageGroup);
         hideElement(textGroup);
         hideElement(shapeGroup);
         if (tableGroup) hideElement(tableGroup);
+        if (chartGroup) hideElement(chartGroup);
+
+        const imgStrokeStyle = el.borderStyle || ((el.borderWidth ?? 0) > 0 ? 'solid' : 'none');
+        const imgStrokeBtns = toolbar.querySelectorAll<HTMLElement>('[data-ref="image-stroke-styles-row"] [data-style]');
+        imgStrokeBtns.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.style === imgStrokeStyle));
+
+        const rangeImgStroke = toolbar.querySelector<HTMLInputElement>('[data-ref="range-image-stroke-width"]');
+        const numImgStroke = toolbar.querySelector<HTMLElement>('[data-ref="num-image-stroke-width"]');
+        const imgSwVal = el.borderWidth ?? 0;
+        if (rangeImgStroke) rangeImgStroke.value = imgSwVal.toString();
+        if (numImgStroke) numImgStroke.textContent = imgSwVal.toString();
+
+        const rangeImgCorner = toolbar.querySelector<HTMLInputElement>('[data-ref="range-image-corner-radius"]');
+        const numImgCorner = toolbar.querySelector<HTMLElement>('[data-ref="num-image-corner-radius"]');
+        const imgCrVal = el.borderRadius ?? 0;
+        if (rangeImgCorner) rangeImgCorner.value = imgCrVal.toString();
+        if (numImgCorner) numImgCorner.textContent = imgCrVal.toString();
+
+        const rangeImgOp = toolbar.querySelector<HTMLInputElement>('[data-ref="range-image-opacity"]');
+        const numImgOp = toolbar.querySelector<HTMLElement>('[data-ref="num-image-opacity"]');
+        const imgOpVal = Math.round((el.opacity !== undefined ? el.opacity : 1) * 100);
+        if (rangeImgOp) rangeImgOp.value = imgOpVal.toString();
+        if (numImgOp) numImgOp.textContent = imgOpVal.toString();
+      } else if (el.type === 'chart') {
+        if (chartGroup) showElement(chartGroup);
+        hideElement(textGroup);
+        hideElement(shapeGroup);
+        if (imageGroup) hideElement(imageGroup);
+        if (tableGroup) hideElement(tableGroup);
       } else if (el.type === 'table') {
-        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
         if (chartGroup) hideElement(chartGroup);
         if (tableGroup) showElement(tableGroup);
         hideElement(textGroup);
         hideElement(shapeGroup);
+        if (imageGroup) hideElement(imageGroup);
 
         const previewHeader = toolbar.querySelector<HTMLElement>('[data-ref="preview-table-header-color"]');
         if (previewHeader) previewHeader.style.backgroundColor = el.headerColor || el.themeColor || '#4b5563';
@@ -4771,10 +4945,10 @@ export class CollaborativePdfEditorController implements ViewController {
         const btnPadding = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-padding"]');
         if (btnPadding) btnPadding.setAttribute('data-tooltip', `Relleno de celdas: ${el.cellPadding || 8}px`);
       } else {
-        const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
         if (chartGroup) hideElement(chartGroup);
         hideElement(textGroup);
         hideElement(shapeGroup);
+        if (imageGroup) hideElement(imageGroup);
         if (tableGroup) hideElement(tableGroup);
       }
     } else if (this.selectedPageIndex !== null) {
@@ -4783,7 +4957,9 @@ export class CollaborativePdfEditorController implements ViewController {
       showElement(pageGroup);
       hideElement(textGroup);
       hideElement(shapeGroup);
+      if (imageGroup) hideElement(imageGroup);
       if (tableGroup) hideElement(tableGroup);
+      if (chartGroup) hideElement(chartGroup);
 
       const previewPageBg = toolbar.querySelector<HTMLElement>('[data-ref="preview-page-bg-color"]');
       if (previewPageBg) {
@@ -4798,6 +4974,8 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     } else {
       if (tableGroup) hideElement(tableGroup);
+      if (chartGroup) hideElement(chartGroup);
+      if (imageGroup) hideElement(imageGroup);
       hideElement(toolbar);
     }
 
@@ -4840,21 +5018,243 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private duplicateSelected(): void {
-    if (this.selectedElementId) {
-      const el = this.elements.find((e) => e.id === this.selectedElementId);
-      if (!el) return;
-      const clone = JSON.parse(JSON.stringify(el));
-      clone.id = `${clone.type}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-      clone.x = (clone.x || 100) + 24;
-      clone.y = (clone.y || 100) + 24;
-      if (clone.x2 !== undefined) clone.x2 += 24;
-      if (clone.y2 !== undefined) clone.y2 += 24;
-      this.pushElement(clone);
+    const targetIds = new Set<string>();
+    if (this.selectedElementIds.size > 0) {
+      for (const id of this.selectedElementIds) targetIds.add(id);
+    } else if (this.selectedElementId) {
+      targetIds.add(this.selectedElementId);
+    }
+
+    if (targetIds.size > 0) {
+      const selectedElements = this.elements.filter((el) => targetIds.has(el.id));
+      const newIds: string[] = [];
+      for (const el of selectedElements) {
+        const clone = JSON.parse(JSON.stringify(el));
+        clone.id = `${clone.type}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        clone.x = (clone.x || 100) + 24;
+        clone.y = (clone.y || 100) + 24;
+        if (clone.x2 !== undefined) clone.x2 += 24;
+        if (clone.y2 !== undefined) clone.y2 += 24;
+        this.pushElement(clone);
+        newIds.push(clone.id);
+      }
       this.renderPages();
-      this.selectElement(clone.id);
-      showToast('Elemento duplicado', 'info');
+      this.selectedElementIds.clear();
+      for (const id of newIds) this.selectedElementIds.add(id);
+      this.selectedElementId = newIds[0] || null;
+      this.updateTransformBoxPosition();
+      this.updateContextToolbar();
+      showToast(newIds.length > 1 ? `${newIds.length} elementos duplicados` : 'Elemento duplicado', 'info');
     } else if (this.selectedPageIndex !== null) {
       this.duplicatePage(this.selectedPageIndex);
+    }
+  }
+
+  private copySelectedElements(): void {
+    const targetIds = new Set<string>();
+    if (this.selectedElementIds.size > 0) {
+      for (const id of this.selectedElementIds) targetIds.add(id);
+    } else if (this.selectedElementId) {
+      targetIds.add(this.selectedElementId);
+    }
+
+    if (targetIds.size === 0) return;
+
+    const selectedElements = this.elements.filter((el) => targetIds.has(el.id));
+    if (selectedElements.length === 0) return;
+
+    const payload = {
+      __boardpdf_collab_elements__: true,
+      elements: JSON.parse(JSON.stringify(selectedElements)),
+      sourceDocId: this.docId,
+      sourcePageIndex: selectedElements[0]?.pageIndex ?? 0,
+      timestamp: Date.now(),
+    };
+
+    const payloadJson = JSON.stringify(payload);
+    try {
+      localStorage.setItem('boardpdf_collab_clipboard', payloadJson);
+    } catch {}
+
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(payloadJson).catch(() => {});
+    }
+
+    showToast(selectedElements.length > 1 ? `${selectedElements.length} elementos copiados` : 'Elemento copiado', 'info');
+  }
+
+  private async pasteFromClipboard(overrideText?: string, overrideFiles?: FileList | null): Promise<void> {
+    const activeTag = document.activeElement?.tagName.toLowerCase();
+    const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+    if (isEditing) return;
+
+    const now = performance.now();
+    if (now - this.lastPasteTimestamp < 150) return;
+    this.lastPasteTimestamp = now;
+
+    let text = overrideText;
+    const files = overrideFiles;
+
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            this.addImageElement({
+              id: `pasted_${Date.now()}`,
+              name: file.name || 'Imagen pegada',
+              size: file.size || 0,
+              type: 'image',
+              url: dataUrl,
+            });
+            showToast('Imagen pegada', 'info');
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
+    }
+
+    if (text === undefined) {
+      try {
+        const localData = localStorage.getItem('boardpdf_collab_clipboard');
+        if (localData && localData.includes('__boardpdf_collab_elements__')) {
+          text = localData;
+        }
+      } catch {}
+    }
+
+    if (text === undefined && navigator.clipboard?.readText) {
+      try {
+        text = await navigator.clipboard.readText();
+      } catch {
+        showToast('Para pegar contenido externo, usa el atajo Ctrl+V', 'info');
+        return;
+      }
+    }
+
+    const targetPageIndex = this.selectedPageIndex !== null
+      ? this.selectedPageIndex
+      : (this.elements.find((e) => e.id === this.selectedElementId)?.pageIndex ?? 0);
+    const pageDim = this.getPageDimensions(targetPageIndex);
+
+    let collabPayload: {
+      __boardpdf_collab_elements__: boolean;
+      elements: EditorElement[];
+      sourceDocId?: string;
+      sourcePageIndex?: number;
+      timestamp?: number;
+    } | null = null;
+
+    if (text && text.includes('__boardpdf_collab_elements__')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && parsed.__boardpdf_collab_elements__ && Array.isArray(parsed.elements)) {
+          collabPayload = parsed;
+        }
+      } catch {}
+    }
+
+    if (!collabPayload && (!text || text.trim() === '')) {
+      try {
+        const localRaw = localStorage.getItem('boardpdf_collab_clipboard');
+        if (localRaw) {
+          const parsed = JSON.parse(localRaw);
+          if (parsed && parsed.__boardpdf_collab_elements__ && Array.isArray(parsed.elements)) {
+            collabPayload = parsed;
+          }
+        }
+      } catch {}
+    }
+
+    if (collabPayload && collabPayload.elements.length > 0) {
+      const isSameDocAndPage = collabPayload.sourceDocId === this.docId && (collabPayload.sourcePageIndex ?? 0) === targetPageIndex;
+
+      if (collabPayload.timestamp && collabPayload.timestamp === this.lastPastedTimestamp) {
+        this.consecutivePasteCount++;
+      } else {
+        this.lastPastedTimestamp = collabPayload.timestamp || Date.now();
+        this.consecutivePasteCount = 0;
+      }
+
+      const offset = (isSameDocAndPage ? 24 : 0) + (this.consecutivePasteCount * 24);
+      const newIds: string[] = [];
+
+      for (const rawEl of collabPayload.elements) {
+        const cloned: EditorElement = JSON.parse(JSON.stringify(rawEl));
+        const newId = `${cloned.type}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        cloned.id = newId;
+        cloned.pageIndex = targetPageIndex;
+
+        if (cloned.type === 'drawing') {
+          if (offset > 0) {
+            cloned.points = cloned.points.map((pt) => ({ x: pt.x + offset, y: pt.y + offset }));
+          }
+        } else {
+          cloned.x = (cloned.x || 0) + offset;
+          cloned.y = (cloned.y || 0) + offset;
+          if ('x2' in cloned && cloned.x2 !== undefined) cloned.x2 += offset;
+          if ('y2' in cloned && cloned.y2 !== undefined) cloned.y2 += offset;
+        }
+
+        this.pushElement(cloned);
+        newIds.push(newId);
+      }
+
+      this.renderPages();
+      this.selectedElementIds.clear();
+      for (const id of newIds) {
+        this.selectedElementIds.add(id);
+      }
+      this.selectedElementId = newIds[0] || null;
+      this.updateTransformBoxPosition();
+      this.updateContextToolbar();
+      this.activateSelectTool();
+      void this.flushAutoSave();
+
+      showToast(newIds.length > 1 ? `${newIds.length} elementos pegados` : 'Elemento pegado', 'info');
+      return;
+    }
+
+    if (text && text.trim().length > 0) {
+      const cleanText = text.trim();
+      const id = `text_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+      const defaultW = Math.min(420, Math.max(180, Math.round(pageDim.width * 0.6)));
+      const x = Math.max(40, Math.round((pageDim.width - defaultW) / 2));
+      const y = Math.max(80, Math.round(pageDim.height * 0.35 + (this.elements.length % 5) * 20));
+
+      const newTextEl: ElementText = {
+        align: 'left',
+        color: '#000000',
+        fontFamily: 'Helvetica',
+        fontSize: 16,
+        id,
+        pageIndex: targetPageIndex,
+        text: cleanText,
+        type: 'text',
+        width: defaultW,
+        x,
+        y,
+      };
+
+      this.pushElement(newTextEl);
+      this.renderPages();
+
+      const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
+      if (elNode) {
+        newTextEl.width = Math.ceil((elNode.offsetWidth || elNode.scrollWidth) + 8);
+        newTextEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+        elNode.style.width = `${newTextEl.width}px`;
+        elNode.style.height = `${newTextEl.height}px`;
+        this.broadcastElementUpdate(newTextEl);
+      }
+
+      this.selectElement(id);
+      this.activateSelectTool();
+      void this.flushAutoSave();
+      showToast('Texto pegado', 'info');
     }
   }
 
@@ -4868,7 +5268,6 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const searchInput = this.queryPanel<HTMLInputElement>('[data-ref="input-search-fonts"]');
     const clearSearchBtn = this.queryPanel<HTMLButtonElement>('[data-ref="btn-clear-fonts-search"]');
-    const categoriesBar = this.queryPanel<HTMLElement>('[data-ref="font-categories-bar"]');
 
     if (searchInput && !searchInput.dataset.hasFontListener) {
       searchInput.dataset.hasFontListener = 'true';
@@ -4893,19 +5292,6 @@ export class CollaborativePdfEditorController implements ViewController {
       });
     }
 
-    if (categoriesBar && !categoriesBar.dataset.hasFontListener) {
-      categoriesBar.dataset.hasFontListener = 'true';
-      const pills = categoriesBar.querySelectorAll<HTMLButtonElement>('.category-pill');
-      pills.forEach((pill) => {
-        pill.addEventListener('click', () => {
-          pills.forEach((p) => p.classList.remove('is-active'));
-          pill.classList.add('is-active');
-          this.fontActiveCategory = pill.getAttribute('data-font-cat') || 'all';
-          this.updateFontList();
-        });
-      });
-    }
-
     this.updateFontList();
   }
 
@@ -4919,8 +5305,8 @@ export class CollaborativePdfEditorController implements ViewController {
       if (el && el.type === 'text') activeEl = el;
     }
     const currentFamily = activeEl?.fontFamily || 'Helvetica';
-
-    this.renderFontVariations(currentFamily, activeEl);
+    const curWeight = Number(activeEl?.fontWeight || (activeEl?.isBold ? 700 : 400));
+    const isItalic = activeEl?.fontStyle === 'italic' || !!activeEl?.isItalic;
 
     let filtered = GOOGLE_FONTS_CATALOG;
     if (this.fontActiveCategory !== 'all') {
@@ -4938,16 +5324,34 @@ export class CollaborativePdfEditorController implements ViewController {
 
     listContainer.innerHTML = filtered.map((f) => {
       const isSelected = f.family.toLowerCase() === currentFamily.toLowerCase();
+      const isExpanded = this.expandedFontFamily?.toLowerCase() === f.family.toLowerCase();
+
+      const variantsHtml = isExpanded ? `
+        <div class="collaborative-font-variants-inline" data-ref="font-variants-${f.family.replace(/\s+/g, '-')}">
+          <div class="collaborative-font-weights-grid">
+            ${f.weights.map((w) => {
+              const isAct = w === curWeight;
+              const label = WEIGHT_LABELS[w] || `${w}`;
+              return `<button type="button" class="collaborative-weight-pill${isAct ? ' is-active' : ''}" data-font-family="${f.family}" data-weight="${w}" style="font-family: '${f.family}', sans-serif; font-weight: ${w};">${w} ${label}</button>`;
+            }).join('')}
+            ${f.hasItalic ? `
+              <button type="button" class="collaborative-weight-pill${isItalic ? ' is-active' : ''}" data-font-family="${f.family}" data-action="toggle-italic" style="font-family: '${f.family}', sans-serif; font-style: italic;">Cursiva</button>
+            ` : ''}
+          </div>
+        </div>
+      ` : '';
+
       return `
-        <button type="button" class="collaborative-font-item${isSelected ? ' is-selected' : ''}" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-          <div class="collaborative-font-item__info">
-            <span class="collaborative-font-item__name" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
-            <span class="collaborative-font-item__meta">${f.category} • ${f.weights.length} variantes</span>
-          </div>
-          <div class="collaborative-font-item__badge">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-          </div>
-        </button>
+        <div class="collaborative-font-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ''}" data-ref="font-card-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
+          <button type="button" class="collaborative-font-card__header collaborative-text-preset" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
+            <div class="collaborative-font-card__info">
+              <span class="collaborative-font-card__name" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
+              <span class="collaborative-font-card__meta">${f.category} • ${f.weights.length} variantes</span>
+            </div>
+            <svg class="component-icon collaborative-font-card__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          ${variantsHtml}
+        </div>
       `;
     }).join('');
 
@@ -4968,13 +5372,79 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     }, { root: listContainer, rootMargin: '80px' });
 
-    const fontButtons = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-item');
-    fontButtons.forEach((btn) => {
-      this.fontObserver?.observe(btn);
-      btn.addEventListener('click', () => {
-        const family = btn.getAttribute('data-font-family');
-        if (family) {
-          void this.applyFontFamily(family);
+    const fontHeaders = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-card__header');
+    fontHeaders.forEach((btn) => {
+      const fam = btn.getAttribute('data-font-family');
+      if (fam) {
+        this.fontObserver?.observe(btn);
+        btn.addEventListener('click', async () => {
+          await this.applyFontFamily(fam);
+          this.expandedFontFamily = this.expandedFontFamily?.toLowerCase() === fam.toLowerCase() ? null : fam;
+          this.updateFontList();
+        });
+      }
+    });
+
+    const weightPills = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-weight-pill[data-weight]');
+    weightPills.forEach((pill) => {
+      pill.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const weightNum = Number(pill.getAttribute('data-weight') || 400);
+        const fam = pill.getAttribute('data-font-family');
+        if (activeEl) {
+          activeEl.fontWeight = weightNum;
+          activeEl.isBold = weightNum >= 600;
+          if (fam) await loadGoogleFont(fam, [weightNum], activeEl.fontStyle === 'italic');
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
+          if (elNode) {
+            elNode.style.fontWeight = `${weightNum}`;
+            if (!activeEl.isStickyNote) {
+              elNode.style.width = 'auto';
+              elNode.style.height = 'auto';
+              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+              elNode.style.width = `${activeEl.width}px`;
+              elNode.style.height = `${activeEl.height}px`;
+            }
+          }
+          this.updateTransformBoxPosition();
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(activeEl);
+          this.recordHistory();
+          this.updateFontList();
+        }
+      });
+    });
+
+    const italicPills = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-weight-pill[data-action="toggle-italic"]');
+    italicPills.forEach((pill) => {
+      pill.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const fam = pill.getAttribute('data-font-family');
+        if (activeEl) {
+          const nextStyle = activeEl.fontStyle === 'italic' ? 'normal' : 'italic';
+          activeEl.fontStyle = nextStyle;
+          activeEl.isItalic = nextStyle === 'italic';
+          if (fam) await loadGoogleFont(fam, undefined, true);
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
+          if (elNode) {
+            elNode.style.fontStyle = nextStyle;
+            if (!activeEl.isStickyNote) {
+              elNode.style.width = 'auto';
+              elNode.style.height = 'auto';
+              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+              elNode.style.width = `${activeEl.width}px`;
+              elNode.style.height = `${activeEl.height}px`;
+            }
+          }
+          this.updateTransformBoxPosition();
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(activeEl);
+          this.recordHistory();
+          this.updateFontList();
         }
       });
     });
@@ -4992,23 +5462,14 @@ export class CollaborativePdfEditorController implements ViewController {
     }
 
     let updatedAny = false;
-    let lastActiveText: ElementText | undefined;
 
     for (const id of targetIds) {
       const el = this.elements.find((e) => e.id === id);
       if (el && el.type === 'text') {
         el.fontFamily = family;
-        if (fontItem && fontItem.weights.length > 0) {
-          const curW = Number(el.fontWeight || (el.isBold ? 700 : 400));
-          if (!fontItem.weights.includes(curW)) {
-            el.fontWeight = fontItem.weights.includes(400) ? 400 : fontItem.weights[0];
-            el.isBold = Number(el.fontWeight) >= 600;
-          }
-        }
         const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
         if (elNode) {
-          elNode.style.fontFamily = `"${family}", sans-serif`;
-          if (el.fontWeight) elNode.style.fontWeight = String(el.fontWeight);
+          elNode.style.fontFamily = `'${family}', sans-serif`;
           if (!el.isStickyNote) {
             elNode.style.width = 'auto';
             elNode.style.height = 'auto';
@@ -5019,7 +5480,6 @@ export class CollaborativePdfEditorController implements ViewController {
           }
         }
         this.broadcastElementUpdate(el);
-        lastActiveText = el;
         updatedAny = true;
       }
     }
@@ -5030,109 +5490,6 @@ export class CollaborativePdfEditorController implements ViewController {
       this.setModified(true);
       this.recordHistory();
       void this.flushAutoSave();
-    }
-
-    const listContainer = this.queryPanel<HTMLElement>('[data-ref="font-list-container"]');
-    if (listContainer) {
-      const items = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-item');
-      items.forEach((item) => {
-        const itemFam = item.getAttribute('data-font-family');
-        item.classList.toggle('is-selected', itemFam?.toLowerCase() === family.toLowerCase());
-      });
-    }
-
-    this.renderFontVariations(family, lastActiveText);
-  }
-
-  private renderFontVariations(family: string, activeEl?: ElementText): void {
-    const box = this.queryPanel<HTMLElement>('[data-ref="font-variations-box"]');
-    if (!box) return;
-
-    const fontItem = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
-    if (!fontItem || !activeEl) {
-      hideElement(box);
-      return;
-    }
-
-    showElement(box);
-    const titleEl = box.querySelector<HTMLElement>('[data-ref="font-variations-family-name"]');
-    if (titleEl) titleEl.textContent = `${fontItem.family} (${fontItem.weights.length} variantes)`;
-
-    const italicBtn = box.querySelector<HTMLButtonElement>('[data-ref="btn-font-variation-italic"]');
-    if (italicBtn) {
-      if (fontItem.hasItalic) {
-        showElement(italicBtn);
-        italicBtn.classList.toggle('is-active', activeEl.fontStyle === 'italic');
-        italicBtn.onclick = async () => {
-          const nextStyle = activeEl.fontStyle === 'italic' ? 'normal' : 'italic';
-          activeEl.fontStyle = nextStyle;
-          await loadGoogleFont(fontItem.family, fontItem.weights, true);
-          italicBtn.classList.toggle('is-active', nextStyle === 'italic');
-
-          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
-          if (elNode) {
-            elNode.style.fontStyle = nextStyle;
-            if (!activeEl.isStickyNote) {
-              elNode.style.width = 'auto';
-              elNode.style.height = 'auto';
-              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
-              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
-              elNode.style.width = `${activeEl.width}px`;
-              elNode.style.height = `${activeEl.height}px`;
-            }
-          }
-          this.updateTransformBoxPosition();
-          this.setModified(true);
-          this.broadcastElementUpdate(activeEl);
-          void this.flushAutoSave();
-        };
-      } else {
-        hideElement(italicBtn);
-      }
-    }
-
-    const weightsGrid = box.querySelector<HTMLElement>('[data-ref="font-weights-grid"]');
-    if (weightsGrid) {
-      const curWeight = Number(activeEl.fontWeight || (activeEl.isBold ? 700 : 400));
-      weightsGrid.innerHTML = fontItem.weights.map((w) => {
-        const isAct = w === curWeight;
-        const label = WEIGHT_LABELS[w] || `${w}`;
-        return `<button type="button" class="collaborative-font-weight-pill${isAct ? ' is-active' : ''}" data-weight="${w}">${w} ${label}</button>`;
-      }).join('');
-
-      const pills = weightsGrid.querySelectorAll<HTMLButtonElement>('.collaborative-font-weight-pill');
-      pills.forEach((pill) => {
-        pill.addEventListener('click', async () => {
-          const weightNum = Number(pill.getAttribute('data-weight') || 400);
-          activeEl.fontWeight = weightNum;
-          activeEl.isBold = weightNum >= 600;
-
-          await loadGoogleFont(fontItem.family, [weightNum], activeEl.fontStyle === 'italic');
-
-          pills.forEach((p) => p.classList.remove('is-active'));
-          pill.classList.add('is-active');
-
-          const btnBold = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-bold"]');
-          btnBold?.classList.toggle('is-active', !!activeEl.isBold);
-
-          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
-          if (elNode) {
-            elNode.style.fontWeight = String(weightNum);
-            if (!activeEl.isStickyNote) {
-              elNode.style.width = 'auto';
-              elNode.style.height = 'auto';
-              activeEl.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
-              activeEl.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
-              elNode.style.width = `${activeEl.width}px`;
-              elNode.style.height = `${activeEl.height}px`;
-            }
-          }
-          this.updateTransformBoxPosition();
-          this.setModified(true);
-          this.broadcastElementUpdate(activeEl);
-          void this.flushAutoSave();
-        });
-      });
     }
   }
 
@@ -5566,6 +5923,12 @@ export class CollaborativePdfEditorController implements ViewController {
   private bindEvents(): void {
     const { signal } = this.abortController || {};
 
+    const btnTopHome = this.container.querySelector<HTMLElement>('[data-ref="btn-top-home"]');
+    btnTopHome?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/');
+    }, { signal });
+
     const fileWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-file"]');
     if (fileWrapper) {
       this.fileDropdownCtrl = setupDropdown(fileWrapper, {
@@ -5580,6 +5943,32 @@ export class CollaborativePdfEditorController implements ViewController {
         backdrop: editWrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-edit"]'),
         menu: editWrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-edit"]'),
       });
+    }
+
+    const contextDropdownNames = [
+      'text-align',
+      'text-list',
+      'text-advanced',
+      'text-opacity',
+      'shape-stroke',
+      'shape-corner',
+      'shape-opacity',
+      'shape-flip',
+      'image-stroke',
+      'image-corner',
+      'image-opacity',
+      'image-flip',
+    ];
+
+    for (const name of contextDropdownNames) {
+      const wrap = this.container.querySelector<HTMLElement>(`[data-ref="dropdown-wrapper-${name}"]`);
+      if (wrap) {
+        const ctrl = setupDropdown(wrap, {
+          backdrop: wrap.querySelector<HTMLElement>(`[data-ref="dropdown-backdrop-${name}"]`),
+          menu: wrap.querySelector<HTMLElement>(`[data-ref="dropdown-menu-${name}"]`),
+        });
+        this.activeContextDropdowns.push(ctrl);
+      }
     }
 
     const btnUndo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-undo"]');
@@ -5828,7 +6217,242 @@ export class CollaborativePdfEditorController implements ViewController {
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
         this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
       }
+    }, { signal });
+
+    const btnToggleItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-italic"]');
+    btnToggleItalic?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        el.isItalic = !el.isItalic;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          elNode.style.fontStyle = el.isItalic ? 'italic' : 'normal';
+          if (!el.isStickyNote) {
+            elNode.style.width = 'auto';
+            elNode.style.height = 'auto';
+            el.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+            el.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+            elNode.style.width = `${el.width}px`;
+            elNode.style.height = `${el.height}px`;
+          }
+        }
+        this.updateContextToolbar();
+        this.updateTransformBoxPosition();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnToggleUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-underline"]');
+    btnToggleUnderline?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        el.isUnderline = !el.isUnderline;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const decs: string[] = [];
+          if (el.isUnderline) decs.push('underline');
+          if (el.isStrikethrough) decs.push('line-through');
+          elNode.style.textDecoration = decs.length ? decs.join(' ') : 'none';
+        }
+        this.updateContextToolbar();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnToggleStrikethrough = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-strikethrough"]');
+    btnToggleStrikethrough?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        el.isStrikethrough = !el.isStrikethrough;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const decs: string[] = [];
+          if (el.isUnderline) decs.push('underline');
+          if (el.isStrikethrough) decs.push('line-through');
+          elNode.style.textDecoration = decs.length ? decs.join(' ') : 'none';
+        }
+        this.updateContextToolbar();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnToggleUppercase = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-uppercase"]');
+    btnToggleUppercase?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        el.isUppercase = !el.isUppercase;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          elNode.style.textTransform = el.isUppercase ? 'uppercase' : 'none';
+          if (!el.isStickyNote) {
+            elNode.style.width = 'auto';
+            elNode.style.height = 'auto';
+            el.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+            el.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+            elNode.style.width = `${el.width}px`;
+            elNode.style.height = `${el.height}px`;
+          }
+        }
+        this.updateContextToolbar();
+        this.updateTransformBoxPosition();
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const alignOptions = this.container.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-text-align"] [data-align]');
+    alignOptions.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'text') {
+          const align = (btn.dataset.align as 'center' | 'justify' | 'left' | 'right') || 'left';
+          el.align = align;
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          if (elNode) elNode.style.textAlign = align;
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+        }
+      }, { signal });
+    });
+
+    const listOptions = this.container.querySelectorAll<HTMLElement>('[data-ref="dropdown-menu-text-list"] [data-list]');
+    listOptions.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'text') {
+          const listType = (btn.dataset.list as 'bullet' | 'none' | 'numbered') || 'none';
+          el.listType = listType;
+          el.text = applyListFormatting(el.text, listType);
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          if (elNode) {
+            const contentEl = elNode.querySelector<HTMLElement>('.collaborative-element-text__content') || elNode;
+            contentEl.innerText = el.text;
+            if (!el.isStickyNote) {
+              elNode.style.width = 'auto';
+              elNode.style.height = 'auto';
+              el.width = Math.ceil(elNode.offsetWidth || elNode.scrollWidth);
+              el.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+              elNode.style.width = `${el.width}px`;
+              elNode.style.height = `${el.height}px`;
+            }
+          }
+          this.updateContextToolbar();
+          this.updateTransformBoxPosition();
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+        }
+      }, { signal });
+    });
+
+    const rangeLetter = this.container.querySelector<HTMLInputElement>('[data-ref="range-letter-spacing"]');
+    const numLetter = this.container.querySelector<HTMLElement>('[data-ref="num-letter-spacing"]');
+    rangeLetter?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        const val = parseFloat(rangeLetter.value) || 0;
+        if (numLetter) numLetter.textContent = val.toString();
+        el.letterSpacing = val;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) elNode.style.letterSpacing = `${val}px`;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeLetter?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const rangeLine = this.container.querySelector<HTMLInputElement>('[data-ref="range-line-height"]');
+    const numLine = this.container.querySelector<HTMLElement>('[data-ref="num-line-height"]');
+    rangeLine?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        const raw = parseFloat(rangeLine.value) || 14;
+        const val = parseFloat((raw / 10).toFixed(1));
+        if (numLine) numLine.textContent = val.toFixed(1);
+        el.lineHeight = val;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) elNode.style.lineHeight = `${val}`;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeLine?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const valignBtns = this.container.querySelectorAll<HTMLElement>('[data-ref="valign-row"] [data-valign]');
+    valignBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'text') {
+          const v = (btn.dataset.valign as 'bottom' | 'middle' | 'top') || 'top';
+          el.verticalAlign = v;
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          if (elNode) {
+            if (v === 'middle') {
+              elNode.style.display = 'flex';
+              elNode.style.alignItems = 'center';
+            } else if (v === 'bottom') {
+              elNode.style.display = 'flex';
+              elNode.style.alignItems = 'flex-end';
+            } else {
+              elNode.style.display = 'block';
+              elNode.style.alignItems = 'unset';
+            }
+          }
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+        }
+      }, { signal });
+    });
+
+    const btnTextMoreOptions = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-more-options"]');
+    btnTextMoreOptions?.addEventListener('click', () => {
+      showToast('Opciones de configuración avanzada de texto', 'info');
+    }, { signal });
+
+    const rangeTextOp = this.container.querySelector<HTMLInputElement>('[data-ref="range-text-opacity"]');
+    const numTextOp = this.container.querySelector<HTMLElement>('[data-ref="num-text-opacity"]');
+    rangeTextOp?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'text') {
+        const pct = parseInt(rangeTextOp.value, 10);
+        if (numTextOp) numTextOp.textContent = pct.toString();
+        el.opacity = pct / 100;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) elNode.style.opacity = `${el.opacity}`;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeTextOp?.addEventListener('change', () => {
+      this.recordHistory();
     }, { signal });
 
     const btnTextColor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-color"]');
@@ -5856,17 +6480,312 @@ export class CollaborativePdfEditorController implements ViewController {
       this.openColorMenu('page-bg');
     }, { signal });
 
-    const btnShapeStrokeWidth = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-strokewidth"]');
-    const strokeWidths = [0, 1, 2, 4, 8];
-    btnShapeStrokeWidth?.addEventListener('click', () => {
+    const shapeStrokeStyles = this.container.querySelectorAll<HTMLElement>('[data-ref="shape-stroke-styles-row"] [data-style]');
+    shapeStrokeStyles.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'shape') {
+          const style = (btn.dataset.style as 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid') || 'none';
+          el.strokeStyle = style;
+          if (style === 'none') {
+            el.strokeWidth = 0;
+          } else if ((el.strokeWidth || 0) === 0) {
+            el.strokeWidth = 2;
+          }
+          if (!el.strokeColor || el.strokeColor === 'transparent') {
+            el.strokeColor = '#000000';
+          }
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          const svgNode = elNode?.querySelector<SVGElement>('svg');
+          if (svgNode) svgNode.innerHTML = this.renderShapeInner(el);
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+        }
+      }, { signal });
+    });
+
+    const rangeShapeStroke = this.container.querySelector<HTMLInputElement>('[data-ref="range-shape-stroke-width"]');
+    const numShapeStroke = this.container.querySelector<HTMLElement>('[data-ref="num-shape-stroke-width"]');
+    rangeShapeStroke?.addEventListener('input', () => {
       if (!this.selectedElementId) return;
       const el = this.elements.find((e) => e.id === this.selectedElementId);
       if (el && el.type === 'shape') {
-        const curIdx = strokeWidths.indexOf(el.strokeWidth || 0);
-        el.strokeWidth = strokeWidths[(curIdx + 1) % strokeWidths.length];
-        this.renderPages();
-        this.selectElement(el.id);
+        const val = parseInt(rangeShapeStroke.value, 10);
+        if (numShapeStroke) numShapeStroke.textContent = val.toString();
+        el.strokeWidth = val;
+        if (val > 0 && (!el.strokeStyle || el.strokeStyle === 'none')) {
+          el.strokeStyle = 'solid';
+        }
+        if (!el.strokeColor || el.strokeColor === 'transparent') {
+          el.strokeColor = '#000000';
+        }
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        const svgNode = elNode?.querySelector<SVGElement>('svg');
+        if (svgNode) svgNode.innerHTML = this.renderShapeInner(el);
         this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeShapeStroke?.addEventListener('change', () => {
+      this.updateContextToolbar();
+      this.recordHistory();
+    }, { signal });
+
+    const rangeShapeCorner = this.container.querySelector<HTMLInputElement>('[data-ref="range-shape-corner-radius"]');
+    const numShapeCorner = this.container.querySelector<HTMLElement>('[data-ref="num-shape-corner-radius"]');
+    rangeShapeCorner?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        const val = parseInt(rangeShapeCorner.value, 10);
+        if (numShapeCorner) numShapeCorner.textContent = val.toString();
+        el.borderRadius = val;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        const svgNode = elNode?.querySelector<SVGElement>('svg');
+        if (svgNode) svgNode.innerHTML = this.renderShapeInner(el);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeShapeCorner?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const rangeShapeSides = this.container.querySelector<HTMLInputElement>('[data-ref="range-shape-sides"]');
+    const numShapeSides = this.container.querySelector<HTMLElement>('[data-ref="num-shape-sides"]');
+    rangeShapeSides?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        const val = parseInt(rangeShapeSides.value, 10);
+        if (numShapeSides) numShapeSides.textContent = val.toString();
+        el.sides = val;
+        if (val === 3) el.shapeType = 'triangle';
+        else if (val === 4) el.shapeType = 'rect';
+        else if (val === 5) el.shapeType = 'pentagon';
+        else if (val === 6) el.shapeType = 'hexagon';
+        else if (val === 7) el.shapeType = 'heptagon';
+        else if (val === 8) el.shapeType = 'octagon';
+        else if (val === 10) el.shapeType = 'decagon';
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        const svgNode = elNode?.querySelector<SVGElement>('svg');
+        if (svgNode) svgNode.innerHTML = this.renderShapeInner(el);
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeShapeSides?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const rangeShapeOp = this.container.querySelector<HTMLInputElement>('[data-ref="range-shape-opacity"]');
+    const numShapeOp = this.container.querySelector<HTMLElement>('[data-ref="num-shape-opacity"]');
+    rangeShapeOp?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        const pct = parseInt(rangeShapeOp.value, 10);
+        if (numShapeOp) numShapeOp.textContent = pct.toString();
+        el.opacity = pct / 100;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) elNode.style.opacity = `${el.opacity}`;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeShapeOp?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const btnShapeFlipH = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-flip-h"]');
+    btnShapeFlipH?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        el.flipHorizontal = !el.flipHorizontal;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const sx = el.flipHorizontal ? -1 : 1;
+          const sy = el.flipVertical ? -1 : 1;
+          elNode.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnShapeFlipV = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-flip-v"]');
+    btnShapeFlipV?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        el.flipVertical = !el.flipVertical;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const sx = el.flipHorizontal ? -1 : 1;
+          const sy = el.flipVertical ? -1 : 1;
+          elNode.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnImageRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-remove-bg"]');
+    btnImageRemoveBg?.addEventListener('click', () => {
+      showToast('Eliminación de fondo con IA próximamente disponible', 'info');
+    }, { signal });
+
+    const btnImageCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-crop"]');
+    btnImageCrop?.addEventListener('click', () => {
+      showToast('Herramienta de recorte próximamente disponible', 'info');
+    }, { signal });
+
+    const imgStrokeStyles = this.container.querySelectorAll<HTMLElement>('[data-ref="image-stroke-styles-row"] [data-style]');
+    imgStrokeStyles.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((e) => e.id === this.selectedElementId);
+        if (el && el.type === 'image') {
+          const style = (btn.dataset.style as 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid') || 'none';
+          el.borderStyle = style;
+          if (style === 'none') {
+            el.borderWidth = 0;
+          } else if ((el.borderWidth || 0) === 0) {
+            el.borderWidth = 2;
+          }
+          if (!el.borderColor) el.borderColor = '#000000';
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          if (elNode) {
+            if (el.borderWidth && el.borderStyle && el.borderStyle !== 'none') {
+              const bs = el.borderStyle === 'long-dash' ? 'dashed' : el.borderStyle;
+              elNode.style.border = `${el.borderWidth}px ${bs} ${el.borderColor || '#000000'}`;
+              elNode.style.boxSizing = 'border-box';
+            } else {
+              elNode.style.border = 'none';
+            }
+          }
+          this.updateContextToolbar();
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+        }
+      }, { signal });
+    });
+
+    const rangeImgStroke = this.container.querySelector<HTMLInputElement>('[data-ref="range-image-stroke-width"]');
+    const numImgStroke = this.container.querySelector<HTMLElement>('[data-ref="num-image-stroke-width"]');
+    rangeImgStroke?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'image') {
+        const val = parseInt(rangeImgStroke.value, 10);
+        if (numImgStroke) numImgStroke.textContent = val.toString();
+        el.borderWidth = val;
+        if (val > 0 && (!el.borderStyle || el.borderStyle === 'none')) {
+          el.borderStyle = 'solid';
+        }
+        if (!el.borderColor) el.borderColor = '#000000';
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          if (val > 0) {
+            const bs = el.borderStyle === 'long-dash' ? 'dashed' : (el.borderStyle || 'solid');
+            elNode.style.border = `${val}px ${bs} ${el.borderColor || '#000000'}`;
+            elNode.style.boxSizing = 'border-box';
+          } else {
+            elNode.style.border = 'none';
+          }
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeImgStroke?.addEventListener('change', () => {
+      this.updateContextToolbar();
+      this.recordHistory();
+    }, { signal });
+
+    const rangeImgCorner = this.container.querySelector<HTMLInputElement>('[data-ref="range-image-corner-radius"]');
+    const numImgCorner = this.container.querySelector<HTMLElement>('[data-ref="num-image-corner-radius"]');
+    rangeImgCorner?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'image') {
+        const val = parseInt(rangeImgCorner.value, 10);
+        if (numImgCorner) numImgCorner.textContent = val.toString();
+        el.borderRadius = val;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          elNode.style.borderRadius = `${val}px`;
+          elNode.style.overflow = val > 0 ? 'hidden' : '';
+          const img = elNode.querySelector<HTMLImageElement>('img');
+          if (img) img.style.borderRadius = `${val}px`;
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeImgCorner?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const rangeImgOp = this.container.querySelector<HTMLInputElement>('[data-ref="range-image-opacity"]');
+    const numImgOp = this.container.querySelector<HTMLElement>('[data-ref="num-image-opacity"]');
+    rangeImgOp?.addEventListener('input', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'image') {
+        const pct = parseInt(rangeImgOp.value, 10);
+        if (numImgOp) numImgOp.textContent = pct.toString();
+        el.opacity = pct / 100;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) elNode.style.opacity = `${el.opacity}`;
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+      }
+    }, { signal });
+    rangeImgOp?.addEventListener('change', () => {
+      this.recordHistory();
+    }, { signal });
+
+    const btnImageFlipH = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-flip-h"]');
+    btnImageFlipH?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'image') {
+        el.flipHorizontal = !el.flipHorizontal;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const sx = el.flipHorizontal ? -1 : 1;
+          const sy = el.flipVertical ? -1 : 1;
+          elNode.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
+      }
+    }, { signal });
+
+    const btnImageFlipV = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-flip-v"]');
+    btnImageFlipV?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (el && el.type === 'image') {
+        el.flipVertical = !el.flipVertical;
+        const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+        if (elNode) {
+          const sx = el.flipHorizontal ? -1 : 1;
+          const sy = el.flipVertical ? -1 : 1;
+          elNode.style.transform = `rotate(${el.rotation || 0}deg) scale(${sx}, ${sy})`;
+        }
+        this.setModified(true);
+        this.broadcastElementUpdate(el);
+        this.recordHistory();
       }
     }, { signal });
 
@@ -6061,6 +6980,23 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     }, { signal });
 
+    const btnMenuCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-copy"]');
+    btnMenuCopy?.addEventListener('click', () => {
+      this.copySelectedElements();
+      this.editDropdownCtrl?.close();
+    }, { signal });
+
+    const btnMenuPaste = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-paste"]');
+    btnMenuPaste?.addEventListener('click', () => {
+      void this.pasteFromClipboard();
+      this.editDropdownCtrl?.close();
+    }, { signal });
+
+    const btnContextCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-context-copy"]');
+    btnContextCopy?.addEventListener('click', () => {
+      this.copySelectedElements();
+    }, { signal });
+
     const btnContextDup = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-context-duplicate"]');
     btnContextDup?.addEventListener('click', () => this.duplicateSelected(), { signal });
 
@@ -6068,31 +7004,70 @@ export class CollaborativePdfEditorController implements ViewController {
     btnContextDel?.addEventListener('click', () => this.deleteSelectedElement(), { signal });
 
     window.addEventListener('keydown', (e) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        const activeTag = document.activeElement?.tagName.toLowerCase();
-        const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
         if (!isEditing) {
-          if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+          const key = e.key.toLowerCase();
+          if (key === 'z' && !e.shiftKey) {
             e.preventDefault();
             this.undo();
             return;
           }
-          if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+          if (key === 'y' || (key === 'z' && e.shiftKey)) {
             e.preventDefault();
             this.redo();
+            return;
+          }
+          if (key === 'c') {
+            const hasSelection = this.selectedElementId || this.selectedElementIds.size > 0;
+            if (hasSelection) {
+              e.preventDefault();
+              this.copySelectedElements();
+              return;
+            }
+          }
+          if (key === 'x') {
+            const hasSelection = this.selectedElementId || this.selectedElementIds.size > 0;
+            if (hasSelection) {
+              e.preventDefault();
+              this.copySelectedElements();
+              this.deleteSelectedElement();
+              return;
+            }
+          }
+          if (key === 'v') {
+            e.preventDefault();
+            void this.pasteFromClipboard();
+            return;
+          }
+          if (key === 'd') {
+            e.preventDefault();
+            this.duplicateSelected();
             return;
           }
         }
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag === 'input' || (document.activeElement as HTMLElement)?.isContentEditable) return;
         if (this.selectedElementId || this.selectedPageIndex !== null) {
           e.preventDefault();
           this.deleteSelectedElement();
         }
       }
+    }, { signal });
+
+    window.addEventListener('paste', (e: ClipboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+      if (isEditing) return;
+
+      e.preventDefault();
+      const text = e.clipboardData?.getData('text/plain');
+      const files = e.clipboardData?.files;
+      void this.pasteFromClipboard(text, files);
     }, { signal });
 
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');

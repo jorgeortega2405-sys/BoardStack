@@ -199,6 +199,21 @@ function createDrawerElement(): HTMLElement {
   drawer.className = 'layout-drawer';
   drawer.setAttribute('data-ref', 'layout-drawer');
 
+  const collapseBtn = document.createElement('button');
+  collapseBtn.setAttribute('type', 'button');
+  collapseBtn.className = 'layout-drawer__collapse-pill';
+  collapseBtn.setAttribute('data-ref', 'btn-drawer-collapse');
+  collapseBtn.setAttribute('data-tooltip', t('common.close', 'Cerrar menú'));
+  collapseBtn.setAttribute('data-i18n-tooltip', 'common.close');
+  collapseBtn.setAttribute('data-i18n-aria', 'common.close');
+  collapseBtn.setAttribute('aria-label', t('common.close', 'Cerrar menú'));
+  collapseBtn.innerHTML = '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>';
+  collapseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleDrawer(false);
+  });
+  drawer.appendChild(collapseBtn);
+
   const drawerBody = document.createElement('div');
   drawerBody.className = 'layout-drawer__body';
   drawerBody.setAttribute('data-ref', 'drawer-body');

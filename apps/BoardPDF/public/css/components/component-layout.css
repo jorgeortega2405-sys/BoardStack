@@ -529,12 +529,61 @@ html, body {
   width: 325px;
   min-width: 325px;
   border: none;
+  border-right: 1px solid var(--border-color, #e5e7eb);
   background-color: var(--bg-surface, #ffffff);
   box-shadow: none;
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
   padding: 8px 6px 20px 0;
+  overflow: visible;
+}
+
+.layout-drawer__collapse-pill {
+  align-items: center;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  color: var(--text-primary, #000000);
+  cursor: pointer;
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  outline: none;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  width: 22px;
+  z-index: 60;
+}
+
+.layout-drawer__collapse-pill:hover {
+  background-color: var(--bg-hover, #f3f4f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+  color: var(--text-primary, #000000);
+}
+
+.layout-drawer__collapse-pill:active {
+  background-color: var(--bg-active, #e5e7eb);
+  transform: translate(50%, -50%) scale(0.95);
+}
+
+.layout-drawer__collapse-pill:focus-visible {
+  box-shadow: 0 0 0 2px var(--border-focus, #000000);
+}
+
+.layout-drawer__collapse-pill .component-icon {
+  display: block;
+  fill: currentColor;
+  height: 14px;
+  stroke-width: 0;
+  width: 14px;
 }
 
 .layout-drawer.is-hidden {
