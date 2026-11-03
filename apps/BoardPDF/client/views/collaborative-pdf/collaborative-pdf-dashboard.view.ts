@@ -1,5 +1,5 @@
-import { openCollabPageSizeModal } from './collab-page-size-modal.util.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, putApi } from '../../services/api.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
@@ -431,44 +431,39 @@ export class CollaborativePdfDashboardController implements ViewController {
       }
     }
 
-    openCollabPageSizeModal({
-      initialTitle: 'Documento sin título',
-      mode: 'create',
-      onConfirm: async ({ dimensions, title }) => {
-        const titleVal = title || 'Documento sin título';
-        const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const titleVal = 'Documento sin título';
+    const dimensions = { ...COLLAB_DOCUMENT_DEFAULT_SIZE };
+    const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
-        const initialContent = {
-          elements: [],
-          pageBackgrounds: ['#ffffff'],
-          pageCount: 1,
-          pagePdfSources: [null],
-          pageSize: dimensions,
-          pageSizes: [dimensions],
-          pageTitles: [''],
-        };
+    const initialContent = {
+      elements: [],
+      pageBackgrounds: ['#ffffff'],
+      pageCount: 1,
+      pagePdfSources: [null],
+      pageSize: dimensions,
+      pageSizes: [dimensions],
+      pageTitles: [''],
+    };
 
-        saveLocalDraft(newDocId, {
+    saveLocalDraft(newDocId, {
+      content: initialContent,
+      title: titleVal,
+    });
+
+    if (currentUser) {
+      try {
+        void putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
           content: initialContent,
+          id: newDocId,
           title: titleVal,
         });
+      } catch {}
+    }
 
-        if (currentUser) {
-          try {
-            await putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
-              content: initialContent,
-              id: newDocId,
-              title: titleVal,
-            });
-          } catch {}
-        }
-
-        const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
-        navigate(navUrl);
-      },
-    });
+    const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
+    navigate(navUrl);
   }
 
   private async handleDelete(id: string, isLocal = false): Promise<void> {

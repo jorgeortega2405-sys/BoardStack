@@ -4,7 +4,7 @@ export interface PageDimension {
 }
 
 export interface PagePreset {
-  category: 'custom' | 'document' | 'presentation' | 'social';
+  category: 'document';
   defaultOrientation?: 'landscape' | 'portrait';
   description: string;
   height: number;
@@ -14,6 +14,11 @@ export interface PagePreset {
   unitLabel: string;
   width: number;
 }
+
+export const COLLAB_DOCUMENT_DEFAULT_SIZE: PageDimension = {
+  height: 1123,
+  width: 794,
+};
 
 export const COLLAB_PAGE_PRESETS: PagePreset[] = [
   {
@@ -48,61 +53,6 @@ export const COLLAB_PAGE_PRESETS: PagePreset[] = [
     name: 'Oficio (Legal)',
     unitLabel: '8.5 × 14 in',
     width: 816,
-  },
-  {
-    category: 'presentation',
-    defaultOrientation: 'landscape',
-    description: '1280 × 720 px (16:9)',
-    height: 720,
-    icon: 'slideshow',
-    id: 'slides-16-9',
-    name: 'Presentación 16:9',
-    unitLabel: '1280 × 720 px',
-    width: 1280,
-  },
-  {
-    category: 'presentation',
-    defaultOrientation: 'landscape',
-    description: '1024 × 768 px (4:3)',
-    height: 768,
-    icon: 'slideshow',
-    id: 'slides-4-3',
-    name: 'Presentación 4:3',
-    unitLabel: '1024 × 768 px',
-    width: 1024,
-  },
-  {
-    category: 'social',
-    defaultOrientation: 'portrait',
-    description: '1080 × 1080 px (1:1)',
-    height: 1080,
-    icon: 'crop_square',
-    id: 'square',
-    name: 'Cuadrado (1:1)',
-    unitLabel: '1080 × 1080 px',
-    width: 1080,
-  },
-  {
-    category: 'social',
-    defaultOrientation: 'portrait',
-    description: '1080 × 1920 px (9:16)',
-    height: 1920,
-    icon: 'devices',
-    id: 'story',
-    name: 'Vertical Móvil (9:16)',
-    unitLabel: '1080 × 1920 px',
-    width: 1080,
-  },
-  {
-    category: 'custom',
-    defaultOrientation: 'portrait',
-    description: 'Dimensiones libres',
-    height: 800,
-    icon: 'tune',
-    id: 'custom',
-    name: 'Personalizado',
-    unitLabel: 'A medida',
-    width: 800,
   },
 ];
 

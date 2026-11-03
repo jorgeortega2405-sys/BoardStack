@@ -2,6 +2,7 @@ import { getFooterHtml, mountSiteFooter } from '../components/footer.component.j
 import { setupLayoutScrollSync } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../config/collab-page-presets.config.js';
 import { getLocalizedPath } from '../config/seo.config.js';
 import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
@@ -17,7 +18,6 @@ import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows } from '../services/w
 import { UserWorkflow } from '../types/workflow.types.js';
 import { listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../utils/collab-local-draft.util.js';
 import { setupDropdown } from '../utils/dom.util.js';
-import { openCollabPageSizeModal } from './collaborative-pdf/collab-page-size-modal.util.js';
 
 interface CollabDocItem {
   access_level?: string;
@@ -452,44 +452,39 @@ export class HomeController {
       }
     }
 
-    openCollabPageSizeModal({
-      initialTitle: 'Documento sin título',
-      mode: 'create',
-      onConfirm: async ({ dimensions, title }) => {
-        const titleVal = title || 'Documento sin título';
-        const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const titleVal = 'Documento sin título';
+    const dimensions = { ...COLLAB_DOCUMENT_DEFAULT_SIZE };
+    const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
-        const initialContent = {
-          elements: [],
-          pageBackgrounds: ['#ffffff'],
-          pageCount: 1,
-          pagePdfSources: [null],
-          pageSize: dimensions,
-          pageSizes: [dimensions],
-          pageTitles: [''],
-        };
+    const initialContent = {
+      elements: [],
+      pageBackgrounds: ['#ffffff'],
+      pageCount: 1,
+      pagePdfSources: [null],
+      pageSize: dimensions,
+      pageSizes: [dimensions],
+      pageTitles: [''],
+    };
 
-        saveLocalDraft(newDocId, {
+    saveLocalDraft(newDocId, {
+      content: initialContent,
+      title: titleVal,
+    });
+
+    if (currentUser) {
+      try {
+        void putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
           content: initialContent,
+          id: newDocId,
           title: titleVal,
         });
+      } catch {}
+    }
 
-        if (currentUser) {
-          try {
-            await putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
-              content: initialContent,
-              id: newDocId,
-              title: titleVal,
-            });
-          } catch {}
-        }
-
-        const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
-        navigate(navUrl);
-      },
-    });
+    const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
+    navigate(navUrl);
   }
 
   private async handleDuplicateCollabDoc(docId: string): Promise<void> {
@@ -595,7 +590,7 @@ export class HomeController {
           return;
         }
 
-        const collabCard = target.closest<HTMLElement>('[data-ref="card-tool-collaborative-pdf"]');
+        const collabCard = target.closest<HTMLElement>('[data-ref="card-tool-collaborative-pdf"], [data-ref="card-doc-empty"]');
         if (collabCard) {
           e.preventDefault();
           this.createNewCollabDocument();
@@ -623,6 +618,16 @@ export class HomeController {
             navigate(path);
           }
         }
+      },
+      { signal: this.abortController?.signal }
+    );
+
+    const fabBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-home-create-doc"]');
+    fabBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        this.createNewCollabDocument();
       },
       { signal: this.abortController?.signal }
     );

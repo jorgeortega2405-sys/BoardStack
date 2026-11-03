@@ -1,7 +1,7 @@
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, inToPx, mmToPx, PageDimension, PagePreset } from '../../config/collab-page-presets.config.js';
-import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, onAuthChange, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
@@ -306,6 +306,7 @@ export class CollaborativePdfEditorController implements ViewController {
   private maxHistoryStates = 50;
   private redoStack: string[] = [];
   private undoStack: string[] = [];
+  private unsubAuth: (() => void) | null = null;
   private shareModalElement: HTMLElement | null = null;
   private uploadedAssets: UploadedAsset[] = [];
   private queryParams?: URLSearchParams;
@@ -349,6 +350,9 @@ export class CollaborativePdfEditorController implements ViewController {
     void this.loadUploadedAssets();
     this.updateFooterPageInfo();
     this.renderPresenceList();
+    this.unsubAuth = onAuthChange(() => {
+      this.renderPresenceList();
+    });
     renderIcons(this.container);
     this.undoStack = [
       JSON.stringify({
@@ -363,6 +367,10 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   destroy(): void {
+    if (this.unsubAuth) {
+      this.unsubAuth();
+      this.unsubAuth = null;
+    }
     for (const d of this.activeContextDropdowns) {
       d.destroy();
     }
@@ -7761,7 +7769,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const canManagePermissions = this.isDocOwner && !!currentUser;
     const isLinkMode = this.docAccessLevel === 'anyone_with_link';
     const ownerName = currentUser?.username || 'Propietario';
-    const ownerAvatar = currentUser?.avatar_url || null;
+    const ownerAvatar = currentUser?.avatar_url || (currentUser?.username ? `/api/avatar?name=${encodeURIComponent(currentUser.username)}&size=80` : null);
     const ownerInitials = ownerName.substring(0, 2).toUpperCase();
 
     popover.innerHTML = `
@@ -7932,8 +7940,9 @@ export class CollaborativePdfEditorController implements ViewController {
         bubble.className = 'collab-avatar-bubble';
         bubble.setAttribute('data-tooltip', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
         bubble.setAttribute('aria-label', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
-        if (m.avatar_url) {
-          bubble.innerHTML = `<img src="${m.avatar_url}" alt="${m.username}" />`;
+        const memberAvatar = m.avatar_url || (m.username ? `/api/avatar?name=${encodeURIComponent(m.username)}&size=80` : null);
+        if (memberAvatar) {
+          bubble.innerHTML = `<img src="${memberAvatar}" alt="${m.username}" />`;
         } else {
           bubble.textContent = m.username.substring(0, 2).toUpperCase();
         }

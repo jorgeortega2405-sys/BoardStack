@@ -4219,6 +4219,19 @@
   width: 100%;
 }
 
+.collab-page-size-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.collab-page-size-checkbox-wrap {
+  align-items: center;
+  display: flex;
+  padding-top: 2px;
+}
+
 .collab-size-card {
   align-items: center;
   background-color: var(--bg-surface);
