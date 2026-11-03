@@ -4,22 +4,10 @@
 
     <div class="tool-top-bar__right" data-ref="tool-top-right">
       <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
-        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Ver resumen IA" aria-label="Ver resumen IA">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-          <span class="component-button__text">Resumen IA</span>
-        </button>
-        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
-        <div class="menu-panel menu-panel--dropdown tool-options-popover summarize-options-popover menu-panel--w-325" data-ref="dropdown-menu-options">
-          <div class="menu-panel__list">
-            <div class="ai-summary-result-panel ai-summary-result-panel--full" data-ref="section-summary-result">
-              <div class="ai-summary-content" data-ref="summary-rendered-text">
-                <p class="tool-sidebar__hint-text">Sube un documento PDF para generar y leer el resumen con IA.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Ver resumen IA" aria-label="Ver resumen IA">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+        <span class="component-button__text">Resumen IA</span>
+      </button>
 
       <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
@@ -63,6 +51,32 @@
         </div>
       </div>
     </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="summarize-pdf-sidebar">
+      <div class="tool-sidebar__header">
+        <div class="tool-sidebar__header-left">
+          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          <h2 class="tool-sidebar__title">Resumen IA</h2>
+        </div>
+        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar__section">
+          <div class="ai-summary-result-panel ai-summary-result-panel--full" data-ref="section-summary-result">
+            <div class="ai-summary-content" data-ref="summary-rendered-text">
+              <p class="tool-sidebar__hint-text">Sube un documento PDF para generar y leer el resumen con IA.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
   </div>
 
   <footer class="tool-footer collaborative-footer" data-ref="tool-footer">

@@ -4,32 +4,10 @@
 
     <div class="tool-top-bar__right" data-ref="tool-top-right">
       <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
-        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-          <span class="component-button__text">Opciones</span>
-        </button>
-        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
-        <div class="menu-panel menu-panel--dropdown tool-options-popover" data-ref="dropdown-menu-options">
-          <div class="menu-panel__list">
-            <label class="field">
-              <input class="field__input field__input--has-action" data-ref="input-password" type="password" placeholder=" " autocomplete="new-password" />
-              <span class="field__label">Introduce una contraseña</span>
-              <button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-              </button>
-            </label>
-
-            <label class="field">
-              <input class="field__input field__input--has-action" data-ref="input-confirm-password" type="password" placeholder=" " autocomplete="new-password" />
-              <span class="field__label">Repetir contraseña</span>
-              <button type="button" class="field__action" data-ref="btn-toggle-confirm-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-              </button>
-            </label>
-          </div>
-        </div>
-      </div>
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text">Opciones</span>
+      </button>
 
       <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-protect" disabled>
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
@@ -69,7 +47,7 @@
 
         <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-          <span>Configura una contraseña segura en las opciones superiores para cifrar tu documento con AES-256.</span>
+          <span>Configura una contraseña segura en el panel de opciones para cifrar tu documento con AES-256.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
@@ -90,5 +68,45 @@
         </div>
       </div>
     </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="protect-pdf-sidebar">
+      <div class="tool-sidebar__header">
+        <div class="tool-sidebar__header-left">
+          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          <h2 class="tool-sidebar__title">Opciones de protección</h2>
+        </div>
+        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar__section">
+          <span class="tool-sidebar__section-title">Contraseña</span>
+          <label class="field">
+            <input class="field__input field__input--has-action" data-ref="input-password" type="password" placeholder=" " autocomplete="new-password" />
+            <span class="field__label">Introduce una contraseña</span>
+            <button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+            </button>
+          </label>
+        </div>
+
+        <div class="tool-sidebar__section">
+          <span class="tool-sidebar__section-title">Confirmar contraseña</span>
+          <label class="field">
+            <input class="field__input field__input--has-action" data-ref="input-confirm-password" type="password" placeholder=" " autocomplete="new-password" />
+            <span class="field__label">Repetir contraseña</span>
+            <button type="button" class="field__action" data-ref="btn-toggle-confirm-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+            </button>
+          </label>
+        </div>
+      </div>
+    </aside>
+  </div>
   </div>
 </div>

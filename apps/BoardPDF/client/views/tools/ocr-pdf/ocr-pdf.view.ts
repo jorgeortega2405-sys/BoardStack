@@ -65,7 +65,7 @@ export class OcrPdfController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="ocr-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -279,7 +279,7 @@ export class OcrPdfController implements ViewController {
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-workspace"]');
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');
@@ -351,7 +351,7 @@ export class OcrPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="ocr-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="ocr-pdf-workspace"]');
     const ocrBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ocr-action"]');

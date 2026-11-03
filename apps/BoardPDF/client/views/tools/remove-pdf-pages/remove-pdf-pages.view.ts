@@ -103,7 +103,7 @@ export class RemovePdfPagesController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
@@ -342,7 +342,7 @@ export class RemovePdfPagesController implements ViewController {
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
     showElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -515,7 +515,7 @@ export class RemovePdfPagesController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
@@ -557,7 +557,7 @@ export class RemovePdfPagesController implements ViewController {
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
     hideElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_sin_paginas.pdf';

@@ -651,7 +651,9 @@ export function setupDropdown(
 export interface ToolSidebarModalController {
   close: () => void;
   destroy: () => void;
+  isOpen: () => boolean;
   open: () => void;
+  toggle: () => void;
 }
 
 export function setupToolSidebarModal(options: {
@@ -663,44 +665,77 @@ export function setupToolSidebarModal(options: {
   signal?: AbortSignal;
 }): ToolSidebarModalController {
   const { backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal } = options;
-  if (!sidebar) {
+  const root = (sidebar || settingsBtn || backdrop)?.closest<HTMLElement>('.tool-layout-wrapper, .view-wrapper, .component-wrapper') || document;
+  const resolvedSidebar = sidebar || root.querySelector<HTMLElement>('.tool-layout__sidebar');
+  if (!resolvedSidebar) {
     return {
       close: () => {},
       destroy: () => {},
+      isOpen: () => false,
       open: () => {},
+      toggle: () => {},
     };
   }
 
-  const resolvedCloseBtn = closeBtn || sidebar.querySelector<HTMLElement>('[data-ref*="close"]') || undefined;
-  const resolvedDragZone = dragZone || sidebar.querySelector<HTMLElement>('[data-ref*="drag-zone"]') || undefined;
+  const parentContainer = resolvedSidebar.closest<HTMLElement>('.tool-sidebar-container') || root.querySelector<HTMLElement>('.tool-sidebar-container');
+  const resolvedBackdrop = backdrop || root.querySelector<HTMLElement>('.tool-sidebar-backdrop');
+  const resolvedSettingsBtn = settingsBtn || root.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+  const resolvedCloseBtn = closeBtn || resolvedSidebar.querySelector<HTMLElement>('[data-ref="btn-sidebar-close"], [data-ref*="close"]');
+  const resolvedDragZone = dragZone || resolvedSidebar.querySelector<HTMLElement>('[data-ref*="drag-zone"]');
 
   let isDragging = false;
   let activePointerId: number | null = null;
   let startY = 0;
   let currentY = 0;
 
+  const isOpen = () => resolvedSidebar.classList.contains('is-open') || resolvedSidebar.classList.contains('is-mobile-open') || Boolean(parentContainer?.classList.contains('is-open'));
+
   const open = () => {
-    sidebar.classList.add('is-mobile-open');
-    if (backdrop) backdrop.classList.add('is-visible');
-    document.body.classList.add('modal-open');
+    resolvedSidebar.classList.add('is-open', 'is-mobile-open');
+    resolvedSidebar.classList.remove('is-hidden');
+    if (parentContainer) {
+      parentContainer.classList.add('is-open');
+      parentContainer.classList.remove('is-hidden');
+    }
+    resolvedSettingsBtn?.classList.add('is-active');
+    if (resolvedBackdrop) {
+      resolvedBackdrop.classList.add('is-visible');
+      resolvedBackdrop.classList.remove('is-hidden');
+    }
   };
 
   const close = () => {
-    sidebar.classList.remove('is-mobile-open');
-    sidebar.style.transform = '';
-    sidebar.style.transition = '';
-    if (backdrop) backdrop.classList.remove('is-visible');
-    document.body.classList.remove('modal-open');
+    resolvedSidebar.classList.remove('is-open', 'is-mobile-open');
+    resolvedSidebar.classList.add('is-hidden');
+    if (parentContainer) {
+      parentContainer.classList.remove('is-open');
+      parentContainer.classList.add('is-hidden');
+    }
+    resolvedSidebar.style.transform = '';
+    resolvedSidebar.style.transition = '';
+    resolvedSettingsBtn?.classList.remove('is-active');
+    if (resolvedBackdrop) {
+      resolvedBackdrop.classList.remove('is-visible');
+      resolvedBackdrop.classList.add('is-hidden');
+    }
+  };
+
+  const toggle = () => {
+    if (isOpen()) {
+      close();
+    } else {
+      open();
+    }
   };
 
   const handleBackdropClick = (e: MouseEvent) => {
-    if (backdrop && e.target === backdrop) {
+    if (resolvedBackdrop && e.target === resolvedBackdrop) {
       close();
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && sidebar.classList.contains('is-mobile-open')) {
+    if (e.key === 'Escape' && isOpen()) {
       e.preventDefault();
       close();
     }
@@ -713,9 +748,9 @@ export function setupToolSidebarModal(options: {
     startY = e.clientY;
     currentY = e.clientY;
     try {
-      (resolvedDragZone || sidebar)?.setPointerCapture(activePointerId);
+      (resolvedDragZone || resolvedSidebar)?.setPointerCapture(activePointerId);
     } catch (_) {}
-    sidebar.style.transition = 'none';
+    resolvedSidebar.style.transition = 'none';
   };
 
   const onPointerMove = (e: PointerEvent) => {
@@ -723,7 +758,7 @@ export function setupToolSidebarModal(options: {
     currentY = e.clientY;
     const diff = currentY - startY;
     if (diff > 0) {
-      sidebar.style.transform = `translateY(${diff}px)`;
+      resolvedSidebar.style.transform = `translateY(${diff}px)`;
     }
   };
 
@@ -732,21 +767,27 @@ export function setupToolSidebarModal(options: {
     isDragging = false;
     try {
       if (activePointerId !== null) {
-        (resolvedDragZone || sidebar)?.releasePointerCapture(activePointerId);
+        (resolvedDragZone || resolvedSidebar)?.releasePointerCapture(activePointerId);
       }
     } catch (_) {}
     const diff = currentY - startY;
     if (diff > 120) {
       close();
     } else {
-      sidebar.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
-      sidebar.style.transform = '';
+      resolvedSidebar.style.transition = 'none';
+      resolvedSidebar.style.transform = '';
     }
   };
 
-  settingsBtn?.addEventListener('click', open, { signal });
-  resolvedCloseBtn?.addEventListener('click', close, { signal });
-  backdrop?.addEventListener('click', handleBackdropClick, { signal });
+  resolvedSettingsBtn?.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    toggle();
+  }, { signal });
+  resolvedCloseBtn?.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    close();
+  }, { signal });
+  resolvedBackdrop?.addEventListener('click', handleBackdropClick, { signal });
   document.addEventListener('keydown', handleKeyDown, { signal });
 
   resolvedDragZone?.addEventListener('pointerdown', onPointerDown, { signal });
@@ -760,7 +801,9 @@ export function setupToolSidebarModal(options: {
       close();
       document.removeEventListener('keydown', handleKeyDown);
     },
+    isOpen,
     open,
+    toggle,
   };
 }
 

@@ -104,7 +104,7 @@ export class WatermarkPdfController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="wm-sidebar-drag-zone"]');
@@ -293,7 +293,7 @@ export class WatermarkPdfController implements ViewController {
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="wm-workspace-card"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-watermark"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
@@ -515,7 +515,7 @@ export class WatermarkPdfController implements ViewController {
     if (txtImgEl) txtImgEl.textContent = 'Añadir Imagen (PNG/JPG)';
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
     hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');

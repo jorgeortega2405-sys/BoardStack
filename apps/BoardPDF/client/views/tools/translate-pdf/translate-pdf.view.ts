@@ -87,7 +87,7 @@ export class TranslatePdfViewController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="translate-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -384,6 +384,7 @@ export class TranslatePdfViewController implements ViewController {
     hideElement(selectedCard);
 
     hideElement(sidebar);
+    this.sidebarModal?.close();
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (translateBtn) translateBtn.disabled = true;
 
@@ -401,6 +402,7 @@ export class TranslatePdfViewController implements ViewController {
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
     hideElement(selectedCard);
     hideElement(sidebar);
+    this.sidebarModal?.close();
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {

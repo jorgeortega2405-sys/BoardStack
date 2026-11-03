@@ -16,49 +16,10 @@
 
     <div class="tool-top-bar__right" data-ref="tool-top-right">
       <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
-        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones de comparación" aria-label="Opciones de comparación">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-          <span class="component-button__text">Opciones</span>
-        </button>
-        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
-        <div class="menu-panel menu-panel--dropdown tool-options-popover" data-ref="dropdown-menu-options">
-          <div class="menu-panel__list">
-            <div class="compare-mode-tabs" data-ref="compare-mode-tabs">
-              <button type="button" class="compare-mode-tab is-active" data-ref="btn-tab-semantic" data-mode="semantic">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-                <span>Texto semántico</span>
-              </button>
-              <button type="button" class="compare-mode-tab" data-ref="btn-tab-overlay" data-mode="overlay">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-                <span>Superposición de contenido</span>
-              </button>
-            </div>
-
-            <div class="tool-options-section compare-overlay-controls is-hidden" data-ref="section-overlay-controls">
-              <span class="tool-options-section__title">Opacidad de superposición</span>
-              <div class="compare-opacity-slider-row">
-                <input class="compare-opacity-slider" data-ref="input-overlay-opacity" type="range" min="0" max="100" value="50" />
-                <span class="compare-opacity-val" data-ref="val-overlay-opacity">50%</span>
-              </div>
-            </div>
-
-            <div class="tool-options-section" data-ref="section-search">
-              <label class="field" data-ref="field-search-changes">
-                <input class="field__input" data-ref="input-search-changes" type="text" placeholder=" " />
-                <span class="field__label">Buscar texto</span>
-              </label>
-            </div>
-
-            <div class="tool-options-section" data-ref="section-summary">
-              <span class="tool-options-section__title">Informe de cambios (<span data-ref="val-total-changes">0</span>)</span>
-              <div class="compare-changes-list" data-ref="changes-list-container">
-                <p class="compare-changes-list__empty">Sube el segundo documento para analizar y visualizar las diferencias.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones de comparación" aria-label="Opciones de comparación">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text">Opciones</span>
+      </button>
 
       <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-download-report" disabled>
         <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
@@ -166,6 +127,59 @@
         </div>
       </div>
     </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="compare-pdf-sidebar">
+      <div class="tool-sidebar__header">
+        <div class="tool-sidebar__header-left">
+          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          <h2 class="tool-sidebar__title">Opciones de comparación</h2>
+        </div>
+        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="tool-sidebar__body">
+        <div class="tool-sidebar__section">
+          <div class="compare-mode-tabs" data-ref="compare-mode-tabs">
+            <button type="button" class="compare-mode-tab is-active" data-ref="btn-tab-semantic" data-mode="semantic">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+              <span>Texto semántico</span>
+            </button>
+            <button type="button" class="compare-mode-tab" data-ref="btn-tab-overlay" data-mode="overlay">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+              <span>Superposición de contenido</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section compare-overlay-controls is-hidden" data-ref="section-overlay-controls">
+          <span class="tool-sidebar__section-title">Opacidad de superposición</span>
+          <div class="compare-opacity-slider-row">
+            <input class="compare-opacity-slider" data-ref="input-overlay-opacity" type="range" min="0" max="100" value="50" />
+            <span class="compare-opacity-val" data-ref="val-overlay-opacity">50%</span>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__section" data-ref="section-search">
+          <label class="field" data-ref="field-search-changes">
+            <input class="field__input" data-ref="input-search-changes" type="text" placeholder=" " />
+            <span class="field__label">Buscar texto</span>
+          </label>
+        </div>
+
+        <div class="tool-sidebar__section" data-ref="section-summary">
+          <span class="tool-sidebar__section-title">Informe de cambios (<span data-ref="val-total-changes">0</span>)</span>
+          <div class="compare-changes-list" data-ref="changes-list-container">
+            <p class="compare-changes-list__empty">Sube el segundo documento para analizar y visualizar las diferencias.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
   </div>
 
   <footer class="tool-footer collaborative-footer" data-ref="tool-footer">

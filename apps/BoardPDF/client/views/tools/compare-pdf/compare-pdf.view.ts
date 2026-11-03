@@ -83,7 +83,7 @@ export class ComparePdfController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="compare-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -406,7 +406,7 @@ export class ComparePdfController implements ViewController {
     showElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     showElement(topControls);
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     showElement(topHeader);
@@ -516,6 +516,7 @@ export class ComparePdfController implements ViewController {
     this.pdfDocument2 = null;
     this.comparisonResult = null;
     this.statusManager?.hide();
+    this.sidebarModal?.close();
 
     const fileInput1 = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file1"]');
     const fileInput2 = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file2"]');
@@ -536,7 +537,7 @@ export class ComparePdfController implements ViewController {
     hideElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     hideElement(topControls);
     hideElement(topHeader);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
@@ -686,6 +687,7 @@ export class ComparePdfController implements ViewController {
         this.renderChangesList();
         this.renderDiffMarkers();
         this.statusManager?.hide();
+    this.sidebarModal?.close();
         showToast('Comparación completada exitosamente.', 'success');
       } else {
         throw new Error(result.error || result.message || 'Error al procesar la comparación.');
@@ -694,6 +696,7 @@ export class ComparePdfController implements ViewController {
       const message = err?.message || 'Ha ocurrido un error al comparar los documentos.';
       this.statusManager?.showError(message, () => {
         this.statusManager?.hide();
+    this.sidebarModal?.close();
       });
       this.showError(message);
     } finally {

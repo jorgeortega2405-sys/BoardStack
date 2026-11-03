@@ -39,7 +39,7 @@ export class CompressPdfController implements ViewController {
           const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
           const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
           const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
 
@@ -87,7 +87,7 @@ export class CompressPdfController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -238,7 +238,7 @@ export class CompressPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
@@ -304,7 +304,7 @@ export class CompressPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
@@ -339,7 +339,7 @@ export class CompressPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
 

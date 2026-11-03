@@ -72,7 +72,7 @@ export class RedactPdfController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="redact-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -287,7 +287,7 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     showElement(topControls);
     showElement(topActions);
     showElement(topHeader);
@@ -326,6 +326,7 @@ export class RedactPdfController implements ViewController {
     this.redactionBoxes = [];
     this.fullPageRedactions.clear();
     this.statusManager?.hide();
+    this.sidebarModal?.close();
 
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="redact-dropzone-card"]');
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
@@ -345,7 +346,7 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     hideElement(topControls);
     hideElement(topActions);
     hideElement(topHeader);
@@ -1024,6 +1025,7 @@ export class RedactPdfController implements ViewController {
       const message = err?.message || 'Ha ocurrido un error inesperado al procesar el archivo PDF.';
       this.statusManager?.showError(message, () => {
         this.statusManager?.hide();
+    this.sidebarModal?.close();
       });
       this.showError(message);
     } finally {

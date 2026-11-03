@@ -101,7 +101,7 @@ export class PageNumbersController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="pn-sidebar-drag-zone"]');
@@ -265,7 +265,7 @@ export class PageNumbersController implements ViewController {
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="pn-workspace-card"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
@@ -551,7 +551,7 @@ export class PageNumbersController implements ViewController {
     if (executeBtn) executeBtn.disabled = true;
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
     hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');

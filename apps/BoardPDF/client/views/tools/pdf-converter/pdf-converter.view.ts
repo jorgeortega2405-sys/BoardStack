@@ -62,7 +62,7 @@ export class PdfConverterController implements ViewController {
           const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
           const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
           const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-sidebar"]');
-          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
           const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
           const ws = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
 
@@ -161,7 +161,7 @@ export class PdfConverterController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -380,7 +380,7 @@ export class PdfConverterController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
@@ -446,7 +446,7 @@ export class PdfConverterController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
@@ -480,7 +480,7 @@ export class PdfConverterController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
 

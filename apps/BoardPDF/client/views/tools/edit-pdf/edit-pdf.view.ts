@@ -93,7 +93,7 @@ export class EditPdfController implements ViewController {
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="edit-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     if (sidebar && backdrop && settingsBtn) {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
@@ -426,7 +426,7 @@ export class EditPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
     const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
@@ -1592,7 +1592,7 @@ export class EditPdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
     const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
 
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');

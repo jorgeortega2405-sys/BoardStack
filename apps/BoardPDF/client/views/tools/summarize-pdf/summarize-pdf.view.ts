@@ -140,7 +140,7 @@ export class SummarizePdfController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="summarize-sidebar-drag-zone"]');
@@ -252,7 +252,7 @@ export class SummarizePdfController implements ViewController {
   private renderViewerState(): void {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-dropzone-card"]');
     const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
@@ -337,7 +337,7 @@ export class SummarizePdfController implements ViewController {
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-dropzone-card"]');
     const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
     const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
@@ -359,7 +359,7 @@ export class SummarizePdfController implements ViewController {
     this.isProcessing = true;
     const viewerCard = this.container.querySelector<HTMLElement>('[data-ref="summarize-viewer-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
     hideElement(viewerCard);

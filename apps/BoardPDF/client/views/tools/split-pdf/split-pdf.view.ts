@@ -119,11 +119,11 @@ export class SplitPdfController implements ViewController {
     const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
     const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
     const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="split-pages-grid"]');
 
@@ -664,9 +664,9 @@ export class SplitPdfController implements ViewController {
     showElement(itemsCard);
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
     showElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -922,8 +922,8 @@ export class SplitPdfController implements ViewController {
     hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
 
@@ -961,9 +961,9 @@ export class SplitPdfController implements ViewController {
     showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"]');
+    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
     hideElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_dividido.pdf';
