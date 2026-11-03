@@ -817,3 +817,40 @@
 .component-toggle-pill--2[data-submode="pages-custom"] .component-toggle-pill-glider {
   transform: translateX(100%);
 }
+
+.home-fab-create-doc {
+  align-items: center;
+  background-color: #111827 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  bottom: 28px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  box-sizing: border-box;
+  color: #ffffff !important;
+  cursor: pointer;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  min-height: 48px;
+  min-width: 48px;
+  position: fixed;
+  right: 28px;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.15s ease;
+  width: 48px;
+  z-index: 50;
+}
+
+.home-fab-create-doc:hover {
+  background-color: #000000 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+  transform: scale(1.08) translateY(-2px);
+}
+
+.home-fab-create-doc:active {
+  transform: scale(0.95);
+}
+
+.home-fab-create-doc .component-icon {
+  height: 24px;
+  width: 24px;
+}

@@ -199,6 +199,10 @@ function createDrawerElement(): HTMLElement {
   drawer.className = 'layout-drawer';
   drawer.setAttribute('data-ref', 'layout-drawer');
 
+    const collapsePillWrapper = document.createElement('div');
+  collapsePillWrapper.className = 'layout-drawer__collapse-wrapper';
+  collapsePillWrapper.setAttribute('data-ref', 'drawer-collapse-wrapper');
+
   const collapseBtn = document.createElement('button');
   collapseBtn.setAttribute('type', 'button');
   collapseBtn.className = 'layout-drawer__collapse-pill';
@@ -212,7 +216,8 @@ function createDrawerElement(): HTMLElement {
     e.stopPropagation();
     toggleDrawer(false);
   });
-  drawer.appendChild(collapseBtn);
+  collapsePillWrapper.appendChild(collapseBtn);
+  drawer.appendChild(collapsePillWrapper);
 
   const drawerBody = document.createElement('div');
   drawerBody.className = 'layout-drawer__body';

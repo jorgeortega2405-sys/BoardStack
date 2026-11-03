@@ -39,70 +39,10 @@
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-.tool-card--collab-doc .pdf-card__actions {
-  align-items: center;
-  background-color: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-  display: flex;
-  gap: 2px;
-  height: 34px;
-  opacity: 0;
-  padding: 2px;
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  transition: opacity 0.15s ease;
-  z-index: 5;
-}
 
-[data-theme='dark'] .tool-card--collab-doc .pdf-card__actions {
-  background-color: var(--bg-surface, #1e2024);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.tool-card--collab-doc:hover .pdf-card__actions,
-.tool-card--collab-doc:focus-within .pdf-card__actions,
-.tool-card--collab-doc.has-open-dropdown .pdf-card__actions {
-  opacity: 1;
-}
 
 .tool-card--collab-doc.has-open-dropdown {
   z-index: 25;
-}
-
-.tool-card--collab-doc .pdf-card__actions .dropdown {
-  display: flex;
-  position: relative;
-}
-
-.tool-card--collab-doc .pdf-card__btn-action {
-  align-items: center;
-  background-color: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  height: 28px;
-  justify-content: center;
-  padding: 0;
-  transition: background-color 0.15s ease, color 0.15s ease;
-  width: 28px;
-}
-
-.tool-card--collab-doc .pdf-card__btn-action:hover,
-.tool-card--collab-doc .pdf-card__btn-action.is-open {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.tool-card--collab-doc .pdf-card__btn-action .component-icon {
-  height: 16px;
-  width: 16px;
 }
 
 .tool-card--collab-doc .menu-panel--doc-actions {
@@ -542,13 +482,29 @@
   border: 1px solid var(--border-color);
   border-radius: 12px;
   box-sizing: border-box;
+  cursor: default;
   display: flex;
   flex-shrink: 0;
-  height: 48px;
+  height: 40px !important;
   justify-content: flex-start;
   margin-bottom: 8px;
+  min-height: 40px !important;
   padding: 0 12px;
+  pointer-events: none;
+  user-select: none;
   width: 100%;
+}
+
+.collaborative-drawer-header button,
+.collaborative-drawer-back-btn {
+  pointer-events: auto;
+}
+
+.collaborative-drawer-header__icon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  height: 20px;
+  width: 20px;
 }
 
 .collaborative-drawer-header__left {
@@ -2165,9 +2121,8 @@
 .collaborative-sticky-note.is-selected:not(.is-editing),
 .collaborative-table-item.is-selected:not(.is-editing),
 .collaborative-chart-item.is-selected {
-  cursor: move;
-  outline: 2px solid #000000;
-  outline-offset: 1px;
+  cursor: default;
+  outline: none !important;
 }
 
 [data-theme='dark'] .collaborative-shape-item.is-selected,
@@ -2176,7 +2131,7 @@
 [data-theme='dark'] .collaborative-sticky-note.is-selected:not(.is-editing),
 [data-theme='dark'] .collaborative-table-item.is-selected:not(.is-editing),
 [data-theme='dark'] .collaborative-chart-item.is-selected {
-  outline-color: #ffffff;
+  outline: none !important;
 }
 
 .collaborative-shape-item:hover:not(.is-selected),
@@ -2202,7 +2157,7 @@
 .collaborative-add-page-btn {
   align-items: center !important;
   background-color: var(--bg-surface) !important;
-  border: 1px dashed var(--border-color, #cbd5e1) !important;
+  border: 1px solid var(--border-color, #cbd5e1) !important;
   border-radius: 8px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   color: var(--text-primary) !important;
@@ -2474,7 +2429,7 @@
   height: 48px !important;
   left: 50% !important;
   margin: 0 !important;
-  padding: 6px 14px !important;
+  padding: 8px 8px !important;
   position: absolute !important;
   top: 14px !important;
   transform: translateX(-50%) !important;
@@ -3210,7 +3165,7 @@
 .collaborative-sticky-note__body {
   box-sizing: border-box;
   color: inherit;
-  cursor: text;
+  cursor: default;
   flex: 1;
   font-family: inherit;
   font-size: inherit;
@@ -3221,6 +3176,10 @@
   padding: 14px 14px 8px 14px;
   user-select: text;
   word-break: break-word;
+}
+
+.collaborative-sticky-note.is-editing .collaborative-sticky-note__body {
+  cursor: text !important;
 }
 
 .collaborative-sticky-note__body:empty::before {
@@ -3386,24 +3345,51 @@
 
 .collab-presence-bubble {
   align-items: center;
+  background-color: var(--bg-surface, #ffffff);
   border: none !important;
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px var(--bg-surface, #ffffff) !important;
   box-sizing: border-box;
   color: #ffffff;
   cursor: default;
   display: flex;
   font-size: 13px;
   font-weight: 700;
-  height: 40px;
+  height: 38px;
   justify-content: center;
-  margin-left: -20px;
-  min-width: 40px;
-  overflow: hidden;
+  margin-left: -10px;
+  min-width: 38px;
+  overflow: visible !important;
   position: relative;
   transition: transform 0.15s ease, z-index 0.15s ease;
   user-select: none;
-  width: 40px;
+  width: 38px;
+}
+
+.collab-presence-bubble::before {
+  background: var(--avatar-tier-bg, #9ca3af);
+  border-radius: 50%;
+  content: "";
+  inset: -3px;
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 2px;
+  pointer-events: none;
+  position: absolute;
+  transition: filter 0.15s ease;
+  z-index: 1;
+}
+
+.collab-presence-bubble img {
+  border-radius: 50%;
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  position: relative;
+  width: 100%;
+  z-index: 2;
 }
 
 .collab-presence-bubble:first-child {
@@ -3456,11 +3442,6 @@
   }
 }
 
-.collab-presence-bubble img {
-  height: 100%;
-  object-fit: cover;
-  width: 100%;
-}
 
 .collab-remote-cursor {
   align-items: flex-start;
@@ -3510,8 +3491,8 @@
    SHARE POPOVER ("Compartir el diseño")
    ============================================================================== */
 
-.collab-share-popover {
-  animation: collabPopoverSlide 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+.collab-share-popover,
+.collab-share-dropdown {
   box-sizing: border-box;
   display: flex;
   max-width: calc(100vw - 32px);
@@ -3520,17 +3501,6 @@
   top: 62px;
   width: 440px;
   z-index: 1200;
-}
-
-@keyframes collabPopoverSlide {
-  0% {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.97);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .collab-share-card {
@@ -4914,4 +4884,101 @@
 
 .collaborative-font-item.is-selected .collaborative-font-item__badge {
   display: inline-flex;
+}
+
+/* Fixed width for toolbar dropdown menus */
+.collaborative-context-toolbar .menu-panel--dropdown,
+.collaborative-tools-toolbar .menu-panel--dropdown {
+  box-sizing: border-box !important;
+  max-width: 280px !important;
+  width: 260px !important;
+}
+
+/* Slider matching zoom slider */
+.collab-popover-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #B7BCC6 0%, #B7BCC6 var(--slider-pct, 50%), #D8DBE2 var(--slider-pct, 50%), #D8DBE2 100%) !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  flex: 1;
+  height: 6px !important;
+  outline: none;
+}
+
+.collab-popover-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.16) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer;
+  height: 16px !important;
+  margin-top: 0;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  width: 16px !important;
+}
+
+.collab-popover-range::-webkit-slider-thumb:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+  transform: scale(1.15);
+}
+
+.collab-popover-range::-moz-range-thumb {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.16) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer;
+  height: 16px !important;
+  width: 16px !important;
+}
+
+.collab-popover-range::-moz-range-thumb:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28) !important;
+  transform: scale(1.15);
+}
+
+/* Fix double border: remove outline on .is-selected elements so transform box handles border */
+.collaborative-shape-item.is-selected,
+.collaborative-text-box.is-selected,
+.collaborative-image-item.is-selected,
+.collaborative-sticky-note.is-selected,
+.collaborative-table-item.is-selected,
+.collaborative-chart-item.is-selected {
+  outline: none !important;
+}
+
+.collaborative-shape-item.is-selected:hover,
+.collaborative-text-box.is-selected:hover,
+.collaborative-image-item.is-selected:hover,
+.collaborative-sticky-note.is-selected:hover,
+.collaborative-table-item.is-selected:hover,
+.collaborative-chart-item.is-selected:hover {
+  outline: none !important;
+}
+
+/* Cursors */
+.collaborative-sticky-note,
+.collaborative-sticky-note__body {
+  cursor: default !important;
+}
+
+.collaborative-sticky-note.is-editing,
+.collaborative-sticky-note.is-editing .collaborative-sticky-note__body {
+  cursor: text !important;
+}
+
+.collaborative-text-box {
+  cursor: default !important;
+}
+
+.collaborative-text-box.is-editing {
+  cursor: text !important;
+}
+
+body.is-dragging-element,
+body.is-dragging-element * {
+  cursor: move !important;
 }

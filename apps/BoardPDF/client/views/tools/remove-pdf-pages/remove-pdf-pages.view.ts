@@ -428,9 +428,11 @@ export class RemovePdfPagesController implements ViewController {
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select') || 'Seleccionar PDF';
+        mainActionBtn.disabled = true;
         showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action') || 'Eliminar páginas';
+        mainActionBtn.disabled = this.isProcessing;
         showElement(mainActionBtn);
       }
     }

@@ -88,14 +88,17 @@ export function createCollaborativeDrawerElement(): HTMLElement {
   drawer.className = 'layout-drawer';
   drawer.setAttribute('data-ref', 'layout-drawer');
   drawer.innerHTML = `
-  <button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-tooltip="Cerrar menú" data-i18n-tooltip="common.close" data-i18n-aria="common.close" aria-label="Cerrar menú">
-    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-  </button>
+  <div class="layout-drawer__collapse-wrapper">
+    <button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-tooltip="Cerrar menú" data-i18n-tooltip="common.close" data-i18n-aria="common.close" aria-label="Cerrar menú">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+    </button>
+  </div>
   <div class="layout-drawer__header collaborative-drawer-header" data-ref="drawer-header">
     <div class="collaborative-drawer-header__left" data-ref="drawer-header-left">
       <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-drawer-back-btn is-hidden" data-ref="btn-drawer-back" data-tooltip="Volver" aria-label="Volver">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
       </button>
+      <svg class="component-icon collaborative-drawer-header__icon" data-ref="drawer-header-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
       <span class="collaborative-drawer-header__title" data-ref="side-panel-title">Elementos</span>
     </div>
   </div>
@@ -104,22 +107,22 @@ export function createCollaborativeDrawerElement(): HTMLElement {
     <div class="collaborative-panel-section" data-ref="panel-section-elements">
       <div class="collaborative-elements-main" data-ref="elements-main-view">
         <div class="menu-list" data-ref="list-elements">
-          <button type="button" class="menu-item" data-ref="btn-elem-shapes">
+          <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-shapes">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
             <span class="menu-item__text">Formas</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-          <button type="button" class="menu-item" data-ref="btn-elem-tables">
+          <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-tables">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
             <span class="menu-item__text">Tablas</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-          <button type="button" class="menu-item" data-ref="btn-elem-photos">
+          <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-photos">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
             <span class="menu-item__text">Fotos</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
-          <button type="button" class="menu-item" data-ref="btn-elem-charts">
+          <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-charts">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#show_chart"></use></svg>
             <span class="menu-item__text">Gráficas</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>

@@ -812,8 +812,10 @@ export class SplitPdfController implements ViewController {
     if (!mainBtnText || !mainBtn) return;
 
     if (this.currentFile) {
+      mainBtn.disabled = this.isProcessing;
       mainBtnText.textContent = t('tools.split_pdf_btn_split') || 'Dividir PDF';
     } else {
+      mainBtn.disabled = true;
       mainBtnText.textContent = t('tools.split_pdf_btn_select') || 'Seleccionar PDF';
     }
   }

@@ -21,6 +21,7 @@ export interface RouteDefinition {
 export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
+      await loadStylesheet('/css/tools/collaborative-pdf.css');
       const { createHomeView } = await import('../views/home.view.js');
       return await createHomeView();
     },
@@ -335,8 +336,10 @@ export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
       await loadStylesheet('/css/tools/collaborative-pdf.css');
-      const { createCollaborativePdfDashboardView } = await import('../views/collaborative-pdf/collaborative-pdf-dashboard.view.js');
-      return await createCollaborativePdfDashboardView();
+      const { navigate } = await import('../services/navigation.service.js');
+      navigate('/?category=collaborative');
+      const { createHomeView } = await import('../views/home.view.js');
+      return await createHomeView();
     },
     id: 'collaborative-pdf',
     match: (path) => path === '/collaborative-pdf' || path.startsWith('/collaborative-pdf'),

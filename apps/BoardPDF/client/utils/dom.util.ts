@@ -772,7 +772,7 @@ export function bindFileDropzone(options: {
 }): void {
   const { dropTarget, visualTarget, onFiles, signal } = options;
   if (!dropTarget) return;
-  const visual = visualTarget || dropTarget.closest<HTMLElement>('.tool-workspace__canvas') || dropTarget;
+  const visual = (visualTarget?.closest<HTMLElement>('.tool-workspace__canvas, .tool-layout__workspace') || visualTarget) || dropTarget.closest<HTMLElement>('.tool-workspace__canvas, .tool-layout__workspace') || dropTarget;
 
   let dragCounter = 0;
 

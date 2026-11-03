@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { SortableGridController, ToolSidebarModalController, bindFileDropzone, hideElement, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
+import { SortableGridController, ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { MergePdfResponseData, SelectedPdfItem } from './merge-pdf.types.js';
 
@@ -43,6 +43,7 @@ export class MergePdfController implements ViewController {
   private selectedFiles: SelectedPdfItem[] = [];
   private sidebarModal: ToolSidebarModalController | null = null;
   private sortable: SortableGridController | null = null;
+  private dropdownControllers: Array<{ destroy: () => void }> = [];
   private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
@@ -76,6 +77,8 @@ export class MergePdfController implements ViewController {
       this.sortable.destroy();
       this.sortable = null;
     }
+    this.dropdownControllers.forEach((ctrl) => ctrl.destroy());
+    this.dropdownControllers = [];
     if (this.sidebarModal) {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
@@ -115,6 +118,36 @@ export class MergePdfController implements ViewController {
       sidebar,
       signal,
     });
+
+    const addFilesDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-add-files"]');
+    if (addFilesDropdownWrapper) {
+      const ctrl = setupDropdown(addFilesDropdownWrapper, {
+        isSelect: false,
+        matchWidth: false,
+      });
+      this.dropdownControllers.push(ctrl);
+    }
+
+    const menuAddDevice = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-device"]');
+    const menuAddDrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-drive"]');
+    const menuAddDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-dropbox"]');
+
+    menuAddDevice?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      addMoreInput?.click();
+    }, { signal });
+
+    menuAddDrive?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleDriveImport();
+    }, { signal });
+
+    menuAddDropbox?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleDropboxImport();
+    }, { signal });
 
     browseBtn?.addEventListener('click', () => {
       fileInput?.click();
@@ -478,6 +511,7 @@ export class MergePdfController implements ViewController {
     if (!mainBtnText || !mainBtn) return;
 
     if (this.selectedFiles.length >= 2) {
+      mainBtn.disabled = this.isProcessing;
       mainBtnText.textContent = t('tools.merge_pdf_btn_merge') || 'Unir PDF';
       showElement(resetBtn);
       showElement(noticeEl);
@@ -485,6 +519,7 @@ export class MergePdfController implements ViewController {
         noticeText.innerHTML = 'Para cambiar el orden de tus PDFs, arrastra y suelta los archivos cómo quieras.';
       }
     } else if (this.selectedFiles.length === 1) {
+      mainBtn.disabled = this.isProcessing;
       mainBtnText.textContent = 'Unir PDF';
       showElement(resetBtn);
       showElement(noticeEl);
@@ -492,6 +527,7 @@ export class MergePdfController implements ViewController {
         noticeText.innerHTML = `Por favor, selecciona más archivos PDF haciendo click en 'Seleccionar archivos PDF'.<br>Selecciona múltiples archivos manteniendo pulsado ’Ctrl’`;
       }
     } else {
+      mainBtn.disabled = true;
       mainBtnText.textContent = t('tools.merge_pdf_btn_select') || 'Seleccionar PDFs';
       hideElement(resetBtn);
       hideElement(noticeEl);

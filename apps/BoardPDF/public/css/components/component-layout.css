@@ -529,7 +529,7 @@ html, body {
   width: 325px;
   min-width: 325px;
   border: none;
-  border-right: 1px solid var(--border-color, #e5e7eb);
+  border-right: none !important;
   background-color: var(--bg-surface, #ffffff);
   box-shadow: none;
   visibility: visible;
@@ -539,39 +539,56 @@ html, body {
   overflow: visible;
 }
 
-.layout-drawer__collapse-pill {
+.layout-drawer__collapse-wrapper {
   align-items: center;
   background-color: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
   border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
-  color: var(--text-primary, #000000);
-  cursor: pointer;
   display: flex;
-  height: 44px;
   justify-content: center;
-  outline: none;
-  padding: 0;
+  padding: 3px;
   position: absolute;
   right: 0;
   top: 50%;
   transform: translate(50%, -50%);
-  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  user-select: none;
-  width: 22px;
   z-index: 60;
 }
 
+[data-theme='dark'] .layout-drawer__collapse-wrapper {
+  background-color: var(--bg-surface, #1e2024);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.layout-drawer__collapse-pill {
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  border-radius: 9999px;
+  box-sizing: border-box;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  outline: none;
+  padding: 0;
+  position: relative;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  width: 18px;
+}
+
 .layout-drawer__collapse-pill:hover {
-  background-color: var(--bg-hover, #f3f4f6);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.06));
   color: var(--text-primary, #000000);
 }
 
 .layout-drawer__collapse-pill:active {
-  background-color: var(--bg-active, #e5e7eb);
-  transform: translate(50%, -50%) scale(0.95);
+  background-color: var(--bg-active, rgba(0, 0, 0, 0.1));
+  transform: scale(0.95);
 }
 
 .layout-drawer__collapse-pill:focus-visible {

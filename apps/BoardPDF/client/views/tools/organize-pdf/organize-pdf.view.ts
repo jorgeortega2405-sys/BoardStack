@@ -505,9 +505,11 @@ export class OrganizePdfController implements ViewController {
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.organize_pdf_btn_select') || 'Seleccionar PDF';
+        mainActionBtn.disabled = true;
         showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.organize_pdf_btn_action') || 'Ordenar PDF';
+        mainActionBtn.disabled = this.isProcessing;
         showElement(mainActionBtn);
       }
     }

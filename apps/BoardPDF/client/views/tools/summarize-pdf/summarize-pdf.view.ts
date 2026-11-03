@@ -160,6 +160,11 @@ export class SummarizePdfController implements ViewController {
       fileInput?.click();
     }, { signal });
 
+    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    mainActionBtn?.addEventListener('click', () => {
+      void this.startSummarize();
+    }, { signal });
+
     heroDriveBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -258,6 +263,8 @@ export class SummarizePdfController implements ViewController {
     showElement(sidebar);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    if (mainActionBtn) mainActionBtn.disabled = false;
   }
 
   private async renderAllPages(): Promise<void> {

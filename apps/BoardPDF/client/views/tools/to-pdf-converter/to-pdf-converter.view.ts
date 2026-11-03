@@ -20,6 +20,7 @@ export class ToPdfConverterController implements ViewController {
   private container: HTMLElement;
   private currentFile: File | null = null;
   private currentUrl: string | null = null;
+  private dropdownAddFilesCtrl: { close: () => void; destroy: () => void; update: () => void } | null = null;
   private dropdownHtmlScreenCtrl: { close: () => void; destroy: () => void; update: () => void } | null = null;
   private dropdownJpgSizeCtrl: { close: () => void; destroy: () => void; update: () => void } | null = null;
   private htmlBlockAds = false;
@@ -218,6 +219,45 @@ export class ToPdfConverterController implements ViewController {
     const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
+
+    const addFilesDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-add-files"]');
+    if (addFilesDropdownWrapper) {
+      this.dropdownAddFilesCtrl = setupDropdown(addFilesDropdownWrapper, {
+        isSelect: false,
+        matchWidth: false,
+      });
+    }
+
+    const menuAddDevice = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-device"]');
+    const menuAddDrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-drive"]');
+    const menuAddDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-add-dropbox"]');
+
+    menuAddDevice?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.config.isUrlMode) {
+        this.openUrlModal();
+      } else {
+        fileInput?.click();
+      }
+    }, { signal });
+
+    menuAddDrive?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const files = await pickGoogleDriveFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
+      if (files && files.length > 0) {
+        this.handleFilesReceived(files);
+      }
+    }, { signal });
+
+    menuAddDropbox?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const files = await pickDropboxFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
+      if (files && files.length > 0) {
+        this.handleFilesReceived(files);
+      }
+    }, { signal });
 
     browseBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
