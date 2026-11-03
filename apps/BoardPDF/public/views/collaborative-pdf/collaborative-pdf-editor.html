@@ -25,8 +25,8 @@
               <span class="menu-item__text">Crear una copia</span>
             </button>
             <div class="menu-panel__divider"></div>
-            <div class="menu-item menu-item--submenu-parent" data-ref="item-menu-file-rulers-parent">
-              <button type="button" class="menu-item__button" data-ref="btn-menu-file-rulers">
+            <div class="menu-item-submenu-wrapper" data-ref="item-menu-file-rulers-parent">
+              <button type="button" class="menu-item menu-item--has-submenu" data-ref="btn-menu-file-rulers">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
                 <span class="menu-item__text">Reglas y guías</span>
                 <svg class="component-icon menu-item__arrow" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
@@ -880,11 +880,26 @@
 
   <footer class="collaborative-footer" data-ref="collaborative-footer">
     <div class="collaborative-footer__right" data-ref="footer-right">
-      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
-      <div class="collaborative-footer__divider"></div>
-      <input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" style="--slider-pct: 31.03%;" aria-label="Nivel de zoom" />
+      <div class="collaborative-zoom-slider-wrap" data-ref="zoom-slider-wrap">
+        <div class="collaborative-zoom-track" data-ref="zoom-track" style="--slider-pct: 31.03%;">
+          <span class="collaborative-zoom-dot collaborative-zoom-dot--start" data-ref="zoom-dot-start"></span>
+          <span class="collaborative-zoom-dot collaborative-zoom-dot--end" data-ref="zoom-dot-end"></span>
+        </div>
+        <input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" style="--slider-pct: 31.03%;" aria-label="Nivel de zoom" />
+      </div>
       <button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
         <span data-ref="txt-zoom-level">100%</span>
+      </button>
+      <button type="button" class="collaborative-footer-btn" data-ref="btn-footer-pages" aria-label="Páginas">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pages_drawer"></use></svg>
+        <span>Páginas</span>
+      </button>
+      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
+      <button type="button" class="collaborative-footer-btn collaborative-footer-btn--icon-only" data-ref="btn-footer-grid" data-tooltip="Vista de cuadrícula" aria-label="Vista de cuadrícula">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
+      </button>
+      <button type="button" class="collaborative-footer-btn collaborative-footer-btn--icon-only" data-ref="btn-footer-help" data-tooltip="Obtener ayuda" aria-label="Obtener ayuda">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
       </button>
     </div>
   </footer>

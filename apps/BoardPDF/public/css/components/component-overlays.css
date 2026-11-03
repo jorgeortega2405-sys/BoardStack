@@ -656,8 +656,8 @@ body.modal-open {
 .account-item {
   align-items: center;
   background: transparent;
-  border: none;
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg, 12px);
   box-sizing: border-box;
   cursor: pointer;
   display: flex;
@@ -666,11 +666,25 @@ body.modal-open {
   padding: 8px 12px;
   text-align: left;
   text-decoration: none;
-  transition: background-color var(--sl-transition-fast, 0.15s ease);
+  transition: background-color var(--sl-transition-fast, 0.15s ease), border-color var(--sl-transition-fast, 0.15s ease);
   width: 100%;
 }
 
 .account-item:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--border-color-hover);
+}
+
+.account-item.menu-item--bordered,
+.account-item--active,
+[data-ref="btn-switch-account-menu"] {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.account-item.menu-item--bordered:hover,
+[data-ref="btn-switch-account-menu"]:hover {
+  border-color: var(--border-color-hover);
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
 }
 

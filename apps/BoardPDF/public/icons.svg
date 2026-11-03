@@ -473,5 +473,11 @@
   <symbol id="text_anchor_bottom" viewBox="0 0 24 24">
     <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M12 15V6m-4 4 4-4 4 4"/>
   </symbol>
+  <symbol id="grid_view" viewBox="0 -960 960 960">
+    <path d="M160-520v-280h280v280H160Zm0 360v-280h280v280H160Zm360-360v-280h280v280H520Zm0 360v-280h280v280H520Zm60-420h160v-160H580v160Zm-360 0h160v-160H220v160Zm0 360h160v-160H220v160Zm360 0h160v-160H580v160Z"/>
+  </symbol>
+  <symbol id="pages_drawer" viewBox="0 -960 960 960">
+    <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h160v-80H160v80Zm240 0h160v-80H400v80Zm240 0h160v-80H640v80ZM160-380h640v-340H160v340Z"/>
+  </symbol>
   </defs>
 </svg>
