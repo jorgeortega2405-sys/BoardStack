@@ -1,6 +1,6 @@
 import { getLocalizedPath, resolveRouteFromSlug } from '../config/seo.config.js';
 import { TOOLS_REGISTRY } from '../config/tools.registry.js';
-import { currentUser, escapeHtml, onAuthChange } from '../services/api.service.js';
+import { currentUser, escapeHtml, hasOrganizationAccess, onAuthChange } from '../services/api.service.js';
 import { getCurrentLanguage, t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -62,7 +62,7 @@ export function updateSidebarAuthState(sidebar?: HTMLElement): void {
   const orgMenuItem = sb.querySelector<HTMLElement>('[data-ref="btn-menu-organization"]');
   const orgDivider = sb.querySelector<HTMLElement>('[data-ref="organization-divider"]');
   const canAccessOrg = Boolean(
-    currentUser?.permissions?.includes('subscription:feature:organization') ||
+    hasOrganizationAccess() ||
     currentUser?.subscription_tier === 'enterprise' ||
     currentUser?.subscription_tier === 'empresas'
   );

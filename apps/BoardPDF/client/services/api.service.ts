@@ -45,7 +45,7 @@ export function hasSubscriptionFeature(feature: string): boolean {
 }
 
 export function hasOrganizationAccess(): boolean {
-  return hasSubscriptionFeature('organization') || hasPermission('org:manage');
+  return hasSubscriptionFeature('organization') || hasPermission('org:manage') || hasPermission('org:view');
 }
 
 export function getCsrfToken(): string {

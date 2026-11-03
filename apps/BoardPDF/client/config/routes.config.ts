@@ -565,7 +565,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async ({ path }) => {
       await loadStylesheet('/css/components/component-settings.css');
-      const { currentUser, hasSubscriptionFeature } = await import('../services/api.service.js');
+      const { currentUser, hasOrganizationAccess } = await import('../services/api.service.js');
       const { navigate } = await import('../services/navigation.service.js');
 
       if (!currentUser) {
@@ -573,7 +573,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         return null;
       }
 
-      if (!hasSubscriptionFeature('organization')) {
+      if (!hasOrganizationAccess()) {
         const { showToast } = await import('../services/toast.service.js');
         showToast('Acceso restringido a organizaciones Enterprise', 'danger');
         navigate('/pricing');
