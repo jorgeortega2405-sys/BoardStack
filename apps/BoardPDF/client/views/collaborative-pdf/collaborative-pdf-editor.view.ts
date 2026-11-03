@@ -11,7 +11,7 @@ import { showToast } from '../../services/toast.service.js';
 import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
-import { getLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../utils/collab-local-draft.util.js';
+import { getLocalDraft, removeLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABELS } from './collab-fonts.config.js';
@@ -311,6 +311,23 @@ export class CollaborativePdfEditorController implements ViewController {
   private uploadedAssets: UploadedAsset[] = [];
   private queryParams?: URLSearchParams;
   private zoomLevel = 1.0;
+  private committedGuidesPreset: '12-col' | '3-col' | '3x3' | 'custom' | null = null;
+  private currentGuidesPreset: '12-col' | '3-col' | '3x3' | 'custom' | null = null;
+  private customGuideCols = 4;
+  private customGuideRows = 4;
+  private editorMode: 'edit' | 'view' = 'edit';
+  private findCurrentIndex = -1;
+  private findMatchCase = false;
+  private findMatches: Array<{ elementId: string; pageIndex: number }> = [];
+  private findReplaceTerm = '';
+  private findSearchTerm = '';
+  private rulerRafId: number | null = null;
+  private showBleed = false;
+  private showMargins = false;
+  private showRulersAndGuides = false;
+  private contextMenuTargetPage = 0;
+  private contextMenuTargetElementId: string | null = null;
+  private isLayersPanelOpen = false;
 
   constructor(container: HTMLElement, docId?: string, queryParams?: URLSearchParams) {
     this.container = container;
@@ -379,6 +396,10 @@ export class CollaborativePdfEditorController implements ViewController {
     this.fileDropdownCtrl = null;
     this.editDropdownCtrl?.destroy();
     this.editDropdownCtrl = null;
+    if (this.rulerRafId) {
+      cancelAnimationFrame(this.rulerRafId);
+      this.rulerRafId = null;
+    }
     this.undoStack = [];
     this.redoStack = [];
     this.closeSharePopover();
@@ -959,6 +980,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addTextElement(preset: 'body' | 'subtitle' | 'title'): void {
+    if (this.editorMode === 'view') return;
     const id = `txt_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     let text = 'Agregar algo de texto';
     let fontSize = 16;
@@ -1011,6 +1033,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addShapeElement(shapeType: ElementShape['shapeType']): void {
+    if (this.editorMode === 'view') return;
     const id = `shape_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     let width = 140;
     let height = 100;
@@ -1103,6 +1126,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addLineElement(lineType: 'flexible' | 'multiconnect' | 'straight'): void {
+    if (this.editorMode === 'view') return;
     const id = `line_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const x1 = 120 + (this.elements.length % 4) * 30;
     const y1 = 200 + (this.elements.length % 4) * 30;
@@ -1137,6 +1161,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addStickyNoteElement(color: string): void {
+    if (this.editorMode === 'view') return;
     const id = `sticky_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const myName = currentUser?.username || this.guestIdentity?.username || 'Anónimo';
     const newSticky: ElementText = {
@@ -1167,6 +1192,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addTableElement(style: 'cards' | 'grid' | 'header-accent', colorTheme: string): void {
+    if (this.editorMode === 'view') return;
     const themeMap: Record<string, { accent: string; tint: string }> = {
       amber: { accent: '#f59e0b', tint: '#fef3c7' },
       blue: { accent: '#3b82f6', tint: '#dbeafe' },
@@ -1240,6 +1266,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addChartElement(chartType: ChartType): void {
+    if (this.editorMode === 'view') return;
     const defaultLabels = ['Invierno', 'Primavera', 'Verano', 'Otoño'];
     const palette = CHART_PALETTES.blue;
     const defaultSeries: ElementChartDataSeries[] = [
@@ -1335,6 +1362,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addPage(afterIndex?: number, customDim?: PageDimension): void {
+    if (this.editorMode === 'view') return;
     const targetIndex = afterIndex !== undefined ? afterIndex + 1 : this.pageCount;
     this.elements.forEach((el) => {
       if ((el.pageIndex ?? 0) >= targetIndex) {
@@ -2052,6 +2080,25 @@ export class CollaborativePdfEditorController implements ViewController {
       sheet.appendChild(canvas);
       sheet.appendChild(guidesSvg);
 
+      if (this.showMargins) {
+        const marginsEl = document.createElement('div');
+        marginsEl.className = 'collaborative-page-margins';
+        marginsEl.setAttribute('data-ref', `page-margins-${p}`);
+        sheet.appendChild(marginsEl);
+      }
+
+      if (this.showBleed) {
+        const bleedEl = document.createElement('div');
+        bleedEl.className = 'collaborative-page-bleed';
+        bleedEl.setAttribute('data-ref', `page-bleed-${p}`);
+        sheet.appendChild(bleedEl);
+      }
+
+      if (this.showRulersAndGuides && this.currentGuidesPreset) {
+        const pGuidesSvg = this.renderPersistentGuidesSvg(p, curPageW, curPageH);
+        sheet.appendChild(pGuidesSvg);
+      }
+
       const pageElements = this.elements.filter((el) => (el.pageIndex ?? 0) === p);
       for (const el of pageElements) {
         if (el.type === 'text') {
@@ -2098,6 +2145,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.bindCanvasDrawing(canvas, p);
 
       sheet.addEventListener('pointerdown', (e: PointerEvent) => {
+        if (this.editorMode === 'view') return;
         if (e.button !== 0) return;
         if (this.activeTool !== 'select') return;
         const target = e.target as Element;
@@ -2226,6 +2274,12 @@ export class CollaborativePdfEditorController implements ViewController {
     }
     this.updateFooterPageInfo();
     renderIcons(this.container);
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
   }
 
   private bindPageHeaderEvents(): void {
@@ -2262,6 +2316,7 @@ export class CollaborativePdfEditorController implements ViewController {
     };
 
     canvas.addEventListener('mousedown', (e) => {
+      if (this.editorMode === 'view') return;
       if (this.activeTool !== 'draw') return;
       isDrawing = true;
       const pos = getCanvasPos(e);
@@ -2455,6 +2510,12 @@ export class CollaborativePdfEditorController implements ViewController {
         div.style.width = `${el.width}px`;
         div.style.height = `${el.height}px`;
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.broadcastElementUpdate(el);
       });
@@ -2490,6 +2551,12 @@ export class CollaborativePdfEditorController implements ViewController {
         div.style.width = `${el.width}px`;
         div.style.height = `${el.height}px`;
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.broadcastElementUpdate(el);
         this.recordHistory();
@@ -3814,6 +3881,12 @@ export class CollaborativePdfEditorController implements ViewController {
           wrap.style.height = `${el.height}px`;
           repositionDividers();
           this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         };
 
         const onPointerUp = () => {
@@ -3848,6 +3921,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private addImageElement(asset: UploadedAsset): void {
+    if (this.editorMode === 'view') return;
     const id = `img_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const pageIdx = this.selectedPageIndex !== null ? this.selectedPageIndex : this.activePageIndex;
     const newImg: ElementImage = {
@@ -3906,6 +3980,12 @@ export class CollaborativePdfEditorController implements ViewController {
         item.x = snapped.x;
         item.y = snapped.y;
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
       }
     };
@@ -4089,6 +4169,9 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private selectElement(id: string | null): void {
+    if (this.editorMode === 'view' && id !== null) {
+      return;
+    }
     this.selectedElementId = id;
     this.selectedPageIndex = null;
     this.selectedElementIds.clear();
@@ -4109,6 +4192,9 @@ export class CollaborativePdfEditorController implements ViewController {
     this.updateSelection();
     this.renderTransformBox();
     this.updateContextToolbar();
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
   }
 
   private selectPage(pageIndex: number | null): void {
@@ -4129,6 +4215,9 @@ export class CollaborativePdfEditorController implements ViewController {
     this.updateSelection();
     this.updateContextToolbar();
     this.updateFooterPageInfo();
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
   }
 
   private updateSelection(): void {
@@ -4174,6 +4263,12 @@ export class CollaborativePdfEditorController implements ViewController {
 
     sheet.appendChild(box);
     this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
     this.bindTransformHandles(box, el);
   }
 
@@ -4239,6 +4334,12 @@ export class CollaborativePdfEditorController implements ViewController {
 
       elNode.style.transform = `rotate(${el.rotation}deg)`;
       this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
       this.setModified(true);
     };
 
@@ -4403,6 +4504,12 @@ export class CollaborativePdfEditorController implements ViewController {
       this.renderActiveSmartGuides(el, el.pageIndex ?? 0, el.x, el.y, el.width ?? 100, el.height ?? 40, otherElements);
 
       this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
       this.setModified(true);
     };
 
@@ -5157,6 +5264,12 @@ export class CollaborativePdfEditorController implements ViewController {
       for (const id of newIds) this.selectedElementIds.add(id);
       this.selectedElementId = newIds[0] || null;
       this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
       this.updateContextToolbar();
       showToast(newIds.length > 1 ? `${newIds.length} elementos duplicados` : 'Elemento duplicado', 'info');
     } else if (this.selectedPageIndex !== null) {
@@ -5324,6 +5437,12 @@ export class CollaborativePdfEditorController implements ViewController {
       }
       this.selectedElementId = newIds[0] || null;
       this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
       this.updateContextToolbar();
       this.activateSelectTool();
       void this.flushAutoSave();
@@ -5522,6 +5641,12 @@ export class CollaborativePdfEditorController implements ViewController {
             }
           }
           this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
           this.updateContextToolbar();
           this.setModified(true);
           this.broadcastElementUpdate(activeEl);
@@ -5554,6 +5679,12 @@ export class CollaborativePdfEditorController implements ViewController {
             }
           }
           this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
           this.updateContextToolbar();
           this.setModified(true);
           this.broadcastElementUpdate(activeEl);
@@ -5600,6 +5731,12 @@ export class CollaborativePdfEditorController implements ViewController {
 
     if (updatedAny) {
       this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
       this.updateContextToolbar();
       this.setModified(true);
       this.recordHistory();
@@ -6059,6 +6196,217 @@ export class CollaborativePdfEditorController implements ViewController {
       });
     }
 
+    const btnMenuFileNew = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-new"]');
+    btnMenuFileNew?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
+      window.open(`/d/${newId}`, '_blank');
+    }, { signal });
+
+    const btnMenuFileUpload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-upload"]');
+    btnMenuFileUpload?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      if (this.activePanelTab !== 'uploads' || !this.drawer?.classList.contains('is-open')) {
+        this.handleRailTabClick('uploads');
+      }
+    }, { signal });
+
+    const btnMenuFileCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-copy"]');
+    btnMenuFileCopy?.addEventListener('click', async () => {
+      this.fileDropdownCtrl?.close();
+      await this.createDocumentCopy();
+    }, { signal });
+
+    const btnMenuFileRulers = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-rulers"]');
+    const submenuRulers = this.container.querySelector<HTMLElement>('[data-ref="dropdown-submenu-rulers"]');
+    const rulersParent = this.container.querySelector<HTMLElement>('[data-ref="item-menu-file-rulers-parent"]');
+
+    btnMenuFileRulers?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !submenuRulers?.classList.contains('is-hidden');
+      if (isOpen) {
+        submenuRulers?.classList.add('is-hidden');
+        rulersParent?.classList.remove('is-open');
+      } else {
+        submenuRulers?.classList.remove('is-hidden');
+        rulersParent?.classList.add('is-open');
+      }
+    }, { signal });
+
+    rulersParent?.addEventListener('mouseenter', () => {
+      submenuRulers?.classList.remove('is-hidden');
+      rulersParent.classList.add('is-open');
+    }, { signal });
+
+    rulersParent?.addEventListener('mouseleave', () => {
+      submenuRulers?.classList.add('is-hidden');
+      rulersParent.classList.remove('is-open');
+    }, { signal });
+
+    const btnSubRulers = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-toggle-rulers"]');
+    btnSubRulers?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleRulersAndGuides();
+    }, { signal });
+
+    const btnSubAddGuides = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-add-guides"]');
+    btnSubAddGuides?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      submenuRulers?.classList.add('is-hidden');
+      rulersParent?.classList.remove('is-open');
+      this.openGuidesModal();
+    }, { signal });
+
+    const btnSubMargins = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-toggle-margins"]');
+    btnSubMargins?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleMargins();
+    }, { signal });
+
+    const btnSubBleed = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sub-toggle-bleed"]');
+    btnSubBleed?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleBleed();
+    }, { signal });
+
+    const btnMenuFileDownload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-download"]');
+    btnMenuFileDownload?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.downloadPdf();
+    }, { signal });
+
+    const btnMenuFileSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-search"]');
+    btnMenuFileSearch?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.openFindReplace();
+    }, { signal });
+
+    const btnMenuFileDelete = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-delete"]');
+    btnMenuFileDelete?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.confirmDeleteDocument();
+    }, { signal });
+
+    const btnGuidesBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-guides-modal-back"]');
+    const btnGuidesCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-guides-cancel"]');
+    const closeGuides = () => {
+      this.currentGuidesPreset = this.committedGuidesPreset;
+      this.container.querySelector('[data-ref="collab-guides-modal"]')?.classList.add('is-hidden');
+      this.renderPages();
+    };
+    btnGuidesBack?.addEventListener('click', closeGuides, { signal });
+    btnGuidesCancel?.addEventListener('click', closeGuides, { signal });
+
+    const presetCards = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="card-guide-"]');
+    presetCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        const preset = card.getAttribute('data-preset') as '12-col' | '3-col' | '3x3' | 'custom';
+        presetCards.forEach((c) => c.classList.remove('is-active'));
+        card.classList.add('is-active');
+
+        const customFields = this.container.querySelector('[data-ref="collab-guides-custom-fields"]');
+        if (preset === 'custom') {
+          customFields?.classList.remove('is-hidden');
+        } else {
+          customFields?.classList.add('is-hidden');
+        }
+
+        this.currentGuidesPreset = preset;
+        if (!this.showRulersAndGuides) {
+          this.showRulersAndGuides = true;
+          this.updateRulersUI();
+        }
+        this.renderPages();
+      }, { signal });
+    });
+
+    const inputCols = this.container.querySelector<HTMLInputElement>('[data-ref="input-guides-custom-cols"]');
+    const inputRows = this.container.querySelector<HTMLInputElement>('[data-ref="input-guides-custom-rows"]');
+    inputCols?.addEventListener('input', () => {
+      this.customGuideCols = Math.max(1, parseInt(inputCols.value || '1', 10));
+      if (this.currentGuidesPreset === 'custom') {
+        this.renderPages();
+      }
+    }, { signal });
+    inputRows?.addEventListener('input', () => {
+      this.customGuideRows = Math.max(1, parseInt(inputRows.value || '1', 10));
+      if (this.currentGuidesPreset === 'custom') {
+        this.renderPages();
+      }
+    }, { signal });
+
+    const btnGuidesConfirm = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-guides-confirm"]');
+    btnGuidesConfirm?.addEventListener('click', () => {
+      this.committedGuidesPreset = this.currentGuidesPreset;
+      this.container.querySelector('[data-ref="collab-guides-modal"]')?.classList.add('is-hidden');
+      this.renderPages();
+      showToast('Guías agregadas al documento', 'success');
+    }, { signal });
+
+    const btnFindClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-close"]');
+    btnFindClose?.addEventListener('click', () => {
+      this.closeFindReplace();
+    }, { signal });
+
+    const inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-find-search"]');
+    const inputReplace = this.container.querySelector<HTMLInputElement>('[data-ref="input-find-replace"]');
+    const checkMatchCase = this.container.querySelector<HTMLInputElement>('[data-ref="check-find-match-case"]');
+
+    inputSearch?.addEventListener('input', () => {
+      this.findSearchTerm = inputSearch.value;
+      this.executeSearch();
+    }, { signal });
+
+    inputSearch?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this.findPrev();
+        } else {
+          this.findNext();
+        }
+      } else if (e.key === 'Escape') {
+        this.closeFindReplace();
+      }
+    }, { signal });
+
+    inputReplace?.addEventListener('input', () => {
+      this.findReplaceTerm = inputReplace.value;
+    }, { signal });
+
+    checkMatchCase?.addEventListener('change', () => {
+      this.findMatchCase = checkMatchCase.checked;
+      this.executeSearch();
+    }, { signal });
+
+    const btnFindPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-prev"]');
+    const btnFindNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-next"]');
+    btnFindPrev?.addEventListener('click', () => {
+      this.findPrev();
+    }, { signal });
+    btnFindNext?.addEventListener('click', () => {
+      this.findNext();
+    }, { signal });
+
+    const btnReplaceOne = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-one"]');
+    const btnReplaceAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-all"]');
+    btnReplaceOne?.addEventListener('click', () => {
+      this.replaceCurrent();
+    }, { signal });
+    btnReplaceAll?.addEventListener('click', () => {
+      this.replaceAll();
+    }, { signal });
+
+    const workspaceEl = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
+    workspaceEl?.addEventListener('scroll', () => {
+      if (this.showRulersAndGuides) {
+        if (this.rulerRafId) cancelAnimationFrame(this.rulerRafId);
+        this.rulerRafId = requestAnimationFrame(() => {
+          this.updateRulers();
+        });
+      }
+    }, { passive: true, signal });
+
     const contextDropdownNames = [
       'text-align',
       'text-list',
@@ -6276,6 +6624,12 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.recordHistory();
       }
@@ -6306,6 +6660,12 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
       }
     }, { signal });
@@ -6330,6 +6690,12 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.broadcastElementUpdate(el);
         this.recordHistory();
@@ -6356,6 +6722,12 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.broadcastElementUpdate(el);
         this.recordHistory();
@@ -6422,6 +6794,12 @@ export class CollaborativePdfEditorController implements ViewController {
         }
         this.updateContextToolbar();
         this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
         this.setModified(true);
         this.broadcastElementUpdate(el);
         this.recordHistory();
@@ -6470,6 +6848,12 @@ export class CollaborativePdfEditorController implements ViewController {
           }
           this.updateContextToolbar();
           this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
           this.setModified(true);
           this.broadcastElementUpdate(el);
           this.recordHistory();
@@ -7094,15 +7478,15 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     }, { signal });
 
-    const btnMenuCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-copy"]');
-    btnMenuCopy?.addEventListener('click', () => {
-      this.copySelectedElements();
+    const btnModeEdit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-mode-edit"]');
+    btnModeEdit?.addEventListener('click', () => {
+      this.setEditorMode('edit');
       this.editDropdownCtrl?.close();
     }, { signal });
 
-    const btnMenuPaste = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-paste"]');
-    btnMenuPaste?.addEventListener('click', () => {
-      void this.pasteFromClipboard();
+    const btnModeView = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-edit-mode-view"]');
+    btnModeView?.addEventListener('click', () => {
+      this.setEditorMode('view');
       this.editDropdownCtrl?.close();
     }, { signal });
 
@@ -7118,8 +7502,35 @@ export class CollaborativePdfEditorController implements ViewController {
     btnContextDel?.addEventListener('click', () => this.deleteSelectedElement(), { signal });
 
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeContextMenu();
+      }
+
       const activeTag = document.activeElement?.tagName.toLowerCase();
       const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+
+      if (e.shiftKey && (e.key === 'R' || e.key === 'r') && !isEditing) {
+        e.preventDefault();
+        this.toggleRulersAndGuides();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        this.openFindReplace();
+        return;
+      }
+
+      if (this.editorMode === 'view') {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 'v' || e.key === 'x')) {
+          e.preventDefault();
+          return;
+        }
+      }
 
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
         if (!isEditing) {
@@ -7209,6 +7620,204 @@ export class CollaborativePdfEditorController implements ViewController {
         this.setZoom(this.zoomLevel + delta);
       }
     }, { passive: false, signal });
+
+    const workspaceCtx = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
+    workspaceCtx?.addEventListener('contextmenu', (e: MouseEvent) => {
+      this.handleContextMenu(e);
+    }, { signal });
+
+    window.addEventListener('pointerdown', (e: PointerEvent) => {
+      const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
+      if (contextMenu && !contextMenu.classList.contains('is-hidden')) {
+        if (!contextMenu.contains(e.target as Node)) {
+          this.closeContextMenu();
+        }
+      }
+    }, { signal });
+
+    const btnCtxElemCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-elem-copy"]');
+    btnCtxElemCopy?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.selectElement(this.contextMenuTargetElementId);
+        this.copySelectedElements();
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxElemPaste = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-elem-paste"]');
+    btnCtxElemPaste?.addEventListener('click', () => {
+      void this.pasteFromClipboard();
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxElemDup = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-elem-duplicate"]');
+    btnCtxElemDup?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.selectElement(this.contextMenuTargetElementId);
+        this.duplicateSelected();
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxElemDel = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-elem-delete"]');
+    btnCtxElemDel?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.selectElement(this.contextMenuTargetElementId);
+        this.deleteSelectedElement();
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxLayerFront = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-layer-front"]');
+    btnCtxLayerFront?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.moveElementLayer(this.contextMenuTargetElementId, 'front');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxLayerForward = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-layer-forward"]');
+    btnCtxLayerForward?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.moveElementLayer(this.contextMenuTargetElementId, 'forward');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxLayerBackward = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-layer-backward"]');
+    btnCtxLayerBackward?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.moveElementLayer(this.contextMenuTargetElementId, 'backward');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxLayerBack = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-layer-back"]');
+    btnCtxLayerBack?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.moveElementLayer(this.contextMenuTargetElementId, 'back');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxLayerShowPanel = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-layer-show-panel"]');
+    btnCtxLayerShowPanel?.addEventListener('click', () => {
+      this.closeContextMenu();
+      this.openLayersPanel();
+    }, { signal });
+
+    const btnCtxAlignTop = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-top"]');
+    btnCtxAlignTop?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'top');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxAlignMiddle = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-middle"]');
+    btnCtxAlignMiddle?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'middle');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxAlignBottom = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-bottom"]');
+    btnCtxAlignBottom?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'bottom');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxAlignLeft = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-left"]');
+    btnCtxAlignLeft?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'left');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxAlignCenter = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-center"]');
+    btnCtxAlignCenter?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'center');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxAlignRight = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-align-right"]');
+    btnCtxAlignRight?.addEventListener('click', () => {
+      if (this.contextMenuTargetElementId) {
+        this.alignElementToPage(this.contextMenuTargetElementId, 'right');
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxPageCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-page-copy"]');
+    btnCtxPageCopy?.addEventListener('click', () => {
+      if (this.contextMenuTargetPage !== null) {
+        this.selectPage(this.contextMenuTargetPage);
+        const pageElements = this.elements.filter((el) => (el.pageIndex ?? 0) === this.contextMenuTargetPage);
+        if (pageElements.length > 0) {
+          const payload = {
+            __boardpdf_collab_elements__: true,
+            elements: JSON.parse(JSON.stringify(pageElements)),
+            sourceDocId: this.docId,
+            sourcePageIndex: this.contextMenuTargetPage,
+            timestamp: Date.now(),
+          };
+          const payloadJson = JSON.stringify(payload);
+          try {
+            localStorage.setItem('boardpdf_collab_clipboard', payloadJson);
+          } catch {}
+          if (navigator.clipboard?.writeText) {
+            void navigator.clipboard.writeText(payloadJson).catch(() => {});
+          }
+          showToast(`Página ${this.contextMenuTargetPage + 1} (${pageElements.length} elementos) copiada`, 'info');
+        } else {
+          showToast(`Página ${this.contextMenuTargetPage + 1} copiada`, 'info');
+        }
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxPagePaste = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-page-paste"]');
+    btnCtxPagePaste?.addEventListener('click', () => {
+      void this.pasteFromClipboard();
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxPageDup = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-page-dup"]');
+    btnCtxPageDup?.addEventListener('click', () => {
+      if (this.contextMenuTargetPage !== null) {
+        this.duplicatePage(this.contextMenuTargetPage);
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxPageAdd = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-page-add"]');
+    btnCtxPageAdd?.addEventListener('click', () => {
+      if (this.contextMenuTargetPage !== null) {
+        this.addPage(this.contextMenuTargetPage);
+      } else {
+        this.addPage();
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnCtxPageLock = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-page-lock"]');
+    btnCtxPageLock?.addEventListener('click', () => {
+      if (this.contextMenuTargetPage !== null) {
+        this.togglePageLock(this.contextMenuTargetPage);
+      }
+      this.closeContextMenu();
+    }, { signal });
+
+    const btnLayersClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layers-close"]');
+    btnLayersClose?.addEventListener('click', () => {
+      this.closeLayersPanel();
+    }, { signal });
   }
 
   private async loadUploadedAssets(): Promise<void> {
@@ -7264,6 +7873,12 @@ export class CollaborativePdfEditorController implements ViewController {
     });
 
     this.updateTransformBoxPosition();
+    if (this.showRulersAndGuides) {
+      this.updateRulers();
+    }
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
   }
 
   private zoomIn(): void {
@@ -8165,6 +8780,942 @@ export class CollaborativePdfEditorController implements ViewController {
       modal.remove();
       this.shareModalElement = null;
       navigate(`/login?redirect=${encodeURIComponent(`/d/${this.docId}`)}`);
+    });
+  }
+
+  private async createDocumentCopy(): Promise<void> {
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
+    const copyTitle = `${this.docTitle} (Copia)`;
+    const content = this.getContentPayload();
+
+    if (this.isLocalOnly || !currentUser) {
+      saveLocalDraft(newId, {
+        content,
+        title: copyTitle,
+      });
+      window.open(`/d/${newId}`, '_blank');
+      showToast('Copia creada en una nueva pestaña', 'success');
+    } else {
+      try {
+        const res = await postApi(API_ROUTES.collaborativeDocs.base, {
+          content,
+          id: newId,
+          title: copyTitle,
+        });
+        if (res.ok) {
+          window.open(`/d/${newId}`, '_blank');
+          showToast('Copia creada en una nueva pestaña', 'success');
+        } else {
+          saveLocalDraft(newId, { content, title: copyTitle });
+          window.open(`/d/${newId}`, '_blank');
+          showToast('Copia creada en una nueva pestaña', 'success');
+        }
+      } catch {
+        saveLocalDraft(newId, { content, title: copyTitle });
+        window.open(`/d/${newId}`, '_blank');
+        showToast('Copia creada en una nueva pestaña', 'success');
+      }
+    }
+  }
+
+  private downloadPdf(): void {
+    const downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `${this.docTitle || 'document'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Descarga iniciada', 'info');
+  }
+
+  private toggleRulersAndGuides(): void {
+    this.showRulersAndGuides = !this.showRulersAndGuides;
+    this.updateRulersUI();
+    this.renderPages();
+  }
+
+  private updateRulersUI(): void {
+    const rulersWrapper = this.container.querySelector<HTMLElement>('[data-ref="collab-rulers-wrapper"]');
+    const checkRulers = this.container.querySelector<HTMLElement>('[data-ref="check-sub-rulers"]');
+    if (this.showRulersAndGuides) {
+      rulersWrapper?.classList.remove('is-hidden');
+      checkRulers?.classList.remove('is-hidden');
+      this.updateRulers();
+    } else {
+      rulersWrapper?.classList.add('is-hidden');
+      checkRulers?.classList.add('is-hidden');
+    }
+  }
+
+  private updateRulers(): void {
+    if (!this.showRulersAndGuides) return;
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
+    const canvasTop = this.container.querySelector<HTMLCanvasElement>('[data-ref="ruler-top"]');
+    const canvasLeft = this.container.querySelector<HTMLCanvasElement>('[data-ref="ruler-left"]');
+    if (!workspace || !canvasTop || !canvasLeft) return;
+
+    const firstSheet = this.container.querySelector<HTMLElement>('.collaborative-page-sheet');
+    if (!firstSheet) return;
+
+    const wsRect = workspace.getBoundingClientRect();
+    const pageRect = firstSheet.getBoundingClientRect();
+
+    const dpr = window.devicePixelRatio || 1;
+    const topW = wsRect.width;
+    const leftH = wsRect.height;
+
+    if (canvasTop.width !== Math.round(topW * dpr) || canvasTop.height !== Math.round(20 * dpr)) {
+      canvasTop.width = Math.round(topW * dpr);
+      canvasTop.height = Math.round(20 * dpr);
+      canvasTop.style.width = `${topW}px`;
+      canvasTop.style.height = '20px';
+    }
+    if (canvasLeft.width !== Math.round(20 * dpr) || canvasLeft.height !== Math.round(leftH * dpr)) {
+      canvasLeft.width = Math.round(20 * dpr);
+      canvasLeft.height = Math.round(leftH * dpr);
+      canvasLeft.style.width = '20px';
+      canvasLeft.style.height = `${leftH}px`;
+    }
+
+    const ctxTop = canvasTop.getContext('2d');
+    const ctxLeft = canvasLeft.getContext('2d');
+    if (!ctxTop || !ctxLeft) return;
+
+    ctxTop.save();
+    ctxTop.scale(dpr, dpr);
+    ctxTop.clearRect(0, 0, topW, 20);
+    ctxTop.fillStyle = '#f3f4f7';
+    ctxTop.fillRect(0, 0, topW, 20);
+
+    const cmPx = 37.8 * (this.zoomLevel || 1.0);
+    const originX = pageRect.left - wsRect.left;
+
+    ctxTop.fillStyle = '#6b7280';
+    ctxTop.strokeStyle = '#9ca3af';
+    ctxTop.lineWidth = 1;
+    ctxTop.font = '9px system-ui, sans-serif';
+    ctxTop.textAlign = 'center';
+
+    const startCm = Math.floor(-originX / cmPx) - 2;
+    const endCm = Math.ceil((topW - originX) / cmPx) + 2;
+
+    for (let cm = startCm; cm <= endCm; cm++) {
+      const x = originX + cm * cmPx;
+      if (x < 0 || x > topW) continue;
+
+      if (cm % 2 === 0) {
+        ctxTop.beginPath();
+        ctxTop.moveTo(x, 8);
+        ctxTop.lineTo(x, 20);
+        ctxTop.stroke();
+        if (cm >= 0 && x > 25) {
+          ctxTop.fillText(cm.toString(), x, 7);
+        }
+      } else {
+        ctxTop.beginPath();
+        ctxTop.moveTo(x, 12);
+        ctxTop.lineTo(x, 20);
+        ctxTop.stroke();
+      }
+
+      for (let sub = 1; sub < 5; sub++) {
+        const subX = x + (sub * 0.2) * cmPx;
+        if (subX >= 0 && subX <= topW) {
+          ctxTop.beginPath();
+          ctxTop.moveTo(subX, 16);
+          ctxTop.lineTo(subX, 20);
+          ctxTop.stroke();
+        }
+      }
+    }
+    ctxTop.restore();
+
+    ctxLeft.save();
+    ctxLeft.scale(dpr, dpr);
+    ctxLeft.clearRect(0, 0, 20, leftH);
+    ctxLeft.fillStyle = '#f3f4f7';
+    ctxLeft.fillRect(0, 0, 20, leftH);
+
+    const originY = pageRect.top - wsRect.top;
+    ctxLeft.fillStyle = '#6b7280';
+    ctxLeft.strokeStyle = '#9ca3af';
+    ctxLeft.lineWidth = 1;
+    ctxLeft.font = '9px system-ui, sans-serif';
+    ctxLeft.textAlign = 'right';
+
+    const startCmY = Math.floor(-originY / cmPx) - 2;
+    const endCmY = Math.ceil((leftH - originY) / cmPx) + 2;
+
+    for (let cm = startCmY; cm <= endCmY; cm++) {
+      const y = originY + cm * cmPx;
+      if (y < 0 || y > leftH) continue;
+
+      if (cm % 2 === 0) {
+        ctxLeft.beginPath();
+        ctxLeft.moveTo(8, y);
+        ctxLeft.lineTo(20, y);
+        ctxLeft.stroke();
+        if (cm >= 0 && y > 25) {
+          ctxLeft.fillText(cm.toString(), 7, y + 3);
+        }
+      } else {
+        ctxLeft.beginPath();
+        ctxLeft.moveTo(12, y);
+        ctxLeft.lineTo(20, y);
+        ctxLeft.stroke();
+      }
+
+      for (let sub = 1; sub < 5; sub++) {
+        const subY = y + (sub * 0.2) * cmPx;
+        if (subY >= 0 && subY <= leftH) {
+          ctxLeft.beginPath();
+          ctxLeft.moveTo(16, subY);
+          ctxLeft.lineTo(20, subY);
+          ctxLeft.stroke();
+        }
+      }
+    }
+    ctxLeft.restore();
+  }
+
+  private toggleMargins(): void {
+    this.showMargins = !this.showMargins;
+    const checkMargins = this.container.querySelector<HTMLElement>('[data-ref="check-sub-margins"]');
+    if (this.showMargins) {
+      checkMargins?.classList.remove('is-hidden');
+    } else {
+      checkMargins?.classList.add('is-hidden');
+    }
+    this.renderPages();
+  }
+
+  private toggleBleed(): void {
+    this.showBleed = !this.showBleed;
+    const checkBleed = this.container.querySelector<HTMLElement>('[data-ref="check-sub-bleed"]');
+    if (this.showBleed) {
+      checkBleed?.classList.remove('is-hidden');
+    } else {
+      checkBleed?.classList.add('is-hidden');
+    }
+    this.renderPages();
+  }
+
+  private openGuidesModal(): void {
+    const modal = this.container.querySelector<HTMLElement>('[data-ref="collab-guides-modal"]');
+    modal?.classList.remove('is-hidden');
+    if (!this.currentGuidesPreset) {
+      this.currentGuidesPreset = '12-col';
+    }
+    const presetCards = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="card-guide-"]');
+    presetCards.forEach((c) => {
+      if (c.getAttribute('data-preset') === this.currentGuidesPreset) {
+        c.classList.add('is-active');
+      } else {
+        c.classList.remove('is-active');
+      }
+    });
+    if (!this.showRulersAndGuides) {
+      this.showRulersAndGuides = true;
+      this.updateRulersUI();
+    }
+    this.renderPages();
+  }
+
+  private renderPersistentGuidesSvg(pageIndex: number, width: number, height: number): SVGElement {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'collaborative-persistent-guides-svg');
+    svg.setAttribute('data-ref', `persistent-guides-svg-${pageIndex}`);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    if (this.currentGuidesPreset === '12-col') {
+      const margin = 38;
+      const gutter = 16;
+      const totalGutters = 11 * gutter;
+      const availableWidth = width - 2 * margin - totalGutters;
+      const colWidth = Math.max(1, availableWidth / 12);
+
+      for (let i = 0; i < 12; i++) {
+        const x1 = margin + i * (colWidth + gutter);
+        const x2 = x1 + colWidth;
+
+        const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line1.setAttribute('class', 'collaborative-persistent-guide-line');
+        line1.setAttribute('x1', x1.toFixed(1));
+        line1.setAttribute('y1', '0');
+        line1.setAttribute('x2', x1.toFixed(1));
+        line1.setAttribute('y2', height.toString());
+        svg.appendChild(line1);
+
+        const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line2.setAttribute('class', 'collaborative-persistent-guide-line');
+        line2.setAttribute('x1', x2.toFixed(1));
+        line2.setAttribute('y1', '0');
+        line2.setAttribute('x2', x2.toFixed(1));
+        line2.setAttribute('y2', height.toString());
+        svg.appendChild(line2);
+      }
+    } else if (this.currentGuidesPreset === '3-col') {
+      const margin = 38;
+      const gutter = 24;
+      const availableWidth = width - 2 * margin - 2 * gutter;
+      const colWidth = Math.max(1, availableWidth / 3);
+
+      for (let i = 0; i < 3; i++) {
+        const x1 = margin + i * (colWidth + gutter);
+        const x2 = x1 + colWidth;
+
+        const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line1.setAttribute('class', 'collaborative-persistent-guide-line');
+        line1.setAttribute('x1', x1.toFixed(1));
+        line1.setAttribute('y1', '0');
+        line1.setAttribute('x2', x1.toFixed(1));
+        line1.setAttribute('y2', height.toString());
+        svg.appendChild(line1);
+
+        const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line2.setAttribute('class', 'collaborative-persistent-guide-line');
+        line2.setAttribute('x1', x2.toFixed(1));
+        line2.setAttribute('y1', '0');
+        line2.setAttribute('x2', x2.toFixed(1));
+        line2.setAttribute('y2', height.toString());
+        svg.appendChild(line2);
+      }
+    } else if (this.currentGuidesPreset === '3x3') {
+      const y1 = (height / 3).toFixed(1);
+      const y2 = ((2 * height) / 3).toFixed(1);
+      const x1 = (width / 3).toFixed(1);
+      const x2 = ((2 * width) / 3).toFixed(1);
+
+      for (const y of [y1, y2]) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'collaborative-persistent-guide-line');
+        line.setAttribute('x1', '0');
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', width.toString());
+        line.setAttribute('y2', y);
+        svg.appendChild(line);
+      }
+
+      for (const x of [x1, x2]) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'collaborative-persistent-guide-line');
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', '0');
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', height.toString());
+        svg.appendChild(line);
+      }
+    } else if (this.currentGuidesPreset === 'custom') {
+      const cols = Math.max(1, this.customGuideCols);
+      const rows = Math.max(1, this.customGuideRows);
+
+      for (let i = 1; i < cols; i++) {
+        const x = ((i * width) / cols).toFixed(1);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'collaborative-persistent-guide-line');
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', '0');
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', height.toString());
+        svg.appendChild(line);
+      }
+
+      for (let j = 1; j < rows; j++) {
+        const y = ((j * height) / rows).toFixed(1);
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'collaborative-persistent-guide-line');
+        line.setAttribute('x1', '0');
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', width.toString());
+        line.setAttribute('y2', y);
+        svg.appendChild(line);
+      }
+    }
+
+    return svg;
+  }
+
+  private openFindReplace(): void {
+    const card = this.container.querySelector<HTMLElement>('[data-ref="collab-find-replace-card"]');
+    card?.classList.remove('is-hidden');
+    const inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-find-search"]');
+    inputSearch?.focus();
+    inputSearch?.select();
+    this.executeSearch();
+  }
+
+  private closeFindReplace(): void {
+    const card = this.container.querySelector<HTMLElement>('[data-ref="collab-find-replace-card"]');
+    card?.classList.add('is-hidden');
+    this.findMatches = [];
+    this.findCurrentIndex = -1;
+  }
+
+  private executeSearch(): void {
+    const query = this.findSearchTerm;
+    const statusEl = this.container.querySelector<HTMLElement>('[data-ref="txt-find-status"]');
+    if (!query) {
+      this.findMatches = [];
+      this.findCurrentIndex = -1;
+      if (statusEl) {
+        statusEl.classList.add('is-hidden');
+        statusEl.textContent = '';
+      }
+      return;
+    }
+
+    const matches: Array<{ elementId: string; pageIndex: number }> = [];
+    for (const el of this.elements) {
+      if (el.type === 'text' && typeof el.text === 'string') {
+        const text = this.findMatchCase ? el.text : el.text.toLowerCase();
+        const search = this.findMatchCase ? query : query.toLowerCase();
+        if (text.includes(search)) {
+          matches.push({ elementId: el.id, pageIndex: el.pageIndex ?? 0 });
+        }
+      }
+    }
+
+    this.findMatches = matches;
+    if (matches.length > 0) {
+      if (this.findCurrentIndex < 0 || this.findCurrentIndex >= matches.length) {
+        this.findCurrentIndex = 0;
+      }
+      this.highlightCurrentMatch();
+    } else {
+      this.findCurrentIndex = -1;
+      if (statusEl) {
+        statusEl.classList.remove('is-hidden');
+        statusEl.textContent = 'Sin resultados';
+      }
+    }
+  }
+
+  private highlightCurrentMatch(): void {
+    if (this.findCurrentIndex < 0 || this.findCurrentIndex >= this.findMatches.length) return;
+    const match = this.findMatches[this.findCurrentIndex];
+    const statusEl = this.container.querySelector<HTMLElement>('[data-ref="txt-find-status"]');
+    if (statusEl) {
+      statusEl.classList.remove('is-hidden');
+      statusEl.textContent = `${this.findCurrentIndex + 1} de ${this.findMatches.length}`;
+    }
+
+    if (this.editorMode !== 'view') {
+      this.selectElement(match.elementId);
+    }
+
+    const sheet = this.container.querySelector<HTMLElement>(`[data-ref="page-sheet-${match.pageIndex}"]`);
+    sheet?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  private findNext(): void {
+    if (this.findMatches.length === 0) return;
+    this.findCurrentIndex = (this.findCurrentIndex + 1) % this.findMatches.length;
+    this.highlightCurrentMatch();
+  }
+
+  private findPrev(): void {
+    if (this.findMatches.length === 0) return;
+    this.findCurrentIndex = (this.findCurrentIndex - 1 + this.findMatches.length) % this.findMatches.length;
+    this.highlightCurrentMatch();
+  }
+
+  private replaceCurrent(): void {
+    if (this.editorMode === 'view') {
+      showToast('No se puede reemplazar en modo solo lectura', 'warning');
+      return;
+    }
+    if (this.findCurrentIndex < 0 || this.findCurrentIndex >= this.findMatches.length) return;
+    const match = this.findMatches[this.findCurrentIndex];
+    const el = this.elements.find((e) => e.id === match.elementId);
+    if (!el || el.type !== 'text') return;
+    const textVal = el.text || '';
+
+    this.recordHistory();
+
+    const search = this.findSearchTerm;
+    const replaceWith = this.findReplaceTerm;
+    if (this.findMatchCase) {
+      el.text = textVal.replace(search, replaceWith);
+    } else {
+      const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      el.text = textVal.replace(regex, replaceWith);
+    }
+
+    this.renderPages();
+    this.scheduleAutoSave();
+    this.executeSearch();
+  }
+
+  private replaceAll(): void {
+    if (this.editorMode === 'view') {
+      showToast('No se puede reemplazar en modo solo lectura', 'warning');
+      return;
+    }
+    if (this.findMatches.length === 0) return;
+
+    this.recordHistory();
+
+    const search = this.findSearchTerm;
+    const replaceWith = this.findReplaceTerm;
+    let count = 0;
+
+    const regex = new RegExp(
+      search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      this.findMatchCase ? 'g' : 'gi'
+    );
+
+    for (const el of this.elements) {
+      if (el.type === 'text' && typeof el.text === 'string') {
+        const matches = el.text.match(regex);
+        if (matches && matches.length > 0) {
+          count += matches.length;
+          el.text = el.text.replace(regex, replaceWith);
+        }
+      }
+    }
+
+    this.renderPages();
+    this.scheduleAutoSave();
+    this.executeSearch();
+    showToast(`Se reemplazaron ${count} coincidencias`, 'success');
+  }
+
+  private confirmDeleteDocument(): void {
+    openModal({
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--danger',
+      confirmText: 'Eliminar',
+      description: `¿Estás seguro de que deseas eliminar permanentemente "${this.docTitle}"? Esta acción no se puede deshacer.`,
+      onConfirm: async () => {
+        if (this.isLocalOnly || !currentUser) {
+          removeLocalDraft(this.docId);
+        } else {
+          try {
+            const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(this.docId));
+            if (!res.ok) {
+              removeLocalDraft(this.docId);
+            }
+          } catch {
+            removeLocalDraft(this.docId);
+          }
+        }
+        showToast('Documento eliminado correctamente', 'info');
+        navigate('/');
+        return true;
+      },
+      title: 'Eliminar documento',
+    });
+  }
+
+  private setEditorMode(mode: 'edit' | 'view'): void {
+    this.editorMode = mode;
+    const txtTopEdit = this.container.querySelector<HTMLElement>('[data-ref="txt-top-edit-current"]');
+    const iconTopEdit = this.container.querySelector<SVGElement>('[data-ref="icon-top-edit-current"] use');
+    const checkEdit = this.container.querySelector<HTMLElement>('[data-ref="check-mode-edit"]');
+    const checkView = this.container.querySelector<HTMLElement>('[data-ref="check-mode-view"]');
+    const btnModeEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-menu-edit-mode-edit"]');
+    const btnModeView = this.container.querySelector<HTMLElement>('[data-ref="btn-menu-edit-mode-view"]');
+    const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+
+    if (mode === 'view') {
+      this.container.classList.add('collaborative-mode-view');
+      if (txtTopEdit) txtTopEdit.textContent = 'Ver';
+      iconTopEdit?.setAttribute('href', '/icons.svg#visibility');
+      checkEdit?.classList.add('is-hidden');
+      checkView?.classList.remove('is-hidden');
+      btnModeEdit?.classList.remove('is-active');
+      btnModeView?.classList.add('is-active');
+      if (titleInput) titleInput.readOnly = true;
+      this.selectedElementId = null;
+      this.selectedElementIds.clear();
+      this.closeSubtoolbars();
+      this.updateSelection();
+      this.renderTransformBox();
+      showToast('Modo solo lectura activado', 'info');
+    } else {
+      this.container.classList.remove('collaborative-mode-view');
+      if (txtTopEdit) txtTopEdit.textContent = 'Editar';
+      iconTopEdit?.setAttribute('href', '/icons.svg#edit');
+      checkEdit?.classList.remove('is-hidden');
+      checkView?.classList.add('is-hidden');
+      btnModeEdit?.classList.add('is-active');
+      btnModeView?.classList.remove('is-active');
+      if (titleInput) titleInput.readOnly = false;
+      this.updateUndoRedoButtons();
+      showToast('Modo de edición activado', 'info');
+    }
+  }
+
+  private handleContextMenu(e: MouseEvent): void {
+    if (this.editorMode === 'view') {
+      return;
+    }
+    const target = e.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    const elementNode = target.closest<HTMLElement | SVGElement>('[data-element-id]');
+    const pageSheet = target.closest<HTMLElement>('.collaborative-page-sheet, .collaborative-page-wrapper');
+
+    const ctxElemSection = this.container.querySelector<HTMLElement>('[data-ref="ctx-section-element"]');
+    const ctxPageSection = this.container.querySelector<HTMLElement>('[data-ref="ctx-section-page"]');
+    const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
+
+    if (!contextMenu || !ctxElemSection || !ctxPageSection) return;
+
+    if (elementNode) {
+      const elementId = elementNode.getAttribute('data-element-id');
+      if (!elementId) return;
+      e.preventDefault();
+      this.contextMenuTargetElementId = elementId;
+      const targetElem = this.elements.find((el) => el.id === elementId);
+      this.contextMenuTargetPage = targetElem?.pageIndex ?? 0;
+      this.selectElement(elementId);
+
+      ctxElemSection.classList.remove('is-hidden');
+      ctxPageSection.classList.add('is-hidden');
+      this.positionContextMenu(e.clientX, e.clientY);
+    } else if (pageSheet) {
+      e.preventDefault();
+      const pageIndexAttr = pageSheet.getAttribute('data-page-index');
+      const pageIndex = pageIndexAttr !== null ? parseInt(pageIndexAttr, 10) : 0;
+      this.contextMenuTargetPage = pageIndex;
+      this.contextMenuTargetElementId = null;
+      this.selectPage(pageIndex);
+
+      const isLocked = this.lockedPages.has(pageIndex);
+      const txtPageLock = this.container.querySelector<HTMLElement>('[data-ref="txt-ctx-page-lock"]');
+      const btnPageLock = this.container.querySelector<HTMLElement>('[data-ref="ctx-page-lock"]');
+      if (txtPageLock) {
+        txtPageLock.textContent = isLocked ? 'Mostrar página' : 'Ocultar página';
+      }
+      const iconUse = btnPageLock?.querySelector('use');
+      iconUse?.setAttribute('href', `/icons.svg#${isLocked ? 'visibility' : 'visibility_off'}`);
+
+      ctxElemSection.classList.add('is-hidden');
+      ctxPageSection.classList.remove('is-hidden');
+      this.positionContextMenu(e.clientX, e.clientY);
+    } else {
+      this.closeContextMenu();
+    }
+  }
+
+  private positionContextMenu(clientX: number, clientY: number): void {
+    const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
+    if (!contextMenu) return;
+
+    contextMenu.classList.remove('is-hidden');
+    contextMenu.style.left = `${clientX}px`;
+    contextMenu.style.top = `${clientY}px`;
+
+    const submenus = this.container.querySelectorAll<HTMLElement>('.collab-context-submenu');
+    submenus.forEach((sub) => sub.classList.add('is-hidden'));
+
+    requestAnimationFrame(() => {
+      const rect = contextMenu.getBoundingClientRect();
+      let left = clientX;
+      let top = clientY;
+
+      if (left + rect.width > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - rect.width - 8);
+      }
+      if (top + rect.height > window.innerHeight - 8) {
+        top = Math.max(8, window.innerHeight - rect.height - 8);
+      }
+
+      if (left + rect.width + 210 > window.innerWidth) {
+        contextMenu.classList.add('is-flip-submenus');
+      } else {
+        contextMenu.classList.remove('is-flip-submenus');
+      }
+
+      contextMenu.style.left = `${left}px`;
+      contextMenu.style.top = `${top}px`;
+    });
+  }
+
+  private closeContextMenu(): void {
+    const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
+    contextMenu?.classList.add('is-hidden');
+    const submenus = this.container.querySelectorAll<HTMLElement>('.collab-context-submenu');
+    submenus.forEach((sub) => sub.classList.add('is-hidden'));
+  }
+
+  private moveElementLayer(elementId: string, direction: 'back' | 'backward' | 'forward' | 'front'): void {
+    const targetIndex = this.elements.findIndex((el) => el.id === elementId);
+    if (targetIndex === -1) return;
+    const targetElem = this.elements[targetIndex];
+    const p = targetElem.pageIndex ?? 0;
+
+    const pageIndices: number[] = [];
+    for (let i = 0; i < this.elements.length; i++) {
+      if ((this.elements[i].pageIndex ?? 0) === p) {
+        pageIndices.push(i);
+      }
+    }
+
+    const posInPage = pageIndices.indexOf(targetIndex);
+    if (posInPage === -1) return;
+
+    if (direction === 'front') {
+      if (posInPage === pageIndices.length - 1) return;
+      const [removed] = this.elements.splice(targetIndex, 1);
+      const lastItem = this.elements.map((el, i) => ({ el, i })).filter((x) => (x.el.pageIndex ?? 0) === p).pop();
+      if (lastItem) {
+        this.elements.splice(lastItem.i + 1, 0, removed);
+      } else {
+        this.elements.push(removed);
+      }
+    } else if (direction === 'back') {
+      if (posInPage === 0) return;
+      const [removed] = this.elements.splice(targetIndex, 1);
+      const firstItem = this.elements.map((el, i) => ({ el, i })).filter((x) => (x.el.pageIndex ?? 0) === p)[0];
+      if (firstItem) {
+        this.elements.splice(firstItem.i, 0, removed);
+      } else {
+        this.elements.unshift(removed);
+      }
+    } else if (direction === 'forward') {
+      if (posInPage === pageIndices.length - 1) return;
+      const nextIndex = pageIndices[posInPage + 1];
+      const temp = this.elements[targetIndex];
+      this.elements[targetIndex] = this.elements[nextIndex];
+      this.elements[nextIndex] = temp;
+    } else if (direction === 'backward') {
+      if (posInPage === 0) return;
+      const prevIndex = pageIndices[posInPage - 1];
+      const temp = this.elements[targetIndex];
+      this.elements[targetIndex] = this.elements[prevIndex];
+      this.elements[prevIndex] = temp;
+    }
+
+    this.recordHistory();
+    this.setModified(true);
+    this.renderPages();
+    this.selectElement(elementId);
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
+    showToast('Capa actualizada', 'info');
+  }
+
+  private reorderElementLayer(draggedId: string, targetId: string): void {
+    if (draggedId === targetId) return;
+    const draggedIdx = this.elements.findIndex((el) => el.id === draggedId);
+    const targetIdx = this.elements.findIndex((el) => el.id === targetId);
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    const [removed] = this.elements.splice(draggedIdx, 1);
+    const newTargetIdx = this.elements.findIndex((el) => el.id === targetId);
+    this.elements.splice(newTargetIdx, 0, removed);
+
+    this.recordHistory();
+    this.setModified(true);
+    this.renderPages();
+    this.selectElement(draggedId);
+    if (this.isLayersPanelOpen) {
+      this.renderLayersList();
+    }
+    showToast('Orden de capas actualizado', 'info');
+  }
+
+  private alignElementToPage(elementId: string, alignment: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top'): void {
+    const elem = this.elements.find((el) => el.id === elementId);
+    if (!elem || !('x' in elem && 'y' in elem)) return;
+    const p = elem.pageIndex ?? 0;
+    const dim = this.getPageDimensions(p);
+    const w = 'width' in elem && typeof elem.width === 'number' ? elem.width : 100;
+    const h = 'height' in elem && typeof elem.height === 'number' ? elem.height : 50;
+
+    switch (alignment) {
+      case 'left':
+        elem.x = 0;
+        break;
+      case 'center':
+        elem.x = Math.round((dim.width - w) / 2);
+        break;
+      case 'right':
+        elem.x = dim.width - w;
+        break;
+      case 'top':
+        elem.y = 0;
+        break;
+      case 'middle':
+        elem.y = Math.round((dim.height - h) / 2);
+        break;
+      case 'bottom':
+        elem.y = dim.height - h;
+        break;
+    }
+
+    this.recordHistory();
+    this.setModified(true);
+    this.renderPages();
+    this.selectElement(elementId);
+    showToast('Elemento alineado', 'info');
+  }
+
+  private openLayersPanel(): void {
+    this.isLayersPanelOpen = true;
+    const panel = this.container.querySelector<HTMLElement>('[data-ref="collab-layers-panel"]');
+    panel?.classList.remove('is-hidden');
+    this.renderLayersList();
+  }
+
+  private closeLayersPanel(): void {
+    this.isLayersPanelOpen = false;
+    const panel = this.container.querySelector<HTMLElement>('[data-ref="collab-layers-panel"]');
+    panel?.classList.add('is-hidden');
+  }
+
+  private renderLayersList(): void {
+    if (!this.isLayersPanelOpen) return;
+    const listEl = this.container.querySelector<HTMLElement>('[data-ref="collab-layers-list"]');
+    if (!listEl) return;
+
+    let targetPage = this.selectedPageIndex;
+    if (targetPage === null && this.selectedElementId) {
+      const curElem = this.elements.find((el) => el.id === this.selectedElementId);
+      targetPage = curElem?.pageIndex ?? 0;
+    }
+    if (targetPage === null) targetPage = 0;
+
+    const pageBadge = this.container.querySelector<HTMLElement>('[data-ref="txt-layers-page-badge"]');
+    if (pageBadge) {
+      pageBadge.textContent = `Página ${targetPage + 1}`;
+    }
+
+    listEl.innerHTML = '';
+    const pageElements = this.elements.filter((el) => (el.pageIndex ?? 0) === targetPage);
+
+    if (pageElements.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'collab-layers-empty';
+      emptyDiv.textContent = 'No hay elementos en esta página';
+      listEl.appendChild(emptyDiv);
+      return;
+    }
+
+    const reversed = [...pageElements].reverse();
+
+    reversed.forEach((el, revIndex) => {
+      const layerNum = pageElements.length - revIndex;
+      const isSelected = el.id === this.selectedElementId;
+
+      let iconName = 'category';
+      let nameText = 'Elemento';
+
+      if (el.type === 'text') {
+        iconName = 'format_size';
+        const txt = (el as any).text?.trim();
+        nameText = txt ? (txt.length > 22 ? `${txt.substring(0, 22)}...` : txt) : 'Texto';
+      } else if (el.type === 'shape') {
+        iconName = 'category';
+        const st = (el as any).shapeType || 'forma';
+        const map: Record<string, string> = {
+          arrow: 'Flecha',
+          circle: 'Círculo',
+          diamond: 'Rombo',
+          line: 'Línea',
+          'line-flexible': 'Línea curva',
+          'line-multiconnect': 'Conector',
+          rect: 'Rectángulo',
+          roundedRect: 'Rectángulo redondeado',
+          star: 'Estrella',
+          triangle: 'Triángulo',
+        };
+        nameText = map[st] || `Forma (${st})`;
+      } else if (el.type === 'image') {
+        iconName = 'image';
+        nameText = 'Imagen';
+      } else if (el.type === 'table') {
+        iconName = 'table_chart';
+        nameText = 'Tabla';
+      } else if (el.type === 'chart') {
+        iconName = 'bar_chart';
+        nameText = 'Gráfico';
+      }
+
+      const item = document.createElement('div');
+      item.className = `collab-layer-item${isSelected ? ' is-active' : ''}`;
+      item.setAttribute('data-layer-id', el.id);
+      item.draggable = true;
+
+      const isTop = revIndex === 0;
+      const isBottom = revIndex === reversed.length - 1;
+
+      item.innerHTML = `
+        <div class="collab-layer-item__drag" title="Arrastrar para reordenar capa">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#drag_indicator"></use></svg>
+        </div>
+        <div class="collab-layer-item__icon">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>
+        </div>
+        <div class="collab-layer-item__content">
+          <span class="collab-layer-item__name">${nameText}</span>
+          <span class="collab-layer-item__badge">Capa ${layerNum}</span>
+        </div>
+        <div class="collab-layer-item__actions">
+          <button type="button" class="collab-layer-btn" data-layer-action="up" data-element-id="${el.id}" title="Subir capa" aria-label="Subir capa"${isTop ? ' disabled' : ''}>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_less"></use></svg>
+          </button>
+          <button type="button" class="collab-layer-btn" data-layer-action="down" data-element-id="${el.id}" title="Bajar capa" aria-label="Bajar capa"${isBottom ? ' disabled' : ''}>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <button type="button" class="collab-layer-btn" data-layer-action="delete" data-element-id="${el.id}" title="Eliminar elemento" aria-label="Eliminar elemento">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+      `;
+
+      item.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-layer-action]');
+        if (btn) return;
+        this.selectElement(el.id);
+      });
+
+      item.addEventListener('dragstart', (e: DragEvent) => {
+        item.classList.add('is-dragging');
+        e.dataTransfer?.setData('text/plain', el.id);
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('is-dragging');
+      });
+
+      item.addEventListener('dragover', (e: DragEvent) => {
+        e.preventDefault();
+      });
+
+      item.addEventListener('drop', (e: DragEvent) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer?.getData('text/plain');
+        if (draggedId && draggedId !== el.id) {
+          this.reorderElementLayer(draggedId, el.id);
+        }
+      });
+
+      const btnUp = item.querySelector<HTMLButtonElement>('[data-layer-action="up"]');
+      btnUp?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveElementLayer(el.id, 'forward');
+      });
+
+      const btnDown = item.querySelector<HTMLButtonElement>('[data-layer-action="down"]');
+      btnDown?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveElementLayer(el.id, 'backward');
+      });
+
+      const btnDel = item.querySelector<HTMLButtonElement>('[data-layer-action="delete"]');
+      btnDel?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.selectElement(el.id);
+        this.deleteSelectedElement();
+        this.renderLayersList();
+      });
+
+      listEl.appendChild(item);
     });
   }
 
