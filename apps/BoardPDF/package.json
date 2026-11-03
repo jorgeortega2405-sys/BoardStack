@@ -13,6 +13,7 @@
     "dev:watch": "tsx watch --exclude \"logs/**\" --exclude \"dist/**\" --exclude \"client/**\" --exclude \"public/**\" --exclude \"data/**\" src/index.ts",
     "purge:css": "tsx scripts/purge-css.ts",
     "start": "node dist/index.js",
+    "start:cluster": "node dist/cluster.js",
     "test": "python test/main.py 8",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "typecheck:all": "npm run typecheck"

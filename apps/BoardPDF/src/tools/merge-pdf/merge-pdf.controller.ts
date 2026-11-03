@@ -7,8 +7,8 @@ import { Request, Response } from 'express';
 
 export const handleUploadMiddleware = createPdfUploadMiddleware({
   fieldName: 'pdfs',
-  maxFileSizeMB: 1000,
-  maxFiles: 500,
+  maxFileSizeMB: 50,
+  maxFiles: 30,
 });
 
 export async function handleMergePdf(req: Request, res: Response): Promise<void> {

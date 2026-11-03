@@ -504,10 +504,29 @@ export async function deleteCollaborativeDocument(id: string, userId?: number | 
   ensureStorageDir();
   try {
     const pool = getDbPool();
+    const [rows] = await pool.query<any[]>(
+      'SELECT user_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+      [id]
+    );
+    if (!rows || rows.length === 0) {
+      return false;
+    }
+    const docUserId = rows[0].user_id;
+    if (userId && docUserId !== null && docUserId !== undefined && Number(docUserId) !== Number(userId)) {
+      const [memberRows] = await pool.query<any[]>(
+        'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
+        [id, userId]
+      );
+      const isOwnerMember = memberRows && memberRows.length > 0 && memberRows[0].role === 'owner';
+      if (!isOwnerMember) {
+        return false;
+      }
+    }
     await pool.query('DELETE FROM collaborative_document_members WHERE document_id = ?', [id]);
     await pool.query('DELETE FROM collaborative_documents WHERE id = ?', [id]);
   } catch (err) {
     logger.db.warn('Error al eliminar documento colaborativo de MySQL', err);
+    return false;
   }
 
   await reclaimDocumentStorage(id, userId);

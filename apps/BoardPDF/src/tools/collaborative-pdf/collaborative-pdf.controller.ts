@@ -289,7 +289,21 @@ export async function deleteCollaborativeDocHandler(req: Request, res: Response)
       return;
     }
     const user = getCurrentUser(req);
-    await deleteCollaborativeDocument(id, user?.id);
+    if (!user || !user.id) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para realizar esta acción.',
+        success: false,
+      });
+      return;
+    }
+    const deleted = await deleteCollaborativeDocument(id, user.id);
+    if (!deleted) {
+      res.status(403).json({
+        error: 'No tienes permisos para eliminar este documento o el documento no existe.',
+        success: false,
+      });
+      return;
+    }
     res.json({
       success: true,
     });

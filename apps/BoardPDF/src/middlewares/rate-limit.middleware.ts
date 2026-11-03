@@ -12,6 +12,19 @@ export interface RateLimiterOptions {
 
 const memoryFallbackStore = new Map<string, number[]>();
 
+const cleanupInterval = setInterval(() => {
+  const cutoff = Date.now() - 3600000;
+  for (const [k, ts] of memoryFallbackStore.entries()) {
+    const valid = ts.filter((t) => t > cutoff);
+    if (valid.length === 0) {
+      memoryFallbackStore.delete(k);
+    } else {
+      memoryFallbackStore.set(k, valid);
+    }
+  }
+}, 300000);
+cleanupInterval.unref();
+
 function checkMemoryFallback(key: string, now: number, windowMs: number, max: number): { allowed: boolean; remaining: number; resetInSeconds: number } {
   const windowStart = now - windowMs;
   let timestamps = memoryFallbackStore.get(key) || [];
@@ -64,10 +77,21 @@ end
 `;
 
 export function getClientIp(req: Request): string {
-  const cfConnectingIp = req.headers['cf-connecting-ip'];
-  if (typeof cfConnectingIp === 'string' && cfConnectingIp.trim()) {
-    return cfConnectingIp.trim();
+  const rawRemote = req.socket?.remoteAddress || '';
+  const isLoopbackOrPrivate = rawRemote === '127.0.0.1' || rawRemote === '::1' || rawRemote.startsWith('::ffff:127.0.0.1') || rawRemote.startsWith('10.') || rawRemote.startsWith('172.') || rawRemote.startsWith('192.168.');
+
+  if (isLoopbackOrPrivate) {
+    const cfConnectingIp = req.headers['cf-connecting-ip'];
+    if (typeof cfConnectingIp === 'string' && cfConnectingIp.trim()) {
+      return cfConnectingIp.trim();
+    }
+    const xForwardedFor = req.headers['x-forwarded-for'];
+    if (typeof xForwardedFor === 'string' && xForwardedFor.trim()) {
+      const firstIp = xForwardedFor.split(',')[0].trim();
+      if (firstIp) return firstIp;
+    }
   }
+
   let ip = req.ip || req.socket?.remoteAddress || '127.0.0.1';
   if (ip.startsWith('::ffff:')) {
     ip = ip.substring(7);

@@ -1,4 +1,4 @@
-import { optionalAuth } from '../../middlewares/auth.middleware.js';
+import { optionalAuth, requireAuth } from '../../middlewares/auth.middleware.js';
 import { addCollaborativeDocMemberHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler } from './collaborative-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
@@ -22,6 +22,6 @@ router.get('/collaborative-docs/:id', optionalAuth, getCollaborativeDocHandler);
 router.get('/collaborative-docs/:id/pdf', optionalAuth, downloadCollaborativeDocPdfHandler);
 router.post('/collaborative-docs', optionalAuth, saveCollaborativeDocHandler);
 router.put('/collaborative-docs/:id', optionalAuth, saveCollaborativeDocHandler);
-router.delete('/collaborative-docs/:id', optionalAuth, deleteCollaborativeDocHandler);
+router.delete('/collaborative-docs/:id', requireAuth, deleteCollaborativeDocHandler);
 
 export default router;

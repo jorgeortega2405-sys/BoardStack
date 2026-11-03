@@ -35,8 +35,18 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   next();
 }
 
-export function requirePermission(_permission: string) {
-  return async (_req: Request, _res: Response, next: NextFunction): Promise<void> => {
+export function requirePermission(permission: string) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
+      return;
+    }
+    const permissions: string[] = (user as any).permissions || [];
+    if (!permissions.includes(permission)) {
+      res.status(403).json({ error: 'Acceso denegado: permisos insuficientes para esta operación.' });
+      return;
+    }
     next();
   };
 }

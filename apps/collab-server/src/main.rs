@@ -7,6 +7,8 @@ use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, RwLock};
+use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
+use tokio_tungstenite::tungstenite::http::StatusCode;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -82,6 +84,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn is_origin_allowed(origin: &str, allowed_env: Option<&str>) -> bool {
+    let origin_lower = origin.trim().to_lowercase();
+    if origin_lower.starts_with("http://localhost")
+        || origin_lower.starts_with("https://localhost")
+        || origin_lower.starts_with("http://127.0.0.1")
+        || origin_lower.starts_with("https://127.0.0.1")
+    {
+        return true;
+    }
+
+    if let Some(allowed) = allowed_env {
+        for entry in allowed.split(',') {
+            let entry_trimmed = entry.trim().to_lowercase();
+            if !entry_trimmed.is_empty() && (origin_lower == entry_trimmed || origin_lower.ends_with(&format!(".{}", entry_trimmed))) {
+                return true;
+            }
+        }
+    } else if origin_lower == "https://boardpdf.com" || origin_lower == "https://www.boardpdf.com" {
+        return true;
+    }
+
+    false
+}
+
 async fn handle_connection(
     stream: TcpStream,
     _peer_addr: SocketAddr,
@@ -90,10 +116,27 @@ async fn handle_connection(
     let mut ws_config = WebSocketConfig::default();
     ws_config.max_message_size = Some(2 * 1024 * 1024);
     ws_config.max_frame_size = Some(2 * 1024 * 1024);
-    let ws_stream = tokio_tungstenite::accept_async_with_config(stream, Some(ws_config)).await?;
+
+    let allowed_env = env::var("ALLOWED_ORIGINS").ok();
+    let callback = |req: &Request, resp: Response| -> Result<Response, ErrorResponse> {
+        if let Some(origin_header) = req.headers().get("Origin") {
+            if let Ok(origin_str) = origin_header.to_str() {
+                if !is_origin_allowed(origin_str, allowed_env.as_deref()) {
+                    let err_resp = Response::builder()
+                        .status(StatusCode::FORBIDDEN)
+                        .body(Some("Forbidden Origin".to_string()))
+                        .unwrap();
+                    return Err(err_resp);
+                }
+            }
+        }
+        Ok(resp)
+    };
+
+    let ws_stream = tokio_tungstenite::accept_hdr_async_with_config(stream, callback, Some(ws_config)).await?;
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
-    let (tx, mut rx) = mpsc::channel::<Message>(128);
+    let (tx, mut rx) = mpsc::channel::<Message>(512);
 
     let send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
@@ -103,7 +146,7 @@ async fn handle_connection(
         }
     });
 
-    let (hub_tx, mut hub_rx) = mpsc::channel::<String>(128);
+    let (hub_tx, mut hub_rx) = mpsc::channel::<String>(512);
     let tx_forward = tx.clone();
     let forward_task = tokio::spawn(async move {
         while let Some(json_str) = hub_rx.recv().await {
@@ -158,8 +201,9 @@ async fn handle_connection(
                         let client_msg: ClientMessage = match serde_json::from_str(text.as_str()) {
                             Ok(m) => m,
                             Err(err) => {
+                                eprintln!("[CollabServer] Error deserializando JSON: {:?}", err);
                                 let err_msg = ServerMessage::Error {
-                                    message: format!("Mensaje JSON no reconocido: {}", err),
+                                    message: "Formato de mensaje no válido.".to_string(),
                                     code: Some("INVALID_JSON".to_string()),
                                 };
                                 if let Ok(json_str) = serde_json::to_string(&err_msg) {

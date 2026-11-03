@@ -15,17 +15,22 @@ export function buildContentSecurityPolicy(): string {
     scriptDirectives.push("'unsafe-eval'");
   }
 
+  const connectDirectives = [
+    "'self'",
+    'https://challenges.cloudflare.com',
+    'https://*.googleapis.com',
+    'https://*.dropboxapi.com',
+    'https://api.stripe.com',
+  ];
+  if (isDev) {
+    connectDirectives.push('ws:', 'wss:', 'http://localhost:*', 'ws://localhost:*');
+  } else {
+    connectDirectives.push('wss://boardpdf.com', 'wss://www.boardpdf.com');
+  }
+
   const directives: Record<string, string[]> = {
     'base-uri': ["'self'"],
-    'connect-src': [
-      "'self'",
-      'ws:',
-      'wss:',
-      'https://challenges.cloudflare.com',
-      'https://*.googleapis.com',
-      'https://*.dropboxapi.com',
-      'https://api.stripe.com',
-    ],
+    'connect-src': connectDirectives,
     'default-src': ["'self'"],
     'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
     'form-action': ["'self'"],

@@ -112,7 +112,7 @@ class CategoryLogger {
       }
 
       const line = `${JSON.stringify(payload)}\n`;
-      fs.appendFileSync(logFile, line, 'utf8');
+      fs.appendFile(logFile, line, 'utf8', () => {});
     } catch {}
   }
 

@@ -1,6 +1,6 @@
-import { checkDatabaseConnection } from './config/database.config.js';
+import { checkDatabaseConnection, getDbPool } from './config/database.config.js';
 import { config } from './config/env.config.js';
-import { checkRedisConnection } from './config/redis.config.js';
+import { checkRedisConnection, redis } from './config/redis.config.js';
 import { ensureBucketExists } from './config/s3.config.js';
 import { injectHtmlSeo, isSupportedLanguage, normalizeLanguageCode } from './config/seo.config.js';
 import { csrfProtection } from './middlewares/csrf.middleware.js';
@@ -21,21 +21,61 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 
-process.on('SIGINT', () => {
-  process.exit(0);
-});
+let isShuttingDown = false;
 
-process.on('SIGTERM', () => {
-  process.exit(0);
-});
+function configureServerResilience(server: http.Server): void {
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
 
-process.on('uncaughtException', (err: Error) => {
-  logger.app.error('Excepción no controlada capturada en proceso Node.js', err);
-});
+  const gracefulShutdown = (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    logger.app.warn(`Señal ${signal} interceptada. Iniciando drenaje y apagado ordenado...`);
 
-process.on('unhandledRejection', (reason: unknown) => {
-  logger.app.error('Promesa rechazada no controlada en proceso Node.js', reason);
-});
+    const forceExitTimer = setTimeout(() => {
+      logger.app.error('Timeout de Graceful Shutdown expirado (15s). Forzando cierre del proceso.');
+      process.exit(1);
+    }, 15000);
+    forceExitTimer.unref();
+
+    server.close(async () => {
+      logger.app.info('Servidor HTTP cerrado. Procediendo a liberar conexiones de persistencia...');
+      try {
+        const pool = getDbPool();
+        await pool.end();
+        logger.db.info('Pool de MySQL drenado y finalizado correctamente.');
+      } catch (err) {
+        logger.db.error('Error cerrando el pool de MySQL:', err);
+      }
+
+      try {
+        await redis.quit();
+        logger.db.info('Conexión con Redis cerrada ordenadamente.');
+      } catch (err) {
+        logger.db.error('Error cerrando cliente Redis:', err);
+      }
+
+      logger.app.info('Apagado completado con éxito. Saliendo de Node.js (código 0).');
+      process.exit(0);
+    });
+
+    if (typeof (server as any).closeIdleConnections === 'function') {
+      (server as any).closeIdleConnections();
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+  process.on('uncaughtException', (err: Error) => {
+    logger.app.error('Excepción crítica no controlada. Saliendo para reinicio limpio:', err);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    logger.app.error('Rechazo de promesa no gestionado en proceso Node.js:', reason);
+  });
+}
 
 async function setupClient(app: express.Express, server: http.Server): Promise<void> {
   if (config.nodeEnv !== 'production') {
@@ -232,6 +272,58 @@ async function startServer(): Promise<void> {
     });
   });
 
+  app.get('/api/health/liveness', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
+  app.get('/api/health/readiness', async (_req: Request, res: Response) => {
+    if (isShuttingDown) {
+      res.status(503).json({
+        message: 'Servidor en proceso de apagado.',
+        status: 'terminating',
+      });
+      return;
+    }
+
+    const dependencies = {
+      database: false,
+      redis: false,
+      s3: true,
+    };
+
+    try {
+      const pool = getDbPool();
+      const conn = await pool.getConnection();
+      await conn.ping();
+      conn.release();
+      dependencies.database = true;
+    } catch (err) {
+      logger.db.error('Fallo en healthcheck de MySQL:', err);
+    }
+
+    try {
+      if (redis.status === 'ready' || redis.status === 'connect') {
+        const pong = await redis.ping();
+        dependencies.redis = pong === 'PONG';
+      }
+    } catch (err) {
+      logger.db.error('Fallo en healthcheck de Redis:', err);
+    }
+
+    const isReady = dependencies.database && dependencies.redis;
+    const httpStatus = isReady ? 200 : 503;
+
+    res.status(httpStatus).json({
+      dependencies,
+      status: isReady ? 'ready' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.use('/api', authRoutes);
   app.use('/api', downloadRoutes);
   app.use('/api', settingsRoutes);
@@ -242,6 +334,7 @@ async function startServer(): Promise<void> {
   await setupClient(app, server);
 
   const port = config.port;
+  configureServerResilience(server);
   server.listen(port, () => {
     logger.app.info(`Servidor BoardPDF iniciado en http://localhost:${port}`);
     startColdStorageCron();

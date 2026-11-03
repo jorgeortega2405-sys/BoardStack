@@ -66,55 +66,83 @@ export function findPythonWorkerScript(scriptName: string, subfolder?: string): 
   return candidatePaths[0];
 }
 
-export function executeProcessWithTimeout(
+const MAX_CONCURRENT_PROCESSES = 4;
+let activeProcessCount = 0;
+const processQueue: Array<() => void> = [];
+
+function acquireProcessSlot(): Promise<void> {
+  if (activeProcessCount < MAX_CONCURRENT_PROCESSES) {
+    activeProcessCount++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    processQueue.push(resolve);
+  });
+}
+
+function releaseProcessSlot(): void {
+  activeProcessCount--;
+  const next = processQueue.shift();
+  if (next) {
+    activeProcessCount++;
+    next();
+  }
+}
+
+export async function executeProcessWithTimeout(
   command: string,
   args: string[],
   options: ProcessExecutionOptions = {}
 ): Promise<ProcessExecutionResult> {
   const { timeoutMs = 60000, ...spawnOptions } = options;
+  await acquireProcessSlot();
 
-  return new Promise((resolve) => {
-    let stdout = '';
-    let stderr = '';
-    let timedOut = false;
-    let timer: NodeJS.Timeout | null = null;
+  try {
+    return await new Promise((resolve) => {
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+      let timer: NodeJS.Timeout | null = null;
 
-    let proc;
-    try {
-      proc = spawn(command, args, spawnOptions);
-    } catch (spawnErr) {
-      logger.app.error(`Fallo inmediato al invocar comando: ${command}`, spawnErr);
-      resolve({ code: -1, stderr: String(spawnErr), stdout: '', timedOut: false });
-      return;
-    }
+      let proc;
+      try {
+        proc = spawn(command, args, spawnOptions);
+      } catch (spawnErr) {
+        logger.app.error(`Fallo inmediato al invocar comando: ${command}`, spawnErr);
+        resolve({ code: -1, stderr: String(spawnErr), stdout: '', timedOut: false });
+        return;
+      }
 
-    if (timeoutMs > 0) {
-      timer = setTimeout(() => {
-        timedOut = true;
-        logger.app.warn(`Subproceso excedió tiempo límite de ${timeoutMs}ms: ${command}`, { args });
-        try {
-          proc.kill('SIGKILL');
-        } catch {}
-      }, timeoutMs);
-    }
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          timedOut = true;
+          logger.app.warn(`Subproceso excedió tiempo límite de ${timeoutMs}ms: ${command}`, { args });
+          try {
+            proc.kill('SIGKILL');
+          } catch {}
+        }, timeoutMs);
+      }
 
-    proc.stdout?.on('data', (chunk) => {
-      stdout += chunk.toString();
+      proc.stdout?.on('data', (chunk) => {
+        stdout += chunk.toString();
+      });
+
+      proc.stderr?.on('data', (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      proc.on('error', (err) => {
+        if (timer) clearTimeout(timer);
+        logger.app.warn(`Error en subproceso: ${command}`, err);
+        resolve({ code: -1, stderr: stderr || err.message, stdout, timedOut });
+      });
+
+      proc.on('close', (code) => {
+        if (timer) clearTimeout(timer);
+        resolve({ code, stderr, stdout, timedOut });
+      });
     });
-
-    proc.stderr?.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    proc.on('error', (err) => {
-      if (timer) clearTimeout(timer);
-      logger.app.warn(`Error en subproceso: ${command}`, err);
-      resolve({ code: -1, stderr: stderr || err.message, stdout, timedOut });
-    });
-
-    proc.on('close', (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({ code, stderr, stdout, timedOut });
-    });
-  });
+  } finally {
+    releaseProcessSlot();
+  }
 }

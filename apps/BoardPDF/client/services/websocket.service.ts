@@ -65,9 +65,10 @@ class WebSocketClientService {
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const hostname = window.location.hostname || 'localhost';
-        const wsPort = '3001';
+        const isDevPort = window.location.port === '3000' || window.location.port === '5173';
+        const portSuffix = isDevPort ? ':3001' : (window.location.port ? `:${window.location.port}` : '');
         const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
-        const wsUrl = `${protocol}//${hostname}:${wsPort}/ws/collab${query}`;
+        const wsUrl = `${protocol}//${hostname}${portSuffix}/ws/collab${query}`;
 
         console.log(`[WebSocket] Conectando a ${wsUrl}...`);
         const ws = new WebSocket(wsUrl);
@@ -170,6 +171,9 @@ class WebSocketClientService {
         this.currentCollabJoin = null;
         this.send({ type: 'leave' });
       }
+      if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) {
+        this.disconnect();
+      }
     };
   }
 
@@ -212,6 +216,9 @@ class WebSocketClientService {
         this.activeSubscriptions.delete(sessionId);
         this.sendUnsubscribe(sessionId);
       }
+      if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) {
+        this.disconnect();
+      }
     }
   }
 
@@ -247,7 +254,8 @@ class WebSocketClientService {
     if (this.reconnectTimer !== null) return;
     if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) return;
 
-    const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 10000);
+    const maxBackoff = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 30000);
+    const delay = Math.floor(Math.random() * maxBackoff);
     this.reconnectAttempts++;
 
     this.reconnectTimer = window.setTimeout(() => {

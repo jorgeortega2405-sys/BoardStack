@@ -9,10 +9,8 @@ export const redis = new Redis({
   password: config.redis.password,
   port: config.redis.port,
   retryStrategy(times) {
-    if (times > 3) {
-      return null;
-    }
-    return Math.min(times * 100, 1000);
+    const jitter = Math.floor(Math.random() * 200);
+    return Math.min(times * 150 + jitter, 3000);
   },
 });
 

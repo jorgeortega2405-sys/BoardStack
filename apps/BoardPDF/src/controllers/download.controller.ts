@@ -2,6 +2,7 @@ import { verifyDownloadToken } from '../services/download-token.service.js';
 import { logger } from '../services/logger.service.js';
 import { DEFAULT_TTL_SECONDS, deleteTempFile, getTempFile, getTempFileMeta, getTempFilePresignedUrl, getTempFileStream } from '../services/temp-storage.service.js';
 import { Request, Response } from 'express';
+import { Readable } from 'node:stream';
 
 function extractRawToken(req: Request): string {
   const token = req.params.token ? String(req.params.token).trim() : '';
@@ -153,6 +154,27 @@ export async function handleToolDownload(req: Request, res: Response): Promise<v
       return;
     }
 
+    const streamResult = await getTempFileStream(fileId);
+    if (streamResult) {
+      const downloadFilename = streamResult.filename || 'document.pdf';
+      res.setHeader('Content-Type', streamResult.contentType || 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+      if (streamResult.fileSize > 0) {
+        res.setHeader('Content-Length', streamResult.fileSize);
+      }
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+      streamResult.stream.on('error', (streamErr) => {
+        logger.app.error('Error durante la transmisión del archivo en descarga', streamErr);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Ha ocurrido un error durante la descarga del archivo.', success: false });
+        }
+      });
+
+      streamResult.stream.pipe(res);
+      return;
+    }
+
     const item = await getTempFile(fileId);
     if (!item) {
       res.status(404).json({
@@ -167,7 +189,7 @@ export async function handleToolDownload(req: Request, res: Response): Promise<v
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
     res.setHeader('Content-Length', item.buffer.length);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(item.buffer);
+    Readable.from(item.buffer).pipe(res);
   } catch (err) {
     logger.app.error('Error al descargar archivo temporal de herramienta', err);
     res.status(500).json({
