@@ -1,6 +1,7 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="edit-pdf-wrapper">
-  <header class="component-top tool-top is-hidden" data-ref="component-top">
-    <div class="tool-top__left">
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left">
+
       <div class="pdf-editor-top-controls pdf-top-controls is-hidden" data-ref="editor-top-controls">
         <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-editor-mode" data-active="0">
           <div class="component-toggle-pill-glider"></div>
@@ -43,31 +44,40 @@
       </div>
     </div>
 
-    <div class="component-top-right tool-top__right">
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
       <div class="pdf-editor-top-actions pdf-top-controls is-hidden" data-ref="editor-top-actions">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-undo" data-tooltip="Deshacer" aria-label="Deshacer" disabled>
+        <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn" data-ref="btn-undo" data-tooltip="Deshacer" aria-label="Deshacer" disabled>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
         </button>
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-redo" data-tooltip="Rehacer" aria-label="Rehacer" disabled>
+        <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn" data-ref="btn-redo" data-tooltip="Rehacer" aria-label="Rehacer" disabled>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
         </button>
+      </div>
 
-        <div class="tool-top__divider"></div>
-
-        <div class="component-inline-control component-inline-control--sm" data-ref="control-zoom">
-          <div class="component-inline-control__group">
-            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-out" data-step-change="-1" aria-label="Disminuir zoom">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-            </button>
-          </div>
-          <input class="component-inline-control__input" data-ref="val-zoom-level" type="text" value="100%" readonly autocomplete="off" />
-          <div class="component-inline-control__group">
-            <button type="button" class="component-inline-control__btn" data-ref="btn-zoom-in" data-step-change="1" aria-label="Aumentar zoom">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-            </button>
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
+        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Elementos añadidos" aria-label="Elementos añadidos">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+          <span class="component-button__text">Elementos</span>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
+        <div class="menu-panel menu-panel--dropdown tool-options-popover" data-ref="dropdown-menu-options">
+          <div class="menu-panel__list">
+            <div class="pdf-editor-elements-container" data-ref="elements-container">
+              <div class="pdf-editor-elements-header is-hidden" data-ref="elements-header">
+                <span class="pdf-editor-elements-title" data-ref="txt-elements-count">Elementos añadidos</span>
+                <button type="button" class="component-button component-button--ghost component-button--danger component-button--sm" data-ref="btn-clear-all-elements">Eliminar todos</button>
+              </div>
+              <div class="pdf-editor-elements-list" data-ref="elements-list"></div>
+            </div>
           </div>
         </div>
       </div>
+
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-sidebar-save-pdf">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+        <span class="component-button__text">Guardar</span>
+      </button>
     </div>
   </header>
 
@@ -189,47 +199,16 @@
         </div>
       </div>
     </main>
-
-    <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
-
-    <aside class="tool-layout__sidebar pdf-editor-properties-sidebar is-hidden" data-ref="edit-pdf-sidebar">
-      <div class="tool-sidebar__mobile-bar">
-        <div class="modal-card__drag-zone" data-ref="edit-sidebar-drag-zone">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" aria-label="Cerrar opciones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">Editar PDF</h1>
-        <p class="tool-sidebar__subtitle">Modifica o añade texto, carga imágenes o anota en tus páginas PDF.</p>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="edit-info-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Utiliza la barra de herramientas para modificar o añadir texto, cargar imágenes o anotar de una forma fácil.</div>
-        </div>
-
-        <div class="pdf-editor-elements-container" data-ref="elements-container">
-          <div class="pdf-editor-elements-header is-hidden" data-ref="elements-header">
-            <span class="pdf-editor-elements-title" data-ref="txt-elements-count">Elementos añadidos</span>
-            <button type="button" class="component-button component-button--ghost component-button--danger component-button--sm" data-ref="btn-clear-all-elements">Eliminar todos</button>
-          </div>
-          <div class="pdf-editor-elements-list" data-ref="elements-list"></div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-sidebar-save-pdf">
-          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-          <span class="component-button__text">Descargar PDF Editado</span>
-          <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="edit-global-error" role="alert"></div>
-      </div>
-    </aside>
   </div>
+
+  <footer class="tool-footer collaborative-footer" data-ref="tool-footer">
+    <div class="collaborative-footer__right" data-ref="footer-right">
+      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
+      <div class="collaborative-footer__divider"></div>
+      <input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" aria-label="Nivel de zoom" />
+      <button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom" aria-label="Restablecer zoom">
+        <span data-ref="txt-zoom-level">100%</span>
+      </button>
+    </div>
+  </footer>
 </div>

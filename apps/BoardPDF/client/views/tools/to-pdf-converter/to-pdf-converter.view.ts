@@ -544,6 +544,8 @@ export class ToPdfConverterController implements ViewController {
     if (htmlUrlInput) htmlUrlInput.value = url;
     if (convertBtn) convertBtn.disabled = false;
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     hideElement(selectedCard);
     showElement(htmlPreviewView);
@@ -631,6 +633,8 @@ export class ToPdfConverterController implements ViewController {
       showElement(iconEl);
     }
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     hideElement(htmlPreviewView);
     showElement(selectedCard);
@@ -684,6 +688,8 @@ export class ToPdfConverterController implements ViewController {
     }
     hideElement(htmlLoader);
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(selectedCard);
     hideElement(htmlPreviewView);
@@ -700,6 +706,8 @@ export class ToPdfConverterController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');

@@ -333,6 +333,8 @@ export class RemovePdfPagesController implements ViewController {
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     hideElement(processingCard);
     showElement(itemsCard);
@@ -506,6 +508,8 @@ export class RemovePdfPagesController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
@@ -542,6 +546,8 @@ export class RemovePdfPagesController implements ViewController {
     if (fileInput) fileInput.value = '';
     if (inputPagesToRemove) inputPagesToRemove.value = '';
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     hideElement(processingCard);
     hideElement(itemsCard);
     showElement(dropzoneCard);

@@ -406,9 +406,9 @@ export class ComparePdfController implements ViewController {
     showElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     showElement(topControls);
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     showElement(topHeader);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
@@ -529,12 +529,13 @@ export class ComparePdfController implements ViewController {
     if (fileInput2) fileInput2.value = '';
     if (pagesWrapper1) pagesWrapper1.innerHTML = '';
     if (pagesWrapper2) pagesWrapper2.innerHTML = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneHero);
     hideElement(workspaceCard);
     hideElement(sidebar);
 
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="compare-top-controls"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     hideElement(topControls);
     hideElement(topHeader);
@@ -650,6 +651,8 @@ export class ComparePdfController implements ViewController {
     if (!this.currentFile1 || !this.currentFile2 || this.isComparing) return;
     this.isComparing = true;
     this.hideError();
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     this.statusManager?.showUploading(2, 2);
 
     try {

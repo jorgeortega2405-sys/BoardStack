@@ -172,6 +172,8 @@ export class RepairPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-workspace"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(selectedCard);
 
@@ -242,6 +244,8 @@ export class RepairPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-workspace"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(selectedCard);
 
@@ -270,6 +274,8 @@ export class RepairPdfController implements ViewController {
     this.hideError();
 
     this.isProcessing = true;
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="repair-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
     const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');

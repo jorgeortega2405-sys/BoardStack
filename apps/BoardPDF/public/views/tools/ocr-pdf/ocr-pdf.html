@@ -1,24 +1,54 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="ocr-pdf-wrapper">
-  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="ocr-pdf-layout">
-    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="ocr-pdf-workspace">
-      <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
 
-      <div class="tool-fab-container" data-ref="tool-fab-container">
-        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
-          <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span class="tool-fab-more__badge" data-ref="badge-fab-count">1</span>
-          </button>
-          <div class="tool-fab-more__options" data-ref="tool-fab-options">
-            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
-              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-            </button>
-            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-dropbox" data-tooltip="Dropbox" data-tooltip-placement="left" aria-label="Dropbox">
-              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-            </button>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
+        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          <span class="component-button__text">Opciones</span>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
+        <div class="menu-panel menu-panel--dropdown tool-options-popover" data-ref="dropdown-menu-options">
+          <div class="menu-panel__list">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-ocr-language">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-ocr-language" aria-label="Seleccionar idioma">
+                <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-ocr-language">
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="icon-ocr-language" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="ocr-language-selected-text">Español</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-ocr-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-ocr-language">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-ocr-language">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-ocr-language" aria-hidden="true">
+                    <div class="menu-panel__drag-handle" data-ref="drag-handle-ocr-language"></div>
+                  </div>
+                  <div class="menu-panel__search" data-ref="search-wrapper-ocr-language">
+                    <svg class="component-icon menu-panel__search-icon" data-ref="search-icon-ocr-language" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                    <input class="menu-panel__search-input" data-ref="input-search-ocr-language" type="text" placeholder="Buscar idioma..." maxlength="50" autocomplete="off" />
+                  </div>
+                  <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-ocr-languages"></div>
+                  <div class="menu-panel__empty is-hidden" data-ref="empty-ocr-languages">No se encontraron idiomas</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-ocr-action" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#center_focus_strong"></use></svg>
+        <span class="component-button__text" data-ref="txt-ocr-action">Reconocer Texto (OCR)</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="ocr-pdf-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="ocr-pdf-workspace">
+      <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
 
       <div class="tool-workspace__canvas" data-ref="ocr-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="ocr-dropzone">
@@ -43,12 +73,7 @@
         </div>
       </div>
 
-      <div class="pdf-items-view is-hidden" data-ref="ocr-selected-card">
-        <div class="tool-workspace__toolbar">
-          <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
-          </div>
-        </div>
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="ocr-selected-card">
 
         <div class="pdf-reorder-hint">
           <span>Selecciona el idioma del texto para digitalizar y hacer seleccionable el contenido del PDF.</span>
@@ -72,66 +97,5 @@
         </div>
       </div>
     </main>
-
-    <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
-
-    <aside class="tool-layout__sidebar is-hidden" data-ref="ocr-pdf-sidebar">
-      <div class="tool-sidebar__mobile-bar">
-        <div class="modal-card__drag-zone" data-ref="ocr-sidebar-drag-zone">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" aria-label="Cerrar opciones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">OCR PDF</h1>
-        <p class="tool-sidebar__subtitle">Convierte documentos PDF escaneados en archivos con texto seleccionable y editable.</p>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">El motor de reconocimiento óptico convertirá el texto de las imágenes en texto indexable y buscable.</div>
-        </div>
-
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Idioma del Documento</span>
-          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-ocr-language">
-            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-ocr-language" aria-label="Seleccionar idioma">
-              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-ocr-language">
-                <svg class="component-icon dropdown-trigger__icon" data-ref="icon-ocr-language" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
-                <span class="dropdown-trigger__text" data-ref="ocr-language-selected-text">Español</span>
-              </div>
-              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-ocr-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-            </button>
-
-            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-ocr-language">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-ocr-language">
-                <div class="menu-panel__drag-zone" data-ref="drag-zone-ocr-language" aria-hidden="true">
-                  <div class="menu-panel__drag-handle" data-ref="drag-handle-ocr-language"></div>
-                </div>
-                <div class="menu-panel__search" data-ref="search-wrapper-ocr-language">
-                  <svg class="component-icon menu-panel__search-icon" data-ref="search-icon-ocr-language" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-                  <input class="menu-panel__search-input" data-ref="input-search-ocr-language" type="text" placeholder="Buscar idioma..." maxlength="50" autocomplete="off" />
-                </div>
-                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-ocr-languages"></div>
-                <div class="menu-panel__empty is-hidden" data-ref="empty-ocr-languages">No se encontraron idiomas</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-ocr-action" disabled>
-          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#center_focus_strong"></use></svg>
-          <span>Reconocer Texto (OCR)</span>
-          <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="ocr-global-error" role="alert"></div>
-      </div>
-    </aside>
   </div>
 </div>

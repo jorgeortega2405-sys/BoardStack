@@ -1,4 +1,34 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="crop-pdf-wrapper">
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-options">
+        <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones de recorte" aria-label="Opciones de recorte">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          <span class="component-button__text">Opciones</span>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-options"></div>
+        <div class="menu-panel menu-panel--dropdown tool-options-popover" data-ref="dropdown-menu-options">
+          <div class="menu-panel__list">
+            <span class="tool-options-section__title">Páginas a recortar</span>
+            <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-crop-mode" data-active="0">
+              <div class="component-toggle-pill-glider"></div>
+              <button type="button" class="component-button component-button--pill is-active" data-ref="btn-crop-all" data-val="all">Todas las páginas</button>
+              <button type="button" class="component-button component-button--pill" data-ref="btn-crop-current" data-val="current">Página actual</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-crop" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+        <span class="component-button__text" data-ref="txt-execute-crop">Recortar PDF</span>
+      </button>
+    </div>
+  </header>
+
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="crop-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="crop-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept=".pdf,application/pdf" />
@@ -58,47 +88,16 @@
         </div>
       </div>
     </main>
-
-    <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
-
-    <aside class="tool-layout__sidebar is-hidden" data-ref="crop-pdf-sidebar">
-      <div class="tool-sidebar__mobile-bar">
-        <div class="modal-card__drag-zone" data-ref="crop-sidebar-drag-zone">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" aria-label="Cerrar opciones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">Recortar PDF</h1>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice" data-ref="crop-info-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Haz clic y arrastra sobre el documento para crear el área de recorte. Podrás moverla o redimensionarla desde las esquinas.</div>
-        </div>
-
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Páginas a recortar</span>
-          <div class="component-toggle-pill component-toggle-pill--2 component-toggle-pill--h40" data-ref="toggle-crop-mode" data-active="0">
-            <div class="component-toggle-pill-glider"></div>
-            <button type="button" class="component-button component-button--pill is-active" data-ref="btn-crop-all" data-val="all">Todas las páginas</button>
-            <button type="button" class="component-button component-button--pill" data-ref="btn-crop-current" data-val="current">Página actual</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-execute-crop" disabled>
-          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
-          <span class="component-button__text" data-ref="txt-execute-crop">Recortar PDF</span>
-          <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="crop-global-error" role="alert"></div>
-      </div>
-    </aside>
   </div>
+
+  <footer class="tool-footer collaborative-footer" data-ref="tool-footer">
+    <div class="collaborative-footer__right" data-ref="footer-right">
+      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
+      <div class="collaborative-footer__divider"></div>
+      <input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" aria-label="Nivel de zoom" />
+      <button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom" aria-label="Restablecer zoom">
+        <span data-ref="txt-zoom-level">100%</span>
+      </button>
+    </div>
+  </footer>
 </div>

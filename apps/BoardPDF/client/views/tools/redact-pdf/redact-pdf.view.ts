@@ -274,6 +274,8 @@ export class RedactPdfController implements ViewController {
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -285,7 +287,6 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     showElement(topControls);
     showElement(topActions);
@@ -332,6 +333,8 @@ export class RedactPdfController implements ViewController {
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
 
     if (fileInput) fileInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
     hideElement(sidebar);
@@ -342,7 +345,6 @@ export class RedactPdfController implements ViewController {
     }
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="redact-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="redact-top-actions"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     hideElement(topControls);
     hideElement(topActions);
@@ -942,6 +944,8 @@ export class RedactPdfController implements ViewController {
 
     this.isProcessing = true;
     this.hideError();
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
     hideElement(workspaceCard);
@@ -1013,6 +1017,8 @@ export class RedactPdfController implements ViewController {
         throw new Error(result.error || result.message || 'Error al censurar el documento PDF.');
       }
     } catch (err: any) {
+      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+      showElement(topHeader);
       showElement(workspaceCard);
       showElement(sidebar);
       const message = err?.message || 'Ha ocurrido un error inesperado al procesar el archivo PDF.';

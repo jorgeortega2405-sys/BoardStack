@@ -391,6 +391,8 @@ export class PdfConverterController implements ViewController {
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (convertBtn) convertBtn.disabled = false;
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(selectedCard);
 
@@ -449,6 +451,8 @@ export class PdfConverterController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(selectedCard);
 
@@ -471,6 +475,8 @@ export class PdfConverterController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-converter-sidebar"]');

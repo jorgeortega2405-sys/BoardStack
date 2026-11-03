@@ -195,6 +195,8 @@ export class UnlockPdfController implements ViewController {
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -259,6 +261,8 @@ export class UnlockPdfController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone-card"]');
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
@@ -276,6 +280,8 @@ export class UnlockPdfController implements ViewController {
   }
 
   private restoreWorkspaceFromProcessing(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     this.statusManager?.hide();
     this.isProcessing = false;
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
@@ -456,6 +462,8 @@ export class UnlockPdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
 
     if (fileInput) fileInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
 

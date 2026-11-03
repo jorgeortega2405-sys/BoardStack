@@ -269,6 +269,8 @@ export class PageNumbersController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -462,6 +464,8 @@ export class PageNumbersController implements ViewController {
     };
 
     this.isProcessing = true;
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     hideElement(workspaceCard);
     hideElement(sidebar);
     this.statusManager?.showUploading(1, 1);
@@ -513,6 +517,8 @@ export class PageNumbersController implements ViewController {
           token,
         });
       } catch (err: unknown) {
+        const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+        showElement(topHeader);
         showElement(workspaceCard);
         showElement(sidebar);
         this.isProcessing = false;
@@ -538,6 +544,8 @@ export class PageNumbersController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
 
     if (fileInput) fileInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;

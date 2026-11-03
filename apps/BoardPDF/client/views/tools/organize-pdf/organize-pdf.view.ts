@@ -305,6 +305,8 @@ export class OrganizePdfController implements ViewController {
     const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     hideElement(processingCard);
     showElement(itemsCard);
@@ -582,6 +584,8 @@ export class OrganizePdfController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
@@ -620,6 +624,8 @@ export class OrganizePdfController implements ViewController {
 
     if (fileInput) fileInput.value = '';
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     hideElement(processingCard);
     hideElement(itemsCard);
     showElement(dropzoneCard);

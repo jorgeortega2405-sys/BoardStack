@@ -297,6 +297,8 @@ export class WatermarkPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -416,6 +418,8 @@ export class WatermarkPdfController implements ViewController {
     };
 
     this.isProcessing = true;
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="wm-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-sidebar"]');
     hideElement(workspaceCard);
@@ -472,6 +476,8 @@ export class WatermarkPdfController implements ViewController {
           token,
         });
       } catch (err: unknown) {
+        const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+        showElement(topHeader);
         showElement(workspaceCard);
         showElement(sidebar);
         this.isProcessing = false;
@@ -501,6 +507,8 @@ export class WatermarkPdfController implements ViewController {
 
     if (fileInput) fileInput.value = '';
     if (imageInput) imageInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;

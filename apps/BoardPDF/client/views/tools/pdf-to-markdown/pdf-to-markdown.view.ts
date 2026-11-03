@@ -156,6 +156,8 @@ export class PdfToMarkdownController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     hideElement(processingCard);
     showElement(selectedCard);
@@ -216,6 +218,8 @@ export class PdfToMarkdownController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(selectedCard);
 
@@ -231,6 +235,8 @@ export class PdfToMarkdownController implements ViewController {
     this.hideError();
 
     this.isProcessing = true;
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="markdown-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
     hideElement(selectedCard);

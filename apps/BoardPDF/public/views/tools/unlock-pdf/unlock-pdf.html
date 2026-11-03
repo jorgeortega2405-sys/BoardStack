@@ -1,24 +1,19 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="unlock-pdf-wrapper">
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-unlock" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
+        <span class="component-button__text">Desbloquear PDF</span>
+      </button>
+    </div>
+  </header>
+
   <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="unlock-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="unlock-pdf-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept=".pdf,application/pdf" />
-
-      <div class="tool-fab-container" data-ref="tool-fab-container">
-        <div class="tool-fab-more is-hidden" data-ref="tool-fab-more">
-          <button type="button" class="tool-fab-more__btn tool-fab-more__btn--main" data-ref="btn-fab-add-more" data-tooltip="Cambiar archivo" data-tooltip-placement="left" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span class="tool-fab-more__badge">1</span>
-          </button>
-          <div class="tool-fab-more__options">
-            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-drive" data-tooltip="Google Drive" data-tooltip-placement="left" aria-label="Google Drive">
-              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-            </button>
-            <button type="button" class="tool-fab-more__btn tool-fab-more__btn--sub" data-ref="btn-fab-dropbox" data-tooltip="Dropbox" data-tooltip-placement="left" aria-label="Dropbox">
-              <svg class="component-icon tool-fab-more__icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div class="tool-workspace__canvas" data-ref="unlock-dropzone-card">
         <div class="tool-hero-dropzone" data-ref="unlock-dropzone">
@@ -43,16 +38,11 @@
         </div>
       </div>
 
-      <div class="pdf-items-view is-hidden" data-ref="unlock-workspace-card">
-        <div class="tool-workspace__toolbar">
-          <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
-          </div>
-        </div>
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="unlock-workspace-card">
 
         <div class="pdf-reorder-hint">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
-          <span>Haz clic en Desbloquear PDF en el panel lateral para quitar las restricciones a tu documento.</span>
+          <span>Haz clic en Desbloquear PDF en la barra superior para quitar las restricciones a tu documento.</span>
         </div>
 
         <div class="pdf-items-grid" data-ref="pdf-items-grid">
@@ -77,39 +67,5 @@
         </div>
       </div>
     </main>
-
-    <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
-
-    <aside class="tool-layout__sidebar is-hidden" data-ref="unlock-pdf-sidebar">
-      <div class="tool-sidebar__mobile-bar">
-        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">Desbloquear PDF</h1>
-        <p class="tool-sidebar__subtitle">Elimina la contraseña de seguridad de tu documento PDF.</p>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Elimina al instante la protección y restricciones de edición, copia o impresión de tu documento PDF. Si el archivo cuenta con contraseña de lectura, te la pediremos al procesarlo.</div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-execute-unlock" disabled>
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
-          <span>Desbloquear PDF</span>
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="unlock-global-error" role="alert"></div>
-      </div>
-    </aside>
   </div>
 </div>

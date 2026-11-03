@@ -430,7 +430,6 @@ export class EditPdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
     const thumbnailsContainer = this.container.querySelector<HTMLElement>('[data-ref="thumbnails-container"]');
 
@@ -447,6 +446,7 @@ export class EditPdfController implements ViewController {
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     showElement(topControls);
     showElement(topActions);
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     showElement(topHeader);
 
     if (pagesWrapper) {
@@ -1595,6 +1595,8 @@ export class EditPdfController implements ViewController {
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(editorCard);
     hideElement(sidebar);
@@ -1602,7 +1604,6 @@ export class EditPdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     hideElement(topControls);
     hideElement(topActions);
     hideElement(topHeader);
@@ -1638,7 +1639,7 @@ export class EditPdfController implements ViewController {
     const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
     hideElement(topHeader);
     hideElement(sidebar);
-
+    hideElement(topHeader);
     this.statusManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {

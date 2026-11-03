@@ -241,6 +241,8 @@ export class RotatePdfController implements ViewController {
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="rotate-top-actions"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -357,6 +359,8 @@ export class RotatePdfController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="rotate-dropzone-card"]');
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="rotate-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-sidebar"]');
@@ -457,6 +461,8 @@ export class RotatePdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-rotate"]');
 
     if (fileInput) fileInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
     hideElement(processingCard);

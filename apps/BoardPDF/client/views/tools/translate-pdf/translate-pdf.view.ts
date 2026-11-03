@@ -323,6 +323,8 @@ export class TranslatePdfViewController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(selectedCard);
 
@@ -376,6 +378,8 @@ export class TranslatePdfViewController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(selectedCard);
 
@@ -391,6 +395,8 @@ export class TranslatePdfViewController implements ViewController {
     this.hideError();
 
     this.isProcessing = true;
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
     hideElement(selectedCard);

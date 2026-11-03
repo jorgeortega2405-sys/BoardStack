@@ -223,6 +223,8 @@ export class ProtectPdfController implements ViewController {
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(workspaceCard);
     showElement(sidebar);
@@ -276,6 +278,8 @@ export class ProtectPdfController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="protect-dropzone-card"]');
     const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="protect-workspace-card"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="protect-pdf-sidebar"]');
@@ -384,6 +388,8 @@ export class ProtectPdfController implements ViewController {
     if (fileInput) fileInput.value = '';
     if (passwordInput) passwordInput.value = '';
     if (confirmInput) confirmInput.value = '';
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     showElement(dropzoneCard);
     hideElement(workspaceCard);
 

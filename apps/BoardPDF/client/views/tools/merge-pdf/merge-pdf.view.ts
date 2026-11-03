@@ -370,6 +370,8 @@ export class MergePdfController implements ViewController {
 
     this.statusManager?.hide();
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    showElement(topHeader);
     hideElement(dropzoneCard);
     showElement(itemsCard);
     showElement(sidebar);
@@ -573,6 +575,8 @@ export class MergePdfController implements ViewController {
   }
 
   private showProcessingState(): void {
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
@@ -617,6 +621,8 @@ export class MergePdfController implements ViewController {
     if (addMoreInput) addMoreInput.value = '';
     if (outputNameInput) outputNameInput.value = 'documento_unido.pdf';
 
+    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
+    hideElement(topHeader);
     hideElement(itemsCard);
     this.statusManager?.hide();
     showElement(dropzoneCard);

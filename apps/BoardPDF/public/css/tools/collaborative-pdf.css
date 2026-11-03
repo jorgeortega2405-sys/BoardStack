@@ -2432,10 +2432,12 @@
 
 .collaborative-tools-toolbar {
   align-items: center;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background-color: rgba(18, 18, 22, 0.78);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50px;
-  box-shadow: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -2457,10 +2459,12 @@
 
 .collaborative-context-toolbar {
   align-items: center !important;
-  background-color: var(--bg-surface) !important;
-  border: 1px solid var(--border-color) !important;
+  background-color: rgba(18, 18, 22, 0.78) !important;
+  backdrop-filter: blur(14px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 50px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
   box-sizing: border-box !important;
   display: inline-flex !important;
   flex-direction: row !important;
@@ -2485,7 +2489,7 @@
 
 .collaborative-context-toolbar .collaborative-toolbar-btn {
   border-radius: 50% !important;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75) !important;
   height: 36px !important;
   min-width: 36px !important;
   transition: all 0.15s ease;
@@ -2493,13 +2497,39 @@
 }
 
 .collaborative-context-toolbar .collaborative-toolbar-btn:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
 }
 
 .collaborative-context-toolbar .collaborative-toolbar-btn.is-active {
-  background-color: var(--action-primary, #000000) !important;
-  color: var(--action-primary-text, #ffffff) !important;
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .collaborative-toolbar-btn.component-button--danger {
+  color: rgba(248, 113, 113, 0.85) !important;
+}
+
+.collaborative-context-toolbar .collaborative-toolbar-btn.component-button--danger:hover {
+  background-color: rgba(239, 68, 68, 0.22) !important;
+  color: #fca5a5 !important;
+}
+
+.collaborative-context-toolbar .collaborative-font-btn {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.collaborative-context-toolbar .collaborative-font-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .collaborative-subtoolbar__divider {
+  background-color: rgba(255, 255, 255, 0.15);
+  height: 20px;
+  margin: 0 4px;
+  width: 1px;
 }
 
 .collaborative-context-toolbar {
@@ -2743,14 +2773,14 @@
 }
 
 .collaborative-context-divider {
-  background-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.15);
   height: 18px;
   margin: 0 2px;
   width: 1px;
 }
 
 .collaborative-context-value {
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 13px;
   font-weight: 600;
   min-width: 22px;
@@ -2758,13 +2788,14 @@
 }
 
 .collaborative-context-badge {
-  color: var(--text-primary);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 13px;
   font-weight: 600;
   padding: 0 4px;
 }
 
 .collaborative-font-step-icon {
+  color: rgba(255, 255, 255, 0.85);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
@@ -2776,7 +2807,7 @@
 
 .collaborative-toolbar-btn {
   border-radius: 50% !important;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   height: 40px !important;
   min-width: 40px !important;
   transition: all 0.15s ease;
@@ -2784,13 +2815,14 @@
 }
 
 .collaborative-toolbar-btn:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
 }
 
 .collaborative-toolbar-btn.is-active {
-  background-color: var(--action-primary, #000000) !important;
-  color: var(--action-primary-text, #ffffff) !important;
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
 }
 
 .collaborative-subtoolbar-flyout {
@@ -2810,10 +2842,12 @@
 
 .collaborative-subtoolbar {
   align-items: center;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  background-color: rgba(18, 18, 22, 0.78);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 30px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -2827,7 +2861,7 @@
 
 .collaborative-subtoolbar-btn {
   border-radius: 50% !important;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75) !important;
   height: 36px !important;
   min-width: 36px !important;
   transition: all 0.15s ease;
@@ -2835,17 +2869,18 @@
 }
 
 .collaborative-subtoolbar-btn:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
 }
 
 .collaborative-subtoolbar-btn.is-active {
-  background-color: var(--action-primary, #000000) !important;
-  color: var(--action-primary-text, #ffffff) !important;
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
 }
 
 .collaborative-subtoolbar__divider {
-  background-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.15);
   height: 1px;
   margin: 2px 0;
   width: 22px;
@@ -2870,16 +2905,109 @@
 }
 
 .collaborative-color-picker-btn.is-active .collaborative-color-picker-preview {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--primary);
+  box-shadow: 0 0 0 2px rgba(18, 18, 22, 0.8), 0 0 0 4px #ffffff;
 }
 
 .collaborative-color-picker-preview {
-  border: 2px solid var(--border-color);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
   box-sizing: border-box;
   height: 24px;
   transition: border-color 0.15s ease;
   width: 24px;
+}
+
+.collaborative-context-toolbar .menu-panel--dropdown {
+  background-color: rgba(18, 18, 22, 0.92) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .menu-panel--dropdown .menu-item {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.collaborative-context-toolbar .menu-panel--dropdown .menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .collab-popover-label {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.collaborative-context-toolbar .collab-popover-num-box {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-stroke-style-btn {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-stroke-style-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.collaborative-context-toolbar .collab-stroke-style-btn.is-active {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .collab-stroke-sample--solid {
+  border-top-color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-stroke-sample--dashed {
+  border-top-color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-stroke-sample--long-dash {
+  background: repeating-linear-gradient(to right, #ffffff 0, #ffffff 6px, transparent 6px, transparent 9px);
+}
+
+.collaborative-context-toolbar .collab-stroke-sample--dotted {
+  background: repeating-linear-gradient(to right, #ffffff 0, #ffffff 2.5px, transparent 2.5px, transparent 5.5px);
+}
+
+.collaborative-context-toolbar .collab-valign-btn {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-valign-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.collaborative-context-toolbar .collab-valign-btn.is-active {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+.collaborative-context-toolbar .collab-popover-action-btn {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.collaborative-context-toolbar .collab-popover-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.collaborative-context-toolbar .collab-popover-divider {
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .collaborative-colors-container {

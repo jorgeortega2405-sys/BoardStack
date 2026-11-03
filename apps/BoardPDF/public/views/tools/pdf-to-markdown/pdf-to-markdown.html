@@ -1,4 +1,16 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="pdf-to-markdown-wrapper">
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-convert-action" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+        <span class="component-button__text">Convertir a Markdown</span>
+      </button>
+    </div>
+  </header>
+
   <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="pdf-to-markdown-layout">
     <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="pdf-to-markdown-workspace">
       <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
@@ -26,12 +38,7 @@
         </div>
       </div>
 
-      <div class="pdf-items-view is-hidden" data-ref="markdown-selected-card">
-        <div class="tool-workspace__toolbar">
-          <div class="tool-workspace__toolbar-left">
-            <h2 class="tool-workspace__toolbar-title">Documentos seleccionados (1)</h2>
-          </div>
-        </div>
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="markdown-selected-card">
 
         <div class="pdf-reorder-hint">
           <span>El documento se convertirá en formato Markdown limpio listo para tus notas y edición.</span>
@@ -54,46 +61,7 @@
           </div>
         </div>
 
-        <div class="tool-fab-container">
-          <button type="button" class="tool-fab-btn" data-ref="btn-markdown-fab-add" data-tooltip="Cambiar archivo" aria-label="Cambiar archivo">
-            <svg class="component-icon tool-fab-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          </button>
-        </div>
       </div>
     </main>
-
-    <div class="tool-sidebar-backdrop" data-ref="tool-sidebar-backdrop"></div>
-
-    <aside class="tool-layout__sidebar is-hidden" data-ref="pdf-to-markdown-sidebar">
-      <div class="tool-sidebar__mobile-bar">
-        <div class="modal-card__drag-zone" data-ref="markdown-sidebar-drag-zone">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" aria-label="Cerrar opciones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__header">
-        <h1 class="tool-sidebar__title">PDF a Markdown</h1>
-        <p class="tool-sidebar__subtitle">Convierte cualquier documento PDF en un archivo Markdown (.md) estructurado.</p>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar-notice">
-          <svg class="component-icon tool-sidebar-notice__icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
-          <div class="tool-sidebar-notice__text">Tu PDF se convertirá al formato Markdown (.md) conservando encabezados, listas, tablas y texto limpio.</div>
-        </div>
-      </div>
-
-      <div class="tool-sidebar__footer">
-        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full tool-sidebar__action-btn" data-ref="btn-convert-action" disabled>
-          <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-          <span>Convertir a Markdown</span>
-          <svg class="component-icon component-button__icon-right" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-        </button>
-        <div class="banner banner--danger tool-sidebar__error-banner is-hidden" data-ref="markdown-global-error" role="alert"></div>
-      </div>
-    </aside>
   </div>
 </div>
