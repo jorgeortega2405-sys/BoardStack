@@ -563,6 +563,35 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
   },
   {
+    handler: async ({ path }) => {
+      await loadStylesheet('/css/components/component-settings.css');
+      const { currentUser, hasSubscriptionFeature } = await import('../services/api.service.js');
+      const { navigate } = await import('../services/navigation.service.js');
+
+      if (!currentUser) {
+        navigate('/login');
+        return null;
+      }
+
+      if (!hasSubscriptionFeature('organization')) {
+        const { showToast } = await import('../services/toast.service.js');
+        showToast('Acceso restringido a organizaciones Enterprise', 'danger');
+        navigate('/pricing');
+        return null;
+      }
+
+      const { createOrganizationView } = await import('../views/organization/organization.view.js');
+
+      if (path === '/organization' || path === '/organization/') {
+        window.history.replaceState({}, '', '/organization/dashboard');
+      }
+
+      return await createOrganizationView(path);
+    },
+    id: 'organization',
+    match: (path) => path === '/organization' || path === '/organization/' || path.startsWith('/organization/'),
+  },
+  {
     handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();

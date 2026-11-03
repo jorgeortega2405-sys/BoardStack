@@ -146,3 +146,166 @@ CREATE TABLE IF NOT EXISTS user_storage_assets (
   INDEX idx_cold_assets (is_cold),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- 1. PBAC Catalog & Subscription Permissions
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS permissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  description VARCHAR(255) NULL,
+  category VARCHAR(50) NOT NULL DEFAULT 'general',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_permission_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_role_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id INT NOT NULL,
+  permission_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (role_id, permission_id),
+  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS subscription_tier_permissions (
+  tier VARCHAR(50) NOT NULL,
+  permission_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (tier, permission_id),
+  INDEX idx_sub_tier (tier),
+  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- 2. Organization, Members, Invitations & SSO
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS organizations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  uuid VARCHAR(36) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  owner_id INT NOT NULL,
+  logo_url VARCHAR(512) NULL,
+  domain VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_org_owner (owner_id),
+  INDEX idx_org_slug (slug),
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS organization_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  user_id INT NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'member',
+  status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_org_user (organization_id, user_id),
+  INDEX idx_org_members_user (user_id),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS organization_invitations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'member',
+  token VARCHAR(64) NOT NULL UNIQUE,
+  invited_by INT NOT NULL,
+  status ENUM('pending', 'accepted', 'revoked', 'expired') NOT NULL DEFAULT 'pending',
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_org_invitations_token (token),
+  INDEX idx_org_invitations_email (email),
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS organization_sso_configs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  organization_id INT NOT NULL UNIQUE,
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  entity_id VARCHAR(512) NOT NULL DEFAULT '',
+  acs_url VARCHAR(512) NOT NULL DEFAULT '',
+  idp_sso_url VARCHAR(512) NULL,
+  idp_certificate TEXT NULL,
+  idp_metadata_xml MEDIUMTEXT NULL,
+  allow_unlinked_users BOOLEAN NOT NULL DEFAULT FALSE,
+  enforce_sso BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- 3. Initial Seeds: Permissions & Tier Grants
+-- ==============================================================================
+
+INSERT IGNORE INTO permissions (name, description, category) VALUES
+  ('tools:access', 'Acceso general a herramientas de procesamiento PDF', 'tools'),
+  ('subscription:feature:pro', 'Acceso a características Pro', 'subscription'),
+  ('subscription:feature:business', 'Acceso a características Business y trabajo colaborativo', 'subscription'),
+  ('subscription:feature:enterprise', 'Acceso a infraestructura y seguridad corporativa Enterprise', 'subscription'),
+  ('subscription:feature:organization', 'Acceso completo al módulo y dashboard de Organización', 'organization'),
+  ('subscription:feature:sso', 'Acceso a configuración de inicio de sesión único (SSO)', 'organization'),
+  ('org:view', 'Visualizar dashboard e información general de la organización', 'organization'),
+  ('org:manage', 'Modificar parámetros de la organización', 'organization'),
+  ('members:view', 'Listar miembros e invitaciones de la organización', 'organization'),
+  ('members:invite', 'Invitar nuevos miembros a la organización', 'organization'),
+  ('members:modify_role', 'Modificar roles de miembros de la organización', 'organization'),
+  ('members:remove', 'Remover miembros de la organización', 'organization'),
+  ('sso:view', 'Visualizar configuración SAML/SSO de la organización', 'organization'),
+  ('sso:manage', 'Actualizar y activar/desactivar configuración SAML/SSO', 'organization');
+
+INSERT IGNORE INTO roles (name, description) VALUES
+  ('USER', 'Usuario estándar registrado'),
+  ('ADMIN', 'Administrador de plataforma');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = 'ADMIN';
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = 'USER' AND p.name = 'tools:access';
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'enterprise', id FROM permissions WHERE name IN (
+  'subscription:feature:pro',
+  'subscription:feature:business',
+  'subscription:feature:enterprise',
+  'subscription:feature:organization',
+  'subscription:feature:sso',
+  'org:view',
+  'org:manage',
+  'members:view',
+  'members:invite',
+  'members:modify_role',
+  'members:remove',
+  'sso:view',
+  'sso:manage'
+);
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'business', id FROM permissions WHERE name IN (
+  'subscription:feature:pro',
+  'subscription:feature:business'
+);
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'pro', id FROM permissions WHERE name IN (
+  'subscription:feature:pro'
+);

@@ -1,0 +1,100 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="org-members-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="members-scrollable">
+    <div class="settings-layout settings-layout--wide" data-ref="members-layout">
+      <div class="settings-header" data-ref="members-header">
+        <h1 class="settings-title" data-ref="members-title" data-i18n="org.members.title">Gestión de Miembros</h1>
+        <p class="settings-subtitle" data-ref="members-subtitle" data-i18n="org.members.subtitle">Administra los usuarios pertenecientes a tu organización, invita colaboradores y asigna roles.</p>
+      </div>
+
+      <div class="settings-group" data-ref="group-members-actions">
+        <div class="settings-item" data-ref="item-members-toolbar">
+          <div class="component-search" data-ref="search-members">
+            <div class="component-search__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box">
+              <input class="component-search__input" data-ref="input-search-members" data-i18n-placeholder="org.members.search_placeholder" type="text" placeholder="Buscar por nombre o correo..." />
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="members-toolbar-actions">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-open-invite">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="org.members.btn_invite">Invitar miembro</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group is-hidden" data-ref="group-invite-form">
+        <div class="settings-item settings-item--stacked" data-ref="item-invite-form">
+          <div class="settings-item__text" data-ref="invite-form-header">
+            <h2 class="settings-item__title" data-ref="invite-form-title" data-i18n="org.members.invite_title">Invitar nuevo miembro</h2>
+            <p class="settings-item__desc" data-ref="invite-form-desc" data-i18n="org.members.invite_desc">Envía una invitación a un usuario para que se una a tu organización empresarial.</p>
+          </div>
+
+          <label class="field field--full" data-ref="field-invite-email">
+            <input class="field__input" data-ref="input-invite-email" data-i18n-placeholder="org.members.invite_email_placeholder" type="email" placeholder=" " autocomplete="email" />
+            <span class="field__label" data-i18n="org.members.invite_email_label">Correo electrónico</span>
+          </label>
+
+          <label class="field field--full" data-ref="field-invite-role">
+            <select class="field__input field__select" data-ref="select-invite-role">
+              <option value="member" data-i18n="org.members.role_member">Miembro</option>
+              <option value="admin" data-i18n="org.members.role_admin">Administrador</option>
+            </select>
+            <span class="field__label" data-i18n="org.members.invite_role_label">Rol organizacional</span>
+          </label>
+
+          <div class="settings-item__actions" data-ref="invite-form-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-invite" data-i18n="common.cancel">Cancelar</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-submit-invite" data-i18n="org.members.btn_send_invite">Enviar invitación</button>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="invite-error"></div>
+          <div class="banner banner--success is-hidden" data-ref="invite-success"></div>
+        </div>
+      </div>
+
+      <div class="settings-group" data-ref="group-members-list">
+        <div class="settings-item" data-ref="item-members-list-header">
+          <div class="settings-item__content" data-ref="members-list-header-content">
+            <div class="settings-item__text" data-ref="members-list-header-text">
+              <h2 class="settings-item__title" data-ref="members-list-title" data-i18n="org.members.list_title">Integrantes activos</h2>
+              <p class="settings-item__desc" data-ref="members-count-desc">Cargando integrantes...</p>
+            </div>
+          </div>
+        </div>
+        <hr class="settings-divider" />
+        <div class="settings-group" data-ref="members-container">
+          <div class="settings-item" data-ref="members-loading">
+            <div class="settings-item__text" data-ref="members-loading-text">
+              <p class="settings-item__desc" data-i18n="org.members.loading">Cargando miembros de la organización...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group" data-ref="group-invitations-list">
+        <div class="settings-item" data-ref="item-invitations-header">
+          <div class="settings-item__content" data-ref="invitations-header-content">
+            <div class="settings-item__text" data-ref="invitations-header-text">
+              <h2 class="settings-item__title" data-ref="invitations-title" data-i18n="org.members.invitations_title">Invitaciones pendientes</h2>
+              <p class="settings-item__desc" data-ref="invitations-count-desc">Cargando invitaciones...</p>
+            </div>
+          </div>
+        </div>
+        <hr class="settings-divider" />
+        <div class="settings-group" data-ref="invitations-container">
+          <div class="settings-item" data-ref="invitations-empty">
+            <div class="settings-item__text" data-ref="invitations-empty-text">
+              <p class="settings-item__desc" data-i18n="org.members.no_invitations">No hay invitaciones pendientes.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner banner--danger is-hidden" data-ref="members-error"></div>
+      <div class="banner banner--success is-hidden" data-ref="members-success"></div>
+    </div>
+  </div>
+</div>

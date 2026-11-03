@@ -1,4 +1,4 @@
-import { ensureSidebarMounted, hasDesignatedMenuItems, setupLayoutScrollSync, toggleDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { ensureSidebarMounted, hasDesignatedMenuItems, setupLayoutScrollSync, toggleDrawer, updateSidebarActiveState, updateSidebarAuthState } from './components/layout.component.js';
 import { closeAllModals } from './components/modal.component.js';
 import { findRoute } from './config/routes.config.js';
 import { getLocalizedPath, updateDomSeo } from './config/seo.config.js';
@@ -200,6 +200,7 @@ export async function render(rawPath = window.location.pathname, options?: Rende
       currentSidebar.style.display = 'none';
     } else {
       currentSidebar.style.display = '';
+      updateSidebarAuthState(currentSidebar);
       updateSidebarActiveState(currentSidebar, internalPath);
       translateElement(currentSidebar);
       if (hasDesignatedMenuItems(internalPath)) {

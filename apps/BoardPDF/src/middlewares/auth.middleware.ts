@@ -1,4 +1,5 @@
 import { getMultiAccountSession } from '../services/auth.service.js';
+import { permissionService } from '../services/permission.service.js';
 import { SessionAccount, UserPayload } from '../types/auth.types.js';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -35,6 +36,22 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   next();
 }
 
+export function hasPermission(userOrPermissions: any, permission: string): boolean {
+  if (!userOrPermissions) return false;
+  if (Array.isArray(userOrPermissions)) {
+    return userOrPermissions.includes(permission);
+  }
+  if (Array.isArray(userOrPermissions.permissions)) {
+    return userOrPermissions.permissions.includes(permission);
+  }
+  return false;
+}
+
+export function hasSubscriptionFeature(userOrPermissions: any, feature: string): boolean {
+  const normalized = feature.startsWith('subscription:feature:') ? feature : `subscription:feature:${feature}`;
+  return hasPermission(userOrPermissions, normalized);
+}
+
 export function requirePermission(permission: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const user = getCurrentUser(req);
@@ -42,11 +59,20 @@ export function requirePermission(permission: string) {
       res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
       return;
     }
-    const permissions: string[] = (user as any).permissions || [];
+    let permissions: string[] = (user as any).permissions || [];
+    if (!permissions || permissions.length === 0) {
+      permissions = await permissionService.getUserPermissions(user.id, user.subscription_tier);
+      (user as any).permissions = permissions;
+    }
     if (!permissions.includes(permission)) {
       res.status(403).json({ error: 'Acceso denegado: permisos insuficientes para esta operación.' });
       return;
     }
     next();
   };
+}
+
+export function requireFeature(feature: string) {
+  const normalized = feature.startsWith('subscription:feature:') ? feature : `subscription:feature:${feature}`;
+  return requirePermission(normalized);
 }

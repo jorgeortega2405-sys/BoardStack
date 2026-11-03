@@ -35,6 +35,19 @@ export function onAuthChange(callback: (user: User | null, accounts?: User[]) =>
   };
 }
 
+export function hasPermission(permission: string): boolean {
+  if (!currentUser || !Array.isArray(currentUser.permissions)) return false;
+  return currentUser.permissions.includes(permission);
+}
+
+export function hasSubscriptionFeature(feature: string): boolean {
+  return hasPermission(`subscription:feature:${feature}`);
+}
+
+export function hasOrganizationAccess(): boolean {
+  return hasSubscriptionFeature('organization') || hasPermission('org:manage');
+}
+
 export function getCsrfToken(): string {
   if (typeof document === 'undefined' || !document.cookie) return '';
   const match = document.cookie.match(/(?:^|;\s*)boardpdf_csrf_token=([^;]*)/);

@@ -4,10 +4,12 @@ export interface UserPayload {
   email: string;
   id: number;
   last_accessed?: number;
+  permissions?: string[];
   role?: string;
   roles?: string[];
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
+  subscription_status?: string;
   subscription_tier?: string;
   two_factor_enabled?: boolean;
   username: string;
@@ -18,11 +20,13 @@ export interface SessionAccount {
   email: string;
   id: number;
   last_accessed?: number;
+  permissions?: string[];
   role?: string;
   roles?: string[];
   sessionId?: string;
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
+  subscription_status?: string;
   subscription_tier?: string;
   two_factor_enabled?: boolean;
   username: string;

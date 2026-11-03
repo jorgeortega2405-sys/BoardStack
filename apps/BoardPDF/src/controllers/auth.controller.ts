@@ -2,6 +2,7 @@ import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middlewar
 import { addAccountToSession, clearSessionCookie, hashPassword, removeAccountFromSession, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.service.js';
+import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
 import { createUser, findUserByEmail, findUserDuplicates, updateUserLastLogin } from '../services/user.service.js';
 import { generateSixDigitCode, getPendingRegistration, savePendingRegistration, verifyAndConsumeCode } from '../services/verification.service.js';
@@ -23,10 +24,12 @@ export function sanitizeUser(user: any): UserPayload {
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,
     id: user.id,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
     role: user.role || 'USER',
     roles: user.roles || (user.role ? [user.role] : ['USER']),
     storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
+    subscription_status: user.subscription_status,
     subscription_tier: user.subscription_tier || 'free',
     username: user.username,
   };
@@ -199,6 +202,14 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
       username: pending.username,
     });
 
+    const permissions = await permissionService.getUserPermissions(
+      newUser.id,
+      newUser.subscription_tier,
+      newUser.subscription_status,
+      newUser.role
+    );
+    (newUser as any).permissions = permissions;
+
     const session = await addAccountToSession(res, req, newUser);
 
     try {
@@ -243,6 +254,14 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const permissions = await permissionService.getUserPermissions(
+      userRow.id,
+      userRow.subscription_tier,
+      userRow.subscription_status,
+      userRow.role
+    );
+    userRow.permissions = permissions;
+
     const user = sanitizeUser(userRow);
     const clientIp = getClientIp(req);
     void updateUserLastLogin(user.id, clientIp);
@@ -264,17 +283,27 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 export async function me(req: Request, res: Response): Promise<void> {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const user = getCurrentUser(req);
     const accounts = getLinkedAccounts(req);
 
     if (user && typeof user.id === 'number') {
       const billing = await purchaseService.getUserBillingInfo(user.id);
-      if (billing && billing.subscription_tier !== user.subscription_tier) {
+      if (billing) {
         user.subscription_tier = billing.subscription_tier;
-        updateActiveAccountInSession(res, req, {
-          subscription_tier: billing.subscription_tier,
-        });
+        user.subscription_status = billing.subscription_status;
       }
+      user.permissions = await permissionService.getUserPermissions(
+        user.id,
+        user.subscription_tier,
+        user.subscription_status,
+        user.role
+      );
+      updateActiveAccountInSession(res, req, {
+        permissions: user.permissions,
+        subscription_status: user.subscription_status,
+        subscription_tier: user.subscription_tier,
+      });
     }
 
     res.status(200).json({

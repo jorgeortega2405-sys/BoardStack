@@ -25,6 +25,13 @@
           </button>
           <span class="rail-nav-item__label" data-ref="rail-label-apps" data-i18n="nav.tools">Apps</span>
         </div>
+
+        <div class="rail-nav-item rail-nav-item--org is-hidden" data-ref="rail-item-organization">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-organization" data-tooltip="Organización" data-i18n-tooltip="nav.organization" data-i18n-aria="nav.organization" aria-label="Organización">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-organization" data-i18n="nav.organization">Organización</span>
+        </div>
       </div>
 
       <div class="rail-center-collaborative" data-ref="rail-center-collaborative" style="display: none;">
@@ -96,6 +103,13 @@
               </button>
 
               <div class="menu-divider" data-ref="active-account-divider"></div>
+
+              <button type="button" class="menu-item menu-item--bordered is-hidden" data-ref="btn-menu-organization">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.organization">Organización</span>
+              </button>
+
+              <div class="menu-divider is-hidden" data-ref="organization-divider"></div>
 
               <button type="button" class="menu-item menu-item--bordered" data-ref="btn-menu-settings">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>

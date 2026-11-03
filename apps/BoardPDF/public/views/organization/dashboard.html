@@ -1,0 +1,88 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="org-dashboard-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="org-scrollable">
+    <div class="settings-layout settings-layout--wide" data-ref="org-layout">
+      <div class="settings-header" data-ref="org-header">
+        <h1 class="settings-title" data-ref="org-title" data-i18n="org.dashboard.title">Panel de Organización</h1>
+        <p class="settings-subtitle" data-ref="org-subtitle" data-i18n="org.dashboard.subtitle">Supervisa el estado general, gestiona el equipo y la seguridad corporativa de tu organización.</p>
+      </div>
+
+      <div class="settings-group" data-ref="group-org-overview">
+        <div class="settings-item" data-ref="item-org-identity">
+          <div class="settings-item__content" data-ref="org-identity-content">
+            <div class="settings-item__icon-box" data-ref="org-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="org-text">
+              <div class="settings-item__info" data-ref="org-title-row">
+                <h2 class="settings-item__title" data-ref="display-org-name" data-i18n="org.dashboard.loading">Cargando...</h2>
+                <span class="component-badge component-badge--sm component-badge--success" data-ref="badge-org-tier" data-i18n="org.dashboard.tier_enterprise">Enterprise</span>
+              </div>
+              <p class="settings-item__desc" data-ref="display-org-domain">-</p>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="storage-breakdown" data-ref="org-stats-grid">
+          <div class="storage-breakdown-card" data-ref="stat-members">
+            <div class="settings-item__text" data-ref="stat-members-text">
+              <span class="settings-item__desc" data-ref="stat-members-label" data-i18n="org.dashboard.stat_members">Integrantes activos</span>
+              <h3 class="settings-item__title" data-ref="stat-members-val">-</h3>
+            </div>
+          </div>
+
+          <div class="storage-breakdown-card" data-ref="stat-invitations">
+            <div class="settings-item__text" data-ref="stat-invitations-text">
+              <span class="settings-item__desc" data-ref="stat-invitations-label" data-i18n="org.dashboard.stat_invitations">Invitaciones pendientes</span>
+              <h3 class="settings-item__title" data-ref="stat-invitations-val">-</h3>
+            </div>
+          </div>
+
+          <div class="storage-breakdown-card" data-ref="stat-sso">
+            <div class="settings-item__text" data-ref="stat-sso-text">
+              <span class="settings-item__desc" data-ref="stat-sso-label" data-i18n="org.dashboard.stat_sso">Estado SSO / SAML</span>
+              <h3 class="settings-item__title" data-ref="stat-sso-val">-</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group" data-ref="group-org-shortcuts">
+        <div class="settings-item" data-ref="item-shortcut-members">
+          <div class="settings-item__content" data-ref="shortcut-members-content">
+            <div class="settings-item__icon-box" data-ref="shortcut-members-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="shortcut-members-text">
+              <h2 class="settings-item__title" data-ref="shortcut-members-title" data-i18n="org.dashboard.shortcut_members_title">Gestión de Miembros</h2>
+              <p class="settings-item__desc" data-ref="shortcut-members-desc" data-i18n="org.dashboard.shortcut_members_desc">Invita nuevos colaboradores y administra permisos del equipo.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="shortcut-members-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-go-members" data-i18n="org.dashboard.btn_manage_members">Administrar miembros</button>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item" data-ref="item-shortcut-sso">
+          <div class="settings-item__content" data-ref="shortcut-sso-content">
+            <div class="settings-item__icon-box" data-ref="shortcut-sso-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="shortcut-sso-text">
+              <h2 class="settings-item__title" data-ref="shortcut-sso-title" data-i18n="org.dashboard.shortcut_sso_title">Configuración SSO / SAML 2.0</h2>
+              <p class="settings-item__desc" data-ref="shortcut-sso-desc" data-i18n="org.dashboard.shortcut_sso_desc">Configura la federación de identidades SAML 2.0 estándar.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="shortcut-sso-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-go-sso" data-i18n="org.dashboard.btn_configure_sso">Configurar SSO</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="banner banner--danger is-hidden" data-ref="org-dashboard-error"></div>
+    </div>
+  </div>
+</div>

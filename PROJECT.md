@@ -45,10 +45,10 @@
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Database Schema, PBAC Engine & Backend Organization Services | F1, F2, F3, F4, F5, F6, F7 | none | IN_PROGRESS |
-| M2 | Frontend Navigation Layout & Organization Views | F8, F9, F10, F11, F12, F13, F14 | M1 | PLANNED |
-| M3 | Automated Test Suite & E2E Verification (R5) | F15, F16, F17, F18, F19, F20 | M1, M2 | PLANNED |
-| M4 | Adversarial Hardening & Final Gate | F21 | M3 | PLANNED |
+| M1 | Database Schema, PBAC Engine & Backend Organization Services | F1, F2, F3, F4, F5, F6, F7 | none | DONE |
+| M2 | Frontend Navigation Layout & Organization Views | F8, F9, F10, F11, F12, F13, F14 | M1 | DONE |
+| M3 | Automated Test Suite & E2E Verification (R5) | F15, F16, F17, F18, F19, F20 | M1, M2 | DONE |
+| M4 | Adversarial Hardening & Final Gate | F21 | M3 | DONE |
 
 ## Interface Contracts
 

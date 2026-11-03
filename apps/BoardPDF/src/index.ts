@@ -8,6 +8,7 @@ import { requestLogger } from './middlewares/request-logger.middleware.js';
 import { originProtection, securityHeaders } from './middlewares/security-headers.middleware.js';
 import authRoutes from './routes/auth.routes.js';
 import downloadRoutes from './routes/download.routes.js';
+import organizationRoutes from './routes/organization.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
@@ -326,6 +327,7 @@ async function startServer(): Promise<void> {
 
   app.use('/api', authRoutes);
   app.use('/api', downloadRoutes);
+  app.use('/api', organizationRoutes);
   app.use('/api', settingsRoutes);
   app.use('/api', subscriptionRoutes);
   app.use('/api', toolsRoutes);

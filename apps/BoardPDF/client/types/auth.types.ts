@@ -4,10 +4,12 @@ export interface User {
   email: string;
   id: number | string;
   language?: string;
+  permissions?: string[];
   role?: string;
   roles?: string[];
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
+  subscription_status?: string;
   subscription_tier?: string;
   two_factor_enabled?: boolean;
   username: string;

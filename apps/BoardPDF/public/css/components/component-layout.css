@@ -469,6 +469,10 @@ html, body {
   border: none;
 }
 
+.rail-nav-item.is-hidden {
+  display: none !important;
+}
+
 .rail-nav-item:hover .rail-btn {
   background-color: #f5f5fa;
   border-color: transparent;
