@@ -329,6 +329,10 @@ html.dark-theme .component-card-popular-badge {
   transition: opacity 0.2s ease;
 }
 
+.component-card-price--custom {
+  font-size: 26px;
+}
+
 .component-card-period {
   font-size: 14px;
   font-weight: 500;

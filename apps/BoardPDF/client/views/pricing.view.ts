@@ -79,6 +79,12 @@ export class PricingController implements ViewController {
       this.setBillingCycle('yearly');
     }, { signal });
 
+    const btnFree = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-free"]');
+    btnFree?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showToast('Estás utilizando el plan gratuito de BoardPDF.', 'info');
+    }, { signal });
+
     const btnPro = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-pro"]');
     btnPro?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -94,7 +100,12 @@ export class PricingController implements ViewController {
     const btnEnterprise = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-enterprise"]');
     btnEnterprise?.addEventListener('click', (e) => {
       e.preventDefault();
-      navigate('/contact/sales');
+      const userTier = currentUser ? normalizeTier(currentUser.subscription_tier) : 'free';
+      if (userTier === 'enterprise') {
+        showToast('Ya cuentas con el plan Empresas activo en tu organización.', 'info');
+      } else {
+        showToast('El plan Empresas se gestiona y asigna centralmente desde la Organización.', 'info');
+      }
     }, { signal });
 
     const btnEduInd = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-individual"]');
@@ -231,6 +242,19 @@ export class PricingController implements ViewController {
     const userTier = normalizeTier(currentUser.subscription_tier);
     const userWeight = getTierWeight(userTier);
 
+    const btnFree = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-free"]');
+    if (btnFree) {
+      if (userWeight === 0) {
+        btnFree.classList.add('component-button--disabled');
+        btnFree.disabled = true;
+        btnFree.innerHTML = '<span>Tu plan actual</span>';
+      } else {
+        btnFree.classList.add('component-button--disabled');
+        btnFree.disabled = true;
+        btnFree.innerHTML = '<span>Plan Base</span>';
+      }
+    }
+
     const btnPro = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-pro"]');
     const btnBusiness = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-business"]');
 
@@ -260,6 +284,19 @@ export class PricingController implements ViewController {
         btnBusiness.classList.add('component-button--disabled');
         btnBusiness.disabled = true;
         btnBusiness.innerHTML = '<span>Incluido en tu plan</span>';
+      }
+    }
+
+    const btnEnterprise = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-enterprise"]');
+    if (btnEnterprise) {
+      if (userTier === 'enterprise') {
+        btnEnterprise.classList.add('component-button--disabled');
+        btnEnterprise.disabled = true;
+        btnEnterprise.innerHTML = '<span>Tu plan actual</span>';
+      } else if (userWeight >= 3) {
+        btnEnterprise.classList.add('component-button--disabled');
+        btnEnterprise.disabled = true;
+        btnEnterprise.innerHTML = '<span>Plan activo</span>';
       }
     }
 

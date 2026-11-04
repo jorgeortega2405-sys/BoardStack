@@ -28,6 +28,76 @@
         </div>
 
         <div class="component-pricing-grid" data-ref="pricing-grid-general">
+          <div class="component-card component-card--grouped component-card--plan component-card--standard" data-ref="plan-card-free" data-tier="free">
+            <div class="component-card-section component-card-section--header" data-ref="card-header-free">
+              <div class="component-card-popular-badge is-hidden" data-ref="popular-badge-free">Plan Base</div>
+              <h2 class="component-card-title" data-ref="card-title-free">BoardPDF Free</h2>
+              <p class="component-card-desc" data-ref="card-desc-free">Ideal para comenzar a explorar y procesar documentos sin costo.</p>
+              <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-free">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                <span>5 GB de almacenamiento</span>
+              </span>
+            </div>
+
+            <div class="component-card-section component-card-section--price" data-ref="card-price-free">
+              <div class="component-card-price-label">Precio</div>
+              <div class="component-card-price-container">
+                <span class="component-card-price">
+                  USD $<span class="component-card-price-value" data-ref="plan-price-free" data-monthly="0" data-yearly="0">0</span>
+                </span>
+                <span class="component-card-period" data-ref="plan-period-free">/ siempre gratis</span>
+              </div>
+            </div>
+
+            <div class="component-card-section component-card-section--action" data-ref="card-action-free">
+              <button type="button" class="component-button component-button--rounded-pill component-cursor-pointer component-card-button" data-ref="btn-subscribe-free" data-action="subscribe" data-tier="free">
+                <span>Plan Base</span>
+              </button>
+            </div>
+
+            <hr class="component-divider" />
+
+            <div class="component-card-section component-card-section--features" data-ref="card-features-free">
+              <div class="component-card-features" data-ref="features-container-free">
+                <div class="component-card-feature-item" data-ref="feature-free-1">
+                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <div class="component-card-feature-text-container">
+                    <span class="component-card-feature-title">Lotes estándar de hasta 25 archivos</span>
+                    <span class="component-card-feature-desc">Combina, organiza y rota documentos con límites de 50 MB por archivo.</span>
+                  </div>
+                </div>
+                <div class="component-card-feature-item" data-ref="feature-free-2">
+                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <div class="component-card-feature-text-container">
+                    <span class="component-card-feature-title">5 GB de almacenamiento en nube</span>
+                    <span class="component-card-feature-desc">Espacio personal sincronizado para respaldar y gestionar tus documentos.</span>
+                  </div>
+                </div>
+                <div class="component-card-feature-item" data-ref="feature-free-3">
+                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <div class="component-card-feature-text-container">
+                    <span class="component-card-feature-title">Herramientas de conversión esenciales</span>
+                    <span class="component-card-feature-desc">Convierte archivos JPG, Word, Excel y PowerPoint a formato PDF sin marca de agua.</span>
+                  </div>
+                </div>
+                <div class="component-card-feature-item" data-ref="feature-free-4">
+                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <div class="component-card-feature-text-container">
+                    <span class="component-card-feature-title">Seguridad y protección básica</span>
+                    <span class="component-card-feature-desc">Aplica contraseñas, bloqueos y marcas de agua personalizadas en tus PDFs.</span>
+                  </div>
+                </div>
+                <div class="component-card-feature-item" data-ref="feature-free-5">
+                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <div class="component-card-feature-text-container">
+                    <span class="component-card-feature-title">5 flujos de trabajo locales</span>
+                    <span class="component-card-feature-desc">Automatiza secuencias básicas de procesamiento documental en tu navegador.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="component-card component-card--grouped component-card--plan component-card--featured" data-ref="plan-card-pro" data-tier="pro">
             <div class="component-card-section component-card-section--header" data-ref="card-header-pro">
               <div class="component-card-popular-badge" data-ref="popular-badge-pro">Más Popular</div>
@@ -43,7 +113,7 @@
               <div class="component-card-price-label">Desde</div>
               <div class="component-card-price-container">
                 <span class="component-card-price">
-                  USD $<span data-ref="plan-price-pro" data-monthly="9.99" data-yearly="7.99">9.99</span>
+                  USD $<span class="component-card-price-value" data-ref="plan-price-pro" data-monthly="9.99" data-yearly="7.99">9.99</span>
                 </span>
                 <span class="component-card-period" data-ref="plan-period-pro" data-period-monthly="/ mes" data-period-yearly="/ mes facturado anualmente">/ mes</span>
               </div>
@@ -63,36 +133,36 @@
                 <div class="component-card-feature-item" data-ref="feature-pro-1">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Lorem ipsum dolor sit amet</span>
-                    <span class="component-card-feature-desc">Consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore.</span>
+                    <span class="component-card-feature-title">Procesamiento masivo por lotes</span>
+                    <span class="component-card-feature-desc">Convierte, une y organiza hasta 500 archivos por tarea sin límites de espera.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-2">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Sed ut perspiciatis unde omnis</span>
-                    <span class="component-card-feature-desc">Iste natus error sit voluptatem accusantium doloremque laudantium.</span>
+                    <span class="component-card-feature-title">Archivos de gran capacidad (1,000 MB)</span>
+                    <span class="component-card-feature-desc">Procesa documentos extensos con soporte de alta fidelidad y máxima compresión.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-3">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Nemo enim ipsam voluptatem</span>
-                    <span class="component-card-feature-desc">Quia voluptas sit aspernatur aut odit aut fugit sed quia consequuntur.</span>
+                    <span class="component-card-feature-title">100 GB de almacenamiento en nube</span>
+                    <span class="component-card-feature-desc">Sincronización instantánea, respaldo seguro y acceso desde cualquier dispositivo.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-4">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Neque porro quisquam est qui</span>
-                    <span class="component-card-feature-desc">Dolorem ipsum quia dolor sit amet consectetur adipisci velit sed quia.</span>
+                    <span class="component-card-feature-title">OCR y herramientas de Inteligencia Artificial</span>
+                    <span class="component-card-feature-desc">Reconocimiento óptico de texto, resumen inteligente y traducción con IA.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-5">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Ut enim ad minima veniam</span>
-                    <span class="component-card-feature-desc">Quis nostrum exercitationem ullam corporis suscipit laboriosam nisi.</span>
+                    <span class="component-card-feature-title">50 flujos de trabajo avanzados</span>
+                    <span class="component-card-feature-desc">Guarda y encadena automatizaciones personalizadas para optimizar tu tiempo.</span>
                   </div>
                 </div>
               </div>
@@ -114,7 +184,7 @@
               <div class="component-card-price-label">Desde</div>
               <div class="component-card-price-container">
                 <span class="component-card-price">
-                  USD $<span data-ref="plan-price-business" data-monthly="19.99" data-yearly="15.99">19.99</span>
+                  USD $<span class="component-card-price-value" data-ref="plan-price-business" data-monthly="19.99" data-yearly="15.99">19.99</span>
                 </span>
                 <span class="component-card-period" data-ref="plan-period-business" data-period-monthly="/ mes" data-period-yearly="/ mes facturado anualmente">/ mes</span>
               </div>
@@ -138,36 +208,36 @@
                 <div class="component-card-feature-item" data-ref="feature-business-1">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">At vero eos et accusamus iusto</span>
-                    <span class="component-card-feature-desc">Dignissimos ducimus qui blanditiis praesentium voluptatum deleniti.</span>
+                    <span class="component-card-feature-title">500 GB de almacenamiento para equipos</span>
+                    <span class="component-card-feature-desc">Espacio ampliado en la nube para centralizar y compartir archivos con tu grupo.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-2">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Nam libero tempore cum soluta</span>
-                    <span class="component-card-feature-desc">Nobis est eligendi optio cumque nihil impedit quo minus id maxime.</span>
+                    <span class="component-card-feature-title">Capacidad ultra alta de procesamiento</span>
+                    <span class="component-card-feature-desc">Lotes de hasta 500 archivos simultáneos y soporte total de archivos hasta 1,000 MB.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-3">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Temporibus autem quibusdam et</span>
-                    <span class="component-card-feature-desc">Officiis debitis aut rerum necessitatibus saepe eveniet ut voluptates.</span>
+                    <span class="component-card-feature-title">Colaboración en tiempo real</span>
+                    <span class="component-card-feature-desc">Edición conjunta de documentos interactivos con control y trazabilidad de cambios.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-4">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Itaque earum rerum hic tenetur</span>
-                    <span class="component-card-feature-desc">Sapiente delectus ut aut reiciendis voluptatibus maiores alias fugiat.</span>
+                    <span class="component-card-feature-title">Flujos de trabajo compartidos</span>
+                    <span class="component-card-feature-desc">Crea, estandariza y distribuye cadenas de automatización entre miembros del equipo.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-5">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Duis aute irure dolor in reprehenderit</span>
-                    <span class="component-card-feature-desc">In voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur.</span>
+                    <span class="component-card-feature-title">Panel de control y gestión de licencias</span>
+                    <span class="component-card-feature-desc">Administración centralizada de integrantes, consumo de recursos y permisos.</span>
                   </div>
                 </div>
               </div>
@@ -188,15 +258,15 @@
             <div class="component-card-section component-card-section--price" data-ref="card-price-enterprise">
               <div class="component-card-price-label">Presupuesto</div>
               <div class="component-card-price-container">
-                <span class="component-card-price" style="font-size: 26px;" data-ref="enterprise-price-text">Contactar a ventas</span>
-                <span class="component-card-period">/ a medida</span>
+                <span class="component-card-price component-card-price--custom" data-ref="enterprise-price-text">Plan Corporativo</span>
+                <span class="component-card-period" data-ref="plan-period-enterprise">/ a medida</span>
               </div>
             </div>
 
             <div class="component-card-section component-card-section--action" data-ref="card-action-enterprise">
-              <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-enterprise" data-action="contact-sales" data-tier="enterprise">
-                <span class="component-button__default-text">Contactar a ventas</span>
-                <span class="component-button__hover-text">Hablar con un asesor</span>
+              <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-enterprise" data-action="enterprise-info" data-tier="enterprise">
+                <span class="component-button__default-text">Plan Corporativo</span>
+                <span class="component-button__hover-text">Asignado por Admin</span>
               </button>
             </div>
 
@@ -211,36 +281,36 @@
                 <div class="component-card-feature-item" data-ref="feature-enterprise-1">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Excepteur sint occaecat cupidatat</span>
-                    <span class="component-card-feature-desc">Non proident sunt in culpa qui officia deserunt mollit anim id est laborum.</span>
+                    <span class="component-card-feature-title">Single Sign-On (SSO) y SAML 2.0 estándar</span>
+                    <span class="component-card-feature-desc">Integración directa con Google Workspace, Microsoft Entra ID, Okta y Shibboleth.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-enterprise-2">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Quis autem vel eum iure</span>
-                    <span class="component-card-feature-desc">Reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</span>
+                    <span class="component-card-feature-title">Consola de Organización y PBAC avanzado</span>
+                    <span class="component-card-feature-desc">Control de accesos por permisos, asignación de roles y métricas de uso corporativo.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-enterprise-3">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Accusantium doloremque laudantium</span>
-                    <span class="component-card-feature-desc">Totam rem aperiam eaque ipsa quae ab illo inventore veritatis et architecto.</span>
+                    <span class="component-card-feature-title">Almacenamiento corporativo a medida (1 TB+)</span>
+                    <span class="component-card-feature-desc">Espacio escalable de alta capacidad con políticas de retención y cifrado seguro.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-enterprise-4">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Architecto beatae vitae dicta sunt</span>
-                    <span class="component-card-feature-desc">Explicabo nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit.</span>
+                    <span class="component-card-feature-title">Infraestructura dedicada de alto volumen</span>
+                    <span class="component-card-feature-desc">Procesamiento sin colas de espera con hasta 1,000 archivos y 2,000 MB por tarea.</span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-enterprise-5">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Corporis suscipit laboriosam nisi ut</span>
-                    <span class="component-card-feature-desc">Aliquid ex ea commodi consequatur quis autem vel eum iure reprehenderit.</span>
+                    <span class="component-card-feature-title">SLA del 99.9% y soporte técnico 24/7</span>
+                    <span class="component-card-feature-desc">Disponibilidad corporativa garantizada con gestor de cuenta técnico dedicado.</span>
                   </div>
                 </div>
               </div>
@@ -332,7 +402,7 @@
             <div class="component-card-section component-card-section--price" data-ref="card-price-edu-school">
               <div class="component-card-price-label">Convenio escolar</div>
               <div class="component-card-price-container">
-                <span class="component-card-price" style="font-size: 26px;">A medida</span>
+                <span class="component-card-price component-card-price--custom" data-ref="school-price-text">A medida</span>
                 <span class="component-card-period">/ presupuesto institucional</span>
               </div>
             </div>
@@ -405,7 +475,7 @@
             <div class="component-card-section component-card-section--price" data-ref="card-price-edu-university">
               <div class="component-card-price-label">Convenio Campus</div>
               <div class="component-card-price-container">
-                <span class="component-card-price" style="font-size: 26px;">A medida</span>
+                <span class="component-card-price component-card-price--custom" data-ref="university-price-text">A medida</span>
                 <span class="component-card-period">/ acuerdo institucional</span>
               </div>
             </div>
