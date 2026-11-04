@@ -1,10 +1,11 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormWithProgress } from '../../../services/api.service.js';
+import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
+import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -297,6 +298,12 @@ export class TranslatePdfViewController implements ViewController {
   }
 
   private handleFileSelected(file: File): void {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para utilizar las herramientas con Inteligencia Artificial.', 'warning');
+      navigate('/login');
+      return;
+    }
+
     this.hideError();
 
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
@@ -437,6 +444,9 @@ export class TranslatePdfViewController implements ViewController {
         }
 
         const token = res.data.fileId;
+        if ((res as any).aiTokens?.balance !== undefined) {
+          updateUserAiTokens((res as any).aiTokens.balance);
+        }
         showToast('Documento traducido con éxito.', 'success');
         saveDownloadPayloadAndNavigate({
           downloadUrl: `/api/download/${token}`,

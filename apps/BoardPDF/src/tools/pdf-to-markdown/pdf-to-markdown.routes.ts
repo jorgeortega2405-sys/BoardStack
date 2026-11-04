@@ -1,5 +1,5 @@
 import { handleToolDownload } from '../../controllers/download.controller.js';
-import { optionalAuth } from '../../middlewares/auth.middleware.js';
+import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { pdfToMarkdownLimiter } from '../../middlewares/rate-limit.middleware.js';
 import { createPdfUploadMiddleware } from '../../utils/upload.util.js';
 import { handleConvertPdfToMarkdown } from './pdf-to-markdown.controller.js';
@@ -12,7 +12,7 @@ const uploadMiddleware = createPdfUploadMiddleware({
   maxFiles: 1,
 });
 
-router.post('/tools/pdf-to-markdown/convert', optionalAuth, pdfToMarkdownLimiter, uploadMiddleware, handleConvertPdfToMarkdown);
+router.post('/tools/pdf-to-markdown/convert', requireAuth, pdfToMarkdownLimiter, uploadMiddleware, handleConvertPdfToMarkdown);
 router.get('/tools/pdf-to-markdown/download/:fileId', handleToolDownload);
 
 export default router;

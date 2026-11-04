@@ -20,6 +20,8 @@ function getClientIp(req: Request): string {
 
 export function sanitizeUser(user: any): UserPayload {
   return {
+    ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
+    ai_tokens_reset_at: user.ai_tokens_reset_at ? new Date(user.ai_tokens_reset_at).toISOString() : undefined,
     avatar_url: user.avatar_url ?? null,
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,

@@ -147,6 +147,10 @@ export const API_ROUTES = {
       process: '/api/tools/watermark-pdf/process',
     },
   },
+  tokens: {
+    balance: '/api/tokens/balance',
+    estimate: '/api/tokens/estimate',
+  },
 } as const;
 
 export default API_ROUTES;

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS users (
   subscription_period_end TIMESTAMP NULL,
   storage_used_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
   storage_limit_bytes BIGINT UNSIGNED NOT NULL DEFAULT 5368709120,
+  ai_tokens_balance INT UNSIGNED NOT NULL DEFAULT 100,
+  ai_tokens_reset_at TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 MONTH),
   two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   two_factor_secret VARCHAR(255) NULL,
   two_factor_recovery_codes TEXT NULL,
@@ -144,6 +146,19 @@ CREATE TABLE IF NOT EXISTS user_storage_assets (
   INDEX idx_user_assets (user_id),
   INDEX idx_document_assets (document_id),
   INDEX idx_cold_assets (is_cold),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ai_token_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  tool_id VARCHAR(50) NOT NULL,
+  tokens_consumed INT UNSIGNED NOT NULL,
+  pdf_pages INT UNSIGNED NOT NULL DEFAULT 1,
+  pdf_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ai_tokens_user (user_id),
+  INDEX idx_ai_tokens_created (created_at),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

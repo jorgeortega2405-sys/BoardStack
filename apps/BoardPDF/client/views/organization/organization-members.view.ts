@@ -193,11 +193,11 @@ export class OrganizationMembersController implements ViewController {
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div class="settings-item" data-ref="members-empty">
-          <div class="settings-item__text">
-            <p class="settings-item__desc" data-i18n="org.members.no_results">${t('org.members.no_results', 'No se encontraron miembros coincidentes.')}</p>
-          </div>
-        </div>
+        <tr data-ref="members-empty">
+          <td class="component-table__cell" colspan="5" style="color: var(--text-secondary); padding: 32px 16px; text-align: center;" data-i18n="org.members.no_results">
+            ${t('org.members.no_results', 'No se encontraron miembros coincidentes.')}
+          </td>
+        </tr>
       `;
       return;
     }
@@ -209,38 +209,45 @@ export class OrganizationMembersController implements ViewController {
       const dateText = member.joined_at ? new Date(member.joined_at).toLocaleDateString() : '-';
 
       html += `
-        <div class="settings-item" data-ref="member-item-${member.id}">
-          <div class="settings-item__content">
-            <div class="settings-item__icon-box">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
-            </div>
-            <div class="settings-item__text">
-              <div class="settings-item__info">
-                <h3 class="settings-item__title" data-ref="member-name-${member.id}">${member.username}</h3>
-                <span class="component-badge component-badge--sm ${isOwner ? 'component-badge--primary' : 'component-badge--info'}" data-ref="member-badge-${member.id}">${roleText}</span>
+        <tr class="component-table__row" data-ref="member-item-${member.id}">
+          <td class="component-table__cell" style="padding-left: 20px;">
+            <div style="align-items: center; display: flex; gap: 10px;">
+              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 9999px; display: flex; height: 32px; justify-content: center; width: 32px;">
+                <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#person"></use></svg>
               </div>
-              <p class="settings-item__desc">${member.email} • Unido el ${dateText}</p>
+              <span style="color: var(--text-primary); font-weight: 600;" data-ref="member-name-${member.id}">${member.username}</span>
             </div>
-          </div>
-          <div class="settings-item__actions">
+          </td>
+          <td class="component-table__cell">
+            <span style="color: var(--text-secondary);">${member.email}</span>
+          </td>
+          <td class="component-table__cell">
+            <span class="component-badge component-badge--sm ${isOwner ? 'component-badge--primary' : 'component-badge--info'}" data-ref="member-badge-${member.id}">${roleText}</span>
+          </td>
+          <td class="component-table__cell">
+            <span style="color: var(--text-secondary);">${dateText}</span>
+          </td>
+          <td class="component-table__cell" style="padding-right: 20px; text-align: right;">
             ${
               isOwner
                 ? ''
                 : `
-              <label class="field" data-ref="field-role-${member.id}">
-                <select class="field__input field__select" data-ref="select-member-role-${member.id}" data-member-id="${member.id}">
-                  <option value="member" ${member.role === 'member' ? 'selected' : ''}>Miembro</option>
-                  <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Administrador</option>
-                </select>
-              </label>
-              <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-remove-member-${member.id}" data-member-id="${member.id}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                <span>Eliminar</span>
-              </button>
+              <div style="align-items: center; display: inline-flex; gap: 8px; justify-content: flex-end;">
+                <label class="field" data-ref="field-role-${member.id}" style="margin: 0;">
+                  <select class="field__input field__select" data-ref="select-member-role-${member.id}" data-member-id="${member.id}" style="height: 32px; padding: 4px 8px;">
+                    <option value="member" ${member.role === 'member' ? 'selected' : ''}>Miembro</option>
+                    <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Administrador</option>
+                  </select>
+                </label>
+                <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-remove-member-${member.id}" data-member-id="${member.id}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                  <span>Eliminar</span>
+                </button>
+              </div>
             `
             }
-          </div>
-        </div>
+          </td>
+        </tr>
       `;
     });
 
@@ -275,11 +282,11 @@ export class OrganizationMembersController implements ViewController {
 
     if (this.invitations.length === 0) {
       container.innerHTML = `
-        <div class="settings-item" data-ref="invitations-empty">
-          <div class="settings-item__text">
-            <p class="settings-item__desc" data-i18n="org.members.no_invitations">${t('org.members.no_invitations', 'No hay invitaciones pendientes.')}</p>
-          </div>
-        </div>
+        <tr data-ref="invitations-empty">
+          <td class="component-table__cell" colspan="5" style="color: var(--text-secondary); padding: 32px 16px; text-align: center;" data-i18n="org.members.no_invitations">
+            ${t('org.members.no_invitations', 'No hay invitaciones pendientes.')}
+          </td>
+        </tr>
       `;
       return;
     }
@@ -290,26 +297,31 @@ export class OrganizationMembersController implements ViewController {
       const roleText = invitation.role === 'admin' ? 'Administrador' : 'Miembro';
 
       html += `
-        <div class="settings-item" data-ref="invitation-item-${invitation.id}">
-          <div class="settings-item__content">
-            <div class="settings-item__icon-box">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
-            </div>
-            <div class="settings-item__text">
-              <div class="settings-item__info">
-                <h3 class="settings-item__title">${invitation.email}</h3>
-                <span class="component-badge component-badge--sm component-badge--warning">${invitation.status}</span>
+        <tr class="component-table__row" data-ref="invitation-item-${invitation.id}">
+          <td class="component-table__cell" style="padding-left: 20px;">
+            <div style="align-items: center; display: flex; gap: 10px;">
+              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 9999px; display: flex; height: 32px; justify-content: center; width: 32px;">
+                <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#mail"></use></svg>
               </div>
-              <p class="settings-item__desc">Rol propuesto: ${roleText} • Expira: ${expDate}</p>
+              <span style="color: var(--text-primary); font-weight: 600;">${invitation.email}</span>
             </div>
-          </div>
-          <div class="settings-item__actions">
+          </td>
+          <td class="component-table__cell">
+            <span class="component-badge component-badge--sm component-badge--neutral">${roleText}</span>
+          </td>
+          <td class="component-table__cell">
+            <span class="component-badge component-badge--sm component-badge--warning">${invitation.status}</span>
+          </td>
+          <td class="component-table__cell">
+            <span style="color: var(--text-secondary);">${expDate}</span>
+          </td>
+          <td class="component-table__cell" style="padding-right: 20px; text-align: right;">
             <button type="button" class="component-button component-button--h34" data-ref="btn-revoke-invitation-${invitation.id}" data-invitation-id="${invitation.id}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
               <span>Revocar</span>
             </button>
-          </div>
-        </div>
+          </td>
+        </tr>
       `;
     });
 

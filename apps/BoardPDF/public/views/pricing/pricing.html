@@ -15,8 +15,10 @@
               <span>Educación</span>
             </button>
           </div>
+        </div>
 
-          <div class="component-toggle-pill" data-ref="billing-toggle-pill" data-cycle="monthly">
+        <div class="pricing-cycle-bar" data-ref="pricing-cycle-bar" style="display: flex; justify-content: flex-start; margin-bottom: 24px; width: 100%;">
+          <div class="component-toggle-pill" data-ref="billing-toggle-pill" data-cycle="monthly" style="margin-top: 0; max-width: 240px;">
             <div class="component-toggle-pill-glider" data-ref="billing-glider"></div>
             <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-cycle-monthly" data-action="setBillingCycle" data-value="monthly">
               <span>Mensual</span>
@@ -28,76 +30,6 @@
         </div>
 
         <div class="component-pricing-grid" data-ref="pricing-grid-general">
-          <div class="component-card component-card--grouped component-card--plan component-card--standard" data-ref="plan-card-free" data-tier="free">
-            <div class="component-card-section component-card-section--header" data-ref="card-header-free">
-              <div class="component-card-popular-badge is-hidden" data-ref="popular-badge-free">Plan Base</div>
-              <h2 class="component-card-title" data-ref="card-title-free">BoardPDF Free</h2>
-              <p class="component-card-desc" data-ref="card-desc-free">Ideal para comenzar a explorar y procesar documentos sin costo.</p>
-              <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-free">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-                <span>5 GB de almacenamiento</span>
-              </span>
-            </div>
-
-            <div class="component-card-section component-card-section--price" data-ref="card-price-free">
-              <div class="component-card-price-label">Precio</div>
-              <div class="component-card-price-container">
-                <span class="component-card-price">
-                  USD $<span class="component-card-price-value" data-ref="plan-price-free" data-monthly="0" data-yearly="0">0</span>
-                </span>
-                <span class="component-card-period" data-ref="plan-period-free">/ siempre gratis</span>
-              </div>
-            </div>
-
-            <div class="component-card-section component-card-section--action" data-ref="card-action-free">
-              <button type="button" class="component-button component-button--rounded-pill component-cursor-pointer component-card-button" data-ref="btn-subscribe-free" data-action="subscribe" data-tier="free">
-                <span>Plan Base</span>
-              </button>
-            </div>
-
-            <hr class="component-divider" />
-
-            <div class="component-card-section component-card-section--features" data-ref="card-features-free">
-              <div class="component-card-features" data-ref="features-container-free">
-                <div class="component-card-feature-item" data-ref="feature-free-1">
-                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                  <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Lotes estándar de hasta 25 archivos</span>
-                    <span class="component-card-feature-desc">Combina, organiza y rota documentos con límites de 50 MB por archivo.</span>
-                  </div>
-                </div>
-                <div class="component-card-feature-item" data-ref="feature-free-2">
-                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                  <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">5 GB de almacenamiento en nube</span>
-                    <span class="component-card-feature-desc">Espacio personal sincronizado para respaldar y gestionar tus documentos.</span>
-                  </div>
-                </div>
-                <div class="component-card-feature-item" data-ref="feature-free-3">
-                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                  <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Herramientas de conversión esenciales</span>
-                    <span class="component-card-feature-desc">Convierte archivos JPG, Word, Excel y PowerPoint a formato PDF sin marca de agua.</span>
-                  </div>
-                </div>
-                <div class="component-card-feature-item" data-ref="feature-free-4">
-                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                  <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Seguridad y protección básica</span>
-                    <span class="component-card-feature-desc">Aplica contraseñas, bloqueos y marcas de agua personalizadas en tus PDFs.</span>
-                  </div>
-                </div>
-                <div class="component-card-feature-item" data-ref="feature-free-5">
-                  <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                  <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">5 flujos de trabajo locales</span>
-                    <span class="component-card-feature-desc">Automatiza secuencias básicas de procesamiento documental en tu navegador.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="component-card component-card--grouped component-card--plan component-card--featured" data-ref="plan-card-pro" data-tier="pro">
             <div class="component-card-section component-card-section--header" data-ref="card-header-pro">
               <div class="component-card-popular-badge" data-ref="popular-badge-pro">Más Popular</div>

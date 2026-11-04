@@ -487,41 +487,48 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
       <span class="menu-item__text" data-i18n="nav.security">${t('nav.security', 'Seguridad')}</span>
     </button>
-    <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-      <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing', 'Facturación')}</span>
-    </button>
-    <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-      <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases', 'Historial de compras')}</span>
-    </button>
   `;
 
   translateElement(drawerBody);
 
   const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
   const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
-  const btnBilling = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
-  const btnPurchases = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
 
   if (currentPath === '/settings' || currentPath === '/settings/your-account') {
     btnAccount?.classList.add('is-active');
   } else if (currentPath === '/settings/security') {
     btnSecurity?.classList.add('is-active');
-  } else if (currentPath === '/settings/billing') {
-    btnBilling?.classList.add('is-active');
-  } else if (currentPath === '/settings/purchases' || currentPath === '/settings/purchase-history') {
-    btnPurchases?.classList.add('is-active');
   }
 
   bindNavLink(btnAccount, '/settings/your-account');
   bindNavLink(btnSecurity, '/settings/security');
-  bindNavLink(btnBilling, '/settings/billing');
-  bindNavLink(btnPurchases, '/settings/purchases');
 
   if (drawerFooter) {
-    drawerFooter.innerHTML = '';
-    hideElement(drawerFooter);
+    drawerFooter.innerHTML = `
+      <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+        <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing', 'Facturación')}</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+        <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases', 'Historial de compras')}</span>
+      </button>
+    `;
+    showElement(drawerFooter);
+    translateElement(drawerFooter);
+
+    const btnBilling = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+    const btnPurchases = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+
+    if (currentPath === '/settings/billing') {
+      btnBilling?.classList.add('is-active');
+    } else if (currentPath === '/settings/purchases' || currentPath === '/settings/purchase-history') {
+      btnPurchases?.classList.add('is-active');
+    }
+
+    bindNavLink(btnBilling, '/settings/billing');
+    bindNavLink(btnPurchases, '/settings/purchases');
+    renderIcons(drawerFooter);
   }
 
   renderIcons(drawerBody);

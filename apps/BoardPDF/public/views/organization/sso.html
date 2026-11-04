@@ -1,37 +1,40 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="org-sso-wrapper">
-  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sso-scrollable">
-    <div class="settings-layout settings-layout--wide" data-ref="sso-layout">
-      <div class="settings-header" data-ref="sso-header">
-        <h1 class="settings-title" data-ref="sso-title" data-i18n="org.sso.title">Configuración SSO / SAML 2.0</h1>
-        <p class="settings-subtitle" data-ref="sso-subtitle" data-i18n="org.sso.subtitle">Conecta tu proveedor de identidad corporativo (Okta, Azure AD, Google Workspace) mediante SAML 2.0 estándar.</p>
+  <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+    <div class="home-floating-top" data-ref="sso-header">
+      <div class="home-floating-top__left" data-ref="sso-header-left">
+        <h1 class="section-floating-title" data-ref="sso-title" data-i18n="org.sso.title">Configuración SSO / SAML 2.0</h1>
       </div>
 
-      <div class="settings-group" data-ref="group-sso-toggle">
-        <div class="settings-item" data-ref="item-sso-toggle">
-          <div class="settings-item__content" data-ref="sso-toggle-content">
-            <div class="settings-item__icon-box" data-ref="sso-toggle-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
-            </div>
-            <div class="settings-item__text" data-ref="sso-toggle-text">
-              <h2 class="settings-item__title" data-ref="sso-toggle-title" data-i18n="org.sso.toggle_title">Autenticación SAML 2.0</h2>
-              <p class="settings-item__desc" data-ref="sso-toggle-desc" data-i18n="org.sso.toggle_desc">Permite que tus colaboradores inicien sesión con sus credenciales corporativas.</p>
-            </div>
-          </div>
-          <div class="settings-item__actions" data-ref="sso-toggle-actions">
+      <div class="home-floating-top__right" data-ref="sso-header-right">
+        <div class="home-floating-actions" data-ref="sso-header-actions">
+          <div style="align-items: center; display: flex; gap: 8px; margin-right: 8px;" data-ref="sso-switch-container">
+            <span style="color: var(--text-secondary); font-size: 13px; font-weight: 500;" data-ref="sso-switch-text">Habilitar SAML</span>
             <label class="component-switch" data-ref="switch-sso-label">
               <input class="component-checkbox" data-ref="checkbox-sso-enable" type="checkbox" />
             </label>
           </div>
+          <button type="button" class="component-button component-button--h34" data-ref="btn-test-sso" data-i18n="org.sso.btn_test">Probar conexión</button>
+          <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-sso" data-i18n="org.sso.btn_save">Guardar configuración</button>
         </div>
       </div>
+    </div>
 
-      <div class="settings-group" data-ref="group-sp-metadata">
-        <div class="settings-item settings-item--stacked" data-ref="item-sp-metadata">
-          <div class="settings-item__text" data-ref="sp-metadata-header">
-            <h2 class="settings-item__title" data-ref="sp-metadata-title" data-i18n="org.sso.sp_title">Datos del Proveedor de Servicios (BoardPDF SP)</h2>
-            <p class="settings-item__desc" data-ref="sp-metadata-desc" data-i18n="org.sso.sp_desc">Copia estos valores en la consola de administración de tu Proveedor de Identidad (IdP):</p>
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sso-scrollable" style="box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 24px; width: 100%;">
+      <div class="banner banner--danger is-hidden" data-ref="sso-error"></div>
+      <div class="banner banner--success is-hidden" data-ref="sso-success"></div>
+
+      <div class="org-hero-card" data-ref="group-sp-metadata" style="flex-direction: column; align-items: stretch; gap: 16px;">
+        <div data-ref="sp-metadata-header">
+          <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
+            <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+            </div>
+            <h2 class="org-hero-card__title" data-ref="sp-metadata-title" data-i18n="org.sso.sp_title" style="font-size: 16px;">Datos del Proveedor de Servicios (BoardPDF SP)</h2>
           </div>
+          <p class="org-hero-card__desc" data-ref="sp-metadata-desc" data-i18n="org.sso.sp_desc">Copia estos valores en la consola de administración de tu Proveedor de Identidad (IdP):</p>
+        </div>
 
+        <div style="display: flex; flex-direction: column; gap: 14px;">
           <label class="field field--full" data-ref="field-sp-entity-id">
             <input class="field__input" data-ref="input-sp-entity-id" type="text" readonly value="https://boardpdf.com/api/sso/saml/metadata" />
             <span class="field__label" data-i18n="org.sso.sp_entity_id_label">Entity ID (Audience URI)</span>
@@ -44,13 +47,18 @@
         </div>
       </div>
 
-      <div class="settings-group" data-ref="group-idp-config">
-        <div class="settings-item settings-item--stacked" data-ref="item-idp-config">
-          <div class="settings-item__text" data-ref="idp-config-header">
-            <h2 class="settings-item__title" data-ref="idp-config-title" data-i18n="org.sso.idp_title">Parámetros del Proveedor de Identidad (IdP)</h2>
-            <p class="settings-item__desc" data-ref="idp-config-desc" data-i18n="org.sso.idp_desc">Ingresa la configuración SAML 2.0 proporcionada por tu IdP corporativo:</p>
+      <div class="org-hero-card" data-ref="group-idp-config" style="flex-direction: column; align-items: stretch; gap: 16px;">
+        <div data-ref="idp-config-header">
+          <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
+            <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
+            </div>
+            <h2 class="org-hero-card__title" data-ref="idp-config-title" data-i18n="org.sso.idp_title" style="font-size: 16px;">Parámetros del Proveedor de Identidad (IdP)</h2>
           </div>
+          <p class="org-hero-card__desc" data-ref="idp-config-desc" data-i18n="org.sso.idp_desc">Ingresa la configuración SAML 2.0 proporcionada por tu IdP corporativo (Okta, Azure AD, Google Workspace):</p>
+        </div>
 
+        <div style="display: flex; flex-direction: column; gap: 14px;">
           <label class="field field--full" data-ref="field-idp-entity-id">
             <input class="field__input" data-ref="input-idp-entity-id" data-i18n-placeholder="org.sso.idp_entity_id_placeholder" type="text" placeholder=" " />
             <span class="field__label" data-i18n="org.sso.idp_entity_id_label">IdP Entity ID (Issuer URL)</span>
@@ -71,20 +79,17 @@
             <span class="field__label" data-i18n="org.sso.idp_xml_label">Metadatos XML de IdP (Opcional)</span>
           </label>
 
-          <div class="settings-item" data-ref="item-enforce-sso">
+          <div style="margin-top: 4px;" data-ref="item-enforce-sso">
             <label class="component-checkbox-label" data-ref="label-enforce-sso">
               <input class="component-checkbox" data-ref="checkbox-enforce-sso" type="checkbox" />
               <span data-i18n="org.sso.enforce_sso_label">Forzar inicio de sesión mediante SSO para todos los miembros</span>
             </label>
           </div>
+        </div>
 
-          <div class="settings-item__actions" data-ref="sso-actions">
-            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-save-sso" data-i18n="org.sso.btn_save">Guardar configuración</button>
-            <button type="button" class="component-button component-button--h40" data-ref="btn-test-sso" data-i18n="org.sso.btn_test">Probar conexión</button>
-          </div>
-
-          <div class="banner banner--danger is-hidden" data-ref="sso-error"></div>
-          <div class="banner banner--success is-hidden" data-ref="sso-success"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;" data-ref="sso-bottom-actions">
+          <button type="button" class="component-button component-button--h34" data-ref="btn-test-sso-secondary" data-i18n="org.sso.btn_test">Probar conexión</button>
+          <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-sso-secondary" data-i18n="org.sso.btn_save">Guardar configuración</button>
         </div>
       </div>
     </div>

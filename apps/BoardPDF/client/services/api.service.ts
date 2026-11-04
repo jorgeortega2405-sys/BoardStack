@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { User } from '../types/auth.types.js';
 import { SalesInquiryPayload } from '../types/contact.types.js';
 import { EducationStatusResponse, OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
@@ -485,5 +486,47 @@ export async function submitSalesInquiryApi(payload: SalesInquiryPayload): Promi
     return { error: body.error || 'No se pudo enviar la solicitud.', ok: false };
   } catch {
     return { error: 'Error de conexión con el servidor. Intenta nuevamente.', ok: false };
+  }
+}
+
+export function updateUserAiTokens(balance: number): void {
+  if (currentUser) {
+    currentUser.ai_tokens_balance = balance;
+    setAuthState(
+      { ...currentUser, ai_tokens_balance: balance },
+      linkedAccounts.map((a) => (a.id === currentUser?.id ? { ...a, ai_tokens_balance: balance } : a))
+    );
+  }
+}
+
+export async function fetchAiTokenBalance(): Promise<{ balance: number; limit: number; resetAt: string } | null> {
+  try {
+    const res = await getApi(API_ROUTES.tokens.balance);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.success && json.data) {
+      if (currentUser && typeof json.data.balance === 'number') {
+        updateUserAiTokens(json.data.balance);
+      }
+      return json.data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function estimateAiTokens(
+  toolId: string,
+  pageCount: number,
+  fileSizeBytes: number
+): Promise<{ canAfford: boolean; cost: number; currentBalance: number; pageCount: number; remainingAfter: number } | null> {
+  try {
+    const res = await postApi(API_ROUTES.tokens.estimate, { fileSizeBytes, pageCount, toolId });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch {
+    return null;
   }
 }

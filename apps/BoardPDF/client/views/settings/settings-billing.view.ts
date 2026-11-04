@@ -1,6 +1,7 @@
 import { navigate } from '../../app-router.js';
 import { openModal } from '../../components/modal.component.js';
-import { cancelSubscriptionImmediateApi, checkAuthSession, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
+import { API_ROUTES } from '../../config/api-routes.js';
+import { cancelSubscriptionImmediateApi, checkAuthSession, currentUser, fetchAiTokenBalance, getApi, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
@@ -205,10 +206,143 @@ export async function createBillingView(): Promise<HTMLElement> {
     });
   });
 
-  await loadBillingData();
+  const formatBytes = (bytes: number): string => {
+    if (bytes <= 0) return '0.0 MB';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const renderStorageSection = async () => {
+    const textUsed = container.querySelector<HTMLElement>('[data-ref="storage-text-used"]');
+    const badgePercent = container.querySelector<HTMLElement>('[data-ref="storage-badge-percent"]');
+    const barFill = container.querySelector<HTMLElement>('[data-ref="storage-bar-fill"]');
+    const textAvailable = container.querySelector<HTMLElement>('[data-ref="storage-available-text"]');
+
+    if (!textUsed || !barFill) return;
+
+    try {
+      const res = await getApi(API_ROUTES.settings.storage);
+      if (res.ok) {
+        const data = await res.json();
+        const used = Number(data.usedBytes) || 0;
+        const limit = Number(data.limitBytes) || 5368709120;
+        const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
+        const avail = Math.max(0, limit - used);
+
+        textUsed.textContent = `${formatBytes(used)} de ${formatBytes(limit)} utilizados`;
+        if (badgePercent) {
+          badgePercent.textContent = `${pct}%`;
+          if (pct >= 90) {
+            badgePercent.className = 'component-badge component-badge--danger';
+          } else if (pct >= 75) {
+            badgePercent.className = 'component-badge component-badge--warning';
+          } else {
+            badgePercent.className = 'component-badge component-badge--neutral';
+          }
+        }
+        barFill.style.width = `${Math.min(100, pct)}%`;
+        if (pct >= 90) {
+          barFill.style.backgroundColor = 'var(--danger, #ef4444)';
+        } else if (pct >= 75) {
+          barFill.style.backgroundColor = 'var(--warning, #f59e0b)';
+        } else {
+          barFill.style.backgroundColor = 'var(--primary, #0f172a)';
+        }
+        if (textAvailable) {
+          textAvailable.textContent = `${formatBytes(avail)} disponibles`;
+        }
+      }
+    } catch {
+      const used = Number(currentUser?.storage_used_bytes) || 0;
+      const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
+      const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
+      textUsed.textContent = `${formatBytes(used)} de ${formatBytes(limit)} utilizados`;
+      barFill.style.width = `${pct}%`;
+    }
+  };
+
+  const renderAiTokensSection = async () => {
+    const tierBadge = container.querySelector<HTMLElement>('[data-ref="tokens-tier-badge"]');
+    const textBalance = container.querySelector<HTMLElement>('[data-ref="tokens-text-balance"]');
+    const badgePercent = container.querySelector<HTMLElement>('[data-ref="tokens-badge-percent"]');
+    const barFill = container.querySelector<HTMLElement>('[data-ref="tokens-bar-fill"]');
+    const resetDateText = container.querySelector<HTMLElement>('[data-ref="tokens-reset-date-text"]');
+
+    if (!textBalance || !barFill) return;
+
+    const tierName = (currentUser?.subscription_tier || 'free').toUpperCase();
+    if (tierBadge) {
+      tierBadge.textContent = `Plan ${tierName}`;
+      if (tierName === 'PRO' || tierName === 'BUSINESS' || tierName === 'ENTERPRISE') {
+        tierBadge.className = 'component-badge component-badge--success';
+      }
+    }
+
+    let balance = currentUser?.ai_tokens_balance ?? 100;
+    let limit = 100;
+    if (currentUser?.subscription_tier === 'pro') limit = 2000;
+    else if (currentUser?.subscription_tier === 'business') limit = 5000;
+    else if (currentUser?.subscription_tier === 'enterprise') limit = 10000;
+
+    let resetAtStr = '';
+    const tokenData = await fetchAiTokenBalance();
+    if (tokenData) {
+      balance = tokenData.balance;
+      limit = tokenData.limit || limit;
+      if (tokenData.resetAt) {
+        try {
+          const d = new Date(tokenData.resetAt);
+          resetAtStr = d.toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          });
+        } catch (_) {}
+      }
+    }
+
+    const pct = Math.min(100, Math.max(0, Math.round((balance / limit) * 100)));
+    textBalance.textContent = `${balance.toLocaleString()} / ${limit.toLocaleString()} tokens disponibles`;
+    if (badgePercent) {
+      badgePercent.textContent = `${pct}%`;
+      if (pct <= 10) {
+        badgePercent.className = 'component-badge component-badge--danger';
+      } else if (pct <= 25) {
+        badgePercent.className = 'component-badge component-badge--warning';
+      } else {
+        badgePercent.className = 'component-badge component-badge--neutral';
+      }
+    }
+    barFill.style.width = `${pct}%`;
+    if (pct <= 10) {
+      barFill.style.backgroundColor = 'var(--danger, #ef4444)';
+    } else if (pct <= 25) {
+      barFill.style.backgroundColor = 'var(--warning, #f59e0b)';
+    } else {
+      barFill.style.backgroundColor = 'var(--primary, #0f172a)';
+    }
+
+    if (resetDateText) {
+      if (resetAtStr) {
+        resetDateText.textContent = `Próximo reinicio: ${resetAtStr}`;
+      } else {
+        resetDateText.textContent = 'Próximo reinicio: Mensual';
+      }
+    }
+  };
+
+  await Promise.all([
+    loadBillingData(),
+    renderAiTokensSection(),
+    renderStorageSection(),
+  ]);
 
   const onSubscriptionUpdated = () => {
     void loadBillingData();
+    void renderAiTokensSection();
+    void renderStorageSection();
   };
   window.addEventListener('subscription-updated', onSubscriptionUpdated);
 

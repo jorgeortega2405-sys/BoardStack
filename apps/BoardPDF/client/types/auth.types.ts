@@ -1,4 +1,6 @@
 export interface User {
+  ai_tokens_balance?: number;
+  ai_tokens_reset_at?: string;
   avatar_url?: string | null;
   created_at?: string;
   email: string;

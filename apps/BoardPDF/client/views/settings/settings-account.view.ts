@@ -502,7 +502,6 @@ export class SettingsAccountController implements ViewController {
       this.refreshAvatarsInDom(avatarUrl);
       this.updateAvatarButtonsState(this.hasCustomAvatar() ? 'custom' : 'default');
       applyAvatarTier(avatarPreviewBox, currentUser.subscription_tier || 'free');
-      void this.renderStorageSection();
     } else {
       if (displayUsername) displayUsername.textContent = '—';
       if (displayEmail) displayEmail.textContent = '—';
@@ -510,63 +509,6 @@ export class SettingsAccountController implements ViewController {
       this.updateAvatarButtonsState('default');
       applyAvatarTier(avatarPreviewBox, 'free');
     }
-  }
-
-  private async renderStorageSection(): Promise<void> {
-    const textUsed = this.container.querySelector<HTMLElement>('[data-ref="storage-text-used"]');
-    const badgePercent = this.container.querySelector<HTMLElement>('[data-ref="storage-badge-percent"]');
-    const barFill = this.container.querySelector<HTMLElement>('[data-ref="storage-bar-fill"]');
-    const textAvailable = this.container.querySelector<HTMLElement>('[data-ref="storage-available-text"]');
-
-    if (!textUsed || !barFill) return;
-
-    try {
-      const res = await getApi(API_ROUTES.settings.storage);
-      if (res.ok) {
-        const data = await res.json();
-        const used = Number(data.usedBytes) || 0;
-        const limit = Number(data.limitBytes) || 5368709120;
-        const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
-        const avail = Math.max(0, limit - used);
-
-        textUsed.textContent = `${this.formatBytes(used)} de ${this.formatBytes(limit)} utilizados`;
-        if (badgePercent) {
-          badgePercent.textContent = `${pct}%`;
-          if (pct >= 90) {
-            badgePercent.className = 'component-badge component-badge--danger';
-          } else if (pct >= 75) {
-            badgePercent.className = 'component-badge component-badge--warning';
-          } else {
-            badgePercent.className = 'component-badge component-badge--neutral';
-          }
-        }
-        barFill.style.width = `${Math.min(100, pct)}%`;
-        if (pct >= 90) {
-          barFill.style.backgroundColor = 'var(--danger, #ef4444)';
-        } else if (pct >= 75) {
-          barFill.style.backgroundColor = 'var(--warning, #f59e0b)';
-        } else {
-          barFill.style.backgroundColor = 'var(--primary, #0f172a)';
-        }
-        if (textAvailable) {
-          textAvailable.textContent = `${this.formatBytes(avail)} disponibles`;
-        }
-      }
-    } catch {
-      const used = Number(currentUser?.storage_used_bytes) || 0;
-      const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
-      const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
-      textUsed.textContent = `${this.formatBytes(used)} de ${this.formatBytes(limit)} utilizados`;
-      barFill.style.width = `${pct}%`;
-    }
-  }
-
-  private formatBytes(bytes: number): string {
-    if (bytes <= 0) return '0.0 MB';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
   private setupLanguageDropdown(): void {

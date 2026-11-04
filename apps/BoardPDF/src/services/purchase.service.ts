@@ -2,7 +2,9 @@ import { getDbPool } from '../config/database.config.js';
 import { normalizeTierKey } from '../config/plans.config.js';
 import { redis } from '../config/redis.config.js';
 import { PurchaseRecord, SubscriptionTierId } from '../types/subscription.types.js';
+import { getMonthlyQuotaByPermissions } from './ai-token.service.js';
 import { logger } from './logger.service.js';
+import { permissionService } from './permission.service.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export class PurchaseService {
@@ -100,6 +102,19 @@ export class PurchaseService {
       try {
         await redis.del(`user:profile:${userId}`);
       } catch {}
+
+      if (status === 'active') {
+        try {
+          const perms = await permissionService.getUserPermissions(userId, canonicalTier);
+          const newQuota = getMonthlyQuotaByPermissions(perms);
+          await pool.query(
+            'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
+            [newQuota, userId]
+          );
+        } catch (tokenErr) {
+          logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
+        }
+      }
 
       logger.db.info('Suscripción de usuario actualizada en base de datos', {
         status,
@@ -223,6 +238,19 @@ export class PurchaseService {
       try {
         await redis.del(`user:profile:${userId}`);
       } catch {}
+
+      if (status === 'active') {
+        try {
+          const perms = await permissionService.getUserPermissions(userId, canonicalTier);
+          const newQuota = getMonthlyQuotaByPermissions(perms);
+          await pool.query(
+            'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
+            [newQuota, userId]
+          );
+        } catch (tokenErr) {
+          logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
+        }
+      }
 
       logger.db.info('Compra confirmada y procesada atómicamente', {
         plan: canonicalTier,

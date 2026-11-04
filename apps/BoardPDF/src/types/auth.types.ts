@@ -1,4 +1,6 @@
 export interface UserPayload {
+  ai_tokens_balance?: number;
+  ai_tokens_reset_at?: string;
   avatar_url?: string | null;
   created_at?: string;
   email: string;
@@ -16,6 +18,8 @@ export interface UserPayload {
 }
 
 export interface SessionAccount {
+  ai_tokens_balance?: number;
+  ai_tokens_reset_at?: string;
   avatar_url?: string | null;
   email: string;
   id: number;

@@ -1,0 +1,16 @@
+ALTER TABLE users 
+  ADD COLUMN ai_tokens_balance INT UNSIGNED NOT NULL DEFAULT 100,
+  ADD COLUMN ai_tokens_reset_at TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 MONTH);
+
+CREATE TABLE IF NOT EXISTS ai_token_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  tool_id VARCHAR(50) NOT NULL,
+  tokens_consumed INT UNSIGNED NOT NULL,
+  pdf_pages INT UNSIGNED NOT NULL DEFAULT 1,
+  pdf_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ai_tokens_user (user_id),
+  INDEX idx_ai_tokens_created (created_at),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

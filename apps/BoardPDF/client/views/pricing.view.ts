@@ -147,10 +147,12 @@ export class PricingController implements ViewController {
     const gridGeneral = this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-general"]');
     const gridEducation = this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-education"]');
     const billingPill = this.container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');
+    const cycleBar = this.container.querySelector<HTMLElement>('[data-ref="pricing-cycle-bar"]');
 
     gridGeneral?.classList.toggle('is-hidden', isEducation);
     gridEducation?.classList.toggle('is-hidden', !isEducation);
     billingPill?.classList.toggle('is-hidden', isEducation);
+    cycleBar?.classList.toggle('is-hidden', isEducation);
   }
 
   private async handleEducationClaim(): Promise<void> {

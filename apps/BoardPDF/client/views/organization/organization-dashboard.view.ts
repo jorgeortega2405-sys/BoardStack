@@ -30,18 +30,22 @@ export class OrganizationDashboardController implements ViewController {
 
   bindEvents(): void {
     const signal = this.abortController?.signal;
-    const btnMembers = this.container.querySelector<HTMLElement>('[data-ref="btn-go-members"]');
-    const btnSso = this.container.querySelector<HTMLElement>('[data-ref="btn-go-sso"]');
+    const btnsMembers = this.container.querySelectorAll<HTMLElement>('[data-ref="btn-go-members"]');
+    const btnsSso = this.container.querySelectorAll<HTMLElement>('[data-ref="btn-go-sso"]');
 
-    btnMembers?.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigate('/organization/members');
-    }, { signal });
+    btnsMembers.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigate('/organization/members');
+      }, { signal });
+    });
 
-    btnSso?.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigate('/organization/sso');
-    }, { signal });
+    btnsSso.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigate('/organization/sso');
+      }, { signal });
+    });
   }
 
   private async loadData(): Promise<void> {

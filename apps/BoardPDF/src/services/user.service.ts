@@ -9,6 +9,8 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 
 export interface UserRecord extends RowDataPacket {
+  ai_tokens_balance?: number;
+  ai_tokens_reset_at?: Date;
   avatar_url?: string | null;
   created_at?: Date;
   email: string;
@@ -47,7 +49,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
@@ -59,7 +61,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   if (rows.length === 0) return null;
@@ -79,7 +81,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
 
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, created_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;

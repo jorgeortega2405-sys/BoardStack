@@ -1,10 +1,11 @@
 import { ToolStatusManager } from '../../../components/tool-status.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormWithProgress } from '../../../services/api.service.js';
+import { currentUser, estimateAiTokens, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
+import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -223,6 +224,12 @@ export class SummarizePdfController implements ViewController {
   }
 
   public async handleFileSelected(file: File): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para utilizar las herramientas con Inteligencia Artificial.', 'warning');
+      navigate('/login');
+      return;
+    }
+
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       showToast('Solo se permiten documentos en formato PDF.', 'danger');
       return;
@@ -393,6 +400,9 @@ export class SummarizePdfController implements ViewController {
       }
 
       this.currentResult = result.data;
+      if ((result as any).aiTokens?.balance !== undefined) {
+        updateUserAiTokens((result as any).aiTokens.balance);
+      }
       this.statusManager?.hide();
       showElement(viewerCard);
       showElement(sidebar);

@@ -1,11 +1,21 @@
 import { getToolLimits } from '../../config/tools-limits.config.js';
+import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { getPdfPageCount, isPdfBuffer } from '../../utils/pdf.util.js';
 import { summarizePdf } from './summarize-pdf.service.js';
 import { SummaryMode } from './summarize-pdf.types.js';
 import { Request, Response } from 'express';
 
 export async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
+  const user = (req as any).user;
+  if (!user) {
+    res.status(401).json({
+      error: 'Debes iniciar sesión para utilizar las herramientas de Inteligencia Artificial.',
+      success: false,
+    });
+    return;
+  }
+
   const file = req.file;
 
   if (!file) {
@@ -24,7 +34,7 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     return;
   }
 
-  const userPerms = ((req as any).user?.permissions as string[]) || [];
+  const userPerms = (user.permissions as string[]) || [];
   const limits = getToolLimits('summarize-pdf', userPerms);
   const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
 
@@ -32,6 +42,20 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     res.status(400).json({
       error: `El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`,
       success: false,
+    });
+    return;
+  }
+
+  const pageCount = await getPdfPageCount(file.buffer);
+  const requiredTokens = calculatePdfCost('summarize-pdf', pageCount, file.buffer.length);
+  const tokenInfo = await getUserTokenBalance(user.id, userPerms);
+
+  if (tokenInfo.balance < requiredTokens) {
+    res.status(402).json({
+      error: `Saldo insuficiente de tokens IA. Esta operación requiere ${requiredTokens} tokens y dispones de ${tokenInfo.balance} tokens. Actualiza tu plan a Pro para recibir 2,000 tokens mensuales.`,
+      requiredTokens,
+      success: false,
+      userTokens: tokenInfo.balance,
     });
     return;
   }
@@ -47,7 +71,19 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
       originalname: file.originalname,
     });
 
+    const consumeResult = await consumeAiTokens({
+      fileSizeBytes: file.buffer.length,
+      pageCount,
+      permissions: userPerms,
+      toolId: 'summarize-pdf',
+      userId: user.id,
+    });
+
     res.status(200).json({
+      aiTokens: {
+        balance: consumeResult.balance,
+        consumed: consumeResult.consumed,
+      },
       data: result,
       success: true,
     });
@@ -76,4 +112,3 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     });
   }
 }
-

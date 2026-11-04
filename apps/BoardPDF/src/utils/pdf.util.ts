@@ -50,6 +50,16 @@ export async function extractPdfText(buffer: Buffer): Promise<{ fullText: string
   }
 }
 
+export async function getPdfPageCount(buffer: Buffer): Promise<number> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), verbosity: 0 }).promise;
+    return doc.numPages || 1;
+  } catch {
+    return 1;
+  }
+}
+
 export function cleanTextForWinAnsi(text: string): string {
   if (!text || typeof text !== 'string') return '';
   const str = text.replace(/\uFFFD/g, '');

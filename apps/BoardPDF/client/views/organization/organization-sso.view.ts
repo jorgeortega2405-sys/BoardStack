@@ -31,17 +31,24 @@ export class OrganizationSsoController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
     const btnSave = this.container.querySelector<HTMLElement>('[data-ref="btn-save-sso"]');
+    const btnSaveSec = this.container.querySelector<HTMLElement>('[data-ref="btn-save-sso-secondary"]');
     const btnTest = this.container.querySelector<HTMLElement>('[data-ref="btn-test-sso"]');
+    const btnTestSec = this.container.querySelector<HTMLElement>('[data-ref="btn-test-sso-secondary"]');
 
-    btnSave?.addEventListener('click', async (e) => {
+    const onSave = async (e: Event) => {
       e.preventDefault();
       await this.handleSaveConfig();
-    }, { signal });
+    };
 
-    btnTest?.addEventListener('click', (e) => {
+    const onTest = (e: Event) => {
       e.preventDefault();
       this.handleTestConnection();
-    }, { signal });
+    };
+
+    btnSave?.addEventListener('click', onSave, { signal });
+    btnSaveSec?.addEventListener('click', onSave, { signal });
+    btnTest?.addEventListener('click', onTest, { signal });
+    btnTestSec?.addEventListener('click', onTest, { signal });
   }
 
   private async loadSsoConfig(): Promise<void> {

@@ -1,5 +1,5 @@
 import { handleToolDownload } from '../../controllers/download.controller.js';
-import { optionalAuth } from '../../middlewares/auth.middleware.js';
+import { requireAuth } from '../../middlewares/auth.middleware.js';
 import { translatePdfLimiter } from '../../middlewares/rate-limit.middleware.js';
 import { translatePdfHandler } from './translate-pdf.controller.js';
 import { Router } from 'express';
@@ -16,7 +16,7 @@ const router = Router();
 
 router.post(
   '/tools/translate-pdf/translate',
-  optionalAuth,
+  requireAuth,
   translatePdfLimiter,
   upload.fields([
     { maxCount: 1, name: 'file' },

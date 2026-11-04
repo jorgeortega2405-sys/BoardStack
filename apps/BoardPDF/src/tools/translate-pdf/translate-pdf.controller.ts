@@ -1,11 +1,21 @@
 import { getToolLimits } from '../../config/tools-limits.config.js';
+import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { getPdfPageCount, isPdfBuffer } from '../../utils/pdf.util.js';
 import { translatePdf } from './translate-pdf.service.js';
 import { Request, Response } from 'express';
 
 export async function translatePdfHandler(req: Request, res: Response): Promise<void> {
   try {
+    const user = (req as any).user;
+    if (!user) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para utilizar las herramientas de Inteligencia Artificial.',
+        success: false,
+      });
+      return;
+    }
+
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
     const file = req.file || files?.file?.[0] || files?.pdf?.[0];
     if (!file) {
@@ -24,7 +34,7 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    const userPerms = ((req as any).user?.permissions as string[]) || [];
+    const userPerms = (user.permissions as string[]) || [];
     const limits = getToolLimits('translate-pdf', userPerms);
     const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
 
@@ -32,6 +42,20 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
       res.status(400).json({
         error: `El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`,
         success: false,
+      });
+      return;
+    }
+
+    const pageCount = await getPdfPageCount(file.buffer);
+    const requiredTokens = calculatePdfCost('translate-pdf', pageCount, file.buffer.length);
+    const tokenInfo = await getUserTokenBalance(user.id, userPerms);
+
+    if (tokenInfo.balance < requiredTokens) {
+      res.status(402).json({
+        error: `Saldo insuficiente de tokens IA. Esta traducción requiere ${requiredTokens} tokens y dispones de ${tokenInfo.balance} tokens. Actualiza tu plan a Pro para recibir 2,000 tokens mensuales.`,
+        requiredTokens,
+        success: false,
+        userTokens: tokenInfo.balance,
       });
       return;
     }
@@ -58,7 +82,19 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
       targetLang,
     });
 
+    const consumeResult = await consumeAiTokens({
+      fileSizeBytes: file.buffer.length,
+      pageCount,
+      permissions: userPerms,
+      toolId: 'translate-pdf',
+      userId: user.id,
+    });
+
     res.status(200).json({
+      aiTokens: {
+        balance: consumeResult.balance,
+        consumed: consumeResult.consumed,
+      },
       data: result,
       success: true,
     });
@@ -89,4 +125,3 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     });
   }
 }
-
