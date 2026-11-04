@@ -15,6 +15,42 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
     stripePriceYearlyId: 'price_1UWf5dE4dfTcnyKKbvBdN2eP',
     tagline: 'Máxima potencia, automatización y colaboración avanzada para despachos y equipos en crecimiento.',
   },
+  edu_individual: {
+    badge: 'Para Docentes y Alumnos',
+    borderColor: '#6366f1',
+    buttonText: 'Reclamar 1 año gratis',
+    currency: 'USD',
+    id: 'edu_individual',
+    name: 'Docentes y Estudiantes',
+    priceMonthly: 0,
+    priceYearly: 0,
+    ringBg: '#6366f1',
+    tagline: 'Acceso completo a herramientas Pro para docentes y estudiantes de educación con correo institucional.',
+  },
+  edu_school: {
+    badge: 'Para Escuelas K-12',
+    borderColor: '#10b981',
+    buttonText: 'Contactar ventas',
+    currency: 'USD',
+    id: 'edu_school',
+    name: 'Escuelas y Sistemas Educativos',
+    priceMonthly: 0,
+    priceYearly: 0,
+    ringBg: '#10b981',
+    tagline: 'Colaboración escolar masiva, gestión administrativa y SSO para instituciones K-12.',
+  },
+  edu_university: {
+    badge: 'Para Campus y Universidades',
+    borderColor: '#ef4444',
+    buttonText: 'Contactar ventas',
+    currency: 'USD',
+    id: 'edu_university',
+    name: 'Universidades e Institutos',
+    priceMonthly: 0,
+    priceYearly: 0,
+    ringBg: '#ef4444',
+    tagline: 'Convenio de campus, alta concurrencia, integración SSO y soporte prioritario.',
+  },
   enterprise: {
     badge: 'Para Empresas',
     borderColor: '#ef4444',
@@ -60,6 +96,15 @@ export function normalizeTierKey(tier?: string | null): SubscriptionTierId {
   if (clean === 'negocios' || clean === 'business') {
     return 'business';
   }
+  if (clean === 'edu_individual' || clean === 'educacion_individual') {
+    return 'edu_individual';
+  }
+  if (clean === 'edu_school' || clean === 'escuelas') {
+    return 'edu_school';
+  }
+  if (clean === 'edu_university' || clean === 'universidades') {
+    return 'edu_university';
+  }
   if (clean === 'empresas' || clean === 'enterprise') {
     return 'enterprise';
   }
@@ -76,6 +121,9 @@ export function getTierBorderColor(tier?: string | null): string {
 
 export const TIER_WEIGHTS: Record<SubscriptionTierId, number> = {
   business: 2,
+  edu_individual: 1,
+  edu_school: 2,
+  edu_university: 3,
   enterprise: 3,
   free: 0,
   pro: 1,

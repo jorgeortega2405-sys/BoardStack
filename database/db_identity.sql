@@ -309,3 +309,81 @@ INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
 SELECT 'pro', id FROM permissions WHERE name IN (
   'subscription:feature:pro'
 );
+
+CREATE TABLE IF NOT EXISTS education_claims (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
+  institutional_email VARCHAR(255) NOT NULL,
+  institution_domain VARCHAR(100) NOT NULL,
+  claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  status ENUM('active', 'expired', 'revoked') NOT NULL DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_edu_claims_email (institutional_email),
+  INDEX idx_edu_claims_domain (institution_domain),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'edu_individual', id FROM permissions WHERE name IN (
+  'subscription:feature:pro'
+);
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'edu_school', id FROM permissions WHERE name IN (
+  'subscription:feature:pro',
+  'subscription:feature:business',
+  'subscription:feature:organization',
+  'subscription:feature:sso',
+  'org:view',
+  'org:manage',
+  'members:view',
+  'members:invite',
+  'members:modify_role',
+  'members:remove',
+  'sso:view',
+  'sso:manage'
+);
+
+INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
+SELECT 'edu_university', id FROM permissions WHERE name IN (
+  'subscription:feature:pro',
+  'subscription:feature:business',
+  'subscription:feature:enterprise',
+  'subscription:feature:organization',
+  'subscription:feature:sso',
+  'org:view',
+  'org:manage',
+  'members:view',
+  'members:invite',
+  'members:modify_role',
+  'members:remove',
+  'sso:view',
+  'sso:manage'
+);
+
+-- ==============================================================================
+-- Solicitudes de Contacto y Ventas Institucionales / Enterprise
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS sales_inquiries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  category ENUM('enterprise', 'education_school', 'education_university') NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(50) NULL,
+  organization_name VARCHAR(255) NOT NULL,
+  job_title VARCHAR(150) NULL,
+  role_type VARCHAR(100) NULL,
+  organization_size VARCHAR(100) NULL,
+  primary_use_case VARCHAR(255) NULL,
+  message TEXT NULL,
+  status ENUM('new', 'contacted', 'qualified', 'closed') NOT NULL DEFAULT 'new',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_sales_inquiries_email (email),
+  INDEX idx_sales_inquiries_cat (category),
+  INDEX idx_sales_inquiries_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

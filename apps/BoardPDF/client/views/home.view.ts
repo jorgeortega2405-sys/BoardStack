@@ -7,7 +7,7 @@ import { getLocalizedPath } from '../config/seo.config.js';
 import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_CREATE_WORKFLOW, SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
-import { currentUser, deleteApi, getApi, putApi } from '../services/api.service.js';
+import { claimEducationFreeYearApi, currentUser, deleteApi, getApi, getEducationStatusApi, putApi } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -18,6 +18,7 @@ import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows } from '../services/w
 import { UserWorkflow } from '../types/workflow.types.js';
 import { listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../utils/collab-local-draft.util.js';
 import { setupDropdown } from '../utils/dom.util.js';
+import { applyAvatarTier } from '../utils/tier.util.js';
 
 interface CollabDocItem {
   access_level?: string;
@@ -59,6 +60,7 @@ export class HomeController {
     this.renderTools();
     this.bindEvents();
     this.renderFooter();
+    void this.checkEducationEligibility();
   }
 
   destroy(): void {
@@ -662,6 +664,49 @@ export class HomeController {
       },
       { signal: this.abortController?.signal }
     );
+
+    const btnClaimEdu = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-claim-edu-home"]');
+    btnClaimEdu?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void this.handleEducationClaim();
+    }, { signal: this.abortController?.signal });
+  }
+
+  private async checkEducationEligibility(): Promise<void> {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-edu-claim"]');
+    if (!banner) return;
+    if (!currentUser) {
+      banner.classList.add('is-hidden');
+      return;
+    }
+    const status = await getEducationStatusApi();
+    if (status && status.is_eligible && !status.has_claimed) {
+      banner.classList.remove('is-hidden');
+    } else {
+      banner.classList.add('is-hidden');
+    }
+  }
+
+  private async handleEducationClaim(): Promise<void> {
+    const btn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-claim-edu-home"]');
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-edu-claim"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Canjeando...</span>';
+    }
+    const result = await claimEducationFreeYearApi();
+    if (result.success) {
+      showToast('¡Felicidades! Se ha activado tu año gratuito de BoardPDF Pro.', 'success');
+      banner?.classList.add('is-hidden');
+      const avatarEl = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
+      applyAvatarTier(avatarEl, 'edu_individual');
+    } else {
+      showToast(result.error || 'No se pudo activar el beneficio.', 'danger');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Canjear 1 año gratis</span>';
+      }
+    }
   }
 
   private renderFooter(): void {

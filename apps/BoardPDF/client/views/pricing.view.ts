@@ -1,6 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
-import { currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
+import { claimEducationFreeYearApi, currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -12,6 +12,7 @@ import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } fro
 export class PricingController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private currentCategory: 'education' | 'general' = 'general';
   private currentCycle = 'monthly';
   private footerController: { destroy: () => void } | null = null;
 
@@ -52,6 +53,19 @@ export class PricingController implements ViewController {
   private bindEvents(): void {
     const signal = this.abortController?.signal;
 
+    const btnCatGeneral = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-category-general"]');
+    const btnCatEducation = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-category-education"]');
+
+    btnCatGeneral?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.setCategory('general');
+    }, { signal });
+
+    btnCatEducation?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.setCategory('education');
+    }, { signal });
+
     const btnMonthly = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cycle-monthly"]');
     const btnYearly = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cycle-yearly"]');
 
@@ -80,9 +94,86 @@ export class PricingController implements ViewController {
     const btnEnterprise = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-enterprise"]');
     btnEnterprise?.addEventListener('click', (e) => {
       e.preventDefault();
-      const currentLang = getCurrentLanguage();
-      navigate(getLocalizedPath('contact', currentLang));
+      navigate('/contact/sales');
     }, { signal });
+
+    const btnEduInd = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-individual"]');
+    btnEduInd?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void this.handleEducationClaim();
+    }, { signal });
+
+    const btnEduSchool = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-school"]');
+    btnEduSchool?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/contact/education?type=school');
+    }, { signal });
+
+    const btnEduUni = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-university"]');
+    btnEduUni?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/contact/education?type=university');
+    }, { signal });
+  }
+
+  private setCategory(category: 'education' | 'general'): void {
+    this.currentCategory = category;
+    const isEducation = category === 'education';
+
+    const pill = this.container.querySelector<HTMLElement>('[data-ref="category-toggle-pill"]');
+    if (pill) {
+      pill.setAttribute('data-category', category);
+    }
+
+    const btnGeneral = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-category-general"]');
+    const btnEducation = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-category-education"]');
+
+    if (btnGeneral && btnEducation) {
+      btnGeneral.classList.toggle('active', !isEducation);
+      btnEducation.classList.toggle('active', isEducation);
+    }
+
+    const gridGeneral = this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-general"]');
+    const gridEducation = this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-education"]');
+    const billingPill = this.container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');
+
+    gridGeneral?.classList.toggle('is-hidden', isEducation);
+    gridEducation?.classList.toggle('is-hidden', !isEducation);
+    billingPill?.classList.toggle('is-hidden', isEducation);
+  }
+
+  private async handleEducationClaim(): Promise<void> {
+    if (!currentUser) {
+      showToast('Inicia sesión o crea una cuenta con tu correo institucional para activar el beneficio.', 'info');
+      navigate('/login');
+      return;
+    }
+
+    const userTier = normalizeTier(currentUser.subscription_tier);
+    if (userTier !== 'free') {
+      showToast('Tu cuenta ya tiene un plan activo. Solo puedes mantener un plan a la vez.', 'info');
+      return;
+    }
+
+    const btnEduInd = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-individual"]');
+    if (btnEduInd) {
+      btnEduInd.disabled = true;
+      btnEduInd.innerHTML = '<span>Verificando...</span>';
+    }
+
+    const result = await claimEducationFreeYearApi();
+    if (result.success) {
+      showToast('¡Felicidades! Se ha activado tu año gratuito de BoardPDF Pro.', 'success');
+      this.updateUserTierStatus();
+      const avatarEl = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
+      applyAvatarTier(avatarEl, 'edu_individual');
+    } else {
+      showToast(result.error || 'No se pudo reclamar el beneficio.', 'danger');
+      if (btnEduInd) {
+        btnEduInd.disabled = false;
+        btnEduInd.innerHTML = '<span class="component-button__default-text">Reclamar 1 año gratis</span><span class="component-button__hover-text">Canjear con .edu</span>';
+      }
+    }
   }
 
   private setBillingCycle(cycle: string): void {
@@ -170,6 +261,33 @@ export class PricingController implements ViewController {
         btnBusiness.disabled = true;
         btnBusiness.innerHTML = '<span>Incluido en tu plan</span>';
       }
+    }
+
+    const btnEduInd = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-individual"]');
+    if (btnEduInd) {
+      if (userTier === 'edu_individual') {
+        btnEduInd.classList.add('component-button--disabled');
+        btnEduInd.disabled = true;
+        btnEduInd.innerHTML = '<span>Tu plan actual</span>';
+      } else if (userWeight >= 1) {
+        btnEduInd.classList.add('component-button--disabled');
+        btnEduInd.disabled = true;
+        btnEduInd.innerHTML = '<span>Plan activo</span>';
+      }
+    }
+
+    const btnEduSchool = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-school"]');
+    if (btnEduSchool && userTier === 'edu_school') {
+      btnEduSchool.classList.add('component-button--disabled');
+      btnEduSchool.disabled = true;
+      btnEduSchool.innerHTML = '<span>Tu plan actual</span>';
+    }
+
+    const btnEduUni = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-edu-university"]');
+    if (btnEduUni && userTier === 'edu_university') {
+      btnEduUni.classList.add('component-button--disabled');
+      btnEduUni.disabled = true;
+      btnEduUni.innerHTML = '<span>Tu plan actual</span>';
     }
   }
 

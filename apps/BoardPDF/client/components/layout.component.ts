@@ -64,7 +64,9 @@ export function updateSidebarAuthState(sidebar?: HTMLElement): void {
   const canAccessOrg = Boolean(
     hasOrganizationAccess() ||
     currentUser?.subscription_tier === 'enterprise' ||
-    currentUser?.subscription_tier === 'empresas'
+    currentUser?.subscription_tier === 'empresas' ||
+    currentUser?.subscription_tier === 'edu_school' ||
+    currentUser?.subscription_tier === 'edu_university'
   );
 
   if (orgRailItem) {

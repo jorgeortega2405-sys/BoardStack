@@ -96,6 +96,22 @@ body[data-theme="dark"] .component-toggle-pill-glider {
   transform: translateX(100%);
 }
 
+.component-toggle-pill[data-category="general"] .component-toggle-pill-glider {
+  transform: translateX(0);
+}
+
+.component-toggle-pill[data-category="education"] .component-toggle-pill-glider {
+  transform: translateX(100%);
+}
+
+.component-category-tabs {
+  margin-bottom: 4px;
+}
+
+.component-pricing-grid.is-hidden {
+  display: none !important;
+}
+
 .component-toggle-pill .component-button {
   position: relative;
   z-index: 2;

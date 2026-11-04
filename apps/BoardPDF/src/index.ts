@@ -7,7 +7,9 @@ import { csrfProtection } from './middlewares/csrf.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import { originProtection, securityHeaders } from './middlewares/security-headers.middleware.js';
 import authRoutes from './routes/auth.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 import downloadRoutes from './routes/download.routes.js';
+import educationRoutes from './routes/education.routes.js';
 import organizationRoutes from './routes/organization.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
@@ -326,7 +328,9 @@ async function startServer(): Promise<void> {
   });
 
   app.use('/api', authRoutes);
+  app.use('/api', contactRoutes);
   app.use('/api', downloadRoutes);
+  app.use('/api', educationRoutes);
   app.use('/api', organizationRoutes);
   app.use('/api', settingsRoutes);
   app.use('/api', subscriptionRoutes);

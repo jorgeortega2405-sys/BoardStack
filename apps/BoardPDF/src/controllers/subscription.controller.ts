@@ -295,7 +295,7 @@ export async function createSubscriptionIntent(req: Request, res: Response): Pro
     }
 
     const canonicalPlan = normalizeTierKey(planId);
-    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise') {
+    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise' || canonicalPlan.startsWith('edu_')) {
       sendBadRequest(res, 'El plan solicitado no admite suscripción directa.');
       return;
     }
@@ -367,7 +367,7 @@ export async function createOneTimeIntent(req: Request, res: Response): Promise<
     }
 
     const canonicalPlan = normalizeTierKey(planId);
-    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise') {
+    if (canonicalPlan === 'free' || canonicalPlan === 'enterprise' || canonicalPlan.startsWith('edu_')) {
       sendBadRequest(res, 'El plan solicitado no admite suscripción directa.');
       return;
     }

@@ -2007,3 +2007,56 @@
   font-size: 13px;
   font-weight: 500;
 }
+
+.banner--education {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-lg, 12px);
+  padding: 14px 20px;
+  margin: 16px auto 24px auto;
+  max-width: 900px;
+  box-sizing: border-box;
+}
+
+.banner--education.is-hidden {
+  display: none !important;
+}
+
+.banner--education .banner__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.banner--education .banner__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner--education .banner__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.banner--education .banner__desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.banner--education .banner__actions {
+  flex-shrink: 0;
+}

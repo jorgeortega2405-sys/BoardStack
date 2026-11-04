@@ -1,0 +1,164 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper contact-sales-wrapper" data-ref="contact-sales-wrapper">
+  <div class="view-backdrop view-backdrop--dots" data-ref="contact-sales-backdrop"></div>
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="contact-sales-scrollable">
+    <div class="contact-sales-view" data-ref="contact-sales-view">
+      <div class="contact-sales-split" data-ref="contact-sales-split">
+        <div class="contact-sales-narrative" data-ref="contact-sales-narrative">
+          <div class="component-badge component-badge--sm contact-sales-badge" data-ref="contact-sales-badge">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#business"></use></svg>
+            <span>Ventas Corporativas</span>
+          </div>
+
+          <h1 class="contact-sales-title" data-ref="contact-sales-title">Habla con nuestro equipo comercial</h1>
+          <p class="contact-sales-subtitle" data-ref="contact-sales-subtitle">Obtén una demostración personalizada y asesoramiento experto adaptado a las necesidades operativas y de seguridad de tu empresa:</p>
+
+          <div class="contact-sales-checklist" data-ref="contact-sales-checklist">
+            <div class="contact-sales-check-item" data-ref="sales-check-1">
+              <svg class="component-icon contact-sales-check-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span><strong>Orientación sobre licenciamiento:</strong> Asesoría especializada para elegir la escala óptima de licencias y almacenamiento en tu equipo.</span>
+            </div>
+            <div class="contact-sales-check-item" data-ref="sales-check-2">
+              <svg class="component-icon contact-sales-check-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span><strong>Demostración en vivo personalizada:</strong> Descubre cómo optimizar y automatizar tus flujos documentales con IA y edición colaborativa.</span>
+            </div>
+            <div class="contact-sales-check-item" data-ref="sales-check-3">
+              <svg class="component-icon contact-sales-check-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span><strong>Seguridad y gobernanza de datos:</strong> Integración SAML 2.0 / SSO, control de acceso granular PBAC y acuerdos SLA garantizados.</span>
+            </div>
+          </div>
+
+          <div class="contact-sales-disclaimer-box" data-ref="sales-disclaimer-box">
+            <p><strong>¿Buscas soporte técnico o consultas generales de tu cuenta?</strong> Visita nuestro <a class="link" data-ref="link-help-center" href="/help">Centro de Ayuda</a> o contacta al equipo de asistencia al usuario.</p>
+          </div>
+
+          <div class="contact-sales-trust" data-ref="sales-trust-section">
+            <span class="contact-sales-trust__label" data-ref="sales-trust-label">Empresas que confían en BoardPDF</span>
+            <div class="contact-sales-trust__logos" data-ref="sales-trust-logos">
+              <div class="contact-sales-trust__logo-item">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
+                <span>Airbnb</span>
+              </div>
+              <div class="contact-sales-trust__logo-item">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#hub"></use></svg>
+                <span>HubSpot</span>
+              </div>
+              <div class="contact-sales-trust__logo-item">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+                <span>Salesforce</span>
+              </div>
+              <div class="contact-sales-trust__logo-item">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#videocam"></use></svg>
+                <span>Zoom</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-sales-card" data-ref="contact-sales-card">
+          <div class="wizard-progress-track" data-ref="sales-progress-track">
+            <div class="wizard-progress-bar" data-ref="sales-progress-bar" style="width: 50%;"></div>
+          </div>
+
+          <div class="wizard-body" data-ref="sales-wizard-body">
+            <div class="wizard-step-top" data-ref="sales-step-top">
+              <button type="button" class="wizard-back-btn is-hidden" data-ref="btn-sales-back" aria-label="Volver al paso anterior">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+              </button>
+              <span class="wizard-step-counter" data-ref="sales-step-counter">PASO 1 DE 2</span>
+            </div>
+
+            <div class="wizard-step" data-ref="sales-step-1">
+              <h2 class="wizard-step-title" data-ref="sales-step-1-title">Escribe tu información de contacto</h2>
+
+              <div class="field-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <label class="field" data-ref="field-sales-first-name">
+                  <input class="field__input" data-ref="input-sales-first-name" type="text" placeholder=" " required />
+                  <span class="field__label">Nombre</span>
+                </label>
+                <label class="field" data-ref="field-sales-last-name">
+                  <input class="field__input" data-ref="input-sales-last-name" type="text" placeholder=" " required />
+                  <span class="field__label">Apellido</span>
+                </label>
+              </div>
+
+              <label class="field" data-ref="field-sales-email">
+                <input class="field__input" data-ref="input-sales-email" type="email" placeholder=" " required />
+                <span class="field__label">Correo de la empresa</span>
+              </label>
+
+              <label class="field" data-ref="field-sales-inquiry-type">
+                <select class="field__input" data-ref="input-sales-inquiry-type" required>
+                  <option value="" disabled selected>Selecciona un motivo</option>
+                  <option value="enterprise_pricing">Cotización para plan Empresas</option>
+                  <option value="custom_volume">Licencias y almacenamiento por volumen</option>
+                  <option value="sso_security">Integración SSO, SAML 2.0 y Auditoría</option>
+                  <option value="api_integration">API documental e infraestructura dedicada</option>
+                </select>
+                <span class="field__label">¿En qué podemos ayudarte?</span>
+              </label>
+
+              <button type="button" class="component-button component-button--rounded-pill component-button--primary component-button--w-full" data-ref="btn-sales-step-1-next">
+                <span>Siguiente</span>
+              </button>
+              <div class="banner banner--danger is-hidden" data-ref="sales-step-1-error"></div>
+            </div>
+
+            <div class="wizard-step is-hidden" data-ref="sales-step-2">
+              <h2 class="wizard-step-title" data-ref="sales-step-2-title">Detalles de tu organización</h2>
+
+              <label class="field" data-ref="field-sales-org-name">
+                <input class="field__input" data-ref="input-sales-org-name" type="text" placeholder=" " required />
+                <span class="field__label">Nombre de la empresa</span>
+              </label>
+
+              <label class="field" data-ref="field-sales-size">
+                <select class="field__input" data-ref="input-sales-size" required>
+                  <option value="" disabled selected>Selecciona el tamaño</option>
+                  <option value="1_10">1 a 10 empleados</option>
+                  <option value="11_50">11 a 50 empleados</option>
+                  <option value="51_200">51 a 200 empleados</option>
+                  <option value="201_1000">201 a 1,000 empleados</option>
+                  <option value="more_1000">Más de 1,000 empleados</option>
+                </select>
+                <span class="field__label">Tamaño de la empresa</span>
+              </label>
+
+              <label class="field" data-ref="field-sales-job-title">
+                <input class="field__input" data-ref="input-sales-job-title" type="text" placeholder=" " required />
+                <span class="field__label">¿Cuál es tu cargo o puesto de trabajo?</span>
+              </label>
+
+              <label class="field" data-ref="field-sales-phone">
+                <input class="field__input" data-ref="input-sales-phone" type="tel" placeholder=" " />
+                <span class="field__label">Teléfono de contacto (opcional)</span>
+              </label>
+
+              <label class="field" data-ref="field-sales-message">
+                <textarea class="field__input" data-ref="input-sales-message" rows="3" placeholder=" "></textarea>
+                <span class="field__label">Cuéntanos más sobre tus necesidades (opcional)</span>
+              </label>
+
+              <p class="wizard-legal-note">Al enviar este formulario, aceptas que nuestro equipo corporativo se comunique contigo para coordinar una demostración y asesoría comercial.</p>
+
+              <button type="button" class="component-button component-button--rounded-pill component-button--primary component-button--w-full" data-ref="btn-sales-submit">
+                <span>Enviar solicitud</span>
+              </button>
+              <div class="banner banner--danger is-hidden" data-ref="sales-step-2-error"></div>
+            </div>
+
+            <div class="wizard-success is-hidden" data-ref="sales-wizard-success">
+              <div class="wizard-success-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+              </div>
+              <h3 class="wizard-success-title" data-ref="sales-success-title">¡Solicitud comercial enviada!</h3>
+              <p class="wizard-success-desc" data-ref="sales-success-desc">Un ejecutivo de nuestro equipo corporativo revisará tus requerimientos y se comunicará contigo a la brevedad.</p>
+              <button type="button" class="component-button component-button--rounded-pill component-button--secondary" data-ref="btn-sales-success-home">
+                <span>Volver al inicio</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
