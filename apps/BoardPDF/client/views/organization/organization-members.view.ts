@@ -1,35 +1,31 @@
+import { openModal } from '../../components/modal.component.js';
 import { deleteApi, getApi, postApi, putApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { navigate } from '../../services/navigation.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
+import { applyAvatarTier } from '../../utils/tier.util.js';
 
 interface MemberItem {
+  avatar_url?: string | null;
   email: string;
   id: number;
   joined_at: string;
   role: 'admin' | 'member' | 'owner';
   status: string;
+  subscription_tier?: string;
   user_id: number;
   username: string;
-}
-
-interface InvitationItem {
-  created_at: string;
-  email: string;
-  expires_at: string;
-  id: number;
-  role: 'admin' | 'member';
-  status: string;
 }
 
 export class OrganizationMembersController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
-  private invitations: InvitationItem[] = [];
   private members: MemberItem[] = [];
   private searchQuery = '';
+  private selectedMemberId: number | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -40,7 +36,7 @@ export class OrganizationMembersController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
     translateElement(this.container);
-    await this.loadMembersAndInvitations();
+    await this.loadMembers();
   }
 
   destroy(): void {
@@ -53,102 +49,177 @@ export class OrganizationMembersController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
+    const btnGoInvitations = this.container.querySelector<HTMLElement>('[data-ref="btn-go-invitations"]');
     const btnOpenInvite = this.container.querySelector<HTMLElement>('[data-ref="btn-open-invite"]');
-    const btnCancelInvite = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-invite"]');
-    const btnSubmitInvite = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-invite"]');
-    const inviteGroup = this.container.querySelector<HTMLElement>('[data-ref="group-invite-form"]');
+    const btnManageRole = this.container.querySelector<HTMLElement>('[data-ref="btn-action-manage-role"]');
+    const btnDeleteMember = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete-member"]');
 
     searchInput?.addEventListener('input', () => {
       this.searchQuery = (searchInput.value || '').trim().toLowerCase();
       this.renderMembersList();
     }, { signal });
 
+    btnGoInvitations?.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate('/organization/invitations');
+    }, { signal });
+
     btnOpenInvite?.addEventListener('click', (e) => {
       e.preventDefault();
-      if (inviteGroup) {
-        inviteGroup.classList.toggle('is-hidden');
-        if (!inviteGroup.classList.contains('is-hidden')) {
-          const emailInput = inviteGroup.querySelector<HTMLInputElement>('[data-ref="input-invite-email"]');
-          emailInput?.focus();
+      this.openInviteModal();
+    }, { signal });
+
+    btnManageRole?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openManageRoleModal();
+    }, { signal });
+
+    btnDeleteMember?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.openDeleteMemberModal();
+    }, { signal });
+  }
+
+  private openInviteModal(): void {
+    const modalBody = document.createElement('div');
+    modalBody.style.cssText = 'display: flex; flex-direction: column; gap: 14px; padding: 4px 0;';
+    modalBody.innerHTML = `
+      <p style="margin: 0; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
+        Envía una invitación a un usuario para que se una a tu organización empresarial con acceso a las herramientas asignadas.
+      </p>
+
+      <label class="field" data-ref="field-modal-invite-email">
+        <input class="field__input" data-ref="input-modal-invite-email" type="email" placeholder=" " autocomplete="email" />
+        <span class="field__label">Correo electrónico</span>
+      </label>
+
+      <label class="field" data-ref="field-modal-invite-role">
+        <select class="field__input field__select" data-ref="select-modal-invite-role">
+          <option value="member">Miembro</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <span class="field__label">Rol organizacional</span>
+      </label>
+    `;
+
+    openModal({
+      bodyHtml: modalBody,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Enviar invitación',
+      onConfirm: async (modal) => {
+        const emailInput = modalBody.querySelector<HTMLInputElement>('[data-ref="input-modal-invite-email"]');
+        const roleSelect = modalBody.querySelector<HTMLSelectElement>('[data-ref="select-modal-invite-role"]');
+        const email = (emailInput?.value || '').trim();
+        const role = (roleSelect?.value || 'member') as 'admin' | 'member';
+
+        if (!email || !email.includes('@')) {
+          modal.showError(t('org.members.invalid_email', 'Ingresa un correo electrónico válido.'));
+          return;
         }
-      }
-    }, { signal });
 
-    btnCancelInvite?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (inviteGroup) {
-        inviteGroup.classList.add('is-hidden');
-        this.clearInviteForm();
-      }
-    }, { signal });
+        modal.setConfirmLoading(true);
+        try {
+          const response = await postApi('/api/organization/members/invite', { email, role });
+          const data = await response.json().catch(() => ({}));
 
-    btnSubmitInvite?.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await this.handleInviteSubmit();
-    }, { signal });
+          if (!response.ok) {
+            modal.setConfirmLoading(false);
+            modal.showError(data.error || t('common.error_occurred', 'Error al enviar la invitación.'));
+            return;
+          }
+
+          modal.close();
+          showToast(t('org.members.invite_sent', 'Invitación enviada exitosamente.'), 'success');
+          await this.loadMembers();
+        } catch {
+          modal.setConfirmLoading(false);
+          modal.showError(t('common.network_error', 'Error de conexión con el servidor.'));
+        }
+      },
+      title: 'Invitar nuevo miembro',
+    });
   }
 
-  private clearInviteForm(): void {
-    const emailInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-invite-email"]');
-    const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="invite-error"]');
-    const successBanner = this.container.querySelector<HTMLElement>('[data-ref="invite-success"]');
-    if (emailInput) emailInput.value = '';
-    if (errorBanner) {
-      errorBanner.textContent = '';
-      errorBanner.classList.add('is-hidden');
-    }
-    if (successBanner) {
-      successBanner.textContent = '';
-      successBanner.classList.add('is-hidden');
-    }
-  }
+  private openManageRoleModal(): void {
+    const member = this.members.find((m) => m.id === this.selectedMemberId);
+    if (!member) return;
 
-  private async handleInviteSubmit(): Promise<void> {
-    const emailInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-invite-email"]');
-    const roleSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-invite-role"]');
-    const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="invite-error"]');
-    const successBanner = this.container.querySelector<HTMLElement>('[data-ref="invite-success"]');
-    const inviteGroup = this.container.querySelector<HTMLElement>('[data-ref="group-invite-form"]');
-
-    if (errorBanner) errorBanner.classList.add('is-hidden');
-    if (successBanner) successBanner.classList.add('is-hidden');
-
-    const email = (emailInput?.value || '').trim();
-    const role = (roleSelect?.value || 'member') as 'admin' | 'member';
-
-    if (!email || !email.includes('@')) {
-      if (errorBanner) {
-        errorBanner.textContent = t('org.members.invalid_email', 'Ingresa un correo electrónico válido.');
-        errorBanner.classList.remove('is-hidden');
-      }
+    if (member.role === 'owner') {
+      showToast('No es posible modificar el rol del propietario.', 'info');
       return;
     }
 
-    try {
-      const response = await postApi('/api/organization/members/invite', { email, role });
-      const data = await response.json().catch(() => ({}));
+    const modalBody = document.createElement('div');
+    modalBody.style.cssText = 'display: flex; flex-direction: column; gap: 16px; padding: 4px 0;';
+    modalBody.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background-color: var(--bg-hover); border-radius: 12px;">
+        <div class="table-user-avatar" data-ref="modal-role-avatar">
+          ${member.avatar_url ? `<img src="${member.avatar_url}" alt="${member.username}" />` : `<span>${(member.username || member.email || '?')[0].toUpperCase()}</span>`}
+        </div>
+        <div style="display: flex; flex-direction: column; min-width: 0;">
+          <span style="font-weight: 600; color: var(--text-primary);">${member.username}</span>
+          <span style="font-size: 13px; color: var(--text-secondary);">${member.email}</span>
+        </div>
+      </div>
 
-      if (!response.ok) {
-        if (errorBanner) {
-          errorBanner.textContent = data.error || t('common.error_occurred', 'Error al enviar la invitación.');
-          errorBanner.classList.remove('is-hidden');
+      <label class="field" data-ref="field-modal-role">
+        <select class="field__input field__select" data-ref="select-modal-role">
+          <option value="member" ${member.role === 'member' ? 'selected' : ''}>Miembro</option>
+          <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Administrador</option>
+        </select>
+        <span class="field__label">Rol organizacional</span>
+      </label>
+    `;
+
+    applyAvatarTier(modalBody.querySelector<HTMLElement>('[data-ref="modal-role-avatar"]'), member.subscription_tier || 'free');
+
+    openModal({
+      bodyHtml: modalBody,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Guardar cambios',
+      description: 'Modifica los permisos y capacidades del integrante en la organización.',
+      onConfirm: async (modal) => {
+        const roleSelect = modalBody.querySelector<HTMLSelectElement>('[data-ref="select-modal-role"]');
+        const newRole = (roleSelect?.value || 'member') as 'admin' | 'member';
+        modal.setConfirmLoading(true);
+
+        const success = await this.handleRoleChange(member.id, newRole);
+        if (success) {
+          modal.close();
+        } else {
+          modal.setConfirmLoading(false);
         }
-        return;
-      }
-
-      showToast(t('org.members.invite_sent', 'Invitación enviada exitosamente.'), 'success');
-      this.clearInviteForm();
-      inviteGroup?.classList.add('is-hidden');
-      await this.loadMembersAndInvitations();
-    } catch {
-      if (errorBanner) {
-        errorBanner.textContent = t('common.network_error', 'Error de conexión con el servidor.');
-        errorBanner.classList.remove('is-hidden');
-      }
-    }
+      },
+      title: 'Gestionar rol de miembro',
+    });
   }
 
-  private async loadMembersAndInvitations(): Promise<void> {
+  private openDeleteMemberModal(): void {
+    const member = this.members.find((m) => m.id === this.selectedMemberId);
+    if (!member) return;
+
+    if (member.role === 'owner') {
+      showToast('No es posible eliminar al propietario de la organización.', 'info');
+      return;
+    }
+
+    openModal({
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--danger',
+      confirmText: 'Eliminar miembro',
+      description: `¿Estás seguro de que deseas eliminar a ${member.username} de la organización? Perderá acceso inmediato a los recursos compartidos.`,
+      onConfirm: async (modal) => {
+        modal.setConfirmLoading(true);
+        await this.handleRemoveMember(member.id, member.username);
+        modal.close();
+      },
+      title: 'Eliminar integrante',
+    });
+  }
+
+  private async loadMembers(): Promise<void> {
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="members-error"]');
     try {
       const response = await getApi('/api/organization/members');
@@ -163,10 +234,7 @@ export class OrganizationMembersController implements ViewController {
 
       const data = await response.json();
       this.members = Array.isArray(data.members) ? data.members : [];
-      this.invitations = Array.isArray(data.invitations) ? data.invitations : [];
-
       this.renderMembersList();
-      this.renderInvitationsList();
     } catch {
       if (errorBanner) {
         errorBanner.textContent = t('common.network_error', 'Error de conexión con el servidor.');
@@ -177,7 +245,6 @@ export class OrganizationMembersController implements ViewController {
 
   private renderMembersList(): void {
     const container = this.container.querySelector<HTMLElement>('[data-ref="members-container"]');
-    const countDesc = this.container.querySelector<HTMLElement>('[data-ref="members-count-desc"]');
     if (!container) return;
 
     const filtered = this.members.filter((m) => {
@@ -187,18 +254,15 @@ export class OrganizationMembersController implements ViewController {
       return u.includes(this.searchQuery) || e.includes(this.searchQuery);
     });
 
-    if (countDesc) {
-      countDesc.textContent = `${this.members.length} ${this.members.length === 1 ? 'miembro' : 'miembros'}`;
-    }
-
     if (filtered.length === 0) {
       container.innerHTML = `
         <tr data-ref="members-empty">
-          <td class="component-table__cell" colspan="5" style="color: var(--text-secondary); padding: 32px 16px; text-align: center;" data-i18n="org.members.no_results">
+          <td class="component-table__cell" colspan="4" style="color: var(--text-secondary); padding: 32px 16px; text-align: center;" data-i18n="org.members.no_results">
             ${t('org.members.no_results', 'No se encontraron miembros coincidentes.')}
           </td>
         </tr>
       `;
+      this.updateSelectionState();
       return;
     }
 
@@ -207,13 +271,14 @@ export class OrganizationMembersController implements ViewController {
       const isOwner = member.role === 'owner';
       const roleText = member.role === 'owner' ? 'Propietario' : member.role === 'admin' ? 'Administrador' : 'Miembro';
       const dateText = member.joined_at ? new Date(member.joined_at).toLocaleDateString() : '-';
+      const isSelected = this.selectedMemberId === member.id;
 
       html += `
-        <tr class="component-table__row" data-ref="member-item-${member.id}">
+        <tr class="component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}" data-ref="member-item-${member.id}" data-member-id="${member.id}">
           <td class="component-table__cell" style="padding-left: 20px;">
-            <div style="align-items: center; display: flex; gap: 10px;">
-              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 9999px; display: flex; height: 32px; justify-content: center; width: 32px;">
-                <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#person"></use></svg>
+            <div style="align-items: center; display: flex; gap: 12px;">
+              <div class="table-user-avatar" data-ref="avatar-member-${member.id}">
+                ${member.avatar_url ? `<img src="${member.avatar_url}" alt="${member.username}" />` : `<span>${(member.username || member.email || '?')[0].toUpperCase()}</span>`}
               </div>
               <span style="color: var(--text-primary); font-weight: 600;" data-ref="member-name-${member.id}">${member.username}</span>
             </div>
@@ -224,28 +289,8 @@ export class OrganizationMembersController implements ViewController {
           <td class="component-table__cell">
             <span class="component-badge component-badge--sm ${isOwner ? 'component-badge--primary' : 'component-badge--info'}" data-ref="member-badge-${member.id}">${roleText}</span>
           </td>
-          <td class="component-table__cell">
+          <td class="component-table__cell" style="padding-right: 20px;">
             <span style="color: var(--text-secondary);">${dateText}</span>
-          </td>
-          <td class="component-table__cell" style="padding-right: 20px; text-align: right;">
-            ${
-              isOwner
-                ? ''
-                : `
-              <div style="align-items: center; display: inline-flex; gap: 8px; justify-content: flex-end;">
-                <label class="field" data-ref="field-role-${member.id}" style="margin: 0;">
-                  <select class="field__input field__select" data-ref="select-member-role-${member.id}" data-member-id="${member.id}" style="height: 32px; padding: 4px 8px;">
-                    <option value="member" ${member.role === 'member' ? 'selected' : ''}>Miembro</option>
-                    <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Administrador</option>
-                  </select>
-                </label>
-                <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-remove-member-${member.id}" data-member-id="${member.id}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                  <span>Eliminar</span>
-                </button>
-              </div>
-            `
-            }
           </td>
         </tr>
       `;
@@ -255,103 +300,66 @@ export class OrganizationMembersController implements ViewController {
     renderIcons(container);
 
     filtered.forEach((member) => {
-      if (member.role === 'owner') return;
+      const avatarBox = container.querySelector<HTMLElement>(`[data-ref="avatar-member-${member.id}"]`);
+      applyAvatarTier(avatarBox, member.subscription_tier || 'free');
 
-      const roleSelect = container.querySelector<HTMLSelectElement>(`[data-ref="select-member-role-${member.id}"]`);
-      roleSelect?.addEventListener('change', async () => {
-        const newRole = roleSelect.value as 'admin' | 'member';
-        await this.handleRoleChange(member.id, newRole);
-      });
-
-      const removeBtn = container.querySelector<HTMLElement>(`[data-ref="btn-remove-member-${member.id}"]`);
-      removeBtn?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await this.handleRemoveMember(member.id, member.username);
+      const row = container.querySelector<HTMLElement>(`[data-ref="member-item-${member.id}"]`);
+      row?.addEventListener('click', () => {
+        if (this.selectedMemberId === member.id) {
+          this.selectedMemberId = null;
+        } else {
+          this.selectedMemberId = member.id;
+        }
+        this.renderMembersList();
       });
     });
+
+    this.updateSelectionState();
   }
 
-  private renderInvitationsList(): void {
-    const container = this.container.querySelector<HTMLElement>('[data-ref="invitations-container"]');
-    const countDesc = this.container.querySelector<HTMLElement>('[data-ref="invitations-count-desc"]');
-    if (!container) return;
+  private updateSelectionState(): void {
+    const btnManageRole = this.container.querySelector<HTMLElement>('[data-ref="btn-action-manage-role"]');
+    const btnDeleteMember = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete-member"]');
 
-    if (countDesc) {
-      countDesc.textContent = `${this.invitations.length} ${this.invitations.length === 1 ? 'invitación' : 'invitaciones'}`;
-    }
-
-    if (this.invitations.length === 0) {
-      container.innerHTML = `
-        <tr data-ref="invitations-empty">
-          <td class="component-table__cell" colspan="5" style="color: var(--text-secondary); padding: 32px 16px; text-align: center;" data-i18n="org.members.no_invitations">
-            ${t('org.members.no_invitations', 'No hay invitaciones pendientes.')}
-          </td>
-        </tr>
-      `;
+    if (!this.selectedMemberId) {
+      btnManageRole?.classList.add('is-hidden');
+      btnDeleteMember?.classList.add('is-hidden');
       return;
     }
 
-    let html = '';
-    this.invitations.forEach((invitation) => {
-      const expDate = invitation.expires_at ? new Date(invitation.expires_at).toLocaleDateString() : '-';
-      const roleText = invitation.role === 'admin' ? 'Administrador' : 'Miembro';
+    const member = this.members.find((m) => m.id === this.selectedMemberId);
+    if (!member) {
+      this.selectedMemberId = null;
+      btnManageRole?.classList.add('is-hidden');
+      btnDeleteMember?.classList.add('is-hidden');
+      return;
+    }
 
-      html += `
-        <tr class="component-table__row" data-ref="invitation-item-${invitation.id}">
-          <td class="component-table__cell" style="padding-left: 20px;">
-            <div style="align-items: center; display: flex; gap: 10px;">
-              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 9999px; display: flex; height: 32px; justify-content: center; width: 32px;">
-                <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#mail"></use></svg>
-              </div>
-              <span style="color: var(--text-primary); font-weight: 600;">${invitation.email}</span>
-            </div>
-          </td>
-          <td class="component-table__cell">
-            <span class="component-badge component-badge--sm component-badge--neutral">${roleText}</span>
-          </td>
-          <td class="component-table__cell">
-            <span class="component-badge component-badge--sm component-badge--warning">${invitation.status}</span>
-          </td>
-          <td class="component-table__cell">
-            <span style="color: var(--text-secondary);">${expDate}</span>
-          </td>
-          <td class="component-table__cell" style="padding-right: 20px; text-align: right;">
-            <button type="button" class="component-button component-button--h34" data-ref="btn-revoke-invitation-${invitation.id}" data-invitation-id="${invitation.id}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-              <span>Revocar</span>
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-
-    container.innerHTML = html;
-    renderIcons(container);
-
-    this.invitations.forEach((invitation) => {
-      const revokeBtn = container.querySelector<HTMLElement>(`[data-ref="btn-revoke-invitation-${invitation.id}"]`);
-      revokeBtn?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        await this.handleRevokeInvitation(invitation.id);
-      });
-    });
+    if (member.role === 'owner') {
+      btnManageRole?.classList.add('is-hidden');
+      btnDeleteMember?.classList.add('is-hidden');
+    } else {
+      btnManageRole?.classList.remove('is-hidden');
+      btnDeleteMember?.classList.remove('is-hidden');
+    }
   }
 
-  private async handleRoleChange(memberId: number, role: 'admin' | 'member'): Promise<void> {
+  private async handleRoleChange(memberId: number, role: 'admin' | 'member'): Promise<boolean> {
     try {
       const response = await putApi(`/api/organization/members/${memberId}/role`, { role });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         showToast(data.error || t('common.error_occurred', 'Error al cambiar rol.'), 'danger');
-        await this.loadMembersAndInvitations();
-        return;
+        return false;
       }
 
       showToast(t('org.members.role_updated', 'Rol actualizado exitosamente.'), 'success');
-      await this.loadMembersAndInvitations();
+      await this.loadMembers();
+      return true;
     } catch {
       showToast(t('common.network_error', 'Error de conexión con el servidor.'), 'danger');
+      return false;
     }
   }
 
@@ -366,24 +374,8 @@ export class OrganizationMembersController implements ViewController {
       }
 
       showToast(`Se ha eliminado a ${username} de la organización.`, 'info');
-      await this.loadMembersAndInvitations();
-    } catch {
-      showToast(t('common.network_error', 'Error de conexión con el servidor.'), 'danger');
-    }
-  }
-
-  private async handleRevokeInvitation(invitationId: number): Promise<void> {
-    try {
-      const response = await deleteApi(`/api/organization/invitations/${invitationId}`);
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        showToast(data.error || t('common.error_occurred', 'Error al revocar invitación.'), 'danger');
-        return;
-      }
-
-      showToast(t('org.members.invitation_revoked', 'Invitación revocada.'), 'info');
-      await this.loadMembersAndInvitations();
+      this.selectedMemberId = null;
+      await this.loadMembers();
     } catch {
       showToast(t('common.network_error', 'Error de conexión con el servidor.'), 'danger');
     }

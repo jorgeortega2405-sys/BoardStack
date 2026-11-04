@@ -5,6 +5,7 @@ export interface User {
   created_at?: string;
   email: string;
   id: number | string;
+  is_sso?: boolean;
   language?: string;
   permissions?: string[];
   role?: string;

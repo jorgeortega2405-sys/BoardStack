@@ -22,22 +22,26 @@ export interface OrganizationDetails {
 }
 
 export interface OrganizationMember {
+  avatar_url?: string | null;
   email: string;
   id: number;
   joined_at: string;
   role: string;
   status: string;
+  subscription_tier?: string;
   user_id: number;
   username: string;
 }
 
 export interface OrganizationInvitation {
+  avatar_url?: string | null;
   created_at: string;
   email: string;
   expires_at: string;
   id: number;
   role: string;
   status: string;
+  subscription_tier?: string;
 }
 
 export interface OrganizationSsoConfig {
@@ -235,7 +239,7 @@ export async function listMembers(
   const pool = getDbPool();
 
   const [memberRows] = await pool.query<any[]>(
-    `SELECT om.id, om.user_id, u.email, u.username, om.role, om.status, om.joined_at
+    `SELECT om.id, om.user_id, u.email, u.username, u.avatar_url, u.subscription_tier, om.role, om.status, om.joined_at
      FROM organization_members om
      JOIN users u ON om.user_id = u.id
      WHERE om.organization_id = ?
@@ -244,30 +248,35 @@ export async function listMembers(
   );
 
   const members: OrganizationMember[] = (Array.isArray(memberRows) ? memberRows : []).map((row) => ({
+    avatar_url: row.avatar_url || null,
     email: row.email,
     id: Number(row.id),
     joined_at: row.joined_at ? new Date(row.joined_at).toISOString() : new Date().toISOString(),
     role: row.role,
     status: row.status,
+    subscription_tier: row.subscription_tier || 'free',
     user_id: Number(row.user_id),
     username: row.username,
   }));
 
   const [invitationRows] = await pool.query<any[]>(
-    `SELECT id, email, role, status, expires_at, created_at
-     FROM organization_invitations
-     WHERE organization_id = ? AND status = 'pending'
-     ORDER BY created_at DESC`,
+    `SELECT oi.id, oi.email, oi.role, oi.status, oi.expires_at, oi.created_at, u.avatar_url, u.subscription_tier
+     FROM organization_invitations oi
+     LEFT JOIN users u ON oi.email = u.email
+     WHERE oi.organization_id = ? AND oi.status = 'pending'
+     ORDER BY oi.created_at DESC`,
     [orgId]
   );
 
   const invitations: OrganizationInvitation[] = (Array.isArray(invitationRows) ? invitationRows : []).map((row) => ({
+    avatar_url: row.avatar_url || null,
     created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
     email: row.email,
     expires_at: row.expires_at ? new Date(row.expires_at).toISOString() : new Date().toISOString(),
     id: Number(row.id),
     role: row.role,
     status: row.status,
+    subscription_tier: row.subscription_tier || 'free',
   }));
 
   return { invitations, members };

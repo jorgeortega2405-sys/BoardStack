@@ -372,6 +372,13 @@ export class SettingsAccountController implements ViewController {
 
     btnSaveEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
+      if (currentUser?.is_sso) {
+        if (emailErrorBanner) {
+          emailErrorBanner.textContent = t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.';
+          emailErrorBanner.style.display = 'block';
+        }
+        return;
+      }
       const newEmail = inputEmail?.value?.trim() || '';
 
       const validation = validateEmail(newEmail);
@@ -418,6 +425,10 @@ export class SettingsAccountController implements ViewController {
 
     btnEditEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
+      if (currentUser?.is_sso) {
+        showToast(t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.', 'warning');
+        return;
+      }
       if (emailErrorBanner) emailErrorBanner.style.display = 'none';
 
       await withButtonLoading(btnEditEmail, t('common.loading') || 'Cargando...', async () => {
@@ -493,10 +504,23 @@ export class SettingsAccountController implements ViewController {
     const displayUsername = this.container.querySelector<HTMLElement>('[data-ref="display-username"]');
     const displayEmail = this.container.querySelector<HTMLElement>('[data-ref="display-email"]');
     const avatarPreviewBox = this.container.querySelector<HTMLElement>('[data-ref="avatar-preview-box"]');
+    const btnEditEmail = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-edit-email"]');
+    const badgeSsoEmail = this.container.querySelector<HTMLElement>('[data-ref="badge-sso-email"]');
 
     if (currentUser) {
       if (displayUsername) displayUsername.textContent = currentUser.username;
       if (displayEmail) displayEmail.textContent = currentUser.email;
+
+      if (currentUser.is_sso) {
+        if (btnEditEmail) btnEditEmail.style.display = 'none';
+        if (badgeSsoEmail) {
+          badgeSsoEmail.style.display = 'inline-flex';
+          renderIcons(badgeSsoEmail);
+        }
+      } else {
+        if (btnEditEmail) btnEditEmail.style.display = '';
+        if (badgeSsoEmail) badgeSsoEmail.style.display = 'none';
+      }
 
       const avatarUrl = currentUser.avatar_url || this.getDefaultAvatarUrl(currentUser.username);
       this.refreshAvatarsInDom(avatarUrl);
@@ -505,6 +529,8 @@ export class SettingsAccountController implements ViewController {
     } else {
       if (displayUsername) displayUsername.textContent = '—';
       if (displayEmail) displayEmail.textContent = '—';
+      if (btnEditEmail) btnEditEmail.style.display = '';
+      if (badgeSsoEmail) badgeSsoEmail.style.display = 'none';
       this.refreshAvatarsInDom(null);
       this.updateAvatarButtonsState('default');
       applyAvatarTier(avatarPreviewBox, 'free');

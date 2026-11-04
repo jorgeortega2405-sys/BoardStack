@@ -5,6 +5,7 @@ export interface UserPayload {
   created_at?: string;
   email: string;
   id: number;
+  is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
   role?: string;
@@ -23,6 +24,7 @@ export interface SessionAccount {
   avatar_url?: string | null;
   email: string;
   id: number;
+  is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
   role?: string;

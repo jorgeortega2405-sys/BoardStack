@@ -143,7 +143,11 @@ export async function handleRequestEmailChangeCode(req: Request, res: Response):
     );
 
     if (!result.success) {
-      sendBadRequest(res, result.error || 'No se pudo enviar el código de verificación.');
+      if (result.status === 403) {
+        sendForbidden(res, result.error || 'Acción no permitida.');
+      } else {
+        sendBadRequest(res, result.error || 'No se pudo enviar el código de verificación.');
+      }
       return;
     }
 
@@ -212,7 +216,7 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
       if (result.status === 409) {
         sendConflict(res, result.error || 'El correo electrónico ya está registrado.');
       } else if (result.status === 403) {
-        sendUnauthorized(res, result.error || 'La autorización de 5 minutos para cambiar de correo ha expirado.');
+        sendForbidden(res, result.error || 'La autorización para cambiar de correo ha expirado o no está permitida.');
       } else {
         sendBadRequest(res, result.error || 'Correo electrónico inválido.');
       }

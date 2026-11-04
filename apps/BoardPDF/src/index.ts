@@ -14,6 +14,7 @@ import educationRoutes from './routes/education.routes.js';
 import organizationRoutes from './routes/organization.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+import ssoRoutes from './routes/sso.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
@@ -264,6 +265,7 @@ async function startServer(): Promise<void> {
       (req as any).rawBody = buf;
     },
   }));
+  app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(requestLogger);
   app.use(csrfProtection);
@@ -335,6 +337,7 @@ async function startServer(): Promise<void> {
   app.use('/api', educationRoutes);
   app.use('/api', organizationRoutes);
   app.use('/api', settingsRoutes);
+  app.use('/api', ssoRoutes);
   app.use('/api', subscriptionRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);

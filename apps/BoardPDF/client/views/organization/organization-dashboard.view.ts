@@ -46,6 +46,14 @@ export class OrganizationDashboardController implements ViewController {
         navigate('/organization/sso');
       }, { signal });
     });
+
+    const statMembers = this.container.querySelector<HTMLElement>('[data-ref="stat-members"]');
+    const statInvitations = this.container.querySelector<HTMLElement>('[data-ref="stat-invitations"]');
+    const statSso = this.container.querySelector<HTMLElement>('[data-ref="stat-sso"]');
+
+    statMembers?.addEventListener('click', () => navigate('/organization/members'), { signal });
+    statInvitations?.addEventListener('click', () => navigate('/organization/invitations'), { signal });
+    statSso?.addEventListener('click', () => navigate('/organization/sso'), { signal });
   }
 
   private async loadData(): Promise<void> {

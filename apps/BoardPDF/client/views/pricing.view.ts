@@ -26,6 +26,7 @@ export class PricingController implements ViewController {
     this.renderFooter();
     this.updateUserTierStatus();
     renderIcons(this.container);
+    requestAnimationFrame(() => this.updateCycleBarAlignment());
 
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
@@ -125,6 +126,28 @@ export class PricingController implements ViewController {
       e.preventDefault();
       navigate('/contact/education?type=university');
     }, { signal });
+
+    window.addEventListener('resize', () => this.updateCycleBarAlignment(), { signal });
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => this.updateCycleBarAlignment());
+      const section = this.container.querySelector('[data-ref="pricing-section"]') || this.container;
+      ro.observe(section);
+      signal?.addEventListener('abort', () => ro.disconnect());
+    }
+  }
+
+  private updateCycleBarAlignment(): void {
+    const cycleBar = this.container.querySelector<HTMLElement>('[data-ref="pricing-cycle-bar"]');
+    const grid = this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-general"]:not(.is-hidden)')
+      || this.container.querySelector<HTMLElement>('[data-ref="pricing-grid-general"]');
+    const firstCard = grid?.querySelector<HTMLElement>('.component-card--plan');
+
+    if (cycleBar && firstCard) {
+      const cycleRect = cycleBar.getBoundingClientRect();
+      const cardRect = firstCard.getBoundingClientRect();
+      const offset = Math.max(0, cardRect.left - cycleRect.left);
+      cycleBar.style.paddingLeft = `${offset}px`;
+    }
   }
 
   private setCategory(category: 'education' | 'general'): void {
@@ -153,6 +176,10 @@ export class PricingController implements ViewController {
     gridEducation?.classList.toggle('is-hidden', !isEducation);
     billingPill?.classList.toggle('is-hidden', isEducation);
     cycleBar?.classList.toggle('is-hidden', isEducation);
+
+    if (!isEducation) {
+      requestAnimationFrame(() => this.updateCycleBarAlignment());
+    }
   }
 
   private async handleEducationClaim(): Promise<void> {

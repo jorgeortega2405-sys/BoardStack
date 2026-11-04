@@ -4,6 +4,7 @@ import { logger } from '../services/logger.service.js';
 import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.service.js';
 import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
+import { ssoService } from '../services/sso.service.js';
 import { createUser, findUserByEmail, findUserDuplicates, updateUserLastLogin } from '../services/user.service.js';
 import { generateSixDigitCode, getPendingRegistration, savePendingRegistration, verifyAndConsumeCode } from '../services/verification.service.js';
 import { UserPayload } from '../types/auth.types.js';
@@ -26,6 +27,7 @@ export function sanitizeUser(user: any): UserPayload {
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,
     id: user.id,
+    is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
     role: user.role || 'USER',
     roles: user.roles || (user.role ? [user.role] : ['USER']),
@@ -265,6 +267,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     userRow.permissions = permissions;
 
     const user = sanitizeUser(userRow);
+    user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
     const clientIp = getClientIp(req);
     void updateUserLastLogin(user.id, clientIp);
 
@@ -301,15 +304,24 @@ export async function me(req: Request, res: Response): Promise<void> {
         user.subscription_status,
         user.role
       );
+      user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
       updateActiveAccountInSession(res, req, {
+        is_sso: user.is_sso,
         permissions: user.permissions,
         subscription_status: user.subscription_status,
         subscription_tier: user.subscription_tier,
       });
     }
 
+    const sanitizedAccounts = await Promise.all(
+      accounts.map(async (acc) => {
+        const isSso = typeof acc.id === 'number' ? await ssoService.isUserSsoManaged(acc.id, acc.email) : false;
+        return sanitizeUser({ ...acc, is_sso: isSso });
+      })
+    );
+
     res.status(200).json({
-      accounts: accounts.map(sanitizeUser),
+      accounts: sanitizedAccounts,
       user: user ? sanitizeUser(user) : null,
     });
   } catch (error) {

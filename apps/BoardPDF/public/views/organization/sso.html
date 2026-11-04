@@ -1,96 +1,166 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="org-sso-wrapper">
   <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-    <div class="home-floating-top" data-ref="sso-header">
+    <div class="home-floating-top home-floating-top--gradient" data-ref="sso-header">
       <div class="home-floating-top__left" data-ref="sso-header-left">
         <h1 class="section-floating-title" data-ref="sso-title" data-i18n="org.sso.title">Configuración SSO / SAML 2.0</h1>
       </div>
 
       <div class="home-floating-top__right" data-ref="sso-header-right">
         <div class="home-floating-actions" data-ref="sso-header-actions">
-          <div style="align-items: center; display: flex; gap: 8px; margin-right: 8px;" data-ref="sso-switch-container">
-            <span style="color: var(--text-secondary); font-size: 13px; font-weight: 500;" data-ref="sso-switch-text">Habilitar SAML</span>
-            <label class="component-switch" data-ref="switch-sso-label">
-              <input class="component-checkbox" data-ref="checkbox-sso-enable" type="checkbox" />
-            </label>
-          </div>
           <button type="button" class="component-button component-button--h34" data-ref="btn-test-sso" data-i18n="org.sso.btn_test">Probar conexión</button>
           <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-sso" data-i18n="org.sso.btn_save">Guardar configuración</button>
         </div>
       </div>
     </div>
 
-    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sso-scrollable" style="box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 24px; width: 100%;">
-      <div class="banner banner--danger is-hidden" data-ref="sso-error"></div>
-      <div class="banner banner--success is-hidden" data-ref="sso-success"></div>
-
-      <div class="org-hero-card" data-ref="group-sp-metadata" style="flex-direction: column; align-items: stretch; gap: 16px;">
-        <div data-ref="sp-metadata-header">
-          <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
-            <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sso-scrollable" style="box-sizing: border-box; padding: 24px 20px 48px; width: 100%;">
+      <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; width: 100%;" data-ref="sso-container">
+        <div class="org-hero-card" data-ref="group-domain-status" style="flex-direction: column; align-items: stretch; gap: 16px;">
+          <div data-ref="domain-status-header">
+            <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
+              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+              </div>
+              <h2 class="org-hero-card__title" data-ref="domain-status-title" style="font-size: 16px;">Dominio Corporativo y Estado General</h2>
             </div>
-            <h2 class="org-hero-card__title" data-ref="sp-metadata-title" data-i18n="org.sso.sp_title" style="font-size: 16px;">Datos del Proveedor de Servicios (BoardPDF SP)</h2>
+            <p class="org-hero-card__desc" data-ref="domain-status-desc">Vincula tu dominio corporativo y habilita la federación de identidades SAML 2.0 para tu equipo.</p>
           </div>
-          <p class="org-hero-card__desc" data-ref="sp-metadata-desc" data-i18n="org.sso.sp_desc">Copia estos valores en la consola de administración de tu Proveedor de Identidad (IdP):</p>
-        </div>
 
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <label class="field field--full" data-ref="field-sp-entity-id">
-            <input class="field__input" data-ref="input-sp-entity-id" type="text" readonly value="https://boardpdf.com/api/sso/saml/metadata" />
-            <span class="field__label" data-i18n="org.sso.sp_entity_id_label">Entity ID (Audience URI)</span>
-          </label>
-
-          <label class="field field--full" data-ref="field-sp-acs-url">
-            <input class="field__input" data-ref="input-sp-acs-url" type="text" readonly value="https://boardpdf.com/api/sso/saml/acs" />
-            <span class="field__label" data-i18n="org.sso.sp_acs_url_label">ACS URL (Single Sign-On URL)</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="org-hero-card" data-ref="group-idp-config" style="flex-direction: column; align-items: stretch; gap: 16px;">
-        <div data-ref="idp-config-header">
-          <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
-            <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
-            </div>
-            <h2 class="org-hero-card__title" data-ref="idp-config-title" data-i18n="org.sso.idp_title" style="font-size: 16px;">Parámetros del Proveedor de Identidad (IdP)</h2>
-          </div>
-          <p class="org-hero-card__desc" data-ref="idp-config-desc" data-i18n="org.sso.idp_desc">Ingresa la configuración SAML 2.0 proporcionada por tu IdP corporativo (Okta, Azure AD, Google Workspace):</p>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <label class="field field--full" data-ref="field-idp-entity-id">
-            <input class="field__input" data-ref="input-idp-entity-id" data-i18n-placeholder="org.sso.idp_entity_id_placeholder" type="text" placeholder=" " />
-            <span class="field__label" data-i18n="org.sso.idp_entity_id_label">IdP Entity ID (Issuer URL)</span>
-          </label>
-
-          <label class="field field--full" data-ref="field-idp-sso-url">
-            <input class="field__input" data-ref="input-idp-sso-url" data-i18n-placeholder="org.sso.idp_sso_url_placeholder" type="url" placeholder=" " />
-            <span class="field__label" data-i18n="org.sso.idp_sso_url_label">IdP Single Sign-On Service URL (ACS)</span>
-          </label>
-
-          <label class="field field--textarea field--full" data-ref="field-idp-certificate">
-            <textarea class="field__textarea" data-ref="input-idp-certificate" data-i18n-placeholder="org.sso.idp_cert_placeholder" placeholder=" " rows="5"></textarea>
-            <span class="field__label" data-i18n="org.sso.idp_cert_label">Certificado X.509 Público (PEM)</span>
-          </label>
-
-          <label class="field field--textarea field--full" data-ref="field-idp-metadata-xml">
-            <textarea class="field__textarea" data-ref="input-idp-metadata-xml" data-i18n-placeholder="org.sso.idp_xml_placeholder" placeholder=" " rows="5"></textarea>
-            <span class="field__label" data-i18n="org.sso.idp_xml_label">Metadatos XML de IdP (Opcional)</span>
-          </label>
-
-          <div style="margin-top: 4px;" data-ref="item-enforce-sso">
-            <label class="component-checkbox-label" data-ref="label-enforce-sso">
-              <input class="component-checkbox" data-ref="checkbox-enforce-sso" type="checkbox" />
-              <span data-i18n="org.sso.enforce_sso_label">Forzar inicio de sesión mediante SSO para todos los miembros</span>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label class="field field--full" data-ref="field-org-domain">
+              <input class="field__input" data-ref="input-org-domain" type="text" placeholder=" " autocomplete="off" />
+              <span class="field__label">Dominio corporativo (ej. tuempresa.com)</span>
             </label>
+            <span style="font-size: 12px; color: var(--text-secondary); padding-left: 4px;">Los colaboradores con correos de este dominio iniciarán sesión mediante este IdP.</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
+            <div class="settings-item" data-ref="item-sso-toggle" style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface);">
+              <div class="settings-item__content">
+                <div class="settings-item__text">
+                  <h3 class="settings-item__title" style="font-size: 13px;">Habilitar autenticación SAML 2.0</h3>
+                  <p class="settings-item__desc">Permite iniciar sesión con credenciales corporativas (Okta, Azure AD, Google Workspace).</p>
+                </div>
+              </div>
+              <label class="component-switch" data-ref="switch-sso-label">
+                <input class="component-checkbox" data-ref="checkbox-sso-enable" type="checkbox" />
+              </label>
+            </div>
+
+            <div class="settings-item" data-ref="item-enforce-sso" style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-surface);">
+              <div class="settings-item__content">
+                <div class="settings-item__text">
+                  <h3 class="settings-item__title" style="font-size: 13px;" data-i18n="org.sso.enforce_sso_label">Forzar inicio de sesión mediante SSO</h3>
+                  <p class="settings-item__desc">Exige a todos los miembros con este dominio autenticarse exclusivamente por SSO, desactivando contraseñas locales.</p>
+                </div>
+              </div>
+              <label class="component-switch" data-ref="label-enforce-sso">
+                <input class="component-checkbox" data-ref="checkbox-enforce-sso" type="checkbox" />
+              </label>
+            </div>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;" data-ref="sso-bottom-actions">
-          <button type="button" class="component-button component-button--h34" data-ref="btn-test-sso-secondary" data-i18n="org.sso.btn_test">Probar conexión</button>
-          <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-sso-secondary" data-i18n="org.sso.btn_save">Guardar configuración</button>
+        <div class="org-hero-card" data-ref="group-sp-metadata" style="flex-direction: column; align-items: stretch; gap: 16px;">
+          <div data-ref="sp-metadata-header">
+            <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
+              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
+              </div>
+              <h2 class="org-hero-card__title" data-ref="sp-metadata-title" data-i18n="org.sso.sp_title" style="font-size: 16px;">Datos del Proveedor de Servicios (BoardPDF SP)</h2>
+            </div>
+            <p class="org-hero-card__desc" data-ref="sp-metadata-desc" data-i18n="org.sso.sp_desc">Copia estos valores en la consola de administración de tu Proveedor de Identidad (IdP):</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); padding-left: 2px;" data-i18n="org.sso.sp_entity_id_label">Entity ID (Audience URI)</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input class="field__input" data-ref="input-sp-entity-id" type="text" readonly value="https://boardpdf.com/api/sso/saml/metadata" style="background-color: var(--bg-hover); cursor: text;" />
+                <button type="button" class="component-button component-button--h55" data-ref="btn-copy-sp-entity" style="min-width: 105px;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); padding-left: 2px;" data-i18n="org.sso.sp_acs_url_label">ACS URL (Single Sign-On URL)</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input class="field__input" data-ref="input-sp-acs-url" type="text" readonly value="https://boardpdf.com/api/sso/saml/acs" style="background-color: var(--bg-hover); cursor: text;" />
+                <button type="button" class="component-button component-button--h55" data-ref="btn-copy-sp-acs" style="min-width: 105px;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="org-hero-card" data-ref="group-idp-config" style="flex-direction: column; align-items: stretch; gap: 16px;">
+          <div data-ref="idp-config-header">
+            <div style="align-items: center; display: flex; gap: 10px; margin-bottom: 4px;">
+              <div style="align-items: center; background-color: var(--bg-hover); border-radius: 8px; display: flex; height: 32px; justify-content: center; width: 32px;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+              </div>
+              <h2 class="org-hero-card__title" data-ref="idp-config-title" data-i18n="org.sso.idp_title" style="font-size: 16px;">Parámetros del Proveedor de Identidad (IdP)</h2>
+            </div>
+            <p class="org-hero-card__desc" data-ref="idp-config-desc" data-i18n="org.sso.idp_desc">Ingresa la configuración SAML 2.0 proporcionada por tu IdP corporativo:</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label class="field field--full" data-ref="field-idp-entity-id">
+                <input class="field__input" data-ref="input-idp-entity-id" type="text" placeholder=" " />
+                <span class="field__label" data-i18n="org.sso.idp_entity_id_label">IdP Entity ID (Issuer URL)</span>
+              </label>
+              <span style="font-size: 12px; color: var(--text-secondary); padding-left: 4px;">Ejemplo: https://idp.empresa.com/entityid o https://sts.windows.net/...</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label class="field field--full" data-ref="field-idp-sso-url">
+                <input class="field__input" data-ref="input-idp-sso-url" type="url" placeholder=" " />
+                <span class="field__label" data-i18n="org.sso.idp_sso_url_label">IdP Single Sign-On Service URL (ACS)</span>
+              </label>
+              <span style="font-size: 12px; color: var(--text-secondary); padding-left: 4px;">URL a la que BoardPDF redirige a tus usuarios para autenticarse.</span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Método de credenciales IdP:</span>
+              <div style="display: flex; gap: 4px; background-color: var(--bg-hover); padding: 4px; border-radius: 8px;" data-ref="tabs-idp-method">
+                <button type="button" class="component-button component-button--h34 component-button--black" data-ref="tab-btn-cert" style="font-size: 12px; height: 28px; padding: 0 12px;">Certificado X.509</button>
+                <button type="button" class="component-button component-button--h34" data-ref="tab-btn-xml" style="font-size: 12px; height: 28px; padding: 0 12px;">Metadatos XML</button>
+              </div>
+            </div>
+
+            <div data-ref="container-idp-cert" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; flex-direction: column; gap: 6px;" data-ref="field-idp-certificate">
+                <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);" data-i18n="org.sso.idp_cert_label">Certificado X.509 Público (PEM)</span>
+                <textarea class="field__textarea" data-ref="input-idp-certificate" rows="5" spellcheck="false" style="font-family: monospace; font-size: 12px; line-height: 1.4;" placeholder="-----BEGIN CERTIFICATE-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END CERTIFICATE-----"></textarea>
+              </label>
+            </div>
+
+            <div class="is-hidden" data-ref="container-idp-xml" style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; flex-direction: column; gap: 6px;" data-ref="field-idp-metadata-xml">
+                <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary);" data-i18n="org.sso.idp_xml_label">Metadatos XML de IdP (Opcional)</span>
+                <textarea class="field__textarea" data-ref="input-idp-metadata-xml" rows="5" spellcheck="false" style="font-family: monospace; font-size: 12px; line-height: 1.4;" placeholder="<EntityDescriptor xmlns=&quot;urn:oasis:names:tc:SAML:2.0:metadata&quot; entityID=&quot;...&quot;>
+  ...
+</EntityDescriptor>"></textarea>
+              </label>
+              <span style="font-size: 12px; color: var(--text-secondary); padding-left: 4px;">Al ingresar el XML de tu IdP, BoardPDF extraerá automáticamente el certificado y la URL SSO.</span>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;" data-ref="sso-bottom-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-test-sso-secondary" data-i18n="org.sso.btn_test">Probar conexión</button>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-sso-secondary" data-i18n="org.sso.btn_save">Guardar configuración</button>
+          </div>
+        </div>
+
+        <div class="banner banner--danger is-hidden" data-ref="sso-error"></div>
+        <div class="banner banner--success is-hidden" data-ref="sso-success"></div>
       </div>
     </div>
   </div>

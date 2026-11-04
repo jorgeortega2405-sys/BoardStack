@@ -83,6 +83,10 @@
           </div>
           <div class="settings-item__actions" data-ref="email-view-actions">
             <button type="button" class="component-button component-button--h34" data-ref="btn-edit-email" data-i18n="settings.your_account.btn_edit">Editar</button>
+            <div class="sso-email-badge" data-ref="badge-sso-email" style="display: none; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); background-color: var(--bg-hover); padding: 6px 12px; border-radius: 9999px; border: 1px solid var(--border-subtle);">
+              <svg class="component-icon" style="font-size: 15px;" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
+              <span class="sso-email-badge__text" data-ref="badge-sso-email-text" data-i18n="settings.your_account.sso_managed_label">Gestionado por tu organización (SSO)</span>
+            </div>
           </div>
         </div>
         <div class="banner banner--danger" data-ref="email-error" style="display: none; margin: 0 24px 16px 24px;"></div>

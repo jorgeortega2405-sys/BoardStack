@@ -271,20 +271,38 @@ describe('Feature F16: Navigation Rail & Organization Templates Suite', () => {
       const expectedRefs = [
         'org-members-wrapper',
         'search-members',
+        'btn-go-invitations',
         'btn-open-invite',
-        'group-invite-form',
-        'input-invite-email',
-        'select-invite-role',
-        'btn-submit-invite',
-        'invite-error',
-        'invite-success',
+        'btn-action-manage-role',
+        'btn-action-delete-member',
         'members-container',
-        'invitations-container',
+        'members-error',
+        'members-success',
       ];
       for (const ref of expectedRefs) {
         assert.ok(
           content.includes(`data-ref="${ref}"`),
           `members.html missing data-ref="${ref}"`
+        );
+      }
+    });
+
+    it('invitations.html contains all required data-ref components', () => {
+      const content = fs.readFileSync(path.join(orgViewsDir, 'invitations.html'), 'utf-8');
+      const expectedRefs = [
+        'org-invitations-wrapper',
+        'search-invitations',
+        'btn-go-members',
+        'btn-open-invite',
+        'btn-action-revoke-invitation',
+        'invitations-container',
+        'invitations-error',
+        'invitations-success',
+      ];
+      for (const ref of expectedRefs) {
+        assert.ok(
+          content.includes(`data-ref="${ref}"`),
+          `invitations.html missing data-ref="${ref}"`
         );
       }
     });

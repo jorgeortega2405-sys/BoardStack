@@ -1162,6 +1162,144 @@ html, body {
   border-bottom: 1px solid var(--border-color);
 }
 
+.home-floating-top--gradient {
+  background: linear-gradient(90deg, #6366F1 0%, #A8C0FF 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.home-floating-top--gradient .section-floating-title,
+.home-floating-top--gradient .home-floating-top__left h1,
+.home-floating-top--gradient .home-floating-top__left h2,
+.home-floating-top--gradient .home-floating-top__left h3 {
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .component-badge {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .home-floating-actions .component-button,
+.home-floating-top--gradient .component-button:not(.component-button--black):not(.component-button--danger):not(.component-button--white) {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.38) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.home-floating-top--gradient .home-floating-actions .component-button:hover,
+.home-floating-top--gradient .component-button:not(.component-button--black):not(.component-button--danger):not(.component-button--white):hover {
+  background-color: rgba(255, 255, 255, 0.34) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .component-button--black,
+.home-floating-top--gradient .component-button--white {
+  background-color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+  color: #111827 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+}
+
+.home-floating-top--gradient .component-button--black:hover,
+.home-floating-top--gradient .component-button--white:hover {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.92) !important;
+  color: #030712 !important;
+}
+
+.home-floating-top--gradient .component-button--danger {
+  background-color: #ef4444 !important;
+  border: 1px solid #dc2626 !important;
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .component-button--danger:hover {
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+}
+
+.home-floating-top--gradient .component-search {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.38) !important;
+}
+
+.home-floating-top--gradient .component-search__icon {
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .component-search__input {
+  color: #ffffff !important;
+}
+
+.home-floating-top--gradient .component-search__input::placeholder {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.home-floating-top--gradient [data-ref="sso-switch-text"] {
+  color: #ffffff !important;
+}
+
+.table-user-avatar {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-hover, #f1f5f9);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.table-user-avatar::before {
+  background: var(--avatar-tier-bg, #9ca3af);
+  border-radius: 50%;
+  content: "";
+  inset: -2px;
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 2px;
+  pointer-events: none;
+  position: absolute;
+  transition: filter 0.15s ease;
+  z-index: 1;
+}
+
+.table-user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+.component-table tbody tr.component-cursor-pointer {
+  cursor: pointer;
+}
+
+.component-table tbody tr.is-selected {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+.component-table tbody tr.is-selected td:first-child {
+  box-shadow: inset 4px 0 0 0 #6366f1;
+}
+
 .home-floating-top__left,
 .home-floating-top__right {
   display: flex;

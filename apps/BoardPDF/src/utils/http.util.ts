@@ -11,6 +11,7 @@ export function sanitizeUser(user: any): UserPayload {
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,
     id: user.id,
+    is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
     subscription_tier: tier,

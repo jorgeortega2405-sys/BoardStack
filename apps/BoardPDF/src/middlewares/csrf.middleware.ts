@@ -23,7 +23,12 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
 
-  if (req.path === '/api/subscription/webhook' || req.originalUrl.startsWith('/api/subscription/webhook')) {
+  if (
+    req.path === '/api/subscription/webhook' ||
+    req.originalUrl.startsWith('/api/subscription/webhook') ||
+    req.path === '/api/sso/saml/acs' ||
+    req.originalUrl.startsWith('/api/sso/saml/acs')
+  ) {
     return next();
   }
 

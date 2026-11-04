@@ -108,6 +108,15 @@ body[data-theme="dark"] .component-toggle-pill-glider {
   margin-bottom: 4px;
 }
 
+.pricing-cycle-bar {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0;
+  transition: padding-left var(--sl-transition-fast);
+}
+
 .component-pricing-grid.is-hidden {
   display: none !important;
 }

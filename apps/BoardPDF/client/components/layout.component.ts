@@ -573,7 +573,7 @@ function renderOrganizationDrawerContent(drawerBody: HTMLElement, drawerFooter: 
 
   if (currentPath === '/organization' || currentPath === '/organization/' || currentPath === '/organization/dashboard') {
     btnDashboard?.classList.add('is-active');
-  } else if (currentPath === '/organization/members') {
+  } else if (currentPath === '/organization/members' || currentPath === '/organization/invitations') {
     btnMembers?.classList.add('is-active');
   } else if (currentPath === '/organization/sso' || currentPath === '/organization/saml') {
     btnSso?.classList.add('is-active');

@@ -178,6 +178,35 @@ class LoginViewController implements ViewController {
       const search = window.location.search || '';
       navigate(`/register${search}`);
     }, { signal });
+
+    const ssoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-sso-login"]');
+    ssoBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      banners.hideAll();
+      const email = emailInput?.value.trim() || '';
+      if (email && email.includes('@')) {
+        window.location.href = `/api/sso/saml/login?email=${encodeURIComponent(email)}`;
+      } else {
+        banners.showError('Ingresa tu correo corporativo en el campo de correo para continuar con SSO.');
+        emailInput?.focus();
+      }
+    }, { signal });
+
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ssoErr = urlParams.get('error');
+      if (ssoErr) {
+        if (ssoErr === 'sso_not_configured') {
+          banners.showError('La organización para este dominio no tiene SSO configurado o habilitado.');
+        } else if (ssoErr === 'invalid_saml_assertion') {
+          banners.showError('La respuesta SAML no pudo ser validada. Verifica el certificado o proveedor.');
+        } else if (ssoErr === 'missing_saml_response') {
+          banners.showError('No se recibió respuesta válida del proveedor de identidad SAML.');
+        } else if (ssoErr === 'sso_failed') {
+          banners.showError('Error al iniciar sesión mediante SSO.');
+        }
+      }
+    } catch {}
   }
 
   destroy(): void {

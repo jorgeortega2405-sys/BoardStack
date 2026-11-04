@@ -573,6 +573,8 @@
       "email_title": "Correo electrónico",
       "email_desc": "Tu dirección de correo se utiliza para iniciar sesión y recibir notificaciones de seguridad.",
       "email_placeholder": "Nuevo correo electrónico",
+      "sso_managed_label": "Gestionado por tu organización (SSO)",
+      "sso_email_blocked_toast": "Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.",
       "group_language": "Idioma de la plataforma",
       "language_title": "Idioma de la aplicación",
       "language_desc": "Selecciona el idioma principal de la interfaz y notificaciones.",

@@ -8,6 +8,7 @@ import { ViewController } from '../../types/common.types.js';
 export class OrganizationSsoController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private initialDomain: string = '';
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -34,6 +35,10 @@ export class OrganizationSsoController implements ViewController {
     const btnSaveSec = this.container.querySelector<HTMLElement>('[data-ref="btn-save-sso-secondary"]');
     const btnTest = this.container.querySelector<HTMLElement>('[data-ref="btn-test-sso"]');
     const btnTestSec = this.container.querySelector<HTMLElement>('[data-ref="btn-test-sso-secondary"]');
+    const btnCopyEntity = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-sp-entity"]');
+    const btnCopyAcs = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-sp-acs"]');
+    const tabBtnCert = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-cert"]');
+    const tabBtnXml = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-xml"]');
 
     const onSave = async (e: Event) => {
       e.preventDefault();
@@ -49,14 +54,74 @@ export class OrganizationSsoController implements ViewController {
     btnSaveSec?.addEventListener('click', onSave, { signal });
     btnTest?.addEventListener('click', onTest, { signal });
     btnTestSec?.addEventListener('click', onTest, { signal });
+
+    btnCopyEntity?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-sp-entity-id"]');
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value);
+        showToast(t('common.copied', 'Entity ID copiado al portapapeles'), 'info');
+      }
+    }, { signal });
+
+    btnCopyAcs?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-sp-acs-url"]');
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value);
+        showToast(t('common.copied', 'ACS URL copiada al portapapeles'), 'info');
+      }
+    }, { signal });
+
+    tabBtnCert?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.selectCredentialTab('cert');
+    }, { signal });
+
+    tabBtnXml?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.selectCredentialTab('xml');
+    }, { signal });
+  }
+
+  private selectCredentialTab(tab: 'cert' | 'xml'): void {
+    const tabBtnCert = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-cert"]');
+    const tabBtnXml = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-xml"]');
+    const boxCert = this.container.querySelector<HTMLElement>('[data-ref="container-idp-cert"]');
+    const boxXml = this.container.querySelector<HTMLElement>('[data-ref="container-idp-xml"]');
+
+    if (tab === 'cert') {
+      tabBtnCert?.classList.add('component-button--black');
+      tabBtnXml?.classList.remove('component-button--black');
+      boxCert?.classList.remove('is-hidden');
+      boxXml?.classList.add('is-hidden');
+    } else {
+      tabBtnXml?.classList.add('component-button--black');
+      tabBtnCert?.classList.remove('component-button--black');
+      boxXml?.classList.remove('is-hidden');
+      boxCert?.classList.add('is-hidden');
+    }
   }
 
   private async loadSsoConfig(): Promise<void> {
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="sso-error"]');
     try {
-      const response = await getApi('/api/organization/sso');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+      const [ssoRes, orgRes] = await Promise.all([
+        getApi('/api/organization/sso'),
+        getApi('/api/organization'),
+      ]);
+
+      if (orgRes.ok) {
+        const orgData = await orgRes.json();
+        const inputDomain = this.container.querySelector<HTMLInputElement>('[data-ref="input-org-domain"]');
+        if (inputDomain && orgData.organization?.domain) {
+          inputDomain.value = orgData.organization.domain;
+          this.initialDomain = orgData.organization.domain;
+        }
+      }
+
+      if (!ssoRes.ok) {
+        const errorData = await ssoRes.json().catch(() => ({}));
         if (errorBanner) {
           errorBanner.textContent = errorData.error || t('common.error_load_data', 'Error al cargar configuración SSO.');
           errorBanner.classList.remove('is-hidden');
@@ -64,7 +129,7 @@ export class OrganizationSsoController implements ViewController {
         return;
       }
 
-      const data = await response.json();
+      const data = await ssoRes.json();
       const sso = data.sso || {};
 
       const checkboxEnable = this.container.querySelector<HTMLInputElement>('[data-ref="checkbox-sso-enable"]');
@@ -83,11 +148,15 @@ export class OrganizationSsoController implements ViewController {
       if (inputXml) inputXml.value = sso.idp_metadata_xml || '';
       if (checkboxEnforce) checkboxEnforce.checked = Boolean(sso.enforce_sso);
 
-      if (inputSpEntity && sso.entity_id) {
-        inputSpEntity.value = sso.entity_id;
+      if (inputSpEntity) {
+        inputSpEntity.value = `${window.location.origin}/api/sso/saml/metadata`;
       }
-      if (inputSpAcs && sso.acs_url) {
-        inputSpAcs.value = sso.acs_url;
+      if (inputSpAcs) {
+        inputSpAcs.value = `${window.location.origin}/api/sso/saml/acs`;
+      }
+
+      if (sso.idp_metadata_xml && !sso.idp_certificate) {
+        this.selectCredentialTab('xml');
       }
     } catch {
       if (errorBanner) {
@@ -103,6 +172,7 @@ export class OrganizationSsoController implements ViewController {
     if (errorBanner) errorBanner.classList.add('is-hidden');
     if (successBanner) successBanner.classList.add('is-hidden');
 
+    const inputDomain = this.container.querySelector<HTMLInputElement>('[data-ref="input-org-domain"]');
     const checkboxEnable = this.container.querySelector<HTMLInputElement>('[data-ref="checkbox-sso-enable"]');
     const inputIdpEntity = this.container.querySelector<HTMLInputElement>('[data-ref="input-idp-entity-id"]');
     const inputIdpSsoUrl = this.container.querySelector<HTMLInputElement>('[data-ref="input-idp-sso-url"]');
@@ -111,6 +181,7 @@ export class OrganizationSsoController implements ViewController {
     const checkboxEnforce = this.container.querySelector<HTMLInputElement>('[data-ref="checkbox-enforce-sso"]');
     const inputSpAcs = this.container.querySelector<HTMLInputElement>('[data-ref="input-sp-acs-url"]');
 
+    const domain = (inputDomain?.value || '').trim().toLowerCase();
     const enabled = Boolean(checkboxEnable?.checked);
     const entity_id = (inputIdpEntity?.value || '').trim();
     const idp_sso_url = (inputIdpSsoUrl?.value || '').trim();
@@ -118,6 +189,27 @@ export class OrganizationSsoController implements ViewController {
     const idp_metadata_xml = (inputXml?.value || '').trim();
     const enforce_sso = Boolean(checkboxEnforce?.checked);
     const acs_url = (inputSpAcs?.value || '').trim();
+
+    if (domain !== this.initialDomain) {
+      try {
+        const orgRes = await putApi('/api/organization', { domain: domain || null });
+        if (!orgRes.ok) {
+          const orgErr = await orgRes.json().catch(() => ({}));
+          if (errorBanner) {
+            errorBanner.textContent = orgErr.error || t('common.error_occurred', 'Error al guardar el dominio corporativo.');
+            errorBanner.classList.remove('is-hidden');
+          }
+          return;
+        }
+        this.initialDomain = domain;
+      } catch {
+        if (errorBanner) {
+          errorBanner.textContent = t('common.network_error', 'Error de conexión con el servidor.');
+          errorBanner.classList.remove('is-hidden');
+        }
+        return;
+      }
+    }
 
     const body: Record<string, any> = {
       acs_url: acs_url || 'https://boardpdf.com/api/sso/saml/acs',
