@@ -339,6 +339,34 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
     }
 
     const safeFilename = `${encodeURIComponent(doc.title.replace(/[^a-zA-Z0-9_\-\. ]/g, '_')) || 'document'}.pdf`;
+    const pagesParam = typeof req.query.pages === 'string' ? req.query.pages.trim() : null;
+    if (pagesParam && pagesParam !== 'all') {
+      const pageNums = pagesParam
+        .split(',')
+        .map((p) => parseInt(p.trim(), 10))
+        .filter((p) => !isNaN(p) && p > 0);
+
+      if (pageNums.length > 0) {
+        const existingBytes = fs.readFileSync(pdfPath);
+        const srcDoc = await PDFDocument.load(existingBytes);
+        const totalPages = srcDoc.getPageCount();
+        const validIndices = pageNums
+          .map((p) => p - 1)
+          .filter((idx) => idx >= 0 && idx < totalPages);
+
+        if (validIndices.length > 0) {
+          const outDoc = await PDFDocument.create();
+          const copiedPages = await outDoc.copyPages(srcDoc, validIndices);
+          copiedPages.forEach((p) => outDoc.addPage(p));
+          const pdfBytes = await outDoc.save();
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+          res.send(Buffer.from(pdfBytes));
+          return;
+        }
+      }
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
     const stream = fs.createReadStream(pdfPath);

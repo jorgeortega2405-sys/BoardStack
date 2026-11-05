@@ -105,7 +105,7 @@ export class PageNumbersController implements ViewController {
     }, { signal });
 
     const modePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
-    const modeButtons = modePill?.querySelectorAll<HTMLButtonElement>('.component-button--pill');
+    const modeButtons = modePill?.querySelectorAll<HTMLButtonElement>('.component-button');
     modeButtons?.forEach((btn, index) => {
       btn.addEventListener('click', () => {
         modeButtons.forEach((b) => b.classList.remove('is-active'));

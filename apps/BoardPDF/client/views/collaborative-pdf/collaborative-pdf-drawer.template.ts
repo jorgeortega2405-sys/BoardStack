@@ -604,10 +604,10 @@ export function createCollaborativeDrawerElement(): HTMLElement {
       </div>
 
       <div class="collaborative-chart-tabs-nav">
-        <div class="component-toggle-pill component-toggle-pill--2" data-ref="chart-tabs-toggle" data-active="0">
+        <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="chart-tabs-toggle" data-active="0">
           <div class="component-toggle-pill-glider"></div>
-          <button type="button" class="component-button is-active" data-ref="btn-tab-chart-data">Datos</button>
-          <button type="button" class="component-button" data-ref="btn-tab-chart-customize">Personalizar</button>
+          <button type="button" class="component-button component-button--rounded-pill is-active" data-ref="btn-tab-chart-data">Datos</button>
+          <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-tab-chart-customize">Personalizar</button>
         </div>
       </div>
 

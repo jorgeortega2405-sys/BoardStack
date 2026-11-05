@@ -9008,13 +9008,22 @@ export class CollaborativePdfEditorController implements ViewController {
     }
   }
 
-  private openShareModal(): void {
+  private openShareModal(openInDownloadView: boolean = false): void {
     if (this.isLocalOnly) {
       this.openLocalAuthModal();
       return;
     }
 
     if (this.sharePopoverElement) {
+      if (openInDownloadView) {
+        const viewMain = this.sharePopoverElement.querySelector<HTMLElement>('[data-ref="collab-share-view-main"]');
+        const viewDownload = this.sharePopoverElement.querySelector<HTMLElement>('[data-ref="collab-share-view-download"]');
+        if (viewMain && viewDownload) {
+          viewMain.classList.add('is-hidden');
+          viewDownload.classList.remove('is-hidden');
+        }
+        return;
+      }
       this.closeSharePopover();
       return;
     }
@@ -9134,26 +9143,15 @@ export class CollaborativePdfEditorController implements ViewController {
 
           <div class="collab-share-section">
             <div class="collab-share-section__title">Tipo de archivo</div>
-            <div class="collab-download-type-grid" data-ref="download-type-grid">
-              <button type="button" class="collab-download-type-card is-active" data-ref="btn-type-digital" data-type="digital">
-                <div class="collab-download-type-card__icon">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-                </div>
-                <div class="collab-download-type-card__info">
-                  <span class="collab-download-type-card__title">Digital</span>
-                  <span class="collab-download-type-card__desc">PDF estándar para compartir en línea o por correo</span>
-                </div>
-                <svg class="component-icon collab-download-type-card__check" data-ref="check-type-digital" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="toggle-download-type" data-active="0">
+              <div class="component-toggle-pill-glider"></div>
+              <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-download-type-digital" data-type="digital">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+                <span>Digital</span>
               </button>
-              <button type="button" class="collab-download-type-card" data-ref="btn-type-print" data-type="print">
-                <div class="collab-download-type-card__icon">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-                </div>
-                <div class="collab-download-type-card__info">
-                  <span class="collab-download-type-card__title">Impresión</span>
-                  <span class="collab-download-type-card__desc">PDF para impresión de alta calidad</span>
-                </div>
-                <svg class="component-icon collab-download-type-card__check is-hidden" data-ref="check-type-print" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+              <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-download-type-print" data-type="print">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                <span>Impresión</span>
               </button>
             </div>
           </div>
@@ -9180,29 +9178,22 @@ export class CollaborativePdfEditorController implements ViewController {
 
           <div class="collab-share-section">
             <div class="collab-share-section__title">Seleccionar páginas</div>
-            <div class="collab-download-pages-list" data-ref="group-pages-select">
-              <label class="collab-download-radio-row">
-                <input class="collab-download-radio" data-ref="radio-pages-all" type="radio" name="collab_download_pages" value="all" checked />
-                <div class="collab-download-radio-info">
-                  <span class="collab-download-radio-title" data-ref="txt-pages-all-label">Todas las páginas (1 a ${this.pageCount})</span>
-                </div>
-              </label>
-              <label class="collab-download-radio-row">
-                <input class="collab-download-radio" data-ref="radio-pages-current" type="radio" name="collab_download_pages" value="current" />
-                <div class="collab-download-radio-info">
-                  <span class="collab-download-radio-title" data-ref="txt-pages-current-label">Esta página (Página ${curPageNum})</span>
-                </div>
-              </label>
-              <label class="collab-download-radio-row">
-                <input class="collab-download-radio" data-ref="radio-pages-custom" type="radio" name="collab_download_pages" value="custom" />
-                <div class="collab-download-radio-info">
-                  <span class="collab-download-radio-title">Personalizar</span>
-                </div>
-              </label>
+            <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="toggle-download-pages" data-active="0">
+              <div class="component-toggle-pill-glider"></div>
+              <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-download-pages-all" data-mode="all">
+                <span>Todas las páginas</span>
+              </button>
+              <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-download-pages-custom" data-mode="custom">
+                <span>Personalizar</span>
+              </button>
             </div>
-            <div class="collab-download-custom-input is-hidden" data-ref="container-custom-pages">
-              <input class="field__input field__input--h40" data-ref="input-custom-pages" type="text" placeholder="Ej. 1, 2-3" aria-label="Páginas a descargar" />
-              <span class="collab-download-help-text">Ejemplo: 1, 3, 5-7</span>
+
+            <div class="collab-download-custom-container is-hidden" data-ref="container-custom-pages">
+              <div class="collab-download-custom-header">
+                <span class="collab-download-custom-count" data-ref="txt-selected-pages-count">${this.pageCount} de ${this.pageCount} páginas seleccionadas</span>
+                <button type="button" class="collab-download-toggle-all" data-ref="btn-toggle-all-pages">Deseleccionar todas</button>
+              </div>
+              <div class="collab-download-pages-grid" data-ref="grid-download-pages"></div>
             </div>
           </div>
 
@@ -9434,15 +9425,24 @@ export class CollaborativePdfEditorController implements ViewController {
     const viewDownload = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-download"]');
     const downloadBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
     const btnShareDownloadBack = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-back"]');
-    const btnTypeDigital = popover.querySelector<HTMLButtonElement>('[data-ref="btn-type-digital"]');
-    const btnTypePrint = popover.querySelector<HTMLButtonElement>('[data-ref="btn-type-print"]');
-    const checkTypeDigital = popover.querySelector<HTMLElement>('[data-ref="check-type-digital"]');
-    const checkTypePrint = popover.querySelector<HTMLElement>('[data-ref="check-type-print"]');
+    const toggleDownloadType = popover.querySelector<HTMLElement>('[data-ref="toggle-download-type"]');
+    const btnTypeDigital = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-digital"]');
+    const btnTypePrint = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-print"]');
     const sectionDigitalOptions = popover.querySelector<HTMLElement>('[data-ref="section-digital-options"]');
+    const toggleDownloadPages = popover.querySelector<HTMLElement>('[data-ref="toggle-download-pages"]');
+    const btnPagesAll = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-pages-all"]');
+    const btnPagesCustom = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-pages-custom"]');
     const containerCustomPages = popover.querySelector<HTMLElement>('[data-ref="container-custom-pages"]');
-    const inputCustomPages = popover.querySelector<HTMLInputElement>('[data-ref="input-custom-pages"]');
+    const gridDownloadPages = popover.querySelector<HTMLElement>('[data-ref="grid-download-pages"]');
+    const txtSelectedPagesCount = popover.querySelector<HTMLElement>('[data-ref="txt-selected-pages-count"]');
+    const btnToggleAllPages = popover.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-pages"]');
     const downloadError = popover.querySelector<HTMLElement>('[data-ref="collab-download-error"]');
     const btnConfirmDownload = popover.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
+
+    if (openInDownloadView && viewMain && viewDownload) {
+      viewMain.classList.add('is-hidden');
+      viewDownload.classList.remove('is-hidden');
+    }
 
     downloadBtn?.addEventListener('click', () => {
       if (viewMain && viewDownload) {
@@ -9458,51 +9458,125 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     });
 
+    let currentDownloadType: 'digital' | 'print' = 'digital';
     btnTypeDigital?.addEventListener('click', () => {
-      btnTypeDigital.classList.add('is-active');
-      btnTypePrint?.classList.remove('is-active');
-      checkTypeDigital?.classList.remove('is-hidden');
-      checkTypePrint?.classList.add('is-hidden');
+      currentDownloadType = 'digital';
+      toggleDownloadType?.setAttribute('data-active', '0');
+      btnTypeDigital.classList.add('active');
+      btnTypePrint?.classList.remove('active');
       sectionDigitalOptions?.classList.remove('is-hidden');
     });
 
     btnTypePrint?.addEventListener('click', () => {
-      btnTypePrint.classList.add('is-active');
-      btnTypeDigital?.classList.remove('is-active');
-      checkTypePrint?.classList.remove('is-hidden');
-      checkTypeDigital?.classList.add('is-hidden');
+      currentDownloadType = 'print';
+      toggleDownloadType?.setAttribute('data-active', '1');
+      btnTypePrint.classList.add('active');
+      btnTypeDigital?.classList.remove('active');
       sectionDigitalOptions?.classList.add('is-hidden');
     });
 
-    const pageRadios = popover.querySelectorAll<HTMLInputElement>('input[name="collab_download_pages"]');
-    pageRadios.forEach((r) => {
-      r.addEventListener('change', () => {
-        if (r.value === 'custom') {
-          containerCustomPages?.classList.remove('is-hidden');
-          inputCustomPages?.focus();
-        } else {
-          containerCustomPages?.classList.add('is-hidden');
-        }
+    let currentPagesMode: 'all' | 'custom' = 'all';
+    const selectedPages = new Set<number>();
+    for (let p = 1; p <= this.pageCount; p++) {
+      selectedPages.add(p);
+    }
+
+    const updatePagesSelectionUi = () => {
+      if (txtSelectedPagesCount) {
+        txtSelectedPagesCount.textContent = `${selectedPages.size} de ${this.pageCount} páginas seleccionadas`;
+      }
+      if (btnToggleAllPages) {
+        btnToggleAllPages.textContent = selectedPages.size === this.pageCount ? 'Deseleccionar todas' : 'Seleccionar todas';
+      }
+      const cards = gridDownloadPages?.querySelectorAll<HTMLElement>('.collab-download-page-card');
+      cards?.forEach((card) => {
+        const pageNum = parseInt(card.getAttribute('data-page') || '0', 10);
+        card.classList.toggle('is-selected', selectedPages.has(pageNum));
       });
+    };
+
+    if (gridDownloadPages) {
+      gridDownloadPages.innerHTML = '';
+      for (let p = 1; p <= this.pageCount; p++) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'collab-download-page-card is-selected';
+        card.setAttribute('data-ref', `card-page-${p}`);
+        card.setAttribute('data-page', p.toString());
+        card.innerHTML = `
+          <div class="collab-download-page-card__preview">
+            <span class="collab-download-page-card__num">${p}</span>
+            <div class="collab-download-page-card__checkbox">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            </div>
+          </div>
+          <span class="collab-download-page-card__label">Pág. ${p}</span>
+        `;
+        card.addEventListener('click', () => {
+          if (selectedPages.has(p)) {
+            selectedPages.delete(p);
+          } else {
+            selectedPages.add(p);
+          }
+          updatePagesSelectionUi();
+        });
+        gridDownloadPages.appendChild(card);
+      }
+    }
+
+    btnToggleAllPages?.addEventListener('click', () => {
+      if (selectedPages.size === this.pageCount) {
+        selectedPages.clear();
+      } else {
+        for (let p = 1; p <= this.pageCount; p++) {
+          selectedPages.add(p);
+        }
+      }
+      updatePagesSelectionUi();
+    });
+
+    btnPagesAll?.addEventListener('click', () => {
+      currentPagesMode = 'all';
+      toggleDownloadPages?.setAttribute('data-active', '0');
+      btnPagesAll.classList.add('active');
+      btnPagesCustom?.classList.remove('active');
+      containerCustomPages?.classList.add('is-hidden');
+    });
+
+    btnPagesCustom?.addEventListener('click', () => {
+      currentPagesMode = 'custom';
+      toggleDownloadPages?.setAttribute('data-active', '1');
+      btnPagesCustom.classList.add('active');
+      btnPagesAll?.classList.remove('active');
+      containerCustomPages?.classList.remove('is-hidden');
     });
 
     btnConfirmDownload?.addEventListener('click', () => {
-      const selectedRadio = popover.querySelector<HTMLInputElement>('input[name="collab_download_pages"]:checked')?.value || 'all';
-      if (selectedRadio === 'custom') {
-        const val = inputCustomPages?.value.trim() || '';
-        if (!val) {
-          if (downloadError) {
-            downloadError.textContent = 'Por favor ingresa los números de página a descargar.';
-            downloadError.classList.remove('is-hidden');
-          }
-          return;
+      if (currentPagesMode === 'custom' && selectedPages.size === 0) {
+        if (downloadError) {
+          downloadError.textContent = 'Por favor selecciona al menos una página para descargar.';
+          downloadError.classList.remove('is-hidden');
         }
+        return;
       }
       if (downloadError) {
         downloadError.classList.add('is-hidden');
       }
 
-      const downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
+      let downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
+      const queryParams = new URLSearchParams();
+      if (currentPagesMode === 'custom') {
+        const sorted = Array.from(selectedPages).sort((a, b) => a - b);
+        queryParams.set('pages', sorted.join(','));
+      }
+      if (currentDownloadType === 'print') {
+        queryParams.set('type', 'print');
+      }
+      const queryString = queryParams.toString();
+      if (queryString) {
+        downloadUrl += `?${queryString}`;
+      }
+
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = `${this.docTitle || 'document'}.pdf`;
@@ -9628,14 +9702,7 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private downloadPdf(): void {
-    const downloadUrl = API_ROUTES.collaborativeDocs.pdf(this.docId);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = `${this.docTitle || 'document'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    showToast('Descarga iniciada', 'info');
+    this.openShareModal(true);
   }
 
   private toggleRulersAndGuides(): void {

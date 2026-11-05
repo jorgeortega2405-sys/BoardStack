@@ -1,16 +1,5 @@
 @import './tool-base.css';
 
-.component-toggle-pill--3[data-level="extreme"] .component-toggle-pill-glider {
-  transform: translateX(0);
-}
-
-.component-toggle-pill--3[data-level="recommended"] .component-toggle-pill-glider {
-  transform: translateX(100%);
-}
-
-.component-toggle-pill--3[data-level="low"] .component-toggle-pill-glider {
-  transform: translateX(200%);
-}
 
 .compress-quality-card,
 .translate-layout-card {

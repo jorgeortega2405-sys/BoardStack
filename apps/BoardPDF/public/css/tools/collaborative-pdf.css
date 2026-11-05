@@ -4056,83 +4056,6 @@
   width: 36px;
 }
 
-.collab-download-type-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.collab-download-type-card {
-  align-items: center;
-  background-color: var(--bg-surface, #ffffff);
-  border: 1.5px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: flex;
-  gap: 12px;
-  padding: 12px 14px;
-  text-align: left;
-  transition: all 0.15s ease;
-  width: 100%;
-}
-
-.collab-download-type-card:hover {
-  background-color: var(--bg-hover, #f9fafb);
-  border-color: var(--border-color-hover, #cbd5e1);
-}
-
-.collab-download-type-card.is-active {
-  background-color: var(--bg-hover, #f8fafc);
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 1px var(--color-primary, #6366f1);
-}
-
-.collab-download-type-card__icon {
-  align-items: center;
-  background-color: var(--bg-surface-raised, #f1f5f9);
-  border-radius: 10px;
-  color: var(--text-primary);
-  display: flex;
-  flex-shrink: 0;
-  height: 38px;
-  justify-content: center;
-  width: 38px;
-}
-
-.collab-download-type-card.is-active .collab-download-type-card__icon {
-  background-color: var(--color-primary-light, rgba(99, 102, 241, 0.12));
-  color: var(--color-primary, #6366f1);
-}
-
-.collab-download-type-card__info {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  gap: 2px;
-}
-
-.collab-download-type-card__title {
-  color: var(--text-primary, #111827);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.collab-download-type-card__desc {
-  color: var(--text-secondary, #6b7280);
-  font-size: 12px;
-  line-height: 1.3;
-}
-
-.collab-download-type-card__check {
-  color: var(--color-primary, #6366f1);
-  flex-shrink: 0;
-  height: 20px;
-  margin-left: auto;
-  width: 20px;
-}
-
 .collab-download-options-list {
   display: flex;
   flex-direction: column;
@@ -4176,45 +4099,145 @@
   font-size: 11px;
 }
 
-.collab-download-pages-list {
+.collab-download-custom-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  margin-top: 10px;
   width: 100%;
 }
 
-.collab-download-radio-row {
+.collab-download-custom-header {
   align-items: center;
-  border-radius: 8px;
-  cursor: pointer;
   display: flex;
-  gap: 10px;
-  padding: 6px 4px;
-  transition: background-color 0.12s ease;
-  user-select: none;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.collab-download-radio-row:hover {
-  background-color: var(--bg-hover, #f3f4f6);
-}
-
-.collab-download-radio-title {
-  color: var(--text-primary, #111827);
-  font-size: 13px;
+.collab-download-custom-count {
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
   font-weight: 500;
 }
 
-.collab-download-custom-input {
+.collab-download-toggle-all {
+  background: transparent;
+  border: none;
+  color: var(--action-primary, #111827);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html[data-theme="dark"] .collab-download-toggle-all,
+html.dark-theme .collab-download-toggle-all,
+body[data-theme="dark"] .collab-download-toggle-all {
+  color: #ffffff;
+}
+
+.collab-download-pages-grid {
+  box-sizing: border-box;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 2px;
+  width: 100%;
+}
+
+.collab-download-page-card {
+  align-items: center;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1.5px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  box-sizing: border-box;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 6px;
+  padding: 6px;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.collab-download-hint,
-.collab-download-help-text {
-  color: var(--text-tertiary, #9ca3af);
+.collab-download-page-card:hover {
+  background-color: var(--bg-hover, #f8fafc);
+  border-color: var(--border-color-hover, #94a3b8);
+}
+
+.collab-download-page-card.is-selected {
+  background-color: var(--bg-surface, #ffffff);
+  border-color: var(--action-primary, #111827);
+  box-shadow: 0 0 0 1px var(--action-primary, #111827);
+}
+
+html[data-theme="dark"] .collab-download-page-card.is-selected,
+html.dark-theme .collab-download-page-card.is-selected,
+body[data-theme="dark"] .collab-download-page-card.is-selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+.collab-download-page-card__preview {
+  align-items: center;
+  aspect-ratio: 3 / 4;
+  background-color: var(--bg-surface-raised, #f1f5f9);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.collab-download-page-card__num {
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.collab-download-page-card__checkbox {
+  align-items: center;
+  background-color: var(--action-primary, #111827);
+  border-radius: 4px;
+  color: #ffffff;
+  display: none;
+  height: 16px;
+  justify-content: center;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 16px;
+}
+
+.collab-download-page-card__checkbox .component-icon {
+  font-size: 12px;
+  height: 12px;
+  width: 12px;
+}
+
+.collab-download-page-card.is-selected .collab-download-page-card__checkbox {
+  display: flex;
+}
+
+html[data-theme="dark"] .collab-download-page-card__checkbox,
+html.dark-theme .collab-download-page-card__checkbox,
+body[data-theme="dark"] .collab-download-page-card__checkbox {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.collab-download-page-card__label {
+  color: var(--text-primary, #111827);
   font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
 }
 
 /* ==============================================================================

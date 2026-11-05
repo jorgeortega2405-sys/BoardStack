@@ -107,7 +107,7 @@ export class WatermarkPdfController implements ViewController {
     }, { signal });
 
     const typePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-wm-type"]');
-    const typeButtons = typePill?.querySelectorAll<HTMLButtonElement>('.component-button--pill');
+    const typeButtons = typePill?.querySelectorAll<HTMLButtonElement>('.component-button');
     typeButtons?.forEach((btn, index) => {
       btn.addEventListener('click', () => {
         typeButtons.forEach((b) => b.classList.remove('is-active'));
