@@ -2,7 +2,7 @@
 # -------------------------------------------------------------
 # ETAPA 1: Compilación Binaria con Rust Musl (Estático)
 # -------------------------------------------------------------
-FROM rust:1.80-alpine AS builder
+FROM rust:alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache musl-dev
 

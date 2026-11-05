@@ -1470,10 +1470,18 @@ export class CollaborativePdfEditorController implements ViewController {
     this.activePageIndex = targetIndex;
     this.renderPages();
     this.selectPage(targetIndex);
+    this.scrollToPage(targetIndex);
     this.setModified(true);
     this.broadcastDocSync();
     this.recordHistory();
     showToast(`Página ${targetIndex + 1} añadida`, 'success');
+  }
+
+  private scrollToPage(pageIndex: number): void {
+    requestAnimationFrame(() => {
+      const pageEl = this.container.querySelector<HTMLElement>(`[data-ref="page-sheet-scaler-${pageIndex}"], [data-ref="page-sheet-${pageIndex}"]`);
+      pageEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
   }
 
   private togglePageLock(pageIndex: number): void {
@@ -1516,6 +1524,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.activePageIndex = targetIndex;
     this.renderPages();
     this.selectPage(targetIndex);
+    this.scrollToPage(targetIndex);
     this.setModified(true);
     this.broadcastDocSync();
     this.recordHistory();
@@ -2236,9 +2245,10 @@ export class CollaborativePdfEditorController implements ViewController {
         if (this.editorMode === 'view') return;
         if (e.button !== 0) return;
         if (this.activeTool !== 'select') return;
-        const target = e.target as Element;
-        const isCanvasBackground = target === sheet || target === canvas || target === svg || target === guidesSvg;
-        if (!isCanvasBackground) return;
+        const clickedItem = (e.target as HTMLElement)?.closest(
+          '[data-element-id], .collaborative-transform-box, .collaborative-transform-handle, .collaborative-page-header, .collaborative-page-controls, button, input'
+        );
+        if (clickedItem) return;
 
         const startClientX = e.clientX;
         const startClientY = e.clientY;
@@ -2283,10 +2293,10 @@ export class CollaborativePdfEditorController implements ViewController {
 
           for (const el of pageElements) {
             const elNode = sheet.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
-            const elX = elNode ? elNode.offsetLeft : el.x;
-            const elY = elNode ? elNode.offsetTop : el.y;
-            const elW = elNode ? (elNode.offsetWidth || el.width || 60) : (el.width || 60);
-            const elH = elNode ? (elNode.offsetHeight || el.height || 60) : (el.height || 60);
+            const elX = el.x;
+            const elY = el.y;
+            const elW = el.width || (elNode ? elNode.offsetWidth : 60);
+            const elH = el.height || (elNode ? elNode.offsetHeight : 60);
             const elR = elX + elW;
             const elB = elY + elH;
             const intersects = !(elR < left || elX > right || elB < top || elY > bottom);
@@ -2312,8 +2322,8 @@ export class CollaborativePdfEditorController implements ViewController {
               this.selectElement(singleId);
             } else if (this.selectedElementIds.size > 1) {
               this.selectedElementId = null;
-              this.removeTransformBox();
               this.updateSelection();
+              this.renderTransformBox();
               this.updateContextToolbar();
             } else {
               this.selectedElementId = null;
@@ -4314,6 +4324,13 @@ export class CollaborativePdfEditorController implements ViewController {
             elObj.y = nextY;
           }
         }
+        this.updateTransformBoxPosition();
+        if (this.showRulersAndGuides) {
+          this.updateRulers();
+        }
+        if (this.isLayersPanelOpen) {
+          this.renderLayersList();
+        }
         this.setModified(true);
       } else {
         const rawX = initialX + dx;
@@ -4575,7 +4592,40 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private renderTransformBox(): void {
     this.removeTransformBox();
-    if (!this.selectedElementId) return;
+    if (!this.selectedElementId && this.selectedElementIds.size <= 1) return;
+
+    if (this.selectedElementIds.size > 1) {
+      const activeP = this.selectedPageIndex !== null ? this.selectedPageIndex : this.activePageIndex;
+      const selectedEls = this.elements.filter(
+        (e): e is ElementChart | ElementImage | ElementShape | ElementTable | ElementText =>
+          this.selectedElementIds.has(e.id) && (e.pageIndex ?? 0) === activeP && e.type !== 'drawing'
+      );
+      if (selectedEls.length === 0) return;
+
+      const sheet = this.container.querySelector<HTMLElement>(`[data-ref="page-sheet-${activeP}"]`);
+      if (!sheet) return;
+
+      const box = document.createElement('div');
+      box.className = 'collaborative-transform-box collaborative-transform-box--multi';
+      box.setAttribute('data-ref', 'transform-box');
+
+      box.innerHTML = `
+        <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--nw" data-handle="nw"></div>
+        <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--ne" data-handle="ne"></div>
+        <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--se" data-handle="se"></div>
+        <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--sw" data-handle="sw"></div>
+      `;
+
+      sheet.appendChild(box);
+      this.updateTransformBoxPosition();
+      if (this.showRulersAndGuides) {
+        this.updateRulers();
+      }
+      if (this.isLayersPanelOpen) {
+        this.renderLayersList();
+      }
+      return;
+    }
 
     const el = this.elements.find((e) => e.id === this.selectedElementId);
     if (!el || el.type === 'drawing') return;
@@ -4623,7 +4673,40 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private updateTransformBoxPosition(): void {
     const box = this.container.querySelector<HTMLElement>('[data-ref="transform-box"]');
-    if (!box || !this.selectedElementId) return;
+    if (!box) return;
+
+    if (this.selectedElementIds.size > 1) {
+      const activeP = this.selectedPageIndex !== null ? this.selectedPageIndex : this.activePageIndex;
+      const selectedEls = this.elements.filter(
+        (e): e is ElementChart | ElementImage | ElementShape | ElementTable | ElementText =>
+          this.selectedElementIds.has(e.id) && (e.pageIndex ?? 0) === activeP && e.type !== 'drawing'
+      );
+      if (selectedEls.length === 0) return;
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      for (const el of selectedEls) {
+        const w = el.width || 100;
+        const h = el.height || 40;
+        if (el.x < minX) minX = el.x;
+        if (el.y < minY) minY = el.y;
+        if (el.x + w > maxX) maxX = el.x + w;
+        if (el.y + h > maxY) maxY = el.y + h;
+      }
+
+      box.style.left = `${minX}px`;
+      box.style.top = `${minY}px`;
+      box.style.width = `${Math.max(20, maxX - minX)}px`;
+      box.style.height = `${Math.max(20, maxY - minY)}px`;
+      box.style.transform = 'none';
+      box.classList.remove('is-narrow');
+      return;
+    }
+
+    if (!this.selectedElementId) return;
 
     const el = this.elements.find((e) => e.id === this.selectedElementId);
     if (!el || el.type === 'drawing') return;
@@ -4880,6 +4963,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const width = item.width || 100;
     const height = item.height || 40;
     const threshold = 6;
+    const margin = 38;
 
     const otherElements = this.elements.filter(
       (el): el is ElementChart | ElementImage | ElementShape | ElementTable | ElementText =>
@@ -4904,6 +4988,10 @@ export class CollaborativePdfEditorController implements ViewController {
     checkSnapX(rawX + width / 2, pageW / 2);
     checkSnapX(rawX, 0);
     checkSnapX(rawX + width, pageW);
+    checkSnapX(rawX, margin);
+    checkSnapX(rawX + width, pageW - margin);
+    checkSnapX(rawX + width / 2, margin);
+    checkSnapX(rawX + width / 2, pageW - margin);
 
     for (const other of otherElements) {
       const oW = other.width || 100;
@@ -4943,6 +5031,10 @@ export class CollaborativePdfEditorController implements ViewController {
     checkSnapY(rawY + height / 2, pageH / 2);
     checkSnapY(rawY, 0);
     checkSnapY(rawY + height, pageH);
+    checkSnapY(rawY, margin);
+    checkSnapY(rawY + height, pageH - margin);
+    checkSnapY(rawY + height / 2, margin);
+    checkSnapY(rawY + height / 2, pageH - margin);
 
     for (const other of otherElements) {
       const oH = other.height || 40;
@@ -4989,6 +5081,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const pageDim = this.getPageDimensions(pageIndex);
     const pageW = pageDim.width;
     const pageH = pageDim.height;
+    const margin = 38;
     const linesToDraw: Array<{ x1: number; x2: number; y1: number; y2: number }> = [];
 
     const myLeft = x;
@@ -5017,6 +5110,24 @@ export class CollaborativePdfEditorController implements ViewController {
         y1: pageH / 2,
         y2: pageH / 2,
       });
+    }
+
+    if (isClose(myLeft, margin) || isClose(myRight, margin) || isClose(myCenter, margin)) {
+      const snapX = isClose(myLeft, margin) ? myLeft : (isClose(myRight, margin) ? myRight : myCenter);
+      linesToDraw.push({ x1: snapX, x2: snapX, y1: 0, y2: pageH });
+    }
+    if (isClose(myRight, pageW - margin) || isClose(myLeft, pageW - margin) || isClose(myCenter, pageW - margin)) {
+      const snapX = isClose(myRight, pageW - margin) ? myRight : (isClose(myLeft, pageW - margin) ? myLeft : myCenter);
+      linesToDraw.push({ x1: snapX, x2: snapX, y1: 0, y2: pageH });
+    }
+
+    if (isClose(myTop, margin) || isClose(myBottom, margin) || isClose(myMiddle, margin)) {
+      const snapY = isClose(myTop, margin) ? myTop : (isClose(myBottom, margin) ? myBottom : myMiddle);
+      linesToDraw.push({ x1: 0, x2: pageW, y1: snapY, y2: snapY });
+    }
+    if (isClose(myBottom, pageH - margin) || isClose(myTop, pageH - margin) || isClose(myMiddle, pageH - margin)) {
+      const snapY = isClose(myBottom, pageH - margin) ? myBottom : (isClose(myTop, pageH - margin) ? myTop : myMiddle);
+      linesToDraw.push({ x1: 0, x2: pageW, y1: snapY, y2: snapY });
     }
 
     const vCoords = [myLeft, myCenter, myRight];
@@ -5081,7 +5192,12 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     }
 
+    const drawnLineKeys = new Set<string>();
     for (const l of linesToDraw) {
+      const key = `${l.x1}_${l.y1}_${l.x2}_${l.y2}`;
+      if (drawnLineKeys.has(key)) continue;
+      drawnLineKeys.add(key);
+
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('class', 'collaborative-guide-line');
       line.setAttribute('x1', l.x1.toString());
@@ -5124,6 +5240,11 @@ export class CollaborativePdfEditorController implements ViewController {
       guidesSvg.appendChild(g);
     };
 
+    let closestLeft: { cy: number; gap: number; oRight: number } | null = null;
+    let closestRight: { cy: number; gap: number; oLeft: number } | null = null;
+    let closestTop: { cx: number; gap: number; oBottom: number } | null = null;
+    let closestBottom: { cx: number; gap: number; oTop: number } | null = null;
+
     for (const other of otherElements) {
       const oW = other.width || 100;
       const oH = other.height || 40;
@@ -5136,29 +5257,15 @@ export class CollaborativePdfEditorController implements ViewController {
       if (yOverlap) {
         if (oRight <= myLeft) {
           const gap = myLeft - oRight;
-          if (gap >= 4 && gap <= 400) {
+          if (gap >= 4 && gap <= 300 && (!closestLeft || gap < closestLeft.gap)) {
             const cy = Math.max(myTop, oTop) + Math.min(myBottom - myTop, oBottom - oTop) / 2;
-            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            tick.setAttribute('class', 'collaborative-guide-line');
-            tick.setAttribute('x1', oRight.toFixed(1));
-            tick.setAttribute('x2', myLeft.toFixed(1));
-            tick.setAttribute('y1', cy.toFixed(1));
-            tick.setAttribute('y2', cy.toFixed(1));
-            guidesSvg.appendChild(tick);
-            renderBadge((oRight + myLeft) / 2, cy, gap);
+            closestLeft = { cy, gap, oRight };
           }
         } else if (myRight <= oLeft) {
           const gap = oLeft - myRight;
-          if (gap >= 4 && gap <= 400) {
+          if (gap >= 4 && gap <= 300 && (!closestRight || gap < closestRight.gap)) {
             const cy = Math.max(myTop, oTop) + Math.min(myBottom - myTop, oBottom - oTop) / 2;
-            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            tick.setAttribute('class', 'collaborative-guide-line');
-            tick.setAttribute('x1', myRight.toFixed(1));
-            tick.setAttribute('x2', oLeft.toFixed(1));
-            tick.setAttribute('y1', cy.toFixed(1));
-            tick.setAttribute('y2', cy.toFixed(1));
-            guidesSvg.appendChild(tick);
-            renderBadge((myRight + oLeft) / 2, cy, gap);
+            closestRight = { cy, gap, oLeft };
           }
         }
       }
@@ -5167,32 +5274,59 @@ export class CollaborativePdfEditorController implements ViewController {
       if (xOverlap) {
         if (oBottom <= myTop) {
           const gap = myTop - oBottom;
-          if (gap >= 4 && gap <= 400) {
+          if (gap >= 4 && gap <= 300 && (!closestTop || gap < closestTop.gap)) {
             const cx = Math.max(myLeft, oLeft) + Math.min(myRight - myLeft, oRight - oLeft) / 2;
-            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            tick.setAttribute('class', 'collaborative-guide-line');
-            tick.setAttribute('x1', cx.toFixed(1));
-            tick.setAttribute('x2', cx.toFixed(1));
-            tick.setAttribute('y1', oBottom.toFixed(1));
-            tick.setAttribute('y2', myTop.toFixed(1));
-            guidesSvg.appendChild(tick);
-            renderBadge(cx, (oBottom + myTop) / 2, gap);
+            closestTop = { cx, gap, oBottom };
           }
         } else if (myBottom <= oTop) {
           const gap = oTop - myBottom;
-          if (gap >= 4 && gap <= 400) {
+          if (gap >= 4 && gap <= 300 && (!closestBottom || gap < closestBottom.gap)) {
             const cx = Math.max(myLeft, oLeft) + Math.min(myRight - myLeft, oRight - oLeft) / 2;
-            const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            tick.setAttribute('class', 'collaborative-guide-line');
-            tick.setAttribute('x1', cx.toFixed(1));
-            tick.setAttribute('x2', cx.toFixed(1));
-            tick.setAttribute('y1', myBottom.toFixed(1));
-            tick.setAttribute('y2', oTop.toFixed(1));
-            guidesSvg.appendChild(tick);
-            renderBadge(cx, (myBottom + oTop) / 2, gap);
+            closestBottom = { cx, gap, oTop };
           }
         }
       }
+    }
+
+    if (closestLeft) {
+      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tick.setAttribute('class', 'collaborative-guide-line');
+      tick.setAttribute('x1', closestLeft.oRight.toFixed(1));
+      tick.setAttribute('x2', myLeft.toFixed(1));
+      tick.setAttribute('y1', closestLeft.cy.toFixed(1));
+      tick.setAttribute('y2', closestLeft.cy.toFixed(1));
+      guidesSvg.appendChild(tick);
+      renderBadge((closestLeft.oRight + myLeft) / 2, closestLeft.cy, closestLeft.gap);
+    }
+    if (closestRight) {
+      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tick.setAttribute('class', 'collaborative-guide-line');
+      tick.setAttribute('x1', myRight.toFixed(1));
+      tick.setAttribute('x2', closestRight.oLeft.toFixed(1));
+      tick.setAttribute('y1', closestRight.cy.toFixed(1));
+      tick.setAttribute('y2', closestRight.cy.toFixed(1));
+      guidesSvg.appendChild(tick);
+      renderBadge((myRight + closestRight.oLeft) / 2, closestRight.cy, closestRight.gap);
+    }
+    if (closestTop) {
+      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tick.setAttribute('class', 'collaborative-guide-line');
+      tick.setAttribute('x1', closestTop.cx.toFixed(1));
+      tick.setAttribute('x2', closestTop.cx.toFixed(1));
+      tick.setAttribute('y1', closestTop.oBottom.toFixed(1));
+      tick.setAttribute('y2', myTop.toFixed(1));
+      guidesSvg.appendChild(tick);
+      renderBadge(closestTop.cx, (closestTop.oBottom + myTop) / 2, closestTop.gap);
+    }
+    if (closestBottom) {
+      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      tick.setAttribute('class', 'collaborative-guide-line');
+      tick.setAttribute('x1', closestBottom.cx.toFixed(1));
+      tick.setAttribute('x2', closestBottom.cx.toFixed(1));
+      tick.setAttribute('y1', myBottom.toFixed(1));
+      tick.setAttribute('y2', closestBottom.oTop.toFixed(1));
+      guidesSvg.appendChild(tick);
+      renderBadge(closestBottom.cx, (myBottom + closestBottom.oTop) / 2, closestBottom.gap);
     }
   }
 
@@ -6207,6 +6341,13 @@ export class CollaborativePdfEditorController implements ViewController {
             elNode.style.color = color;
           }
         }
+        this.updateTransformBoxPosition();
+        if (this.showRulersAndGuides) {
+          this.updateRulers();
+        }
+        if (this.isLayersPanelOpen) {
+          this.renderLayersList();
+        }
         this.setModified(true);
       }
     } else if (this.currentColorTarget === 'sticky-bg') {
@@ -6233,6 +6374,13 @@ export class CollaborativePdfEditorController implements ViewController {
             elNode.style.backgroundImage = 'none';
             elNode.style.backgroundColor = color;
           }
+        }
+        this.updateTransformBoxPosition();
+        if (this.showRulersAndGuides) {
+          this.updateRulers();
+        }
+        if (this.isLayersPanelOpen) {
+          this.renderLayersList();
         }
         this.setModified(true);
       }
@@ -7542,6 +7690,13 @@ export class CollaborativePdfEditorController implements ViewController {
           } else {
             elNode.style.border = 'none';
           }
+        }
+        this.updateTransformBoxPosition();
+        if (this.showRulersAndGuides) {
+          this.updateRulers();
+        }
+        if (this.isLayersPanelOpen) {
+          this.renderLayersList();
         }
         this.setModified(true);
         this.broadcastElementUpdate(el);
@@ -9516,8 +9671,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const pageRect = firstSheet.getBoundingClientRect();
 
     const dpr = window.devicePixelRatio || 1;
-    const topW = wsRect.width;
-    const leftH = wsRect.height;
+    const topW = Math.max(100, Math.round(wsRect.width - 20));
+    const leftH = Math.max(100, Math.round(wsRect.height - 20));
 
     if (canvasTop.width !== Math.round(topW * dpr) || canvasTop.height !== Math.round(20 * dpr)) {
       canvasTop.width = Math.round(topW * dpr);
@@ -9536,17 +9691,22 @@ export class CollaborativePdfEditorController implements ViewController {
     const ctxLeft = canvasLeft.getContext('2d');
     if (!ctxTop || !ctxLeft) return;
 
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bgFill = isDark ? '#1e293b' : '#f3f4f7';
+    const textFill = isDark ? '#94a3b8' : '#6b7280';
+    const strokeLine = isDark ? '#475569' : '#9ca3af';
+
     ctxTop.save();
     ctxTop.scale(dpr, dpr);
     ctxTop.clearRect(0, 0, topW, 20);
-    ctxTop.fillStyle = '#f3f4f7';
+    ctxTop.fillStyle = bgFill;
     ctxTop.fillRect(0, 0, topW, 20);
 
     const cmPx = 37.8 * (this.zoomLevel || 1.0);
-    const originX = pageRect.left - wsRect.left;
+    const originX = (pageRect.left - wsRect.left) - 20;
 
-    ctxTop.fillStyle = '#6b7280';
-    ctxTop.strokeStyle = '#9ca3af';
+    ctxTop.fillStyle = textFill;
+    ctxTop.strokeStyle = strokeLine;
     ctxTop.lineWidth = 1;
     ctxTop.font = '9px system-ui, sans-serif';
     ctxTop.textAlign = 'center';
@@ -9588,12 +9748,12 @@ export class CollaborativePdfEditorController implements ViewController {
     ctxLeft.save();
     ctxLeft.scale(dpr, dpr);
     ctxLeft.clearRect(0, 0, 20, leftH);
-    ctxLeft.fillStyle = '#f3f4f7';
+    ctxLeft.fillStyle = bgFill;
     ctxLeft.fillRect(0, 0, 20, leftH);
 
-    const originY = pageRect.top - wsRect.top;
-    ctxLeft.fillStyle = '#6b7280';
-    ctxLeft.strokeStyle = '#9ca3af';
+    const originY = (pageRect.top - wsRect.top) - 20;
+    ctxLeft.fillStyle = textFill;
+    ctxLeft.strokeStyle = strokeLine;
     ctxLeft.lineWidth = 1;
     ctxLeft.font = '9px system-ui, sans-serif';
     ctxLeft.textAlign = 'right';
