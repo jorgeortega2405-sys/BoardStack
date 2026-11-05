@@ -6,7 +6,7 @@ import { navigate } from '../../services/navigation.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { applyAvatarTier } from '../../utils/tier.util.js';
+import { applyAvatarTier, renderUserAvatarHtml } from '../../utils/avatar.util.js';
 
 interface MemberItem {
   avatar_url?: string | null;
@@ -154,9 +154,7 @@ export class OrganizationMembersController implements ViewController {
     modalBody.style.cssText = 'display: flex; flex-direction: column; gap: 16px; padding: 4px 0;';
     modalBody.innerHTML = `
       <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background-color: var(--bg-hover); border-radius: 12px;">
-        <div class="table-user-avatar" data-ref="modal-role-avatar">
-          ${member.avatar_url ? `<img src="${member.avatar_url}" alt="${member.username}" />` : `<span>${(member.username || member.email || '?')[0].toUpperCase()}</span>`}
-        </div>
+        ${renderUserAvatarHtml(member, { dataRef: 'modal-role-avatar' })}
         <div style="display: flex; flex-direction: column; min-width: 0;">
           <span style="font-weight: 600; color: var(--text-primary);">${member.username}</span>
           <span style="font-size: 13px; color: var(--text-secondary);">${member.email}</span>
@@ -277,9 +275,7 @@ export class OrganizationMembersController implements ViewController {
         <tr class="component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}" data-ref="member-item-${member.id}" data-member-id="${member.id}">
           <td class="component-table__cell" style="padding-left: 20px;">
             <div style="align-items: center; display: flex; gap: 12px;">
-              <div class="table-user-avatar" data-ref="avatar-member-${member.id}">
-                ${member.avatar_url ? `<img src="${member.avatar_url}" alt="${member.username}" />` : `<span>${(member.username || member.email || '?')[0].toUpperCase()}</span>`}
-              </div>
+              ${renderUserAvatarHtml(member, { dataRef: `avatar-member-${member.id}` })}
               <span style="color: var(--text-primary); font-weight: 600;" data-ref="member-name-${member.id}">${member.username}</span>
             </div>
           </td>

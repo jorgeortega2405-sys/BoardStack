@@ -18,31 +18,6 @@
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="crop-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="crop-pdf-workspace">
-      <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept=".pdf,application/pdf" />
-
-      <div class="tool-workspace__canvas" data-ref="crop-dropzone-card">
-        <div class="tool-hero-dropzone" data-ref="crop-dropzone">
-          <h1 class="tool-hero-dropzone__title">Recortar PDF</h1>
-          <p class="tool-hero-dropzone__desc">Recorta las páginas de tu documento PDF de forma interactiva y ajusta los márgenes a tu medida.</p>
-
-          <div class="tool-hero-dropzone__actions">
-            <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-pdf">
-              <span class="component-button__text">Seleccionar PDF</span>
-            </button>
-            <div class="tool-hero-dropzone__cloud-btns">
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-dropbox" data-tooltip="Dropbox" aria-label="Dropbox">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-              </button>
-            </div>
-          </div>
-
-          <p class="tool-hero-dropzone__hint">o arrastra y suelta el PDF aquí</p>
-        </div>
-      </div>
-
       <div class="pdf-viewer-workspace pdf-editor-workspace is-hidden" data-ref="crop-workspace-card">
         <div class="pdf-viewer-main-layout pdf-editor-main-layout" data-ref="crop-main-layout">
           <aside class="pdf-viewer-pages-sidebar pdf-editor-pages-sidebar" data-ref="crop-pages-sidebar">
@@ -51,23 +26,25 @@
 
           <div class="pdf-viewer-canvas-container pdf-editor-canvas-container" data-ref="crop-scroll-container">
             <div class="crop-workspace-container">
-              <div class="crop-preview-wrap" data-ref="crop-preview-wrap">
-                <canvas class="crop-canvas" data-ref="crop-canvas"></canvas>
-                <div class="crop-overlay" data-ref="crop-overlay"></div>
-                <div class="crop-mask crop-mask--top" data-ref="mask-top"></div>
-                <div class="crop-mask crop-mask--bottom" data-ref="mask-bottom"></div>
-                <div class="crop-mask crop-mask--left" data-ref="mask-left"></div>
-                <div class="crop-mask crop-mask--right" data-ref="mask-right"></div>
+              <div class="crop-scaler tool-viewport-scaler" data-ref="crop-scaler">
+                <div class="crop-preview-wrap tool-viewport-sheet" data-ref="crop-preview-wrap">
+                  <canvas class="crop-canvas" data-ref="crop-canvas"></canvas>
+                  <div class="crop-overlay" data-ref="crop-overlay"></div>
+                  <div class="crop-mask crop-mask--top" data-ref="mask-top"></div>
+                  <div class="crop-mask crop-mask--bottom" data-ref="mask-bottom"></div>
+                  <div class="crop-mask crop-mask--left" data-ref="mask-left"></div>
+                  <div class="crop-mask crop-mask--right" data-ref="mask-right"></div>
 
-                <div class="crop-box" data-ref="crop-box">
-                  <div class="crop-handle crop-handle--nw" data-handle="nw"></div>
-                  <div class="crop-handle crop-handle--n" data-handle="n"></div>
-                  <div class="crop-handle crop-handle--ne" data-handle="ne"></div>
-                  <div class="crop-handle crop-handle--e" data-handle="e"></div>
-                  <div class="crop-handle crop-handle--se" data-handle="se"></div>
-                  <div class="crop-handle crop-handle--s" data-handle="s"></div>
-                  <div class="crop-handle crop-handle--sw" data-handle="sw"></div>
-                  <div class="crop-handle crop-handle--w" data-handle="w"></div>
+                  <div class="crop-box" data-ref="crop-box">
+                    <div class="crop-handle crop-handle--nw" data-handle="nw"></div>
+                    <div class="crop-handle crop-handle--n" data-handle="n"></div>
+                    <div class="crop-handle crop-handle--ne" data-handle="ne"></div>
+                    <div class="crop-handle crop-handle--e" data-handle="e"></div>
+                    <div class="crop-handle crop-handle--se" data-handle="se"></div>
+                    <div class="crop-handle crop-handle--s" data-handle="s"></div>
+                    <div class="crop-handle crop-handle--sw" data-handle="sw"></div>
+                    <div class="crop-handle crop-handle--w" data-handle="w"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -109,7 +86,7 @@
   </div>
   </div>
 
-  <footer class="tool-footer collaborative-footer" data-ref="tool-footer">
+  <footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
     <div class="collaborative-footer__right" data-ref="footer-right">
       <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
       <div class="collaborative-footer__divider"></div>

@@ -1,17 +1,15 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
 
@@ -24,9 +22,9 @@ export class RemovePdfPagesController implements ViewController {
   private lastClickedPageIndex: number | null = null;
   private pages: RemovePageItem[] = [];
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private removedPages: Set<number> = new Set();
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -34,15 +32,25 @@ export class RemovePdfPagesController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        this.renderFilesView();
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar PDF',
+        desc: 'Selecciona y elimina las páginas que no necesitas de tu documento PDF.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Eliminar páginas',
       },
+      sidebarRef: 'remove-pages-sidebar',
+      toolId: 'remove-pdf-pages',
       toolName: 'Eliminar páginas',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'pdf-items-card',
     });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -52,9 +60,9 @@ export class RemovePdfPagesController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.sidebarModal) {
       this.sidebarModal.destroy();
@@ -68,107 +76,25 @@ export class RemovePdfPagesController implements ViewController {
     }
   }
 
-  private async handleDriveImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
-    }
-  }
-
-  private async handleDropboxImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
-    }
-  }
-
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
-    const downloadResultBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const restartRemoveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-restart-remove"]');
-    const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
+    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
+    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="remove-sidebar-drag-zone"]');
+    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const inputPagesToRemove = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-to-remove"]');
+    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
 
     this.sidebarModal = setupToolSidebarModal({
-      backdrop: sidebarBackdrop,
-      closeBtn: sidebarCloseBtn,
-      dragZone: sidebarDragZone,
+      backdrop,
+      closeBtn,
+      dragZone,
       settingsBtn,
       sidebar,
-      signal,
-    });
-
-    browseBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-
-    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
-    const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
-    const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
-
-    fabAddMoreBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-    fabDriveBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      void this.handleDriveImport();
-    }, { signal });
-    fabDropboxBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      void this.handleDropboxImport();
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDriveImport();
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDropboxImport();
-    }, { signal });
-
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files?.[0];
-      if (file) {
-        void this.handleFileSelected(file);
-      }
-      fileInput.value = '';
-    }, { signal });
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const dropTarget = dropzoneCard || dropzone;
-    bindFileDropzone({
-      dropTarget,
-      visualTarget: dropTarget,
-      onFiles: (files) => {
-        if (files.length > 0) {
-          void this.handleFileSelected(files[0]);
-        }
-      },
       signal,
     });
 
@@ -216,39 +142,31 @@ export class RemovePdfPagesController implements ViewController {
     }, { signal });
 
     mainActionBtn?.addEventListener('click', () => {
-      if (!this.currentFile) {
-        fileInput?.click();
-      } else {
+      if (this.currentFile) {
         void this.executeRemovePages();
       }
-    }, { signal });
-
-    downloadResultBtn?.addEventListener('click', () => {
-      if (this.currentResult) {
-        window.open(this.currentResult.downloadUrl, '_blank');
-      }
-    }, { signal });
-
-    restartRemoveBtn?.addEventListener('click', () => {
-      this.resetToInitial();
     }, { signal });
   }
 
   public async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
-    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      this.showError('Selecciona únicamente un documento en formato PDF.');
+      showToast('Selecciona únicamente un documento en formato PDF.', 'danger');
       return;
     }
 
     const limits = getCurrentUserToolLimits('remove-pdf-pages');
     const maxSizeBytes = limits.maxFileSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      this.showError(`El archivo supera el límite de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos de mayor tamaño.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolName: 'Eliminar páginas PDF',
+        type: 'file_size',
+      });
       return;
     }
 
@@ -259,40 +177,30 @@ export class RemovePdfPagesController implements ViewController {
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({
         cMapPacked: true,
-        cMapUrl: '/vendor/pdfjs/cmaps/',
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
         data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/',
       });
+
       this.pdfDocument = await loadingTask.promise;
-      const count = this.pdfDocument.numPages || 1;
+      const numPages = this.pdfDocument.numPages;
 
-      if (count <= 1) {
-        this.showError('El documento seleccionado solo tiene 1 página y no se pueden eliminar páginas de él.');
-        this.resetToInitial();
-        return;
-      }
-
-      this.pages = Array.from({ length: count }, (_, i) => ({
-        id: `page-${i + 1}`,
-        num: i + 1,
-      }));
-
-      this.removedPages.clear();
-      this.lastClickedPageIndex = null;
-
-      const inputPagesToRemove = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-to-remove"]');
-      if (inputPagesToRemove) {
-        inputPagesToRemove.value = '';
+      this.pages = [];
+      for (let i = 1; i <= numPages; i++) {
+        this.pages.push({
+          id: `page-${i}`,
+          num: i,
+          thumbnailDataUrl: undefined,
+        });
       }
 
       this.renderFilesView();
-      this.updateSummary();
 
-      for (const page of this.pages) {
-        void this.generatePageThumbnail(page);
+      for (const item of this.pages) {
+        void this.generatePageThumbnail(item);
       }
     } catch {
-      this.showError('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado o protegido.');
+      showToast('No se pudo cargar el documento PDF. Comprueba que no esté protegido o dañado.', 'danger');
       this.resetToInitial();
     }
   }
@@ -328,20 +236,11 @@ export class RemovePdfPagesController implements ViewController {
   }
 
   private renderFilesView(): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
+    this.phaseManager?.setPhase('workspace');
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    hideElement(processingCard);
-    showElement(itemsCard);
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    showElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
@@ -411,12 +310,8 @@ export class RemovePdfPagesController implements ViewController {
     const removed = this.removedPages.size;
 
     if (this.currentFile) {
-      if (removed === 0) {
-        this.hideError();
-      } else if (removed >= total) {
-        this.showError('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.');
-      } else {
-        this.hideError();
+      if (removed >= total) {
+        showToast('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.', 'warning');
       }
     }
   }
@@ -429,29 +324,26 @@ export class RemovePdfPagesController implements ViewController {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select') || 'Seleccionar PDF';
         mainActionBtn.disabled = true;
-        showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action') || 'Eliminar páginas';
         mainActionBtn.disabled = this.isProcessing;
-        showElement(mainActionBtn);
       }
     }
   }
 
   private async executeRemovePages(): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
-    this.hideError();
 
     const total = this.pages.length;
     const removedCount = this.removedPages.size;
 
     if (removedCount === 0) {
-      this.showError('Debes seleccionar al menos una página para eliminar.');
+      showToast('Debes seleccionar al menos una página para eliminar.', 'warning');
       return;
     }
 
     if (removedCount >= total) {
-      this.showError('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.');
+      showToast('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.', 'danger');
       return;
     }
 
@@ -464,19 +356,19 @@ export class RemovePdfPagesController implements ViewController {
     formData.append('filename', customFilename);
 
     this.isProcessing = true;
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     try {
       const response = await postFormWithProgress(
         API_ROUTES.tools.removePdfPages.remove,
         formData,
         (progress) => {
-          this.statusManager?.updateUploadProgress(progress);
+          this.phaseManager?.updateUploadProgress(progress);
         }
       );
       const json = await response.json();
 
-      this.statusManager?.showProcessing('Eliminando páginas del PDF...');
+      this.phaseManager?.showProcessing('Eliminando páginas del PDF...', 'Generando nuevo documento sin las páginas seleccionadas');
 
       if (!response.ok || !json.success || !json.data) {
         throw new Error(json.error || 'Error al procesar la solicitud.');
@@ -485,8 +377,7 @@ export class RemovePdfPagesController implements ViewController {
       this.currentResult = json.data as RemovePdfResponseData;
       const token = this.currentResult.fileId;
       showToast('Páginas eliminadas con éxito.', 'success');
-      this.statusManager?.hide();
-      saveDownloadPayloadAndNavigate({
+      this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -497,35 +388,12 @@ export class RemovePdfPagesController implements ViewController {
         token,
       });
     } catch {
-      this.statusManager?.showError({
-        boxText: 'Comprueba que el documento no esté protegido con contraseña o dañado.',
-        boxTitle: 'Error al eliminar páginas',
-        desc: 'No se pudieron eliminar las páginas seleccionadas. Por favor intenta de nuevo.',
-        retryText: 'Reintentar Eliminar Páginas',
-        title: '¡Oh no! No hemos podido procesar tu archivo.',
+      this.phaseManager?.showError('No se pudieron eliminar las páginas seleccionadas. Por favor intenta de nuevo.', () => {
+        this.phaseManager?.setPhase('workspace');
       });
     } finally {
       this.isProcessing = false;
     }
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(itemsCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
   private resetToInitial(): void {
@@ -536,62 +404,24 @@ export class RemovePdfPagesController implements ViewController {
     this.lastClickedPageIndex = null;
     this.pdfDocument = null;
     this.isProcessing = false;
-    this.statusManager?.hide();
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     const inputPagesToRemove = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-to-remove"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
-
-    if (fileInput) fileInput.value = '';
     if (inputPagesToRemove) inputPagesToRemove.value = '';
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    hideElement(processingCard);
-    hideElement(itemsCard);
-    showElement(dropzoneCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-sidebar"]');
-    hideElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+    this.sidebarModal?.close();
+
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_sin_paginas.pdf';
-    if (this.sidebarModal) this.sidebarModal.close();
+    if (outputNameInput) outputNameInput.value = '';
 
-    this.updateSummary();
-    this.updateActionButtons();
-    this.hideError();
-  }
+    const grid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
+    if (grid) grid.innerHTML = '';
 
-  private showError(msg: string): void {
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-pdf-error"]');
-    if (banner) {
-      banner.textContent = msg;
-      showElement(banner);
-    }
-    showToast(msg, 'danger');
-  }
-
-  private hideError(): void {
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-pdf-error"]');
-    if (banner) {
-      banner.textContent = '';
-      hideElement(banner);
-    }
-  }
-
-  private escapeHtml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+    this.phaseManager?.setPhase('dropzone');
   }
 }
 

@@ -1,17 +1,14 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { OCR_LANGUAGES } from '../ocr-pdf/ocr-pdf.types.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
@@ -33,10 +30,10 @@ export class TranslatePdfViewController implements ViewController {
   private currentFile: File | null = null;
   private dropdownControllers: Array<{ destroy: () => void }> = [];
   private isProcessing = false;
+  private phaseManager: ToolPhaseManager | null = null;
   private selectedLayout: 'preserve' | 'text_only' = 'preserve';
   private sidebarModal: ToolSidebarModalController | null = null;
   private sourceLang = '';
-  private statusManager: ToolStatusManager | null = null;
   private targetLang = 'spa';
 
   private readonly layoutDetails = {
@@ -56,8 +53,29 @@ export class TranslatePdfViewController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
-    this.statusManager = new ToolStatusManager(workspace || this.container);
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar Archivo PDF',
+        desc: 'Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con IA avanzada.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) this.handleFileSelected(files[0]);
+        },
+        title: 'Traducir PDF',
+      },
+      onRetry: () => {
+        const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
+        if (translateBtn) void this.handleTranslate(translateBtn);
+      },
+      sidebarRef: 'translate-pdf-sidebar',
+      toolId: 'translate-pdf',
+      toolName: 'Traducir PDF',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'translate-selected-card',
+    });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -67,9 +85,9 @@ export class TranslatePdfViewController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.abortController) {
       this.abortController.abort();
@@ -94,150 +112,97 @@ export class TranslatePdfViewController implements ViewController {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone-card"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
-
-    browseBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput?.click();
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
 
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
     }, { signal });
 
-    fileInput?.addEventListener('change', () => {
-      const files = fileInput.files;
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
+    translateBtn?.addEventListener('click', () => {
+      void this.handleTranslate(translateBtn);
     }, { signal });
-
-    if (dropzoneCard) {
-      bindFileDropzone({
-        dropTarget: dropzoneCard,
-        onFiles: (files) => {
-          if (files.length > 0) this.handleFileSelected(files[0]);
-        },
-        signal,
-        visualTarget: dropzoneCard,
-      });
-    }
-
-    const wrapperSource = this.container.querySelector<HTMLElement>('[data-ref="wrapper-source-lang"]');
-    const listSource = this.container.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
-    const inputSearchSource = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-source-lang"]');
-    const emptySource = this.container.querySelector<HTMLElement>('[data-ref="empty-source-lang"]');
-    const txtSelectedSource = this.container.querySelector<HTMLElement>('[data-ref="txt-selected-source-lang"]');
-
-    if (listSource) {
-      this.renderSourceLanguages(listSource);
-    }
-
-    inputSearchSource?.addEventListener('input', (e) => {
-      if (listSource) {
-        this.filterLanguages(listSource, emptySource, (e.target as HTMLInputElement).value);
-      }
-    }, { signal });
-
-    if (wrapperSource) {
-      const ctrl = setupDropdown(wrapperSource, {
-        backdrop: this.container.querySelector<HTMLElement>('[data-ref="backdrop-source-lang"]'),
-        menu: this.container.querySelector<HTMLElement>('[data-ref="menu-source-lang"]'),
-        onSelect: (val: string) => {
-          this.sourceLang = val || '';
-          const found = SOURCE_LANG_ITEMS.find((l) => l.code === val);
-          if (txtSelectedSource) {
-            txtSelectedSource.textContent = found ? found.name : 'Detección automática (Recomendado)';
-          }
-          if (listSource) {
-            this.renderSourceLanguages(listSource);
-            if (inputSearchSource) {
-              inputSearchSource.value = '';
-              this.filterLanguages(listSource, emptySource, '');
-            }
-          }
-        },
-        trigger: this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-source-lang"]'),
-      });
-      this.dropdownControllers.push(ctrl);
-    }
-
-    const wrapperTarget = this.container.querySelector<HTMLElement>('[data-ref="wrapper-target-lang"]');
-    const listTarget = this.container.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
-    const inputSearchTarget = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-target-lang"]');
-    const emptyTarget = this.container.querySelector<HTMLElement>('[data-ref="empty-target-lang"]');
-    const txtSelectedTarget = this.container.querySelector<HTMLElement>('[data-ref="txt-selected-target-lang"]');
-
-    if (listTarget) {
-      this.renderTargetLanguages(listTarget);
-    }
-
-    inputSearchTarget?.addEventListener('input', (e) => {
-      if (listTarget) {
-        this.filterLanguages(listTarget, emptyTarget, (e.target as HTMLInputElement).value);
-      }
-    }, { signal });
-
-    if (wrapperTarget) {
-      const ctrl = setupDropdown(wrapperTarget, {
-        backdrop: this.container.querySelector<HTMLElement>('[data-ref="backdrop-target-lang"]'),
-        menu: this.container.querySelector<HTMLElement>('[data-ref="menu-target-lang"]'),
-        onSelect: (val: string) => {
-          this.targetLang = val || 'spa';
-          const found = TARGET_LANG_ITEMS.find((l) => l.code === val);
-          if (txtSelectedTarget) {
-            txtSelectedTarget.textContent = found ? found.name : 'Español';
-          }
-          if (listTarget) {
-            this.renderTargetLanguages(listTarget);
-            if (inputSearchTarget) {
-              inputSearchTarget.value = '';
-              this.filterLanguages(listTarget, emptyTarget, '');
-            }
-          }
-        },
-        trigger: this.container.querySelector<HTMLElement>('[data-ref="btn-trigger-target-lang"]'),
-      });
-      this.dropdownControllers.push(ctrl);
-    }
 
     const btnPreserve = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-preserve"]');
     const btnText = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layout-text"]');
 
-    btnPreserve?.addEventListener('click', () => {
-      this.setLayoutMode('preserve');
-    }, { signal });
+    btnPreserve?.addEventListener('click', () => this.setLayoutMode('preserve'), { signal });
+    btnText?.addEventListener('click', () => this.setLayoutMode('text_only'), { signal });
 
-    btnText?.addEventListener('click', () => {
-      this.setLayoutMode('text_only');
-    }, { signal });
+    this.bindLanguageDropdowns(signal);
+  }
 
-    translateBtn?.addEventListener('click', () => {
-      void this.handleTranslate(translateBtn);
-    }, { signal });
+  private bindLanguageDropdowns(signal: AbortSignal): void {
+    const sourceWrapper = this.container.querySelector<HTMLElement>('[data-ref="wrapper-source-lang"]');
+    const targetWrapper = this.container.querySelector<HTMLElement>('[data-ref="wrapper-target-lang"]');
+
+    if (sourceWrapper) {
+      const listEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
+      const emptyEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="empty-source-lang"]');
+      const searchInput = sourceWrapper.querySelector<HTMLInputElement>('[data-ref="search-source-lang"]');
+      const labelEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="txt-selected-source-lang"]');
+
+      if (listEl) this.renderSourceLanguages(listEl);
+
+      const ctrl = setupDropdown(sourceWrapper, {
+        backdrop: sourceWrapper.querySelector<HTMLElement>('[data-ref="backdrop-source-lang"]'),
+        isSelect: true,
+        matchWidth: true,
+        menu: sourceWrapper.querySelector<HTMLElement>('[data-ref="menu-source-lang"]'),
+        offset: [0, 8],
+        onSelect: (val, item) => {
+          this.sourceLang = val || '';
+          if (labelEl && item) {
+            const text = item.querySelector('.menu-item__text')?.textContent || '';
+            labelEl.textContent = text;
+          }
+          listEl?.querySelectorAll('.menu-item').forEach((i) => {
+            i.classList.toggle('is-active', (i.getAttribute('data-lang') || '') === this.sourceLang);
+          });
+        },
+        trigger: sourceWrapper.querySelector<HTMLElement>('[data-ref="btn-trigger-source-lang"]'),
+      });
+      this.dropdownControllers.push(ctrl);
+
+      searchInput?.addEventListener('input', () => {
+        if (listEl) this.filterLanguages(listEl, emptyEl, searchInput.value);
+      }, { signal });
+    }
+
+    if (targetWrapper) {
+      const listEl = targetWrapper.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
+      const emptyEl = targetWrapper.querySelector<HTMLElement>('[data-ref="empty-target-lang"]');
+      const searchInput = targetWrapper.querySelector<HTMLInputElement>('[data-ref="search-target-lang"]');
+      const labelEl = targetWrapper.querySelector<HTMLElement>('[data-ref="txt-selected-target-lang"]');
+
+      if (listEl) this.renderTargetLanguages(listEl);
+
+      const ctrl = setupDropdown(targetWrapper, {
+        backdrop: targetWrapper.querySelector<HTMLElement>('[data-ref="backdrop-target-lang"]'),
+        isSelect: true,
+        matchWidth: true,
+        menu: targetWrapper.querySelector<HTMLElement>('[data-ref="menu-target-lang"]'),
+        offset: [0, 8],
+        onSelect: (val, item) => {
+          if (!val) return;
+          this.targetLang = val;
+          if (labelEl && item) {
+            const text = item.querySelector('.menu-item__text')?.textContent || '';
+            labelEl.textContent = text;
+          }
+          listEl?.querySelectorAll('.menu-item').forEach((i) => {
+            i.classList.toggle('is-active', (i.getAttribute('data-lang') || '') === this.targetLang);
+          });
+        },
+        trigger: targetWrapper.querySelector<HTMLElement>('[data-ref="btn-trigger-target-lang"]'),
+      });
+      this.dropdownControllers.push(ctrl);
+
+      searchInput?.addEventListener('input', () => {
+        if (listEl) this.filterLanguages(listEl, emptyEl, searchInput.value);
+      }, { signal });
+    }
   }
 
   private renderSourceLanguages(container: HTMLElement): void {
@@ -322,26 +287,15 @@ export class TranslatePdfViewController implements ViewController {
   }
 
   private renderSelectedState(file: File): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    showElement(selectedCard);
-
-    showElement(sidebar);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (translateBtn) translateBtn.disabled = false;
 
+    this.phaseManager?.setPhase('workspace');
     void this.renderThumbnail(file);
   }
 
@@ -375,26 +329,11 @@ export class TranslatePdfViewController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    this.statusManager?.hide();
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    if (fileInput) fileInput.value = '';
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="translate-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-workspace"]');
     const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(selectedCard);
-
-    hideElement(sidebar);
-    this.sidebarModal?.close();
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (translateBtn) translateBtn.disabled = true;
 
+    this.sidebarModal?.close();
+    this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }
 
@@ -403,14 +342,7 @@ export class TranslatePdfViewController implements ViewController {
     this.hideError();
 
     this.isProcessing = true;
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="translate-selected-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="translate-pdf-sidebar"]');
-    hideElement(selectedCard);
-    hideElement(sidebar);
-    this.sidebarModal?.close();
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
       try {
@@ -427,17 +359,17 @@ export class TranslatePdfViewController implements ViewController {
           API_ROUTES.tools.translatePdf.translate,
           formData,
           (progress) => {
-            this.statusManager?.updateUploadProgress(progress);
+            this.phaseManager?.updateUploadProgress(progress, 1);
           }
         );
         const res = (await response.json()) as { data?: TranslatePdfResultData; error?: string; success: boolean };
 
-        this.statusManager?.showProcessingState({
-          subtitle: this.selectedLayout === 'preserve'
+        this.phaseManager?.showProcessing(
+          'Traduciendo documento...',
+          this.selectedLayout === 'preserve'
             ? 'Conservando formato, tipografía y tablas en el idioma de destino'
-            : 'Generando documento con texto traducido estructurado',
-          title: 'Traduciendo documento...',
-        });
+            : 'Generando documento con texto traducido estructurado'
+        );
 
         if (!response.ok || !res.success || !res.data) {
           throw new Error(res.error || 'Error al traducir el documento PDF.');
@@ -448,7 +380,7 @@ export class TranslatePdfViewController implements ViewController {
           updateUserAiTokens((res as any).aiTokens.balance);
         }
         showToast('Documento traducido con éxito.', 'success');
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: res.data.size,
           filename: res.data.filename,
@@ -460,11 +392,7 @@ export class TranslatePdfViewController implements ViewController {
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Error al conectar con el servidor.';
-        this.statusManager?.showError(errorMessage, () => {
-          this.statusManager?.hide();
-          showElement(selectedCard);
-          showElement(sidebar);
-        });
+        this.phaseManager?.showError(errorMessage);
         this.showError(errorMessage);
       } finally {
         this.isProcessing = false;

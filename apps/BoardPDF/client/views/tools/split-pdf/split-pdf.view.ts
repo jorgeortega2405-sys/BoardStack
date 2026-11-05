@@ -1,4 +1,5 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
@@ -26,13 +27,13 @@ export class SplitPdfController implements ViewController {
   private pages: PageItem[] = [];
   private pagesSubmode: 'all' | 'custom' = 'all';
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private rangeSubmode: 'custom' | 'fixed' = 'custom';
   private ranges: RangeItem[] = [];
   private selectedPages: Set<number> = new Set();
   private sidebarModal: ToolSidebarModalController | null = null;
   private sizeLimitValue = 200;
   private sizeUnit: 'KB' | 'MB' = 'KB';
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement, initialMode: SplitMode = 'range') {
     this.container = container;
@@ -41,15 +42,25 @@ export class SplitPdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        this.renderFilesView();
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar PDF',
+        desc: 'Extrae una o varias páginas, define rangos o divide por tamaño.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Dividir PDF',
       },
+      sidebarRef: 'pdf-splitter-sidebar',
+      toolId: 'split-pdf',
       toolName: 'Dividir PDF',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'pdf-items-card',
     });
+    await this.phaseManager.init();
     renderIcons(this.container);
     if (this.activeMode !== 'range') {
       this.switchMode(this.activeMode);
@@ -72,9 +83,9 @@ export class SplitPdfController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.pdfDocument) {
       try {
@@ -114,11 +125,6 @@ export class SplitPdfController implements ViewController {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
@@ -136,45 +142,8 @@ export class SplitPdfController implements ViewController {
       signal,
     });
 
-    browseBtn?.addEventListener('click', () => {
-      fileInput?.click();
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDriveImport();
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDropboxImport();
-    }, { signal });
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const dropTarget = dropzoneCard || dropzone;
-    bindFileDropzone({
-      dropTarget,
-      visualTarget: dropTarget,
-      onFiles: (files) => {
-        if (files.length > 0) {
-          void this.handleFileSelected(files[0]);
-        }
-      },
-      signal,
-    });
-
-    fileInput?.addEventListener('change', () => {
-      if (fileInput.files && fileInput.files.length > 0) {
-        void this.handleFileSelected(fileInput.files[0]);
-      }
-    }, { signal });
-
     mainActionBtn?.addEventListener('click', () => {
-      if (!this.currentFile) {
-        fileInput?.click();
-      } else {
+      if (this.currentFile) {
         void this.startSplitProcess();
       }
     }, { signal });
@@ -338,7 +307,12 @@ export class SplitPdfController implements ViewController {
 
     const limits = getCurrentUserToolLimits('split-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolName: 'Dividir PDF',
+        type: 'file_size',
+      });
       return;
     }
 
@@ -648,24 +622,15 @@ export class SplitPdfController implements ViewController {
   }
 
   private renderFilesView(): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
     const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
     const badge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
-    const title = this.container.querySelector<HTMLElement>('[data-ref="pdf-file-title"]');
 
     if (!itemsCard) return;
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    hideElement(processingCard);
-    showElement(itemsCard);
+    this.phaseManager?.setPhase('workspace');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
-    showElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
@@ -825,7 +790,7 @@ export class SplitPdfController implements ViewController {
 
     this.isProcessing = true;
     this.hideError();
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     try {
       const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -872,29 +837,22 @@ export class SplitPdfController implements ViewController {
         API_ROUTES.tools.splitPdf.split,
         formData,
         (progress) => {
-          this.statusManager?.updateUploadProgress(progress, 1);
+          this.phaseManager?.updateUploadProgress(progress, 1);
         },
         this.abortController?.signal
       );
       const json = await response.json();
 
+      this.phaseManager?.showProcessing('Dividiendo documento PDF...', 'Generando segmentos de acuerdo a la configuración');
+
       if (!response.ok || !json.success) {
-        const errorMsg = json.error || 'No se pudo dividir el documento PDF. Intenta nuevamente.';
-        this.statusManager?.showError({
-          boxText: 'Uno o más rangos o páginas no pudieron procesarse. Comprueba el formato de división.',
-          boxTitle: 'Error al dividir PDF',
-          desc: errorMsg,
-          retryText: 'Reintentar Dividir PDF',
-          title: '¡Oh no! No hemos podido dividir tu archivo.',
-        });
-        return;
+        throw new Error(json.error || 'No se pudo dividir el documento PDF. Intenta nuevamente.');
       }
 
       this.currentResult = json.data as SplitPdfResponseData;
       const token = this.currentResult.fileId;
       showToast('¡Documento PDF dividido exitosamente!', 'success');
-      this.statusManager?.hide();
-      saveDownloadPayloadAndNavigate({
+      this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -904,36 +862,14 @@ export class SplitPdfController implements ViewController {
         title: '¡PDF dividido con éxito!',
         token,
       });
-    } catch {
-      this.statusManager?.showError({
-        boxText: 'Comprueba tu conexión a internet o intenta con un archivo de menor tamaño.',
-        boxTitle: 'Error de conexión',
-        desc: 'Ha ocurrido un error inesperado al procesar el archivo. Por favor intenta más tarde.',
-        retryText: 'Reintentar Dividir PDF',
-        title: '¡Oh no! No hemos podido dividir tu archivo.',
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al procesar la división del documento.';
+      this.phaseManager?.showError(msg, () => {
+        this.phaseManager?.setPhase('workspace');
       });
     } finally {
       this.isProcessing = false;
     }
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(itemsCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
   private resetToInitial(): void {
@@ -945,24 +881,9 @@ export class SplitPdfController implements ViewController {
     this.selectedPages.clear();
     this.pdfDocument = null;
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-workspace"]');
-
-    if (fileInput) fileInput.value = '';
-
-    this.statusManager?.hide();
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    hideElement(processingCard);
-    hideElement(itemsCard);
-    showElement(dropzoneCard);
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-splitter-sidebar"], [data-ref="split-pdf-sidebar"], .tool-layout__sidebar');
-    hideElement(sidebar);
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
@@ -984,6 +905,7 @@ export class SplitPdfController implements ViewController {
     this.updateSummary();
     this.updateActionButtons();
     this.hideError();
+    this.phaseManager?.setPhase('dropzone');
   }
 
   private showError(msg: string): void {

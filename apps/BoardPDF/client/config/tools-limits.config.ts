@@ -1,4 +1,5 @@
-import { ALL_TOOLS_LIMITS, ToolLimitTierConfig, ToolTierLimits, WORKFLOW_LIMITS as MASTER_WORKFLOW_LIMITS } from './subscription-plans.config.js';
+import { currentUser } from '../services/api.service.js';
+import { ALL_TOOLS_LIMITS, resolveToolLimits, ToolLimitTierConfig, ToolTierLimits, WORKFLOW_LIMITS as MASTER_WORKFLOW_LIMITS } from './subscription-plans.config.js';
 
 export interface ToolLimitDefinition {
   free: {
@@ -17,16 +18,19 @@ export interface ToolLimitDefinition {
 export const TOOLS_LIMITS: Record<string, ToolTierLimits> = ALL_TOOLS_LIMITS;
 
 export function getCurrentUserToolLimits(toolId: string): { isPremium: boolean; maxFiles: number; maxFileSizeMB: number; maxTotalSizeMB: number } {
-  const config = TOOLS_LIMITS[toolId];
-  if (!config) {
-    return { isPremium: true, maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 2000 };
-  }
+  const perms = currentUser?.permissions || [];
+  const limits = resolveToolLimits(toolId, perms);
+  const tool = ALL_TOOLS_LIMITS[toolId];
+  const isPremium = perms.includes('subscription:feature:pro') ||
+    perms.includes('subscription:feature:business') ||
+    perms.includes('subscription:feature:enterprise') ||
+    (tool ? limits.maxFiles > tool.free.maxFiles : false);
 
   return {
-    isPremium: true,
-    maxFiles: config.premium.maxFiles,
-    maxFileSizeMB: config.premium.maxFileSizeMB,
-    maxTotalSizeMB: config.premium.maxTotalSizeMB,
+    isPremium,
+    maxFiles: limits.maxFiles,
+    maxFileSizeMB: limits.maxFileSizeMB,
+    maxTotalSizeMB: limits.maxTotalSizeMB,
   };
 }
 

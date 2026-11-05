@@ -28,11 +28,31 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
     return;
   }
+  if (!user.permissions || !Array.isArray(user.permissions) || user.permissions.length === 0) {
+    try {
+      user.permissions = await permissionService.getUserPermissions(
+        user.id,
+        user.subscription_tier,
+        user.subscription_status,
+        user.role
+      );
+    } catch {}
+  }
   next();
 }
 
 export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
-  getCurrentUser(req);
+  const user = getCurrentUser(req);
+  if (user && (!user.permissions || !Array.isArray(user.permissions) || user.permissions.length === 0)) {
+    try {
+      user.permissions = await permissionService.getUserPermissions(
+        user.id,
+        user.subscription_tier,
+        user.subscription_status,
+        user.role
+      );
+    } catch {}
+  }
   next();
 }
 

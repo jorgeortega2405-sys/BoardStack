@@ -30,31 +30,7 @@
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="compare-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="compare-pdf-workspace">
-      <input class="pdf-dropzone__input" data-ref="input-pdf-file1" type="file" accept="application/pdf,.pdf" />
       <input class="pdf-dropzone__input" data-ref="input-pdf-file2" type="file" accept="application/pdf,.pdf" />
-
-      <div class="tool-workspace__canvas" data-ref="compare-dropzone-card">
-        <div class="tool-hero-dropzone" data-ref="compare-dropzone">
-          <h1 class="tool-hero-dropzone__title">Comparar PDF</h1>
-          <p class="tool-hero-dropzone__desc">Compara dos archivos PDF uno al lado del otro, detecta cambios de texto semántico y visualiza diferencias con facilidad.</p>
-
-          <div class="tool-hero-dropzone__actions">
-            <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file1">
-              <span>Seleccionar Primer PDF</span>
-            </button>
-            <div class="tool-hero-dropzone__cloud-btns">
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive1" data-tooltip="Google Drive" aria-label="Google Drive">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-dropbox1" data-tooltip="Dropbox" aria-label="Dropbox">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-              </button>
-            </div>
-          </div>
-
-          <p class="tool-hero-dropzone__hint">o arrastra y suelta el PDF aquí para comenzar la comparación</p>
-        </div>
-      </div>
 
       <div class="pdf-viewer-workspace pdf-editor-workspace compare-editor-workspace is-hidden" data-ref="compare-workspace-card">
         <div class="compare-split-layout" data-ref="split-layout">
@@ -182,7 +158,7 @@
   </div>
   </div>
 
-  <footer class="tool-footer collaborative-footer" data-ref="tool-footer">
+  <footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
     <div class="collaborative-footer__right" data-ref="footer-right">
       <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
       <div class="collaborative-footer__divider"></div>

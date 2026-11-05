@@ -1,15 +1,13 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { SortableGridController, ToolSidebarModalController, hideElement, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
@@ -24,9 +22,9 @@ export class OrganizePdfController implements ViewController {
   private originalPages: OrganizePageItem[] = [];
   private pages: OrganizePageItem[] = [];
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private sidebarModal: ToolSidebarModalController | null = null;
   private sortableInstance: SortableGridController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -34,15 +32,24 @@ export class OrganizePdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        this.renderFilesView();
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar PDF',
+        desc: 'Ordena, reorganiza y gira las páginas de tu documento PDF a tu gusto.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Ordenar PDF',
       },
-      toolName: 'Organizar PDF',
+      toolId: 'organize-pdf',
+      toolName: 'Ordenar PDF',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'pdf-items-card',
     });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -60,9 +67,9 @@ export class OrganizePdfController implements ViewController {
       this.sortableInstance.destroy();
       this.sortableInstance = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.pdfDocument) {
       try {
@@ -72,104 +79,29 @@ export class OrganizePdfController implements ViewController {
     }
   }
 
-  private async handleDriveImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
-    }
-  }
-
-  private async handleDropboxImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
-    }
-  }
-
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
+    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
+    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="organize-sidebar-drag-zone"]');
+    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
     this.sidebarModal = setupToolSidebarModal({
-      backdrop: sidebarBackdrop,
-      closeBtn: sidebarCloseBtn,
-      dragZone: sidebarDragZone,
+      backdrop,
+      closeBtn,
+      dragZone,
       settingsBtn,
       sidebar,
       signal,
     });
 
-    heroDriveBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDriveImport();
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDropboxImport();
-    }, { signal });
     const rotateAllBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all"]');
     const resetOrderBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-order"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
-    const downloadResultBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-result"]');
-    const restartOrganizeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-restart-organize"]');
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="organize-pages-grid"]');
-
-    browseBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files?.[0];
-      if (file) {
-        void this.handleFileSelected(file);
-      }
-      fileInput.value = '';
-    }, { signal });
-
-    if (dropzone) {
-      dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('tool-dropzone--active');
-      }, { signal });
-
-      dropzone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('tool-dropzone--active');
-      }, { signal });
-
-      dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('tool-dropzone--active');
-        const file = e.dataTransfer?.files?.[0];
-        if (file) {
-          void this.handleFileSelected(file);
-        }
-      }, { signal });
-    }
 
     rotateAllBtn?.addEventListener('click', () => {
       this.rotateAllPages();
@@ -179,58 +111,54 @@ export class OrganizePdfController implements ViewController {
       this.resetOrder();
     }, { signal });
 
-    pagesGrid?.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const rotateBtn = target.closest<HTMLElement>('[data-ref="btn-rotate-card"]');
-      const removeBtn = target.closest<HTMLElement>('[data-ref="btn-remove-card"]');
-      const card = target.closest<HTMLElement>('[data-page-id]');
-      if (!card) return;
-      const pageId = card.getAttribute('data-page-id');
-      if (!pageId) return;
-
-      if (rotateBtn) {
-        e.stopPropagation();
-        this.rotatePage(pageId);
-      } else if (removeBtn) {
-        e.stopPropagation();
-        this.removePage(pageId);
-      }
-    }, { signal });
-
     mainActionBtn?.addEventListener('click', () => {
-      if (!this.currentFile) {
-        fileInput?.click();
-      } else {
+      if (this.currentFile) {
         void this.executeOrganizePdf();
       }
     }, { signal });
 
-    downloadResultBtn?.addEventListener('click', () => {
-      if (this.currentResult) {
-        window.open(this.currentResult.downloadUrl, '_blank');
-      }
-    }, { signal });
+    pagesGrid?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
 
-    restartOrganizeBtn?.addEventListener('click', () => {
-      this.resetToInitial();
+      const rotateBtn = target.closest<HTMLButtonElement>('[data-action="rotate"]');
+      if (rotateBtn) {
+        const pageId = rotateBtn.getAttribute('data-page-id');
+        if (pageId) {
+          this.rotatePage(pageId);
+        }
+        return;
+      }
+
+      const removeBtn = target.closest<HTMLButtonElement>('[data-action="remove"]');
+      if (removeBtn) {
+        const pageId = removeBtn.getAttribute('data-page-id');
+        if (pageId) {
+          this.removePage(pageId);
+        }
+        return;
+      }
     }, { signal });
   }
 
   public async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
-    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      this.showError('Selecciona únicamente un documento en formato PDF.');
+      showToast('Selecciona únicamente un documento en formato PDF.', 'danger');
       return;
     }
 
     const limits = getCurrentUserToolLimits('organize-pdf');
     const maxSizeBytes = limits.maxFileSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      this.showError(`El archivo supera el límite de ${limits.maxFileSizeMB} MB.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolName: 'Organizar PDF',
+        type: 'file_size',
+      });
       return;
     }
 
@@ -241,30 +169,36 @@ export class OrganizePdfController implements ViewController {
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({
         cMapPacked: true,
-        cMapUrl: '/vendor/pdfjs/cmaps/',
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
         data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/',
       });
+
       this.pdfDocument = await loadingTask.promise;
-      const count = this.pdfDocument.numPages || 1;
+      const numPages = this.pdfDocument.numPages;
 
-      this.pages = Array.from({ length: count }, (_, i) => ({
-        id: `page-${Date.now()}-${i + 1}`,
-        originalIndex: i,
-        pageNum: i + 1,
-        rotation: 0,
-      }));
+      this.pages = [];
+      this.originalPages = [];
 
-      this.originalPages = this.pages.map((p) => ({ ...p }));
+      for (let i = 1; i <= numPages; i++) {
+        const item: OrganizePageItem = {
+          id: `page-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          originalIndex: i - 1,
+          pageNum: i,
+          rotation: 0,
+          thumbnailDataUrl: undefined,
+        };
+        this.pages.push(item);
+        this.originalPages.push({ ...item });
+      }
 
       this.renderFilesView();
-      this.updateSummary();
 
-      for (const page of this.pages) {
-        void this.generatePageThumbnail(page);
+      for (const item of this.pages) {
+        void this.generatePageThumbnail(item);
       }
     } catch {
-      this.showError('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado o protegido.');
+      showToast('No se pudo cargar el documento PDF. Comprueba que no esté protegido o dañado.', 'danger');
       this.resetToInitial();
     }
   }
@@ -272,7 +206,7 @@ export class OrganizePdfController implements ViewController {
   private async generatePageThumbnail(item: OrganizePageItem): Promise<void> {
     if (!this.pdfDocument) return;
     try {
-      const page = await this.pdfDocument.getPage(item.originalIndex + 1);
+      const page = await this.pdfDocument.getPage(item.pageNum);
       const origViewport = page.getViewport({ scale: 1 });
       const targetWidth = 220;
       const scale = targetWidth / Math.max(origViewport.width, 1);
@@ -293,32 +227,21 @@ export class OrganizePdfController implements ViewController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
         if (sheet) {
-          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${item.rotation !== 0 ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
+          const isRotated = item.rotation !== 0;
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${isRotated ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
         }
       }
     } catch {}
   }
 
   private renderFilesView(): void {
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
+    this.phaseManager?.setPhase('workspace');
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    hideElement(processingCard);
-    showElement(itemsCard);
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    showElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
+    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
-
-    const topActions = this.container.querySelector<HTMLElement>('[data-ref="organize-top-actions"]');
-    showElement(topActions);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput && this.currentFile) {
@@ -334,6 +257,7 @@ export class OrganizePdfController implements ViewController {
     this.renderPagesGrid();
     this.initSortable();
     this.updateActionButtons();
+    this.updateSummary();
   }
 
   private renderPagesGrid(): void {
@@ -343,14 +267,13 @@ export class OrganizePdfController implements ViewController {
     grid.innerHTML = this.pages.map((p, index) => {
       const isMoved = p.originalIndex !== index;
       const isRotated = p.rotation !== 0;
-
       return `
-        <div class="pdf-card" data-ref="card-${p.id}" data-id="${p.id}" data-page-id="${p.id}" data-page-index="${index}">
+        <div class="pdf-card organize-page-card" data-ref="card-${p.id}" data-page-id="${p.id}" data-page-index="${index}">
           <div class="pdf-card__actions">
-            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-card" title="Girar 90°" aria-label="Girar 90°">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-${p.id}" data-action="rotate" data-page-id="${p.id}" title="Girar página" aria-label="Girar página">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
             </button>
-            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-card" title="Quitar página" aria-label="Quitar página">
+            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-${p.id}" data-action="remove" data-page-id="${p.id}" title="Eliminar página" aria-label="Eliminar página">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -452,49 +375,71 @@ export class OrganizePdfController implements ViewController {
         rotBadge.remove();
       }
     }
-
-    this.updateSummary();
   }
 
   private rotateAllPages(): void {
+    if (this.pages.length === 0) return;
     this.pages.forEach((p) => {
-      this.rotatePage(p.id);
-    });
-    showToast('Todas las páginas han sido giradas 90°.', 'info');
-  }
-
-  private removePage(pageId: string): void {
-    if (this.pages.length <= 1) {
-      this.showError('El documento no puede quedar vacío. Debe contener al menos una página.');
-      return;
-    }
-
-    const index = this.pages.findIndex((p) => p.id === pageId);
-    if (index !== -1) {
-      this.pages.splice(index, 1);
-      this.renderPagesGrid();
-      this.initSortable();
-      this.updateSummary();
-
-      const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
-      if (countBadge) {
-        countBadge.textContent = `${this.pages.length} págs.`;
+      p.rotation = (p.rotation + 90) % 360;
+      const img = this.container.querySelector<HTMLElement>(`[data-ref="img-${p.id}"]`);
+      if (img) {
+        img.style.transform = p.rotation !== 0 ? `rotate(${p.rotation}deg)` : '';
       }
-    }
+      const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${p.id}"]`);
+      if (card) {
+        let rotBadge = card.querySelector<HTMLElement>(`[data-ref="rot-badge-${p.id}"]`);
+        if (p.rotation !== 0) {
+          if (!rotBadge) {
+            rotBadge = document.createElement('span');
+            rotBadge.className = 'pdf-card__badge';
+            rotBadge.setAttribute('data-ref', `rot-badge-${p.id}`);
+            card.querySelector('.pdf-card__footer')?.appendChild(rotBadge);
+          }
+          rotBadge.textContent = `+${p.rotation}°`;
+        } else if (rotBadge) {
+          rotBadge.remove();
+        }
+      }
+    });
   }
 
   private resetOrder(): void {
+    if (this.originalPages.length === 0) return;
     this.pages = this.originalPages.map((p) => ({ ...p, rotation: 0 }));
     this.renderPagesGrid();
     this.initSortable();
     this.updateSummary();
-    showToast('Se ha restablecido el orden original del documento.', 'info');
+  }
+
+  private removePage(pageId: string): void {
+    if (this.pages.length <= 1) {
+      showToast('Debes mantener al menos una página en el documento.', 'warning');
+      return;
+    }
+
+    const index = this.pages.findIndex((p) => p.id === pageId);
+    if (index === -1) return;
+
+    this.pages.splice(index, 1);
+
+    const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${pageId}"]`);
+    if (card) {
+      card.remove();
+    }
+
+    this.refreshCardBadges();
+    this.updateSummary();
+
+    const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
+    if (countBadge) {
+      countBadge.textContent = `${this.pages.length} págs.`;
+    }
   }
 
   private updateSummary(): void {
-    const total = this.pages.length;
-    if (total > 0) {
-      this.hideError();
+    const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
+    if (countBadge) {
+      countBadge.textContent = `${this.pages.length} págs.`;
     }
   }
 
@@ -506,21 +451,18 @@ export class OrganizePdfController implements ViewController {
       if (!this.currentFile) {
         txtMainAction.textContent = t('tools.organize_pdf_btn_select') || 'Seleccionar PDF';
         mainActionBtn.disabled = true;
-        showElement(mainActionBtn);
       } else {
         txtMainAction.textContent = t('tools.organize_pdf_btn_action') || 'Ordenar PDF';
         mainActionBtn.disabled = this.isProcessing;
-        showElement(mainActionBtn);
       }
     }
   }
 
   private async executeOrganizePdf(): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
-    this.hideError();
 
     if (this.pages.length === 0) {
-      this.showError('Debes incluir al menos una página en el orden final.');
+      showToast('Debes incluir al menos una página en el orden final.', 'warning');
       return;
     }
 
@@ -538,21 +480,19 @@ export class OrganizePdfController implements ViewController {
     formData.append('filename', customFilename);
 
     this.isProcessing = true;
-    this.hideError();
-    this.showProcessingState();
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     try {
       const response = await postFormWithProgress(
         API_ROUTES.tools.organizePdf.organize,
         formData,
         (progress) => {
-          this.statusManager?.updateUploadProgress(progress);
+          this.phaseManager?.updateUploadProgress(progress);
         }
       );
       const json = await response.json();
 
-      this.statusManager?.showProcessing('Organizando páginas del PDF...');
+      this.phaseManager?.showProcessing('Organizando páginas del PDF...', 'Aplicando el nuevo orden y rotaciones');
 
       if (!response.ok || !json.success || !json.data) {
         throw new Error(json.error || 'Error al procesar la solicitud.');
@@ -561,8 +501,7 @@ export class OrganizePdfController implements ViewController {
       this.currentResult = json.data as OrganizePdfResponseData;
       const token = this.currentResult.fileId;
       showToast('Documento PDF organizado con éxito.', 'success');
-      this.statusManager?.hide();
-      saveDownloadPayloadAndNavigate({
+      this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
@@ -573,35 +512,12 @@ export class OrganizePdfController implements ViewController {
         token,
       });
     } catch {
-      this.statusManager?.showError({
-        boxText: 'Uno o más archivos seleccionados están dañados, protegidos o en un formato no compatible.',
-        boxTitle: 'Error al organizar el documento',
-        desc: 'No se pudo aplicar el nuevo orden a las páginas. Por favor intenta de nuevo.',
-        retryText: 'Reintentar Ordenar PDF',
-        title: '¡Oh no! No hemos podido ordenar tu archivo.',
+      this.phaseManager?.showError('No se pudo aplicar el nuevo orden a las páginas. Por favor intenta de nuevo.', () => {
+        this.phaseManager?.setPhase('workspace');
       });
     } finally {
       this.isProcessing = false;
     }
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(itemsCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
   private resetToInitial(): void {
@@ -611,67 +527,26 @@ export class OrganizePdfController implements ViewController {
     this.originalPages = [];
     this.pdfDocument = null;
     this.isProcessing = false;
-    this.statusManager?.hide();
 
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
       this.sortableInstance = null;
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-dropzone-card"]');
-    const itemsCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-card"]');
-    const processingCard = this.container.querySelector<HTMLElement>('[data-ref="pdf-processing-card"]');
+    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
 
-    if (fileInput) fileInput.value = '';
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    hideElement(processingCard);
-    hideElement(itemsCard);
-    showElement(dropzoneCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    hideElement(sidebar);
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    const topActions = this.container.querySelector<HTMLElement>('[data-ref="organize-top-actions"]');
-    hideElement(topActions);
+    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+    this.sidebarModal?.close();
+
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_organizado.pdf';
-    if (this.sidebarModal) this.sidebarModal.close();
+    if (outputNameInput) outputNameInput.value = '';
 
-    this.updateSummary();
-    this.updateActionButtons();
-    this.hideError();
-  }
+    const grid = this.container.querySelector<HTMLElement>('[data-ref="organize-pages-grid"]');
+    if (grid) grid.innerHTML = '';
 
-  private showError(msg: string): void {
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-error"]');
-    if (banner) {
-      banner.textContent = msg;
-      showElement(banner);
-    }
-    showToast(msg, 'danger');
-  }
-
-  private hideError(): void {
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-error"]');
-    if (banner) {
-      banner.textContent = '';
-      hideElement(banner);
-    }
-  }
-
-  private escapeHtml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+    this.phaseManager?.setPhase('dropzone');
   }
 }
 

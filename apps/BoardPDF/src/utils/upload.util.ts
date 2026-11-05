@@ -10,9 +10,9 @@ export interface UploadOptions {
 
 export function createPdfUploadMiddleware(options?: UploadOptions): RequestHandler {
   const requestedMaxFiles = options?.maxFiles ?? 1;
-  const maxFiles = Math.min(Math.max(1, requestedMaxFiles), 50);
+  const maxFiles = Math.min(Math.max(1, requestedMaxFiles), 500);
   const requestedMaxFileSizeMB = options?.maxFileSizeMB ?? 50;
-  const maxFileSizeMB = Math.min(Math.max(1, requestedMaxFileSizeMB), 100);
+  const maxFileSizeMB = Math.min(Math.max(1, requestedMaxFileSizeMB), 2000);
   const maxFileSizeBytes = Math.floor(maxFileSizeMB * 1024 * 1024);
   const fieldName = options?.fieldName || (maxFiles > 1 ? 'files' : 'file');
 

@@ -201,21 +201,35 @@ export async function renderCollaborativePdf(
       }
     } else if (el.type === 'image' && el.url) {
       try {
-        const localRel = el.url.replace(/^\//, '');
-        const localPath = path.resolve(process.cwd(), 'public', localRel);
-        if (fs.existsSync(localPath)) {
-          const imgBytes = fs.readFileSync(localPath);
+        let imgBytes: Buffer | null = null;
+        if (el.url.startsWith('data:')) {
+          const parts = el.url.split(',');
+          if (parts[1]) imgBytes = Buffer.from(parts[1], 'base64');
+        } else {
+          const localRel = el.url.replace(/^\//, '');
+          const localPath = path.resolve(process.cwd(), 'public', localRel);
+          if (fs.existsSync(localPath)) {
+            imgBytes = fs.readFileSync(localPath);
+          }
+        }
+        if (imgBytes) {
           let embeddedImg: any = null;
           const lowerUrl = el.url.toLowerCase();
-          if (lowerUrl.endsWith('.png')) {
-            embeddedImg = await pdfDoc.embedPng(imgBytes);
-          } else if (lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg')) {
-            embeddedImg = await pdfDoc.embedJpg(imgBytes);
-          } else {
+          if (lowerUrl.includes('png') || el.url.startsWith('data:image/png')) {
             try {
               embeddedImg = await pdfDoc.embedPng(imgBytes);
             } catch {
+              try {
+                embeddedImg = await pdfDoc.embedJpg(imgBytes);
+              } catch {}
+            }
+          } else {
+            try {
               embeddedImg = await pdfDoc.embedJpg(imgBytes);
+            } catch {
+              try {
+                embeddedImg = await pdfDoc.embedPng(imgBytes);
+              } catch {}
             }
           }
           if (embeddedImg) {

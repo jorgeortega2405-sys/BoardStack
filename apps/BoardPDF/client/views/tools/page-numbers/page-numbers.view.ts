@@ -1,16 +1,13 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, bindInlineControls, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
 
 export class PageNumbersController implements ViewController {
@@ -27,9 +24,9 @@ export class PageNumbersController implements ViewController {
   private mode: PageNumberMode = 'single';
   private pages: PageThumbnailItem[] = [];
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private position: PageNumberPosition = 'bottom-right';
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -37,8 +34,25 @@ export class PageNumbersController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
-    this.statusManager = new ToolStatusManager(workspace || this.container);
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar PDF',
+        desc: 'Añade numeración de páginas en cualquier posición, formato y tipografía a tu documento PDF.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Insertar números de página',
+      },
+      sidebarRef: 'page-numbers-sidebar',
+      toolId: 'page-numbers',
+      toolName: 'Insertar números de página',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'pn-workspace-card',
+    });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -48,9 +62,9 @@ export class PageNumbersController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.sidebarModal) {
       this.sidebarModal.destroy();
@@ -66,48 +80,16 @@ export class PageNumbersController implements ViewController {
     }
   }
 
-  private async handleDriveImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
-    }
-  }
-
-  private async handleDropboxImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
-      }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
-    }
-  }
-
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="pn-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
     const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="pn-sidebar-drag-zone"]');
+    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar-drag-zone"]');
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
-    const fabAddBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pn-fab-add"]');
 
     this.sidebarModal = setupToolSidebarModal({
       backdrop: sidebarBackdrop,
@@ -118,207 +100,147 @@ export class PageNumbersController implements ViewController {
       signal,
     });
 
-    browseBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-    fabAddBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-
-    heroDriveBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDriveImport();
+    executeBtn?.addEventListener('click', () => {
+      void this.handleExecutePageNumbers(executeBtn);
     }, { signal });
 
-    heroDropboxBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleDropboxImport();
-    }, { signal });
+    const modePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
+    const modeButtons = modePill?.querySelectorAll<HTMLButtonElement>('.component-button--pill');
+    modeButtons?.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        modeButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        modePill?.setAttribute('data-active', index.toString());
+        this.mode = (btn.getAttribute('data-mode') || 'single') as PageNumberMode;
+        this.renderPagesView();
+      }, { signal });
+    });
 
-    const checkCover = this.container.querySelector<HTMLInputElement>('[data-ref="check-cover"]');
-    const customTextBox = this.container.querySelector<HTMLElement>('[data-ref="box-custom-text"]');
+    const posGrid = this.container.querySelector<HTMLElement>('[data-ref="grid-pn-position"]');
+    const posCells = posGrid?.querySelectorAll<HTMLButtonElement>('.pn-position-cell');
+    posCells?.forEach((cell) => {
+      cell.addEventListener('click', () => {
+        posCells.forEach((c) => c.classList.remove('is-selected'));
+        cell.classList.add('is-selected');
+        this.position = (cell.getAttribute('data-pos') || 'bottom-right') as PageNumberPosition;
+        this.updateIndicators();
+      }, { signal });
+    });
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pn-dropzone-card"]');
-
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files?.[0];
-      if (file) {
-        void this.handleFileSelected(file);
-      }
-      fileInput.value = '';
-    }, { signal });
-
-    if (dropzoneCard) {
-      bindFileDropzone({
-        dropTarget: dropzoneCard,
-        onFiles: (files) => {
-          if (files.length > 0) void this.handleFileSelected(files[0]);
-        },
-        signal,
-        visualTarget: dropzoneCard,
-      });
-    }
-
-    const pageModeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
-    pageModeToggle?.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
-      if (!btn) return;
-      const val = btn.getAttribute('data-val') as 'single' | 'double';
-      if (!val || val === this.mode) return;
-      this.mode = val;
-      pageModeToggle.setAttribute('data-active', val === 'single' ? '0' : '1');
-      pageModeToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
-        b.classList.toggle('is-active', b === btn);
-      });
-      this.renderPagesGrid();
-    }, { signal });
-
-    checkCover?.addEventListener('change', () => {
-      this.firstPageIsCover = checkCover.checked;
+    const coverCheck = this.container.querySelector<HTMLInputElement>('[data-ref="check-first-page-cover"]');
+    coverCheck?.addEventListener('change', () => {
+      this.firstPageIsCover = coverCheck.checked;
       this.updateIndicators();
     }, { signal });
 
-    const marginToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-margin"]');
-    marginToggle?.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
-      if (!btn) return;
-      const val = btn.getAttribute('data-val') as PageNumberMargin;
-      if (!val) return;
-      this.margin = val;
-      const idx = val === 'recommended' ? '0' : val === 'small' ? '1' : '2';
-      marginToggle.setAttribute('data-active', idx);
-      marginToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
-        b.classList.toggle('is-active', b === btn);
-      });
-    }, { signal });
+    this.setupDropdowns(signal);
+  }
 
-    const wrapperFormat = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-format"]');
-    if (wrapperFormat) {
-      const ctrl = setupDropdown(wrapperFormat, {
-        onSelect: (val: string) => {
-          this.format = val || '{n}';
-          if (customTextBox) {
-            toggleElement(customTextBox, val === 'custom');
+  private setupDropdowns(signal: AbortSignal): void {
+    const marginWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-margin"]');
+    if (marginWrap) {
+      const ctrl = setupDropdown(marginWrap, {
+        isSelect: true,
+        onSelect: (val) => {
+          this.margin = val as PageNumberMargin;
+          const text = marginWrap.querySelector<HTMLElement>('[data-ref="pn-margin-selected-text"]');
+          if (text) {
+            text.textContent = val === 'small' ? 'Pequeño' : val === 'recommended' ? 'Recomendado' : 'Grande';
           }
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const wrapperFontFamily = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-font-family"]');
-    if (wrapperFontFamily) {
-      const ctrl = setupDropdown(wrapperFontFamily, {
-        onSelect: (val: string) => {
-          this.fontFamily = val || 'Helvetica';
+    const formatWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-format"]');
+    const customTextGroup = this.container.querySelector<HTMLElement>('[data-ref="group-custom-text"]');
+    if (formatWrap) {
+      const ctrl = setupDropdown(formatWrap, {
+        isSelect: true,
+        onSelect: (val) => {
+          this.format = val;
+          const text = formatWrap.querySelector<HTMLElement>('[data-ref="pn-format-selected-text"]');
+          if (text) {
+            text.textContent = val === '{n}' ? 'Solo número de página' : val === '{n}/{p}' ? 'Página {n} de {p}' : 'Texto personalizado';
+          }
+          toggleElement(customTextGroup, val === 'custom');
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const wrapperFontSize = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-font-size"]');
-    if (wrapperFontSize) {
-      const ctrl = setupDropdown(wrapperFontSize, {
-        onSelect: (val: string) => {
-          this.fontSize = Number(val) || 11;
+    const fontWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-font"]');
+    if (fontWrap) {
+      const ctrl = setupDropdown(fontWrap, {
+        isSelect: true,
+        onSelect: (val) => {
+          this.fontFamily = val;
+          const text = fontWrap.querySelector<HTMLElement>('[data-ref="pn-font-selected-text"]');
+          if (text) text.textContent = val;
         },
       });
       this.dropdownControllers.push(ctrl);
     }
-
-    const posCells = this.container.querySelectorAll<HTMLElement>('.pn-position-cell[data-pos]');
-    posCells.forEach((cell) => {
-      cell.addEventListener('click', () => {
-        posCells.forEach((c) => c.classList.remove('is-selected'));
-        cell.classList.add('is-selected');
-        this.position = (cell.getAttribute('data-pos') as PageNumberPosition) || 'bottom-right';
-        this.updateIndicators();
-      }, { signal });
-    });
-
-    executeBtn?.addEventListener('click', () => {
-      if (this.currentFile) {
-        void this.handleExecutePageNumbers(executeBtn);
-      }
-    }, { signal });
-
-    bindInlineControls(this.container, signal);
   }
 
   private async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
-    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      this.showError('Selecciona únicamente un archivo PDF válido.');
+      showToast('Selecciona únicamente un archivo PDF válido.', 'danger');
       return;
     }
 
     const limits = getCurrentUserToolLimits('page-numbers');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo PDF supera el tamaño máximo permitido de ${limits.maxFileSizeMB} MB.`);
+      showToast(`El archivo PDF supera el tamaño máximo permitido de ${limits.maxFileSizeMB} MB.`, 'danger');
       return;
     }
 
     this.currentFile = file;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pn-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="pn-workspace-card"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    showElement(workspaceCard);
-    showElement(sidebar);
+    this.phaseManager?.setPhase('workspace');
+
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-
-    if (outputNameInput) {
+    if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_numerado.pdf`;
+      filenameInput.value = `${base}_numerado.pdf`;
     }
 
     try {
       const arrayBuffer = await file.arrayBuffer();
       this.pdfDocument = await loadPdfDocument(arrayBuffer);
-      const count = this.pdfDocument.numPages || 1;
+      const numPages = this.pdfDocument.numPages || 1;
 
-      this.pages = Array.from({ length: count }, (_, i) => ({
+      this.pages = Array.from({ length: numPages }, (_, i) => ({
         id: `pn-page-${i + 1}`,
         originalIndex: i,
         pageNum: i + 1,
       }));
 
       const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
-      if (toPageInput) {
-        toPageInput.value = String(count);
-        toPageInput.max = String(count);
-      }
-
-      const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
-      if (fromPageInput) {
-        fromPageInput.max = String(count);
-      }
+      if (toPageInput) toPageInput.value = numPages.toString();
 
       if (executeBtn) executeBtn.disabled = false;
-
-      const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
-      if (countBadge) countBadge.textContent = String(count);
-
-      this.renderPagesGrid();
+      this.renderPagesView();
     } catch {
-      this.showError('No se pudo procesar el archivo PDF. Asegúrate de que no esté dañado ni protegido por contraseña.');
+      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado ni protegido.', 'danger');
       this.resetToInitial();
     }
   }
 
-  private renderPagesGrid(): void {
+  private renderPagesView(): void {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="pn-pages-grid"]');
     if (!grid) return;
+    grid.innerHTML = '';
 
     if (this.mode === 'single') {
       grid.className = 'pdf-items-grid pn-pages-grid';
@@ -331,18 +253,18 @@ export class PageNumbersController implements ViewController {
               <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
             </div>
           </div>
+          <span class="pdf-card__title">Página ${p.pageNum}</span>
         </div>
       `).join('');
     } else {
-      grid.className = 'pn-pages-grid pn-pages-grid--double';
+      grid.className = 'pdf-items-grid pn-pages-grid pn-pages-grid--facing';
       let html = '';
 
       for (let i = 0; i < this.pages.length; i += 2) {
         const leftPage = this.pages[i];
         const rightPage = this.pages[i + 1];
 
-        html += `<div class="pn-spread-pair">`;
-
+        html += `<div class="pn-facing-pair" data-ref="facing-pair-${i / 2}">`;
         html += `
           <div class="pdf-card pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}" style="width: 170px;">
             <div class="pdf-card__sheet-wrapper">
@@ -435,10 +357,6 @@ export class PageNumbersController implements ViewController {
 
   private async handleExecutePageNumbers(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
-    this.hideError();
-
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="pn-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
 
     const startNumberInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-start-number"]');
     const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
@@ -464,11 +382,7 @@ export class PageNumbersController implements ViewController {
     };
 
     this.isProcessing = true;
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    hideElement(workspaceCard);
-    hideElement(sidebar);
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
       try {
@@ -486,7 +400,7 @@ export class PageNumbersController implements ViewController {
           API_ROUTES.tools.pageNumbers.process,
           formData,
           (progress) => {
-            this.statusManager?.updateUploadProgress(progress);
+            this.phaseManager?.updateUploadProgress(progress);
           }
         );
         const result = (await response.json()) as {
@@ -495,10 +409,7 @@ export class PageNumbersController implements ViewController {
           success: boolean;
         };
 
-        this.statusManager?.showProcessingState({
-          subtitle: 'Renderizando y estampando las numeraciones en el documento PDF',
-          title: 'Insertando números de página...',
-        });
+        this.phaseManager?.showProcessing('Insertando números de página...', 'Renderizando y estampando las numeraciones en el documento PDF');
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
           throw new Error(result.error || 'Ocurrió un error al insertar números de página.');
@@ -506,7 +417,7 @@ export class PageNumbersController implements ViewController {
 
         const token = result.data.fileId;
         showToast('Números de página insertados con éxito.', 'success');
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
@@ -517,16 +428,13 @@ export class PageNumbersController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-        showElement(topHeader);
-        showElement(workspaceCard);
-        showElement(sidebar);
-        this.isProcessing = false;
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al numerar el documento.';
-        this.statusManager?.showError(errorMessage, () => {
-          this.statusManager?.hide();
+        this.phaseManager?.showError(errorMessage, () => {
+          this.phaseManager?.setPhase('workspace');
         });
-        this.showError(errorMessage);
+        showToast(errorMessage, 'danger');
+      } finally {
+        this.isProcessing = false;
       }
     });
   }
@@ -536,46 +444,20 @@ export class PageNumbersController implements ViewController {
     this.pages = [];
     this.pdfDocument = null;
     this.isProcessing = false;
-    this.statusManager?.hide();
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="pn-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="pn-workspace-card"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-page-numbers"]');
-
-    if (fileInput) fileInput.value = '';
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(workspaceCard);
     if (executeBtn) executeBtn.disabled = true;
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-workspace"]');
-    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_numerado.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
-  }
 
-  private showError(message: string): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
-    if (errorEl) {
-      errorEl.textContent = message;
-      showElement(errorEl);
-    }
-    showToast(message, 'danger');
-  }
-
-  private hideError(): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
-    if (errorEl) {
-      errorEl.textContent = '';
-      hideElement(errorEl);
-    }
+    this.phaseManager?.setPhase('dropzone');
   }
 }
 

@@ -509,9 +509,9 @@ export function createCollaborativeDrawerElement(): HTMLElement {
         </div>
 
         <div class="collaborative-pdf-apply-actions">
-          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full is-disabled" data-ref="btn-embed-design" disabled data-tooltip="Próximamente">
+          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full" data-ref="btn-embed-design" data-tooltip="Insertar como diseño editable en la página actual">
             <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            <span class="component-button__text">Incrustar diseño</span>
+            <span class="component-button__text">Incrustar en página actual</span>
           </button>
           <button type="button" class="component-button component-button--black component-button--h40 component-button--w-full" data-ref="btn-apply-all-pages">
             <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>

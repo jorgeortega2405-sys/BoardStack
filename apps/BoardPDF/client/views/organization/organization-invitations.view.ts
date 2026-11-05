@@ -6,7 +6,7 @@ import { navigate } from '../../services/navigation.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { applyAvatarTier } from '../../utils/tier.util.js';
+import { applyAvatarTier, renderUserAvatarHtml } from '../../utils/avatar.util.js';
 
 interface InvitationItem {
   avatar_url?: string | null;
@@ -208,9 +208,7 @@ export class OrganizationInvitationsController implements ViewController {
         <tr class="component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}" data-ref="invitation-item-${invitation.id}" data-invitation-id="${invitation.id}">
           <td class="component-table__cell" style="padding-left: 20px;">
             <div style="align-items: center; display: flex; gap: 12px;">
-              <div class="table-user-avatar" data-ref="avatar-inv-${invitation.id}">
-                ${invitation.avatar_url ? `<img src="${invitation.avatar_url}" alt="${invitation.email}" />` : `<span>${(invitation.email || '?')[0].toUpperCase()}</span>`}
-              </div>
+              ${renderUserAvatarHtml(invitation, { dataRef: `avatar-inv-${invitation.id}` })}
               <span style="color: var(--text-primary); font-weight: 600;">${invitation.email}</span>
             </div>
           </td>

@@ -1023,7 +1023,6 @@
   animation: tool-upload-pulse 1.8s infinite ease-in-out;
   background: linear-gradient(90deg, var(--action-primary) 0%, var(--border-color-hover) 50%, var(--action-primary) 100%);
   background-size: 200% 100%;
-  width: 100% !important;
 }
 
 @keyframes tool-upload-pulse {

@@ -1,17 +1,15 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
+import { ToolZoomController } from '../../../utils/tool-zoom.util.js';
 import { ClientRedactTool, ClientRedactionBox, RedactPdfResultData } from './redact-pdf.types.js';
 
 export class RedactPdfController implements ViewController {
@@ -26,9 +24,10 @@ export class RedactPdfController implements ViewController {
   private pageScales: number[] = [];
   private pageTextItems: Array<Array<{ height: number; str: string; width: number; x: number; y: number }>> = [];
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private redactionBoxes: ClientRedactionBox[] = [];
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
+  private zoomController: ToolZoomController | null = null;
   private zoomLevel = 1.0;
 
   constructor(container: HTMLElement) {
@@ -37,8 +36,28 @@ export class RedactPdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-workspace"]');
-    this.statusManager = new ToolStatusManager(workspace || this.container);
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar Archivo PDF',
+        desc: 'Oculta y elimina de forma irreversible información confidencial, texto o páginas completas de tu PDF.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Censurar PDF',
+      },
+      onRetry: () => {
+        void this.executeRedaction();
+      },
+      sidebarRef: 'redact-pdf-sidebar',
+      toolId: 'redact-pdf',
+      toolName: 'Censurar PDF',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'redact-workspace-card',
+    });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -48,9 +67,12 @@ export class RedactPdfController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.zoomController) {
+      this.zoomController = null;
+    }
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.abortController) {
       this.abortController.abort();
@@ -78,66 +100,23 @@ export class RedactPdfController implements ViewController {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="redact-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-redact"]');
-
     const toolSelectBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-select"]');
     const toolDrawBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-draw"]');
-
-    const zoomInBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-in"]');
-    const zoomOutBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-out"]');
 
     const searchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-search-redact"]');
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-phrase"]');
 
-    if (browseBtn && fileInput) {
-      browseBtn.addEventListener('click', () => fileInput.click(), { signal });
-    }
-
-    if (fileInput) {
-      fileInput.addEventListener('change', async () => {
-        if (fileInput.files && fileInput.files.length > 0) {
-          await this.handleFileSelected(fileInput.files[0]);
-        }
-      }, { signal });
-    }
-
-    if (dropzone) {
-      dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('is-dragover');
-      }, { signal });
-
-      dropzone.addEventListener('dragleave', () => {
-        dropzone.classList.remove('is-dragover');
-      }, { signal });
-
-      dropzone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('is-dragover');
-        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-          await this.handleFileSelected(e.dataTransfer.files[0]);
-        }
-      }, { signal });
-    }
-
-    if (heroDriveBtn) {
-      heroDriveBtn.addEventListener('click', async () => {
-        await this.handleDriveImport();
-      }, { signal });
-    }
-
-    if (heroDropboxBtn) {
-      heroDropboxBtn.addEventListener('click', async () => {
-        await this.handleDropboxImport();
-      }, { signal });
-    }
-
     const toggleRedactTool = this.container.querySelector<HTMLElement>('[data-ref="toggle-redact-tool"]');
+
+    this.zoomController = new ToolZoomController({
+      container: this.container,
+      initialZoom: this.zoomLevel,
+      onZoomChange: (level) => {
+        this.applyZoom(level);
+      },
+      signal,
+    });
 
     if (toolSelectBtn) {
       toolSelectBtn.addEventListener('click', () => {
@@ -150,18 +129,6 @@ export class RedactPdfController implements ViewController {
       toolDrawBtn.addEventListener('click', () => {
         if (toggleRedactTool) toggleRedactTool.setAttribute('data-active', '1');
         this.switchTool('draw-box');
-      }, { signal });
-    }
-
-    if (zoomInBtn) {
-      zoomInBtn.addEventListener('click', () => {
-        this.changeZoom(0.15);
-      }, { signal });
-    }
-
-    if (zoomOutBtn) {
-      zoomOutBtn.addEventListener('click', () => {
-        this.changeZoom(-0.15);
       }, { signal });
     }
 
@@ -211,43 +178,34 @@ export class RedactPdfController implements ViewController {
     });
   }
 
-  private changeZoom(delta: number): void {
-    const newZoom = Math.min(2.0, Math.max(0.6, Math.round((this.zoomLevel + delta) * 100) / 100));
-    if (newZoom === this.zoomLevel) return;
-    this.zoomLevel = newZoom;
+  private applyZoom(level: number): void {
+    this.zoomLevel = level;
+    const cards = this.container.querySelectorAll<HTMLElement>('.pdf-redact-page-card');
+    cards.forEach((card) => {
+      const pIdx = parseInt(card.getAttribute('data-page-index') || '0', 10);
+      const dims = this.pageDimensions[pIdx];
+      if (!dims) return;
+      const baseW = 760;
+      const baseH = Math.floor((dims.height / dims.width) * baseW);
+      const scaledW = Math.round(baseW * this.zoomLevel);
+      const scaledH = Math.round(baseH * this.zoomLevel);
 
-    const zoomInput = this.container.querySelector<HTMLInputElement>('[data-ref="val-zoom-level"]');
-    if (zoomInput) {
-      zoomInput.value = `${Math.round(this.zoomLevel * 100)}%`;
-    }
-
-    this.renderDocumentPages();
-  }
-
-  private async handleDriveImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
+      const scaler = card.querySelector<HTMLElement>('.tool-viewport-scaler');
+      if (scaler) {
+        scaler.style.width = `${scaledW}px`;
+        scaler.style.height = `${scaledH}px`;
       }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Google Drive.');
-    }
-  }
-
-  private async handleDropboxImport(): Promise<void> {
-    if (this.isProcessing) return;
-    this.hideError();
-    try {
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files.length > 0) {
-        await this.handleFileSelected(files[0]);
+      const viewport = card.querySelector<HTMLElement>('.pdf-redact-viewport');
+      if (viewport) {
+        viewport.style.transform = `scale(${this.zoomLevel})`;
+        viewport.style.transformOrigin = 'top left';
       }
-    } catch (err: any) {
-      this.showError(err?.message || 'Error al importar archivo desde Dropbox.');
-    }
+      const header = card.querySelector<HTMLElement>('.pdf-redact-page-card__header');
+      if (header) {
+        header.style.width = `${scaledW}px`;
+      }
+      card.style.width = `${scaledW}px`;
+    });
   }
 
   private async handleFileSelected(file: File): Promise<void> {
@@ -270,15 +228,7 @@ export class RedactPdfController implements ViewController {
     const docNamePill = this.container.querySelector<HTMLElement>('[data-ref="val-doc-title"]');
     if (docNamePill) docNamePill.textContent = file.name;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="redact-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    showElement(workspaceCard);
-    showElement(sidebar);
+    this.phaseManager?.setPhase('workspace');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -290,7 +240,6 @@ export class RedactPdfController implements ViewController {
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     showElement(topControls);
     showElement(topActions);
-    showElement(topHeader);
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
     try {
@@ -314,6 +263,8 @@ export class RedactPdfController implements ViewController {
       await this.renderThumbnails();
       await this.renderDocumentPages();
       this.updateSidebarSummary();
+      this.zoomController?.showFooter(true);
+      this.zoomController?.updatePageInfo(1, numPages);
     } catch {
       this.showError('Error al leer el archivo PDF. Verifica que no esté dañado o protegido con contraseña.');
       this.resetSelectedFile();
@@ -325,20 +276,9 @@ export class RedactPdfController implements ViewController {
     this.pdfDocument = null;
     this.redactionBoxes = [];
     this.fullPageRedactions.clear();
-    this.statusManager?.hide();
     this.sidebarModal?.close();
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="redact-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-
-    if (fileInput) fileInput.value = '';
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(workspaceCard);
-    hideElement(sidebar);
+    this.zoomController?.showFooter(false);
+    this.zoomController?.reset();
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -349,8 +289,10 @@ export class RedactPdfController implements ViewController {
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     hideElement(topControls);
     hideElement(topActions);
-    hideElement(topHeader);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
+
+    this.phaseManager?.setPhase('dropzone');
+    this.hideError();
   }
 
   private async renderThumbnails(): Promise<void> {
@@ -390,6 +332,7 @@ export class RedactPdfController implements ViewController {
         if (targetPageCard) {
           targetPageCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+        this.zoomController?.updatePageInfo(pageIndex + 1, this.pdfDocument?.numPages || 1);
       });
 
       try {
@@ -426,20 +369,23 @@ export class RedactPdfController implements ViewController {
       const page = await this.pdfDocument.getPage(i);
       const dims = this.pageDimensions[pageIndex];
 
-      const baseWidth = 760 * this.zoomLevel;
+      const baseWidth = 760;
       const displayScale = baseWidth / dims.width;
       this.pageScales[pageIndex] = displayScale;
 
       const displayWidth = Math.floor(baseWidth);
       const displayHeight = Math.floor((dims.height / dims.width) * baseWidth);
+      const scaledW = Math.round(displayWidth * this.zoomLevel);
+      const scaledH = Math.round(displayHeight * this.zoomLevel);
 
       const pageCard = document.createElement('div');
       pageCard.className = 'pdf-redact-page-card';
       pageCard.setAttribute('data-page-index', `${pageIndex}`);
+      pageCard.style.width = `${scaledW}px`;
 
       const header = document.createElement('div');
       header.className = 'pdf-redact-page-card__header';
-      header.style.width = `${displayWidth}px`;
+      header.style.width = `${scaledW}px`;
 
       const title = document.createElement('span');
       title.className = 'pdf-redact-page-card__title';
@@ -462,11 +408,19 @@ export class RedactPdfController implements ViewController {
       header.appendChild(togglePageBtn);
       pageCard.appendChild(header);
 
+      const scalerEl = document.createElement('div');
+      scalerEl.className = 'tool-viewport-scaler';
+      scalerEl.setAttribute('data-ref', `viewport-scaler-${pageIndex}`);
+      scalerEl.style.width = `${scaledW}px`;
+      scalerEl.style.height = `${scaledH}px`;
+
       const viewportEl = document.createElement('div');
-      viewportEl.className = 'pdf-redact-viewport';
+      viewportEl.className = 'pdf-redact-viewport tool-viewport-sheet';
       viewportEl.setAttribute('data-viewport-page', `${pageIndex}`);
       viewportEl.style.width = `${displayWidth}px`;
       viewportEl.style.height = `${displayHeight}px`;
+      viewportEl.style.transform = `scale(${this.zoomLevel})`;
+      viewportEl.style.transformOrigin = 'top left';
 
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-redact-canvas';
@@ -510,7 +464,8 @@ export class RedactPdfController implements ViewController {
       overlay.setAttribute('data-overlay-page', `${pageIndex}`);
       viewportEl.appendChild(overlay);
 
-      pageCard.appendChild(viewportEl);
+      scalerEl.appendChild(viewportEl);
+      pageCard.appendChild(scalerEl);
       pagesWrapper.appendChild(pageCard);
 
       this.renderPageRedactions(pageIndex);
@@ -584,10 +539,10 @@ export class RedactPdfController implements ViewController {
 
     for (let i = 0; i < clientRects.length; i++) {
       const rect = clientRects[i];
-      const relX = Math.round((rect.left - vpRect.left) / scale);
-      const relY = Math.round((rect.top - vpRect.top) / scale);
-      const relW = Math.round(rect.width / scale);
-      const relH = Math.round(rect.height / scale);
+      const relX = Math.round(((rect.left - vpRect.left) / this.zoomLevel) / scale);
+      const relY = Math.round(((rect.top - vpRect.top) / this.zoomLevel) / scale);
+      const relW = Math.round((rect.width / this.zoomLevel) / scale);
+      const relH = Math.round((rect.height / this.zoomLevel) / scale);
 
       if (relW > 2 && relH > 2) {
         this.redactionBoxes.push({
@@ -627,8 +582,8 @@ export class RedactPdfController implements ViewController {
     surface.addEventListener('mousedown', (e: MouseEvent) => {
       if (this.currentTool !== 'draw-box') return;
       const vpRect = viewportEl.getBoundingClientRect();
-      startX = e.clientX - vpRect.left;
-      startY = e.clientY - vpRect.top;
+      startX = (e.clientX - vpRect.left) / this.zoomLevel;
+      startY = (e.clientY - vpRect.top) / this.zoomLevel;
       isDrawing = true;
 
       previewBox = document.createElement('div');
@@ -641,8 +596,8 @@ export class RedactPdfController implements ViewController {
 
       const onMouseMove = (ev: MouseEvent) => {
         if (!isDrawing || !previewBox) return;
-        const curX = ev.clientX - vpRect.left;
-        const curY = ev.clientY - vpRect.top;
+        const curX = (ev.clientX - vpRect.left) / this.zoomLevel;
+        const curY = (ev.clientY - vpRect.top) / this.zoomLevel;
 
         const left = Math.min(startX, curX);
         const top = Math.min(startY, curY);
@@ -666,8 +621,8 @@ export class RedactPdfController implements ViewController {
           previewBox = null;
         }
 
-        const curX = ev.clientX - vpRect.left;
-        const curY = ev.clientY - vpRect.top;
+        const curX = (ev.clientX - vpRect.left) / this.zoomLevel;
+        const curY = (ev.clientY - vpRect.top) / this.zoomLevel;
 
         const left = Math.min(startX, curX);
         const top = Math.min(startY, curY);
@@ -945,13 +900,7 @@ export class RedactPdfController implements ViewController {
 
     this.isProcessing = true;
     this.hideError();
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="redact-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="redact-pdf-sidebar"]');
-    hideElement(workspaceCard);
-    hideElement(sidebar);
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     try {
       const numPages = this.pdfDocument?.numPages || 0;
@@ -986,7 +935,7 @@ export class RedactPdfController implements ViewController {
         API_ROUTES.tools.redactPdf.redact,
         formData,
         (progress) => {
-          this.statusManager?.updateUploadProgress(progress);
+          this.phaseManager?.updateUploadProgress(progress, 1);
         }
       );
       const result = (await response.json()) as {
@@ -996,15 +945,15 @@ export class RedactPdfController implements ViewController {
         success: boolean;
       };
 
-      this.statusManager?.showProcessingState({
-        subtitle: 'Eliminando texto internamente y aplicando marcas de censura permanentes',
-        title: 'Censurando y purgando contenido...',
-      });
+      this.phaseManager?.showProcessing(
+        'Censurando y purgando contenido...',
+        'Eliminando texto internamente y aplicando marcas de censura permanentes'
+      );
 
       if (response.ok && result.success && result.data) {
         const token = result.data.fileId;
         showToast('Documento censurado con éxito.', 'success');
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename || `${this.currentFile.name.replace(/\.pdf$/i, '')}_censurado.pdf`,
@@ -1018,15 +967,8 @@ export class RedactPdfController implements ViewController {
         throw new Error(result.error || result.message || 'Error al censurar el documento PDF.');
       }
     } catch (err: any) {
-      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      showElement(topHeader);
-      showElement(workspaceCard);
-      showElement(sidebar);
       const message = err?.message || 'Ha ocurrido un error inesperado al procesar el archivo PDF.';
-      this.statusManager?.showError(message, () => {
-        this.statusManager?.hide();
-    this.sidebarModal?.close();
-      });
+      this.phaseManager?.showError(message);
       this.showError(message);
     } finally {
       this.isProcessing = false;

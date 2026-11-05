@@ -1,5 +1,6 @@
 import { openModal } from '../../../components/modal.component.js';
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { escapeHtml, postApi, postFormWithProgress } from '../../../services/api.service.js';
@@ -8,7 +9,6 @@ import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js'
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
@@ -37,9 +37,9 @@ export class ToPdfConverterController implements ViewController {
   private jpgMerge = true;
   private jpgOrientation: JpgOrientation = 'portrait';
   private jpgPageSize: JpgPageSize = 'fit';
+  private phaseManager: ToolPhaseManager | null = null;
   private previewImageUrl: string | null = null;
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement, sourceType?: ToPdfSourceType) {
     this.container = container;
@@ -51,38 +51,34 @@ export class ToPdfConverterController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        if (this.currentFile || this.currentUrl || this.imageFiles.length > 0) {
-          const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
-          const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
-          const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');
-          const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
-          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-          const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-          const ws = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
-
-          hideElement(dropzoneCard);
-          if (this.config.sourceType === 'html-to-pdf') {
-            showElement(htmlPreviewView);
-            hideElement(selectedCard);
-          } else {
-            showElement(selectedCard);
-            hideElement(htmlPreviewView);
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        accept: this.config.accept,
+        buttonText: this.config.browseText || (this.config.isUrlMode ? 'Añadir URL' : 'Seleccionar archivos'),
+        desc: this.config.subtitle,
+        hideCloudButtons: this.config.isUrlMode,
+        hint: this.config.isUrlMode ? '' : 'o arrastra y suelta tus archivos aquí',
+        multiselect: this.config.sourceType === 'jpg-to-pdf',
+        onBrowseClick: this.config.isUrlMode ? () => this.openUrlModal() : undefined,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) {
+            this.handleFilesReceived(files);
           }
-          showElement(sidebar);
-          if (settingsBtn) settingsBtn.classList.add('is-visible');
-          showElement(fabMore);
-          if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
-        } else {
-          this.resetSelectedFile();
-        }
+        },
+        title: this.config.title,
       },
+      onRetry: () => {
+        const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
+        if (convertBtn) void this.handleConvert(convertBtn);
+      },
+      sidebarRef: 'to-pdf-converter-sidebar',
+      toolId: 'to-pdf-converter',
       toolName: this.config.title,
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'converter-selected-card',
     });
+    await this.phaseManager.init();
     this.applyConfiguration();
     renderIcons(this.container);
     this.bindEvents();
@@ -101,9 +97,9 @@ export class ToPdfConverterController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.previewImageUrl) {
       URL.revokeObjectURL(this.previewImageUrl);
@@ -571,29 +567,17 @@ export class ToPdfConverterController implements ViewController {
     this.htmlUrl = url;
     this.currentFile = null;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
     const htmlUrlInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-html-url"]');
 
     if (htmlUrlInput) htmlUrlInput.value = url;
     if (convertBtn) convertBtn.disabled = false;
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
+    this.phaseManager?.setPhase('workspace');
     hideElement(selectedCard);
     showElement(htmlPreviewView);
-
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    showElement(fabMore);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
     void this.fetchUrlPreview(url, this.htmlScreen);
   }
@@ -618,20 +602,20 @@ export class ToPdfConverterController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('to-pdf-converter');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo excede el tamaño máximo permitido (${limits.maxFileSizeMB} MB).`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolName: 'Conversor a PDF',
+        type: 'file_size',
+      });
       return;
     }
 
     this.currentFile = file;
     this.currentUrl = null;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
@@ -673,16 +657,9 @@ export class ToPdfConverterController implements ViewController {
       showElement(iconEl);
     }
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    hideElement(htmlPreviewView);
+    this.phaseManager?.setPhase('workspace');
     showElement(selectedCard);
-
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    showElement(fabMore);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+    hideElement(htmlPreviewView);
   }
 
   private resetSelectedFile(): void {
@@ -703,13 +680,8 @@ export class ToPdfConverterController implements ViewController {
     }
     this.imagePreviewUrls = [];
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
     const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
     const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
     const imgEl = this.container.querySelector<HTMLImageElement>('[data-ref="doc-preview-img"]');
     const iconEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-icon"]');
@@ -728,42 +700,13 @@ export class ToPdfConverterController implements ViewController {
     }
     hideElement(htmlLoader);
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
     hideElement(selectedCard);
     hideElement(htmlPreviewView);
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
     if (convertBtn) convertBtn.disabled = true;
-    this.statusManager?.hide();
+    this.phaseManager?.setPhase('dropzone');
     this.hideError();
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="converter-selected-card"]');
-    const htmlPreviewView = this.container.querySelector<HTMLElement>('[data-ref="html-preview-view"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(selectedCard);
-    hideElement(htmlPreviewView);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
   }
 
   private async handleConvert(button: HTMLButtonElement): Promise<void> {
@@ -771,8 +714,7 @@ export class ToPdfConverterController implements ViewController {
     this.hideError();
 
     this.isConverting = true;
-    this.showProcessingState();
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
       try {
@@ -810,7 +752,7 @@ export class ToPdfConverterController implements ViewController {
           API_ROUTES.tools.toPdfConverter.convert,
           formData,
           (progress) => {
-            this.statusManager?.updateUploadProgress(progress, 1);
+            this.phaseManager?.updateUploadProgress(progress, 1);
           },
           this.abortController?.signal
         );
@@ -826,7 +768,7 @@ export class ToPdfConverterController implements ViewController {
 
         const data = result.data;
         showToast('Documento convertido exitosamente', 'success');
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: data.downloadUrl,
           fileSize: data.fileSize,
           filename: data.filename,
@@ -840,7 +782,7 @@ export class ToPdfConverterController implements ViewController {
         });
       } catch (err: unknown) {
         const errorDetail = err instanceof Error ? err.message : '';
-        this.statusManager?.showError({
+        this.phaseManager?.showError({
           boxText: errorDetail || (this.currentUrl
             ? 'Comprueba que la dirección URL sea accesible públicamente y no requiera inicio de sesión. Si el problema continúa, contacta a soporte.'
             : 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.'),

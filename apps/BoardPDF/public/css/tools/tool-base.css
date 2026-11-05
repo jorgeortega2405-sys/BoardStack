@@ -66,10 +66,79 @@
 .tool-top-bar .pdf-editor-top-controls,
 .component-top.tool-top .pdf-editor-top-controls,
 .tool-top-bar .pdf-editor-top-actions,
-.component-top.tool-top .pdf-editor-top-actions {
+.component-top.tool-top .pdf-editor-top-actions,
+.tool-top-bar .redact-top-controls,
+.component-top.tool-top .redact-top-controls {
   align-items: center;
   display: flex;
+  flex-shrink: 0;
   gap: 8px;
+}
+
+.tool-top-bar .component-toggle-pill,
+.component-top.tool-top .component-toggle-pill {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  height: 40px !important;
+  max-width: 320px;
+  min-height: 40px !important;
+  padding: 3px !important;
+  width: 290px;
+}
+
+.tool-top-bar .component-toggle-pill .component-toggle-pill-glider,
+.component-top.tool-top .component-toggle-pill .component-toggle-pill-glider {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 9px !important;
+  bottom: 3px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+  left: 3px !important;
+  top: 3px !important;
+  width: calc(50% - 3px) !important;
+}
+
+.tool-top-bar .component-toggle-pill .component-button,
+.component-top.tool-top .component-toggle-pill .component-button {
+  border-radius: 9px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-family: inherit !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  gap: 7px !important;
+  height: 100% !important;
+  padding: 0 10px !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.tool-top-bar .component-toggle-pill .component-button:hover,
+.component-top.tool-top .component-toggle-pill .component-button:hover {
+  color: #ffffff !important;
+}
+
+.tool-top-bar .component-toggle-pill .component-button.is-active,
+.tool-top-bar .component-toggle-pill .component-button.active,
+.component-top.tool-top .component-toggle-pill .component-button.is-active,
+.component-top.tool-top .component-toggle-pill .component-button.active {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.tool-top-bar .component-toggle-pill .component-icon,
+.component-top.tool-top .component-toggle-pill .component-icon {
+  color: #ffffff !important;
+  fill: currentColor;
+  flex-shrink: 0;
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
 }
 
 .tool-top-bar .pdf-editor-mode-switcher,
@@ -467,7 +536,8 @@
   padding: 0;
 }
 
-.tool-workspace__canvas {
+.tool-workspace__canvas,
+.tool-processing-wrapper {
   align-items: center;
   box-sizing: border-box;
   display: flex;

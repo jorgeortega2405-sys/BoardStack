@@ -1,17 +1,15 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ClientPdfCompressLevel, CompressResultData } from './compress-pdf.types.js';
 
@@ -20,9 +18,9 @@ export class CompressPdfController implements ViewController {
   private container: HTMLElement;
   private currentFile: File | null = null;
   private isProcessing = false;
+  private phaseManager: ToolPhaseManager | null = null;
   private selectedLevel: ClientPdfCompressLevel = 'recommended';
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -30,33 +28,36 @@ export class CompressPdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        if (this.currentFile) {
-          const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
-          const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-          const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-          const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-          const ws = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
 
-          hideElement(dropzoneCard);
-          showElement(selectedCard);
-          showElement(sidebar);
-          if (settingsBtn) settingsBtn.classList.add('is-visible');
-          showElement(fabMore);
-          if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar archivo PDF',
+        desc: 'Reduce el tamaño de tus archivos PDF optimizando imágenes y tipografías con la mejor calidad visual.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files) => {
+          if (files.length > 0) {
+            this.handleFileSelected(files[0]);
+          }
+        },
+        title: 'Comprimir PDF',
+      },
+      onRetry: () => {
+        if (this.currentFile) {
+          this.phaseManager?.setPhase('workspace');
         } else {
           this.resetSelectedFile();
         }
       },
+      toolId: 'compress-pdf',
       toolName: 'Comprimir PDF',
     });
+
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
+
     const transferred = consumeTransferFile();
     if (transferred) {
       this.handleFileSelected(transferred);
@@ -68,9 +69,9 @@ export class CompressPdfController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.abortController) {
       this.abortController.abort();
@@ -93,83 +94,13 @@ export class CompressPdfController implements ViewController {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
-    const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
-    const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
-
-    browseBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput?.click();
-    }, { signal });
-
-    fabAddMoreBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput?.click();
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    fabDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    fabDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
 
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetSelectedFile();
     }, { signal });
-
-    fileInput?.addEventListener('change', () => {
-      const files = fileInput.files;
-      if (files && files.length > 0) {
-        this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    if (dropzone) {
-      bindFileDropzone({
-        dropTarget: dropzone,
-        visualTarget: dropzone,
-        onFiles: (files) => {
-          if (files.length > 0) {
-            this.handleFileSelected(files[0]);
-          }
-        },
-        signal,
-      });
-    }
 
     const levelToggle = this.container.querySelector<HTMLElement>('[data-ref="compress-level-toggle"]');
     levelToggle?.addEventListener('click', (e) => {
@@ -229,18 +160,17 @@ export class CompressPdfController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('compress-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo excede el tamaño máximo permitido (${limits.maxFileSizeMB} MB).`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolName: 'Comprimir PDF',
+        type: 'file_size',
+      });
       return;
     }
 
     this.currentFile = file;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
@@ -249,15 +179,7 @@ export class CompressPdfController implements ViewController {
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (compressBtn) compressBtn.disabled = false;
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    showElement(selectedCard);
-
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    showElement(fabMore);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+    this.phaseManager?.setPhase('workspace');
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
     if (canvas) {
@@ -298,28 +220,8 @@ export class CompressPdfController implements ViewController {
 
   private resetSelectedFile(): void {
     this.currentFile = null;
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    if (fileInput) fileInput.value = '';
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(selectedCard);
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    this.sidebarModal?.close();
-
     if (compressBtn) compressBtn.disabled = true;
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
@@ -328,28 +230,10 @@ export class CompressPdfController implements ViewController {
       canvas.height = 0;
     }
 
-    this.setCompressLevel('recommended');
-    this.statusManager?.hide();
-    this.hideError();
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="compress-dropzone-card"]');
-    const selectedCard = this.container.querySelector<HTMLElement>('[data-ref="compress-selected-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
     this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(selectedCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
+    this.setCompressLevel('recommended');
+    this.phaseManager?.setPhase('dropzone');
+    this.hideError();
   }
 
   private async handleCompress(button: HTMLButtonElement): Promise<void> {
@@ -357,8 +241,7 @@ export class CompressPdfController implements ViewController {
     this.hideError();
 
     this.isProcessing = true;
-    this.showProcessingState();
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
       try {
@@ -370,7 +253,7 @@ export class CompressPdfController implements ViewController {
           API_ROUTES.tools.compressPdf.compress,
           formData,
           (progress) => {
-            this.statusManager?.updateUploadProgress(progress, 1);
+            this.phaseManager?.updateUploadProgress(progress, 1);
           },
           this.abortController?.signal
         );
@@ -382,8 +265,7 @@ export class CompressPdfController implements ViewController {
 
         const token = result.data.fileId;
         showToast('PDF comprimido con éxito.', 'success');
-        this.statusManager?.hide();
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.compressedSize,
           filename: result.data.filename,
@@ -395,7 +277,7 @@ export class CompressPdfController implements ViewController {
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al comprimir el PDF.';
-        this.statusManager?.showError({
+        this.phaseManager?.showError({
           boxText: 'Comprueba que el documento no esté protegido con contraseña o dañado.',
           boxTitle: 'Error de compresión',
           desc: errorMessage,

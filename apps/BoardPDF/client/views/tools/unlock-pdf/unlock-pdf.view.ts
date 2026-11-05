@@ -1,17 +1,15 @@
 import { openModal } from '../../../components/modal.component.js';
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
+import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ModalInstance, ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
 
@@ -22,8 +20,8 @@ export class UnlockPdfController implements ViewController {
   private isPasswordRequired = false;
   private isProcessing = false;
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -31,33 +29,40 @@ export class UnlockPdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
-      onRetry: () => {
-        this.statusManager?.hide();
-        if (this.currentFile) {
-          const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone-card"]');
-          const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
-          const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-          const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-          const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-          const ws = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
 
-          hideElement(dropzoneCard);
-          showElement(workspaceCard);
-          showElement(sidebar);
-          if (settingsBtn) settingsBtn.classList.add('is-visible');
-          showElement(fabMore);
-          if (ws) ws.classList.add('tool-layout__workspace--top-aligned');
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar PDF',
+        desc: 'Elimina la contraseña de seguridad de tu documento PDF para poder abrirlo, editarlo e imprimirlo libremente.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files) => {
+          if (files.length > 0) {
+            void this.handleFileSelected(files[0]);
+          }
+        },
+        title: 'Desbloquear PDF',
+      },
+      onRetry: () => {
+        if (this.currentFile) {
+          this.phaseManager?.setPhase('workspace');
         } else {
           this.resetToInitial();
         }
       },
+      toolId: 'unlock-pdf',
       toolName: 'Desbloquear PDF',
     });
+
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
+
+    const transferred = consumeTransferFile();
+    if (transferred) {
+      void this.handleFileSelected(transferred);
+    }
   }
 
   public destroy(): void {
@@ -65,9 +70,9 @@ export class UnlockPdfController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.abortController) {
       this.abortController.abort();
@@ -79,6 +84,7 @@ export class UnlockPdfController implements ViewController {
       } catch {}
       this.pdfDocument = null;
     }
+    this.currentFile = null;
   }
 
   private bindEvents(): void {
@@ -95,80 +101,20 @@ export class UnlockPdfController implements ViewController {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-pdf"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
-    const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
-    const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
-
-    browseBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-
-    fabAddMoreBtn?.addEventListener('click', () => fileInput?.click(), { signal });
-
-    heroDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    fabDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    fabDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
 
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetToInitial();
     }, { signal });
 
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files?.[0];
-      if (file) {
-        void this.handleFileSelected(file);
-      }
-    }, { signal });
-
-    if (dropzone) {
-      bindFileDropzone({
-        dropTarget: dropzone,
-        visualTarget: dropzone,
-        onFiles: (files) => {
-          if (files.length > 0) {
-            void this.handleFileSelected(files[0]);
-          }
-        },
-        signal,
-      });
-    }
-
     executeBtn?.addEventListener('click', () => {
-      void this.handleExecuteUnlock(executeBtn);
+      if (this.isPasswordRequired) {
+        this.promptPasswordAndUnlock(executeBtn);
+      } else {
+        void this.processUnlock('', executeBtn);
+      }
     }, { signal });
   }
 
@@ -176,71 +122,66 @@ export class UnlockPdfController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('unlock-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo excede el tamaño máximo permitido (${limits.maxFileSizeMB} MB).`);
+      this.showError(`El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`);
       return;
     }
 
     this.currentFile = file;
 
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
-    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="txt-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="txt-file-size"]');
+    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
-
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    hideElement(dropzoneCard);
-    showElement(workspaceCard);
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    showElement(fabMore);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-
     if (executeBtn) executeBtn.disabled = false;
 
-    await this.loadDocumentPreview(file);
+    this.phaseManager?.setPhase('workspace');
+
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    if (outputNameInput) {
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      outputNameInput.value = `${base}_desbloqueado.pdf`;
+    }
+
+    await this.inspectAndRenderPdf(file);
   }
 
-  private async loadDocumentPreview(file: File): Promise<void> {
+  private async inspectAndRenderPdf(file: File): Promise<void> {
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="unlock-doc-canvas"]');
     const lockedPlaceholder = this.container.querySelector<HTMLElement>('[data-ref="unlock-locked-placeholder"]');
 
-    hideElement(canvas);
-    hideElement(lockedPlaceholder);
-    this.isPasswordRequired = false;
-
     try {
       const pdfjs = await loadPdfJs();
-      const buffer = await file.arrayBuffer();
+      const arrayBuffer = await file.arrayBuffer();
 
-      const loadingTask = pdfjs.getDocument({
-        data: buffer,
-        password: '',
-      });
-
-      this.pdfDocument = await loadingTask.promise;
-
-      if (canvas) {
-        showElement(canvas);
-        await this.renderPageThumbnail(this.pdfDocument, 1, canvas);
+      try {
+        this.pdfDocument = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        this.isPasswordRequired = false;
+        if (canvas) {
+          showElement(canvas);
+          void this.renderThumbnail(this.pdfDocument, canvas);
+        }
+        if (lockedPlaceholder) hideElement(lockedPlaceholder);
+      } catch (err: any) {
+        if (err?.name === 'PasswordException') {
+          this.isPasswordRequired = true;
+          if (canvas) hideElement(canvas);
+          if (lockedPlaceholder) showElement(lockedPlaceholder);
+        } else {
+          this.isPasswordRequired = false;
+          if (canvas) hideElement(canvas);
+          if (lockedPlaceholder) hideElement(lockedPlaceholder);
+        }
       }
     } catch {
-      this.isPasswordRequired = true;
-      showElement(lockedPlaceholder);
+      this.isPasswordRequired = false;
     }
   }
 
-  private async renderPageThumbnail(doc: any, pageNum: number, canvas: HTMLCanvasElement): Promise<void> {
+  private async renderThumbnail(pdf: any, canvas: HTMLCanvasElement): Promise<void> {
     try {
-      const page = await doc.getPage(pageNum);
+      const page = await pdf.getPage(1);
       const targetWidth = 180;
       const origViewport = page.getViewport({ scale: 1 });
       const scale = targetWidth / origViewport.width;
@@ -253,60 +194,11 @@ export class UnlockPdfController implements ViewController {
       canvas.style.height = `${viewport.height}px`;
 
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.scale(dpr, dpr);
-
-      await page.render({ canvasContext: ctx, viewport }).promise;
+      if (ctx) {
+        ctx.scale(dpr, dpr);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      }
     } catch {}
-  }
-
-  private showProcessingState(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    this.sidebarModal?.close();
-    hideElement(dropzoneCard);
-    hideElement(workspaceCard);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-  }
-
-  private restoreWorkspaceFromProcessing(): void {
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-    this.statusManager?.hide();
-    this.isProcessing = false;
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
-
-    showElement(workspaceCard);
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    showElement(fabMore);
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-  }
-
-  private async handleExecuteUnlock(button: HTMLButtonElement): Promise<void> {
-    if (!this.currentFile || this.isProcessing) return;
-    this.hideError();
-
-    if (this.isPasswordRequired) {
-      this.promptPasswordAndUnlock(button);
-      return;
-    }
-
-    await this.processUnlock('', button);
   }
 
   private promptPasswordAndUnlock(button: HTMLButtonElement): void {
@@ -368,8 +260,7 @@ export class UnlockPdfController implements ViewController {
       modal.clearError();
     } else {
       this.isProcessing = true;
-      this.showProcessingState();
-      this.statusManager?.showUploading(1, 1);
+      this.phaseManager?.showUploading(1, 1);
     }
 
     try {
@@ -382,7 +273,7 @@ export class UnlockPdfController implements ViewController {
         formData,
         (progress) => {
           if (!modal) {
-            this.statusManager?.updateUploadProgress(progress);
+            this.phaseManager?.updateUploadProgress(progress);
           }
         }
       );
@@ -402,7 +293,7 @@ export class UnlockPdfController implements ViewController {
             modal.showError('La contraseña introducida es incorrecta. Inténtalo de nuevo.');
             return;
           }
-          this.restoreWorkspaceFromProcessing();
+          this.phaseManager?.setPhase('workspace');
           this.promptPasswordAndUnlock(button);
           return;
         }
@@ -415,7 +306,7 @@ export class UnlockPdfController implements ViewController {
 
       const token = result.data.fileId;
       showToast('PDF desbloqueado correctamente.', 'success');
-      saveDownloadPayloadAndNavigate({
+      this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: result.data.fileSize,
         filename: result.data.filename,
@@ -430,7 +321,7 @@ export class UnlockPdfController implements ViewController {
         modal.setConfirmLoading(false);
         modal.showError('Error al desbloquear el documento. Verifica los datos e inténtalo de nuevo.');
       } else {
-        this.statusManager?.showError({
+        this.phaseManager?.showError({
           boxText: 'Comprueba que la contraseña ingresada sea la correcta o que el archivo PDF no esté dañado.',
           boxTitle: 'Error al desbloquear el documento',
           desc: 'No se pudo eliminar la protección del archivo PDF. Por favor verifica los datos.',
@@ -450,29 +341,8 @@ export class UnlockPdfController implements ViewController {
     this.pdfDocument = null;
     this.isPasswordRequired = false;
     this.isProcessing = false;
-    this.statusManager?.hide();
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-dropzone-card"]');
-    const workspaceCard = this.container.querySelector<HTMLElement>('[data-ref="unlock-workspace-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const fabMore = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-more"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-workspace"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
-
-    if (fileInput) fileInput.value = '';
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(workspaceCard);
-
-    hideElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    hideElement(fabMore);
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    this.sidebarModal?.close();
-
     if (executeBtn) executeBtn.disabled = true;
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="unlock-doc-canvas"]');
@@ -481,6 +351,8 @@ export class UnlockPdfController implements ViewController {
       canvas.height = 0;
     }
 
+    this.sidebarModal?.close();
+    this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }
 

@@ -1,17 +1,16 @@
-import { ToolStatusManager } from '../../../components/tool-status.component.js';
+import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormWithProgress } from '../../../services/api.service.js';
-import { pickDropboxFiles } from '../../../services/dropbox.service.js';
-import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
+import { postFormApi, postFormWithProgress } from '../../../services/api.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
+import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
+import { ToolZoomController } from '../../../utils/tool-zoom.util.js';
 import { EditDrawingStroke, EditImageItem, EditPdfMode, EditPdfResponseData, EditPdfTool, EditShapeItem, EditShapeType, EditTextAddition, EditTextReplacement, EditorProperties, NativeTextItem } from './edit-pdf.types.js';
 
 export class EditPdfController implements ViewController {
@@ -27,8 +26,10 @@ export class EditPdfController implements ViewController {
   private images: EditImageItem[] = [];
   private isProcessing = false;
   private pageDimensions: Array<{ height: number; width: number }> = [];
+  private pageObserver: IntersectionObserver | null = null;
   private pageScales: number[] = [];
   private pdfDocument: any = null;
+  private phaseManager: ToolPhaseManager | null = null;
   private properties: EditorProperties = {
     fillColor: 'transparent',
     fontFamily: 'Helvetica',
@@ -41,9 +42,9 @@ export class EditPdfController implements ViewController {
   private selectedElement: { el: HTMLElement; id: string; type: string } | null = null;
   private shapes: EditShapeItem[] = [];
   private sidebarModal: ToolSidebarModalController | null = null;
-  private statusManager: ToolStatusManager | null = null;
   private texts: EditTextAddition[] = [];
   private undoStack: any[] = [];
+  private zoomController: ToolZoomController | null = null;
   private zoomLevel = 1.0;
 
   constructor(container: HTMLElement) {
@@ -52,26 +53,48 @@ export class EditPdfController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]') || this.container;
-    this.statusManager = new ToolStatusManager({
-      container: workspace,
+    this.phaseManager = new ToolPhaseManager({
+      container: this.container,
+      dropzone: {
+        buttonText: 'Seleccionar Archivo PDF',
+        desc: 'Añade texto, imágenes, formas y dibujos, o edita texto existente en tu documento PDF con total libertad.',
+        hint: 'o arrastra y suelta el PDF aquí',
+        multiselect: false,
+        onFilesSelected: (files: File[]) => {
+          if (files.length > 0) void this.handleFileSelected(files[0]);
+        },
+        title: 'Editar PDF',
+      },
       onRetry: () => {
         this.restoreEditorFromError();
       },
+      sidebarRef: 'edit-pdf-sidebar',
+      toolId: 'edit-pdf',
       toolName: 'Editar PDF',
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'edit-editor-card',
     });
+    await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
   }
 
   public destroy(): void {
+    if (this.pageObserver) {
+      this.pageObserver.disconnect();
+      this.pageObserver = null;
+    }
+    if (this.zoomController) {
+      this.zoomController.destroy();
+      this.zoomController = null;
+    }
     if (this.sidebarModal) {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
-    if (this.statusManager) {
-      this.statusManager.destroy();
-      this.statusManager = null;
+    if (this.phaseManager) {
+      this.phaseManager.destroy();
+      this.phaseManager = null;
     }
     if (this.abortController) {
       this.abortController.abort();
@@ -99,64 +122,15 @@ export class EditPdfController implements ViewController {
       this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
     }
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
     const imgInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-image-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
     const sidebarSaveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-save-pdf"]');
 
     const btnModeAnnotate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-annotate"]');
     const btnModeEdit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-edit"]');
-
-    const btnZoomIn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-in"]');
-    const btnZoomOut = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-out"]');
     const btnUndo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-undo"]');
     const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     outputNameInput?.addEventListener('input', () => this.hideError(), { signal });
-
-    browseBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      fileInput?.click();
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: false });
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    fileInput?.addEventListener('change', () => {
-      const files = fileInput.files;
-      if (files && files.length > 0) {
-        void this.handleFileSelected(files[0]);
-      }
-    }, { signal });
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
-    const dropTarget = dropzoneCard || dropzone;
-    bindFileDropzone({
-      dropTarget,
-      visualTarget: dropTarget,
-      onFiles: (files) => {
-        if (files.length > 0) {
-          void this.handleFileSelected(files[0]);
-        }
-      },
-      signal,
-    });
 
     const toggleEditorMode = this.container.querySelector<HTMLElement>('[data-ref="toggle-editor-mode"]');
     btnModeAnnotate?.addEventListener('click', () => {
@@ -284,21 +258,15 @@ export class EditPdfController implements ViewController {
       imgInput.value = '';
     }, { signal });
 
-    btnZoomIn?.addEventListener('click', () => {
-      if (this.zoomLevel < 2.0) {
-        this.zoomLevel = Math.min(2.0, parseFloat((this.zoomLevel + 0.25).toFixed(2)));
-        this.updateZoomDisplay();
-        void this.rerenderAllPages();
-      }
-    }, { signal });
-
-    btnZoomOut?.addEventListener('click', () => {
-      if (this.zoomLevel > 0.5) {
-        this.zoomLevel = Math.max(0.5, parseFloat((this.zoomLevel - 0.25).toFixed(2)));
-        this.updateZoomDisplay();
-        void this.rerenderAllPages();
-      }
-    }, { signal });
+    this.zoomController = new ToolZoomController({
+      container: this.container,
+      initialZoom: 1.0,
+      maxZoom: 3.0,
+      minZoom: 0.1,
+      onZoomChange: (level) => this.applyZoom(level),
+      scrollContainer: this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]'),
+      signal,
+    });
 
     btnUndo?.addEventListener('click', () => {
       this.handleUndo();
@@ -400,6 +368,26 @@ export class EditPdfController implements ViewController {
     }
   }
 
+  private applyZoom(level: number): void {
+    this.zoomLevel = level;
+    this.updateZoomDisplay();
+    const scalers = this.container.querySelectorAll<HTMLElement>('.tool-viewport-scaler');
+    scalers.forEach((scaler) => {
+      const pageIndex = parseInt(scaler.getAttribute('data-page-index') || '0', 10);
+      const dims = this.pageDimensions[pageIndex];
+      if (!dims) return;
+      const baseWidth = 760;
+      const baseHeight = Math.floor((dims.height / dims.width) * baseWidth);
+      scaler.style.width = `${Math.floor(baseWidth * level)}px`;
+      scaler.style.height = `${Math.floor(baseHeight * level)}px`;
+      const sheet = scaler.querySelector<HTMLElement>('.pdf-edit-page-card');
+      if (sheet) {
+        sheet.style.transform = `scale(${level})`;
+        sheet.style.transformOrigin = 'top left';
+      }
+    });
+  }
+
   private updateZoomDisplay(): void {
     const zoomInput = this.container.querySelector<HTMLInputElement>('[data-ref="val-zoom-level"]');
     if (zoomInput) {
@@ -422,70 +410,32 @@ export class EditPdfController implements ViewController {
     }
 
     this.currentFile = file;
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
-    const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
-    const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
-    const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
-    const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
-    const thumbnailsContainer = this.container.querySelector<HTMLElement>('[data-ref="thumbnails-container"]');
-
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    if (outputNameInput) {
-      const baseName = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${baseName}_editado.pdf`;
-    }
-
-    hideElement(dropzoneCard);
-    showElement(editorCard);
-    showElement(sidebar);
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-    showElement(topControls);
-    showElement(topActions);
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    showElement(topHeader);
-
-    if (pagesWrapper) {
-      pagesWrapper.innerHTML = `
-        <div class="pdf-viewer-loading" data-ref="editor-loading-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--text-secondary, #666);">
-          <div class="component-spinner component-spinner--lg"></div>
-          <span>Cargando páginas del documento...</span>
-        </div>
-      `;
-    }
-    if (thumbnailsContainer) {
-      thumbnailsContainer.innerHTML = '';
-    }
+    this.phaseManager?.setPhase('processing');
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      this.pdfDocument = await loadPdfDocument(arrayBuffer);
-      const numPages = this.pdfDocument.numPages;
-
-      const pagesCountBadge = this.container.querySelector<HTMLElement>('[data-ref="pages-count-badge"]');
-      if (pagesCountBadge) pagesCountBadge.textContent = `${numPages}`;
-
-      this.pageDimensions = [];
-      this.pageScales = [];
-      for (let i = 1; i <= numPages; i++) {
-        const page = await this.pdfDocument.getPage(i);
-        const vp = page.getViewport({ scale: 1 });
-        this.pageDimensions.push({ height: vp.height, width: vp.width });
+      const formData = new FormData();
+      formData.append('files', file);
+      const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
+      if (res.ok) {
+        const data = await res.json();
+        const newFiles = data.files || (data.file ? [data.file] : []);
+        const asset = newFiles[0];
+        if (!asset || !asset.url) {
+          this.showError('No se pudo procesar el archivo PDF.');
+          this.phaseManager?.setPhase('dropzone');
+          return;
+        }
+        const docTitle = file.name.replace(/\.[^/.]+$/, '');
+        const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
+        sessionStorage.setItem('collab_auto_import', JSON.stringify({ asset, docTitle }));
+        navigate(`/d/${newDocId}`);
+      } else {
+        this.showError('Ocurrió un error al subir el documento PDF.');
+        this.phaseManager?.setPhase('dropzone');
       }
-
-      await this.renderThumbnails();
-      await this.renderDocumentPages();
-      this.setMode('annotate');
-    } catch (err: unknown) {
-      const message = err instanceof Error && err.name === 'PasswordException'
-        ? 'El archivo está protegido con contraseña. Desbloquéalo antes de editarlo.'
-        : 'El archivo seleccionado no se pudo abrir porque estaba dañado o contiene errores en su estructura.';
-      this.showError(message);
-      this.resetSelectedFile();
+    } catch {
+      this.showError('Error de red al procesar el archivo. Por favor intenta de nuevo.');
+      this.phaseManager?.setPhase('dropzone');
     }
   }
 
@@ -522,10 +472,11 @@ export class EditPdfController implements ViewController {
         this.container.querySelectorAll('.pdf-editor-thumbnail').forEach((t) => t.classList.remove('is-active'));
         thumbItem.classList.add('is-active');
 
-        const targetPageCard = this.container.querySelector<HTMLElement>(`[data-page-index="${pageIndex}"]`);
+        const targetPageCard = this.container.querySelector<HTMLElement>(`.tool-viewport-scaler[data-page-index="${pageIndex}"]`);
         if (targetPageCard) {
           targetPageCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+        this.zoomController?.updatePageInfo(pageIndex + 1, this.pdfDocument?.numPages || 1);
       });
 
       try {
@@ -553,6 +504,10 @@ export class EditPdfController implements ViewController {
     if (!this.pdfDocument) return;
     const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
     if (!pagesWrapper) return;
+    if (this.pageObserver) {
+      this.pageObserver.disconnect();
+      this.pageObserver = null;
+    }
     pagesWrapper.innerHTML = '';
 
     const numPages = this.pdfDocument.numPages;
@@ -563,22 +518,31 @@ export class EditPdfController implements ViewController {
       const page = await this.pdfDocument.getPage(i);
       const dims = this.pageDimensions[pageIndex];
 
-      const baseWidth = 760 * this.zoomLevel;
+      const baseWidth = 760;
       const displayScale = baseWidth / dims.width;
       this.pageScales[pageIndex] = displayScale;
 
       const displayWidth = Math.floor(baseWidth);
       const displayHeight = Math.floor((dims.height / dims.width) * baseWidth);
 
+      const scaler = document.createElement('div');
+      scaler.className = 'tool-viewport-scaler';
+      scaler.setAttribute('data-page-index', `${pageIndex}`);
+      scaler.style.width = `${Math.floor(displayWidth * this.zoomLevel)}px`;
+      scaler.style.height = `${Math.floor(displayHeight * this.zoomLevel)}px`;
+      scaler.style.marginBottom = '20px';
+
       const pageCard = document.createElement('div');
-      pageCard.className = 'pdf-edit-page-card';
+      pageCard.className = 'pdf-edit-page-card tool-viewport-sheet';
       pageCard.setAttribute('data-page-index', `${pageIndex}`);
       pageCard.style.width = `${displayWidth}px`;
       pageCard.style.height = `${displayHeight}px`;
+      pageCard.style.transform = `scale(${this.zoomLevel})`;
+      pageCard.style.transformOrigin = 'top left';
 
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-edit-page-canvas';
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.max(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(displayWidth * dpr);
       canvas.height = Math.floor(displayHeight * dpr);
       canvas.style.width = `${displayWidth}px`;
@@ -628,11 +592,37 @@ export class EditPdfController implements ViewController {
 
       this.bindPageOverlayInteractions(overlay, pageIndex, drawCanvas, shapesSvg);
 
-      pagesWrapper.appendChild(pageCard);
+      scaler.appendChild(pageCard);
+      pagesWrapper.appendChild(scaler);
     }
 
     this.hasNativeText = foundNativeText;
     this.restoreModifications();
+    this.setupPageScrollObserver();
+  }
+
+  private setupPageScrollObserver(): void {
+    const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
+    if (!pagesWrapper || !this.abortController) return;
+
+    this.pageObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const pageIndex = parseInt(entry.target.getAttribute('data-page-index') || '0', 10);
+          this.activePageIndex = pageIndex;
+          this.container.querySelectorAll('.pdf-editor-thumbnail').forEach((t) => t.classList.remove('is-active'));
+          const activeThumb = this.container.querySelector<HTMLElement>(`[data-ref="thumb-page-${pageIndex}"]`);
+          if (activeThumb) activeThumb.classList.add('is-active');
+          this.zoomController?.updatePageInfo(pageIndex + 1, this.pdfDocument?.numPages || 1);
+        }
+      });
+    }, {
+      root: pagesWrapper,
+      threshold: 0.5,
+    });
+
+    const scalers = this.container.querySelectorAll<HTMLElement>('.tool-viewport-scaler');
+    scalers.forEach((scaler) => this.pageObserver?.observe(scaler));
   }
 
   private renderNativeTextItems(
@@ -774,9 +764,10 @@ export class EditPdfController implements ViewController {
 
     const getCoords = (e: PointerEvent) => {
       const rect = overlay.getBoundingClientRect();
+      const zoom = this.zoomLevel || 1.0;
       return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
       };
     };
 
@@ -892,8 +883,9 @@ export class EditPdfController implements ViewController {
 
     const onMove = (e: PointerEvent) => {
       const rect = overlay.getBoundingClientRect();
-      const currX = e.clientX - rect.left;
-      const currY = e.clientY - rect.top;
+      const zoom = this.zoomLevel || 1.0;
+      const currX = (e.clientX - rect.left) / zoom;
+      const currY = (e.clientY - rect.top) / zoom;
 
       if (!previewEl) return;
 
@@ -926,8 +918,9 @@ export class EditPdfController implements ViewController {
       window.removeEventListener('pointerup', onUp);
 
       const rect = overlay.getBoundingClientRect();
-      const endX = e.clientX - rect.left;
-      const endY = e.clientY - rect.top;
+      const zoom = this.zoomLevel || 1.0;
+      const endX = (e.clientX - rect.left) / zoom;
+      const endY = (e.clientY - rect.top) / zoom;
       const scale = this.pageScales[pageIndex] || 1;
 
       if (shapeType === 'line') {
@@ -1127,8 +1120,9 @@ export class EditPdfController implements ViewController {
       initialTop = parseFloat(el.style.top) || 0;
 
       const onPointerMove = (moveEvt: PointerEvent) => {
-        const dx = moveEvt.clientX - startX;
-        const dy = moveEvt.clientY - startY;
+        const zoom = this.zoomLevel || 1.0;
+        const dx = (moveEvt.clientX - startX) / zoom;
+        const dy = (moveEvt.clientY - startY) / zoom;
         el.style.left = `${initialLeft + dx}px`;
         el.style.top = `${initialTop + dy}px`;
       };
@@ -1159,8 +1153,9 @@ export class EditPdfController implements ViewController {
       const startH = el.offsetHeight;
 
       const onMove = (moveEvt: PointerEvent) => {
-        const newW = Math.max(30, startW + (moveEvt.clientX - startX));
-        const newH = Math.max(30, startH + (moveEvt.clientY - startY));
+        const zoom = this.zoomLevel || 1.0;
+        const newW = Math.max(30, startW + ((moveEvt.clientX - startX) / zoom));
+        const newH = Math.max(30, startH + ((moveEvt.clientY - startY) / zoom));
         el.style.width = `${newW}px`;
         el.style.height = `${newH}px`;
       };
@@ -1576,6 +1571,12 @@ export class EditPdfController implements ViewController {
   }
 
   private resetSelectedFile(): void {
+    if (this.pageObserver) {
+      this.pageObserver.disconnect();
+      this.pageObserver = null;
+    }
+    this.zoomController?.hideFooter();
+    this.zoomController?.setZoom(1.0);
     this.currentFile = null;
     this.pdfDocument = null;
     this.drawings = [];
@@ -1586,27 +1587,15 @@ export class EditPdfController implements ViewController {
     this.undoStack = [];
     this.redoStack = [];
 
-    const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file"]');
-    if (fileInput) fileInput.value = '';
-
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
-    const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
 
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    showElement(dropzoneCard);
-    hideElement(editorCard);
-    hideElement(sidebar);
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
     const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
     hideElement(topControls);
     hideElement(topActions);
-    hideElement(topHeader);
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
     if (outputNameInput) {
@@ -1617,6 +1606,7 @@ export class EditPdfController implements ViewController {
     const subtoolbar = this.container.querySelector<HTMLElement>('[data-ref="editor-subtoolbar"]');
     hideElement(subtoolbar);
 
+    this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }
 
@@ -1624,23 +1614,8 @@ export class EditPdfController implements ViewController {
     if (!this.currentFile || this.isProcessing) return;
     this.hideError();
 
-    const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
-    const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
-    const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
-    const subtoolbar = this.container.querySelector<HTMLElement>('[data-ref="editor-subtoolbar"]');
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
-
     this.isProcessing = true;
-    hideElement(editorCard);
-    hideElement(topControls);
-    hideElement(topActions);
-    hideElement(subtoolbar);
-    const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-    hideElement(topHeader);
-    hideElement(sidebar);
-    hideElement(topHeader);
-    this.statusManager?.showUploading(1, 1);
+    this.phaseManager?.showUploading(1, 1);
 
     await withButtonLoading(button, async () => {
       try {
@@ -1679,16 +1654,16 @@ export class EditPdfController implements ViewController {
           API_ROUTES.tools.editPdf.process,
           formData,
           (progress) => {
-            this.statusManager?.updateUploadProgress(progress, 1);
+            this.phaseManager?.updateUploadProgress(progress, 1);
           },
           this.abortController?.signal
         );
         const result = (await response.json()) as { data?: EditPdfResponseData; error?: string; success: boolean };
 
-        this.statusManager?.showProcessingState({
-          subtitle: 'Guardando anotaciones, formas, dibujos y modificaciones de texto',
-          title: 'Aplicando ediciones al documento...',
-        });
+        this.phaseManager?.showProcessing(
+          'Aplicando ediciones al documento...',
+          'Guardando anotaciones, formas, dibujos y modificaciones de texto'
+        );
 
         if (!response.ok || !result.success || !result.data) {
           throw new Error(result.error || 'Error al aplicar las modificaciones al PDF.');
@@ -1696,7 +1671,7 @@ export class EditPdfController implements ViewController {
 
         const token = result.data.fileId;
         showToast('PDF editado y guardado con éxito.', 'success');
-        saveDownloadPayloadAndNavigate({
+        this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
@@ -1708,7 +1683,7 @@ export class EditPdfController implements ViewController {
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Error inesperado al guardar el PDF editado.';
-        this.statusManager?.showError({
+        this.phaseManager?.showError({
           boxText: 'Uno o más trazos, textos o imágenes agregados superan los límites del visor o el archivo base es ilegible. Revisa las anotaciones e inténtalo de nuevo.',
           boxTitle: 'Error al procesar la edición',
           desc: errorMessage,
@@ -1722,22 +1697,13 @@ export class EditPdfController implements ViewController {
   }
 
   private restoreEditorFromError(): void {
-    this.statusManager?.hide();
-    const dropzoneCard = this.container.querySelector<HTMLElement>('[data-ref="edit-dropzone-card"]');
-    const editorCard = this.container.querySelector<HTMLElement>('[data-ref="edit-editor-card"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-sidebar"]');
-    const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
-    const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
-
     if (this.currentFile && this.pdfDocument) {
-      hideElement(dropzoneCard);
-      showElement(editorCard);
-      showElement(sidebar);
+      this.phaseManager?.setPhase('workspace');
+      const topControls = this.container.querySelector<HTMLElement>('[data-ref="editor-top-controls"]');
+      const topActions = this.container.querySelector<HTMLElement>('[data-ref="editor-top-actions"]');
+      const workspace = this.container.querySelector<HTMLElement>('[data-ref="edit-pdf-workspace"]');
       showElement(topControls);
       showElement(topActions);
-      const topHeader = this.container.querySelector<HTMLElement>('[data-ref="component-top"]');
-      showElement(topHeader);
       this.updateSubtoolbar();
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     } else {

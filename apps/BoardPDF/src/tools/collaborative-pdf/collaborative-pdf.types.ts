@@ -22,7 +22,7 @@ export interface CollaborativeElementShape {
   id: string;
   pageIndex: number;
   rotation?: number;
-  shapeType: 'arrow' | 'circle' | 'diamond' | 'line' | 'line-flexible' | 'line-multiconnect' | 'rect' | 'star' | 'triangle';
+  shapeType: string;
   strokeColor: string;
   strokeWidth: number;
   type: 'shape';

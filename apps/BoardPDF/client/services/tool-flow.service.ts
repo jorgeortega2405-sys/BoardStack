@@ -1,3 +1,4 @@
+import { showUpgradeLimitModal } from '../components/upgrade-limit-modal.component.js';
 import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
 import { bindFileDropzone } from '../utils/dom.util.js';
 import { pickDropboxFiles } from './dropbox.service.js';
@@ -77,6 +78,16 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
 
     if (!multiselect) {
       const file = rawFiles[0];
+      const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
+      if (file.size > maxBytes) {
+        showUpgradeLimitModal({
+          currentLimit: limits.maxFileSizeMB,
+          fileName: file.name,
+          toolName: toolId,
+          type: 'file_size',
+        });
+        return;
+      }
       const validation = validateIncoming(file);
       if (!validation.valid) {
         showToast(validation.error || 'Selecciona únicamente un documento en formato PDF.', 'danger');
@@ -90,14 +101,42 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
       return;
     }
 
-    let filesToProcess = rawFiles;
-    if (limits.maxFiles && filesToProcess.length > limits.maxFiles) {
-      showToast(`El número máximo de archivos permitidos es ${limits.maxFiles}.`, 'danger');
-      filesToProcess = filesToProcess.slice(0, limits.maxFiles);
+    if (limits.maxFiles && rawFiles.length > limits.maxFiles) {
+      showUpgradeLimitModal({
+        currentCount: rawFiles.length,
+        currentLimit: limits.maxFiles,
+        toolName: toolId,
+        type: 'files_count',
+      });
+      return;
+    }
+
+    for (const file of rawFiles) {
+      const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
+      if (file.size > maxBytes) {
+        showUpgradeLimitModal({
+          currentLimit: limits.maxFileSizeMB,
+          fileName: file.name,
+          toolName: toolId,
+          type: 'file_size',
+        });
+        return;
+      }
+    }
+
+    const totalBatchBytes = rawFiles.reduce((acc, f) => acc + f.size, 0);
+    const maxTotalBytes = limits.maxTotalSizeMB * 1024 * 1024;
+    if (totalBatchBytes > maxTotalBytes) {
+      showUpgradeLimitModal({
+        currentLimit: limits.maxTotalSizeMB,
+        toolName: toolId,
+        type: 'total_size',
+      });
+      return;
     }
 
     const validFiles: File[] = [];
-    for (const file of filesToProcess) {
+    for (const file of rawFiles) {
       const validation = validateIncoming(file);
       if (!validation.valid) {
         showToast(validation.error || `El archivo ${file.name} no es válido.`, 'danger');

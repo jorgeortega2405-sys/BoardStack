@@ -11,9 +11,12 @@ export interface ToolStatusOptions {
 export class ToolStatusManager {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private currentPercent = 0;
+  private currentStage: 'completing' | 'idle' | 'processing' | 'uploading' = 'idle';
   private currentTotalFiles = 1;
   private errorScreen: HTMLElement | null = null;
   private onRetry?: () => void;
+  private processingInterval: number | null = null;
   private toolName: string;
   private uploadScreen: HTMLElement | null = null;
 
@@ -48,7 +51,7 @@ export class ToolStatusManager {
             <div class="tool-upload-screen__fill" data-ref="upload-screen-fill"></div>
           </div>
           <div class="tool-upload-screen__percentage" data-ref="upload-screen-percent">0%</div>
-          <span class="tool-upload-screen__badge" data-ref="upload-screen-badge">SUBIDO</span>
+          <span class="tool-upload-screen__badge" data-ref="upload-screen-badge">SUBIENDO</span>
         </div>
       `;
       this.container.appendChild(uploadEl);
@@ -106,10 +109,10 @@ export class ToolStatusManager {
                   <line x1="10" y1="36" x2="24" y2="36" stroke="var(--text-tertiary)" stroke-width="2.5" stroke-linecap="round"/>
                 </g>
               </svg>
-             </div>
-           </div>
-         </div>
-       `;
+            </div>
+          </div>
+        </div>
+      `;
       this.container.appendChild(errorEl);
       this.bindRetryEvent(errorEl);
       renderIcons(errorEl);
@@ -134,13 +137,25 @@ export class ToolStatusManager {
     }, { signal });
   }
 
+  private stopProcessingInterval(): void {
+    if (this.processingInterval !== null) {
+      window.clearInterval(this.processingInterval);
+      this.processingInterval = null;
+    }
+  }
+
   public showUploading(currentFileIndex = 1, totalFiles = 1): void {
+    this.stopProcessingInterval();
+    this.currentStage = 'uploading';
+    this.currentPercent = 0;
     this.currentTotalFiles = totalFiles;
+
     const uploadScreen = this.getOrCreateUploadScreen();
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) hideElement(layoutEl);
     if (this.errorScreen) hideElement(this.errorScreen);
     showElement(uploadScreen);
+
     const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
     const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
     const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
@@ -152,11 +167,11 @@ export class ToolStatusManager {
     if (titleEl) {
       titleEl.textContent = totalFiles > 1
         ? `Subiendo archivo ${currentFileIndex} de ${totalFiles}`
-        : 'Subiendo archivo...';
+        : 'Subiendo archivo al servidor...';
     }
-    if (subEl) subEl.textContent = 'Subiendo...';
+    if (subEl) subEl.textContent = 'Transfiriendo datos...';
     if (etaEl) etaEl.textContent = 'Tiempo restante: calculando...';
-    if (speedEl) speedEl.textContent = 'Velocidad de subida: -- MB/s';
+    if (speedEl) speedEl.textContent = 'Velocidad de subida: calculando...';
     if (fillEl) {
       fillEl.classList.remove('is-processing');
       fillEl.style.width = '0%';
@@ -180,34 +195,27 @@ export class ToolStatusManager {
       return;
     }
 
-    if (!this.uploadScreen) return;
+    if (!this.uploadScreen || this.currentStage === 'completing') return;
+
+    if (info.percent >= 100) {
+      this.startProcessingProgress();
+      return;
+    }
+
     const titleEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
-    const subEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
     const etaEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
     const speedEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
     const fillEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
     const percentEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
-    const badgeEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
 
-    if (info.percent >= 100) {
-      if (titleEl) titleEl.textContent = 'Procesando documentos...';
-      if (subEl) subEl.textContent = 'Aplicando cambios y preparando descarga...';
-      if (fillEl) {
-        fillEl.style.width = '100%';
-        fillEl.classList.add('is-processing');
-      }
-      if (percentEl) percentEl.textContent = '100%';
-      if (badgeEl) badgeEl.textContent = 'PROCESANDO';
-      if (etaEl) etaEl.textContent = 'Casi listo...';
-      if (speedEl) speedEl.textContent = 'Completando tarea';
-      return;
-    }
+    const mappedPercent = Math.min(30, Math.max(this.currentPercent, Math.round((info.percent / 100) * 30)));
+    this.currentPercent = mappedPercent;
 
     if (titleEl && this.currentTotalFiles > 1) {
       titleEl.textContent = `Subiendo archivo ${totalOrFileIndex} de ${this.currentTotalFiles}`;
     }
-    if (fillEl) fillEl.style.width = `${info.percent}%`;
-    if (percentEl) percentEl.textContent = `${info.percent}%`;
+    if (fillEl) fillEl.style.width = `${mappedPercent}%`;
+    if (percentEl) percentEl.textContent = `${mappedPercent}%`;
 
     if (etaEl) {
       etaEl.textContent = info.etaSeconds > 0
@@ -215,36 +223,14 @@ export class ToolStatusManager {
         : 'Tiempo restante: calculando...';
     }
 
-    if (speedEl) {
+    if (speedEl && info.speedBytesPerSec > 0) {
       const mbps = (info.speedBytesPerSec / (1024 * 1024)).toFixed(1);
       speedEl.textContent = `Velocidad de subida: ${mbps} MB/s`;
     }
   }
 
   public showProcessing(title = 'Procesando documento...', subtitle = 'Por favor espera mientras finaliza la tarea'): void {
-    const uploadScreen = this.getOrCreateUploadScreen();
-    const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
-    if (layoutEl) hideElement(layoutEl);
-    if (this.errorScreen) hideElement(this.errorScreen);
-    showElement(uploadScreen);
-    const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
-    const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
-    const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
-    const speedEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
-    const fillEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
-    const percentEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
-    const badgeEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
-
-    if (titleEl) titleEl.textContent = title;
-    if (subEl) subEl.textContent = subtitle;
-    if (etaEl) etaEl.textContent = 'Procesando en servidor...';
-    if (speedEl) speedEl.textContent = 'Optimizando salida';
-    if (fillEl) {
-      fillEl.style.width = '100%';
-      fillEl.classList.add('is-processing');
-    }
-    if (percentEl) percentEl.textContent = '100%';
-    if (badgeEl) badgeEl.textContent = 'PROCESANDO';
+    this.startProcessingProgress(title, subtitle);
   }
 
   public showProcessingState(opts?: { subtitle?: string; title?: string } | string, subtitle?: string): void {
@@ -255,6 +241,98 @@ export class ToolStatusManager {
     }
   }
 
+  private startProcessingProgress(title = 'Procesando documento...', subtitle?: string): void {
+    if (this.currentStage === 'processing' || this.currentStage === 'completing') return;
+    this.currentStage = 'processing';
+    this.stopProcessingInterval();
+
+    const uploadScreen = this.getOrCreateUploadScreen();
+    const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
+    if (layoutEl) hideElement(layoutEl);
+    if (this.errorScreen) hideElement(this.errorScreen);
+    showElement(uploadScreen);
+
+    const titleEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
+    const subEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
+    const etaEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
+    const speedEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
+    const fillEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
+    const percentEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
+    const badgeEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
+
+    if (titleEl) titleEl.textContent = title;
+    if (subEl) subEl.textContent = subtitle || 'Analizando estructura y contenido del documento...';
+    if (etaEl) etaEl.textContent = 'Procesando en servidor...';
+    if (speedEl) speedEl.textContent = 'Optimizando salida';
+    if (badgeEl) badgeEl.textContent = 'PROCESANDO';
+    if (fillEl) fillEl.classList.add('is-processing');
+
+    this.currentPercent = Math.max(30, this.currentPercent);
+    if (fillEl) fillEl.style.width = `${Math.floor(this.currentPercent)}%`;
+    if (percentEl) percentEl.textContent = `${Math.floor(this.currentPercent)}%`;
+
+    this.processingInterval = window.setInterval(() => {
+      if (this.currentStage !== 'processing') {
+        this.stopProcessingInterval();
+        return;
+      }
+
+      if (this.currentPercent < 52) {
+        this.currentPercent += 0.85;
+        if (subEl) subEl.textContent = 'Analizando estructura y contenido del documento...';
+        if (etaEl) etaEl.textContent = 'Verificando páginas...';
+        if (speedEl) speedEl.textContent = 'Motor PDF activo';
+      } else if (this.currentPercent < 76) {
+        this.currentPercent += 0.45;
+        if (subEl) subEl.textContent = 'Optimizando páginas y aplicando transformaciones...';
+        if (etaEl) etaEl.textContent = 'Procesando contenido...';
+        if (speedEl) speedEl.textContent = 'Optimizando salida';
+      } else if (this.currentPercent < 90) {
+        this.currentPercent += 0.22;
+        if (subEl) subEl.textContent = 'Ensamblando y verificando archivo final...';
+        if (etaEl) etaEl.textContent = 'Casi listo...';
+        if (speedEl) speedEl.textContent = 'Finalizando';
+      } else if (this.currentPercent < 93) {
+        this.currentPercent += 0.04;
+        if (subEl) subEl.textContent = 'Preparando archivo para descarga...';
+        if (etaEl) etaEl.textContent = 'Últimos detalles...';
+      }
+
+      const displayPercent = Math.min(93, Math.floor(this.currentPercent));
+      if (fillEl) fillEl.style.width = `${displayPercent}%`;
+      if (percentEl) percentEl.textContent = `${displayPercent}%`;
+    }, 60);
+  }
+
+  public async complete(successTitle = '¡Documento procesado con éxito!', successSubtitle = 'Descarga lista para comenzar'): Promise<void> {
+    this.stopProcessingInterval();
+    this.currentStage = 'completing';
+    this.currentPercent = 100;
+
+    if (!this.uploadScreen) return;
+
+    const titleEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-title"]');
+    const subEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-subtitle"]');
+    const etaEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-eta"]');
+    const speedEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-speed"]');
+    const fillEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-fill"]');
+    const percentEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
+    const badgeEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
+
+    if (titleEl) titleEl.textContent = successTitle;
+    if (subEl) subEl.textContent = successSubtitle;
+    if (badgeEl) badgeEl.textContent = 'COMPLETADO';
+    if (etaEl) etaEl.textContent = 'Listo para descargar';
+    if (speedEl) speedEl.textContent = '100% completado';
+    if (fillEl) {
+      fillEl.classList.remove('is-processing');
+      fillEl.style.width = '100%';
+    }
+    if (percentEl) percentEl.textContent = '100%';
+
+    await new Promise((resolve) => setTimeout(resolve, 240));
+  }
+
   public showError(options: {
     boxText?: string;
     boxTitle?: string;
@@ -262,6 +340,9 @@ export class ToolStatusManager {
     retryText?: string;
     title?: string;
   } | string = {}, onRetry?: () => void): void {
+    this.stopProcessingInterval();
+    this.currentStage = 'idle';
+
     if (onRetry) {
       this.onRetry = onRetry;
     }
@@ -287,6 +368,8 @@ export class ToolStatusManager {
   }
 
   public hide(): void {
+    this.stopProcessingInterval();
+    this.currentStage = 'idle';
     const layoutEl = this.container.querySelector<HTMLElement>('.tool-layout');
     if (layoutEl) showElement(layoutEl);
     if (this.uploadScreen) {
@@ -302,6 +385,8 @@ export class ToolStatusManager {
   }
 
   public destroy(): void {
+    this.stopProcessingInterval();
+    this.currentStage = 'idle';
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;

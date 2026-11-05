@@ -146,32 +146,7 @@
 
   <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="edit-pdf-layout">
     <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="edit-pdf-workspace">
-      <input class="pdf-dropzone__input" data-ref="input-pdf-file" type="file" accept="application/pdf,.pdf" />
       <input class="pdf-dropzone__input" data-ref="input-image-file" type="file" accept="image/png,image/jpeg,image/webp" />
-
-      <div class="tool-workspace__canvas" data-ref="edit-dropzone-card">
-        <div class="tool-hero-dropzone" data-ref="edit-dropzone">
-          <h1 class="tool-hero-dropzone__title">Editar PDF</h1>
-          <p class="tool-hero-dropzone__desc">Añade texto, imágenes, formas y dibujos, o edita texto existente en tu documento PDF con total libertad.</p>
-
-          <div class="tool-hero-dropzone__actions">
-            <button type="button" class="component-button component-button--black component-button--h55 tool-hero-dropzone__btn-select" data-ref="btn-browse-file">
-              <span class="component-button__text" data-ref="txt-browse-file">Seleccionar Archivo PDF</span>
-            </button>
-            <div class="tool-hero-dropzone__cloud-btns">
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-drive" data-tooltip="Google Drive" aria-label="Google Drive">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-hero-dropbox" data-tooltip="Dropbox" aria-label="Dropbox">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-              </button>
-            </div>
-          </div>
-
-          <p class="tool-hero-dropzone__hint">o arrastra y suelta el PDF aquí</p>
-          <div class="banner banner--danger tool-sidebar__error-banner--lg is-hidden" data-ref="edit-dropzone-error" role="alert"></div>
-        </div>
-      </div>
 
       <div class="pdf-viewer-workspace pdf-editor-workspace is-hidden" data-ref="edit-editor-card">
         <div class="pdf-viewer-main-layout pdf-editor-main-layout" data-ref="editor-main-layout">
@@ -215,7 +190,7 @@
   </div>
   </div>
 
-  <footer class="tool-footer collaborative-footer" data-ref="tool-footer">
+  <footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
     <div class="collaborative-footer__right" data-ref="footer-right">
       <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
       <div class="collaborative-footer__divider"></div>

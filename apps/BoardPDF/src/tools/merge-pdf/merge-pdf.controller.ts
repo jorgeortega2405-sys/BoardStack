@@ -7,8 +7,8 @@ import { Request, Response } from 'express';
 
 export const handleUploadMiddleware = createPdfUploadMiddleware({
   fieldName: 'pdfs',
-  maxFileSizeMB: 50,
-  maxFiles: 30,
+  maxFileSizeMB: 1000,
+  maxFiles: 500,
 });
 
 export async function handleMergePdf(req: Request, res: Response): Promise<void> {
@@ -27,8 +27,11 @@ export async function handleMergePdf(req: Request, res: Response): Promise<void>
   const freeLimits = getToolLimits('merge-pdf', []);
 
   if (files.length > limits.maxFiles) {
+    const error = limits.maxFiles >= 500
+      ? `Has superado el límite máximo de ${limits.maxFiles} archivos por tarea permitido por tu plan.`
+      : `El plan gratuito permite unir hasta ${freeLimits.maxFiles} archivos por tarea. Actualiza a Pro para unir hasta 500 archivos.`;
     res.status(400).json({
-      error: `El plan gratuito permite unir hasta ${freeLimits.maxFiles} archivos por tarea. Actualiza a Pro para unir hasta 500 archivos.`,
+      error,
       success: false,
     });
     return;
