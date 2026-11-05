@@ -1637,7 +1637,7 @@ export class CollaborativePdfEditorController implements ViewController {
               }
               this.scheduleAutoSave(500);
             } else {
-              showToast('El documento colaborativo no existe o fue eliminado.', 'danger');
+              showToast('El documento no existe o fue eliminado.', 'danger');
               navigate('/collaborative-pdf');
               return false;
             }
