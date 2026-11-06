@@ -27,6 +27,13 @@ export const API_ROUTES = {
     upload: '/api/collaborative-docs/upload',
     uploads: '/api/collaborative-docs/uploads',
   },
+  projectFolders: {
+    base: '/api/project-folders',
+    byId: (id: string) => `/api/project-folders/${encodeURIComponent(id)}`,
+    docFolder: (docId: string) => `/api/collaborative-docs/${encodeURIComponent(docId)}/folder`,
+    uploadDelete: (id: string) => `/api/collaborative-docs/uploads/${encodeURIComponent(id)}`,
+    uploadFolder: (id: string) => `/api/collaborative-docs/uploads/${encodeURIComponent(id)}/folder`,
+  },
   download: {
     delete: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,
     file: (token: string) => `/api/download/${token.split('/').map(encodeURIComponent).join('/')}`,

@@ -334,15 +334,32 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
-    handler: async () => {
+    handler: async ({ params }) => {
       await loadStylesheet('/css/tools/collaborative-pdf.css');
+      await loadStylesheet('/css/components/component-projects.css');
+      const { createProjectsView } = await import('../views/projects/projects.view.js');
+      return await createProjectsView(params?.folderId || null);
+    },
+    id: 'projects',
+    match: (path) => {
+      if (path === '/projects' || path === '/projects/') {
+        return { folderId: '' };
+      }
+      const match = path.match(/^\/projects\/([a-zA-Z0-9_\-]+)\/?$/);
+      if (match) {
+        return { folderId: match[1] };
+      }
+      return false;
+    },
+  },
+  {
+    handler: async () => {
       const { navigate } = await import('../services/navigation.service.js');
-      navigate('/?category=collaborative');
-      const { createHomeView } = await import('../views/home.view.js');
-      return await createHomeView();
+      navigate('/projects');
+      return null;
     },
     id: 'collaborative-pdf',
-    match: (path) => path === '/collaborative-pdf' || path.startsWith('/collaborative-pdf'),
+    match: (path) => path === '/collaborative-pdf' || (path.startsWith('/collaborative-pdf') && !path.startsWith('/collaborative-pdf/editor')),
   },
   {
     handler: async () => {

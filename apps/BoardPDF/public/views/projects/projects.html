@@ -1,0 +1,209 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="projects-wrapper">
+  <div class="view-backdrop view-backdrop--dots" data-ref="projects-gradient-backdrop"></div>
+  
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="projects-scrollable">
+    <div class="view-body projects-body" data-ref="projects-container">
+      
+      <div class="projects-hero" data-ref="projects-hero">
+        <div class="projects-hero__header" data-ref="projects-hero-header">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost projects-hero__back-btn is-hidden" data-ref="btn-back-projects" data-tooltip="Volver a todos los proyectos" aria-label="Volver a todos los proyectos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          
+          <h1 class="projects-hero__title" data-ref="projects-main-title">Todos los proyectos</h1>
+          
+          <div class="projects-hero__top-actions" data-ref="projects-hero-top-actions">
+            <div class="projects-hero__folder-actions is-hidden" data-ref="folder-header-actions">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--ghost" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              </button>
+              <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--ghost component-button--danger" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              </button>
+            </div>
+
+            <div class="projects-quick-actions" data-ref="projects-quick-actions">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--ghost projects-action-icon-btn" data-ref="btn-toggle-sort" data-tooltip="Invertir orden" aria-label="Invertir orden">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+              </button>
+
+              <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--primary is-hidden" data-ref="btn-upload-direct" data-tooltip="Subir archivos" aria-label="Subir archivos">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+              </button>
+
+              <div class="dropdown" data-ref="dropdown-new-action">
+                <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black projects-btn-plus dropdown-trigger" data-ref="btn-plus-create" data-tooltip="Crear nuevo" aria-label="Crear nuevo">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-plus-create">
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item" data-ref="item-new-doc" data-action="new-doc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+                      <span class="menu-item__text">Nuevo PDF</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-new-folder" data-action="new-folder">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                      <span class="menu-item__text">Nueva carpeta</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-upload-files" data-action="upload-files">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+                      <span class="menu-item__text">Subir archivos</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <input class="is-hidden" data-ref="input-project-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
+            </div>
+          </div>
+        </div>
+
+        <div class="projects-search-wrap" data-ref="projects-search-wrap">
+          <div class="projects-search-bar" data-ref="projects-search-bar">
+            <svg class="component-icon projects-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="projects-search-input" data-ref="input-project-search" type="text" placeholder="Buscar diseños, carpetas y archivos subidos" autocomplete="off" />
+            <button type="button" class="projects-search-clear is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+
+          <div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
+            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
+              <button type="button" class="category-pill" data-ref="btn-filter-type">
+                <span data-ref="label-filter-type">Tipo</span>
+                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
+                <div class="menu-panel__list">
+                  <button type="button" class="menu-item is-active" data-ref="item-type-all" data-type="all">
+                    <span class="menu-item__text">Todos los tipos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-type-docs" data-type="docs">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+                    <span class="menu-item__text">Documentos PDF</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-type-folders" data-type="folders">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                    <span class="menu-item__text">Carpetas</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-type-uploads" data-type="uploads">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                    <span class="menu-item__text">Archivos subidos</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
+              <button type="button" class="category-pill" data-ref="btn-filter-category">
+                <span data-ref="label-filter-category">Categoría</span>
+                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-category">
+                <div class="menu-panel__list" data-ref="list-filter-category">
+                  <button type="button" class="menu-item is-active" data-ref="item-cat-all" data-category="all">
+                    <span class="menu-item__text">Todas las categorías</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-cat-root" data-category="root">
+                    <span class="menu-item__text">Sin carpeta (Raíz)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-date">
+              <button type="button" class="category-pill" data-ref="btn-filter-date">
+                <span data-ref="label-filter-date">Fecha de modificación</span>
+                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
+                <div class="menu-panel__list">
+                  <button type="button" class="menu-item is-active" data-ref="item-date-recent" data-sort="recent">
+                    <span class="menu-item__text">Editado recientemente</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-date-oldest" data-sort="oldest">
+                    <span class="menu-item__text">Más antiguo</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-date-az" data-sort="az">
+                    <span class="menu-item__text">Nombre (A - Z)</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="item-date-za" data-sort="za">
+                    <span class="menu-item__text">Nombre (Z - A)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-tabs is-hidden" data-ref="uploads-filter-tabs">
+          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
+          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
+          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+        </div>
+      </div>
+
+      <section class="projects-section projects-section--collapsible" data-ref="section-folders">
+        <button type="button" class="projects-section__collapsible-header" data-ref="header-folders">
+          <svg class="component-icon projects-section__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <h2 class="projects-section__heading">Carpetas</h2>
+          <span class="projects-section__counter" data-ref="counter-folders"></span>
+        </button>
+        <div class="projects-section__content" data-ref="content-folders">
+          <div class="projects-folders-grid" data-ref="grid-folders"></div>
+          <div class="projects-empty is-hidden" data-ref="empty-folders">
+            <div class="projects-empty__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+            </div>
+            <h3 class="projects-empty__title">Sin carpetas creadas</h3>
+            <p class="projects-empty__desc">Crea carpetas para organizar mejor tus diseños o imágenes.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="projects-section projects-section--collapsible" data-ref="section-documents">
+        <button type="button" class="projects-section__collapsible-header" data-ref="header-documents">
+          <svg class="component-icon projects-section__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <h2 class="projects-section__heading" data-ref="title-section-documents">Diseños</h2>
+          <span class="projects-section__counter" data-ref="counter-documents"></span>
+        </button>
+        <div class="projects-section__content" data-ref="content-documents">
+          <div class="tools-grid projects-grid" data-ref="grid-documents"></div>
+          <div class="projects-empty is-hidden" data-ref="empty-documents">
+            <div class="projects-empty__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+            </div>
+            <h3 class="projects-empty__title" data-ref="empty-docs-title">No hay diseños creados</h3>
+            <p class="projects-empty__desc" data-ref="empty-docs-desc">Crea un diseño desde cero o continúa editando en tiempo real.</p>
+            <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-empty-create-pdf">
+              <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Crear nuevo PDF</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="projects-section projects-section--collapsible is-hidden" data-ref="section-uploads">
+        <button type="button" class="projects-section__collapsible-header" data-ref="header-uploads">
+          <svg class="component-icon projects-section__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <h2 class="projects-section__heading" data-ref="title-section-uploads">Archivos subidos</h2>
+          <span class="projects-section__counter" data-ref="counter-uploads"></span>
+        </button>
+        <div class="projects-section__content" data-ref="content-uploads">
+          <div class="projects-uploads-grid" data-ref="grid-uploads"></div>
+          <div class="projects-empty is-hidden" data-ref="empty-uploads">
+            <div class="projects-empty__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+            </div>
+            <h3 class="projects-empty__title">Sin archivos subidos</h3>
+            <p class="projects-empty__desc">Sube fotos, imágenes y archivos PDF para usarlos en tus diseños.</p>
+            <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-empty-upload">
+              <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+              <span>Subir archivos</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>

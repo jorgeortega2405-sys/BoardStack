@@ -186,6 +186,7 @@ export interface CollaborativeDocumentRecord {
   access_level?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   created_at: string;
+  folder_id?: string | null;
   id: string;
   members?: CollaborativeMember[];
   page_count: number;

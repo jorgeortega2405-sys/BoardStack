@@ -61,6 +61,7 @@ export async function recordUserAsset(params: {
   documentId?: string | null;
   fileName: string;
   filePath: string;
+  folderId?: string | null;
   mimeType: string;
   s3Key?: string | null;
   userId: number;
@@ -74,12 +75,13 @@ export async function recordUserAsset(params: {
 
     await conn.query(
       `INSERT INTO user_storage_assets 
-       (id, user_id, document_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
+       (id, user_id, document_id, folder_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
       [
         id,
         params.userId,
         params.documentId || null,
+        params.folderId || null,
         params.fileName,
         params.filePath,
         params.s3Key || null,

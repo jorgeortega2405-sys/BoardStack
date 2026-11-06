@@ -9,6 +9,7 @@ export interface LocalCollabDraft {
     pageTitles: string[];
   };
   createdAt: string;
+  folderId?: string | null;
   id: string;
   isLocalOnly: true;
   title: string;
@@ -33,6 +34,7 @@ export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>, user
       pageTitles: [''],
     },
     createdAt: existing?.createdAt || now,
+    folderId: data.folderId !== undefined ? data.folderId : (existing?.folderId ?? null),
     id,
     isLocalOnly: true,
     title: data.title || existing?.title || 'Documento sin título',

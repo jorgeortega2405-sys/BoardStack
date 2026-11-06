@@ -23,7 +23,9 @@ function ensureUploadsDir(): void {
 export async function listCollaborativeDocsHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
-    const documents = await listCollaborativeDocuments(user?.id);
+    const folderParam = req.query.folderId as string | undefined;
+    const folderId = folderParam === 'root' ? '' : folderParam;
+    const documents = await listCollaborativeDocuments(user?.id, folderId);
     res.json({
       documents,
       success: true,
@@ -152,6 +154,7 @@ export async function saveCollaborativeDocHandler(req: Request, res: Response): 
     const document = await saveCollaborativeDocument({
       accessLevel,
       content,
+      folderId: req.body.folderId !== undefined ? req.body.folderId : undefined,
       id,
       title,
       userId: existingDoc?.user_id ?? user?.id,
@@ -459,6 +462,8 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
         }
       }
 
+      const targetFolderId = typeof req.body.folderId === 'string' && req.body.folderId.trim().length > 0 ? req.body.folderId.trim() : null;
+
       if (user?.id) {
         try {
           await recordUserAsset({
@@ -466,6 +471,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
             byteSize: item.size || item.buffer?.length || 0,
             fileName: item.originalname,
             filePath,
+            folderId: targetFolderId,
             mimeType: item.mimetype || (isPdf ? 'application/pdf' : 'image/png'),
             s3Key: isS3Configured() ? `uploads/collaborative/${uniqueFilename}` : null,
             userId: Number(user.id),
@@ -477,6 +483,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
 
       const record = {
         createdAt: new Date().toISOString(),
+        folderId: targetFolderId,
         id: `upl_${randomId}`,
         mimeType: item.mimetype,
         name: item.originalname,
@@ -511,6 +518,7 @@ export async function listCollaborativeUploadsHandler(req: Request, res: Respons
     ensureUploadsDir();
     const user = getCurrentUser(req);
     const userId = user?.id ? Number(user.id) : null;
+    const folderIdParam = req.query.folderId as string | undefined;
     const files = fs.readdirSync(UPLOADS_DIR);
     const metaFiles = files.filter((f) => f.endsWith('.meta.json'));
     const records = [];
@@ -520,7 +528,13 @@ export async function listCollaborativeUploadsHandler(req: Request, res: Respons
         const content = fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8');
         const parsed = JSON.parse(content);
         if (!userId || !parsed.userId || parsed.userId === userId) {
-          records.push(parsed);
+          if (folderIdParam === 'root') {
+            if (!parsed.folderId) records.push(parsed);
+          } else if (folderIdParam && folderIdParam !== 'all') {
+            if (parsed.folderId === folderIdParam) records.push(parsed);
+          } else {
+            records.push(parsed);
+          }
         }
       } catch {}
     }

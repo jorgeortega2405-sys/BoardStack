@@ -21,6 +21,7 @@ import toPdfConverterRoutes from '../tools/to-pdf-converter/to-pdf-converter.rou
 import translatePdfRoutes from '../tools/translate-pdf/translate-pdf.routes.js';
 import unlockPdfRoutes from '../tools/unlock-pdf/unlock-pdf.routes.js';
 import watermarkPdfRoutes from '../tools/watermark-pdf/watermark-pdf.routes.js';
+import projectFoldersRoutes from './project-folders.routes.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -37,6 +38,7 @@ router.use(organizePdfRoutes);
 router.use(pageNumbersRoutes);
 router.use(pdfConverterRoutes);
 router.use(pdfToMarkdownRoutes);
+router.use(projectFoldersRoutes);
 router.use(protectPdfRoutes);
 router.use(redactPdfRoutes);
 router.use(removePdfPagesRoutes);

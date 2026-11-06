@@ -90,6 +90,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
   const isSettings = cleanPath.startsWith('/settings');
   const isOrg = cleanPath.startsWith('/organization');
+  const isProjects = cleanPath === '/projects' || cleanPath.startsWith('/projects/');
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
   const isCollaborative = cleanPath.startsWith('/d/') || cleanPath.startsWith('/tools/collaborative-pdf');
@@ -120,6 +121,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
   const itemApps = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-apps"]');
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
+  const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
+  const btnProjects = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-projects"]');
   const itemOrg = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-organization"]');
   const btnOrg = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-organization"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
@@ -132,6 +135,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnHome?.classList.toggle('is-active', isHome && !isDrawerOpen);
   itemApps?.classList.toggle('is-active', isDrawerOpen && currentDrawerMode === 'apps');
   btnApps?.classList.toggle('is-active', isDrawerOpen && currentDrawerMode === 'apps');
+  itemProjects?.classList.toggle('is-active', isProjects && !isDrawerOpen);
+  btnProjects?.classList.toggle('is-active', isProjects && !isDrawerOpen);
   itemOrg?.classList.toggle('is-active', (isOrg && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'organization'));
   btnOrg?.classList.toggle('is-active', (isOrg && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'organization'));
   btnToggle?.classList.toggle('is-active', (isDrawerOpen && currentDrawerMode === 'workflows') || (!isDrawerOpen && isWorkflows));
@@ -192,6 +197,24 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemApps?.addEventListener('click', (e) => {
     if (e.target !== btnApps && !btnApps?.contains(e.target as Node)) {
       toggleApps(e);
+    }
+  });
+
+  const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
+  const btnProjects = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-projects"]');
+
+  const goProjects = (e: Event) => {
+    e.preventDefault();
+    if (isDrawerOpen) {
+      toggleDrawer(false);
+    }
+    navigate('/projects');
+  };
+
+  btnProjects?.addEventListener('click', goProjects);
+  itemProjects?.addEventListener('click', (e) => {
+    if (e.target !== btnProjects && !btnProjects?.contains(e.target as Node)) {
+      goProjects(e);
     }
   });
 

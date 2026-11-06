@@ -371,7 +371,8 @@ export async function renderCollaborativePdf(
 }
 
 export async function listCollaborativeDocuments(
-  userId?: number | null
+  userId?: number | null,
+  folderId?: string | null | 'all'
 ): Promise<CollaborativeDocumentRecord[]> {
   if (!userId) {
     return [];
@@ -379,19 +380,29 @@ export async function listCollaborativeDocuments(
   ensureStorageDir();
   try {
     const pool = getDbPool();
-    const query = `
-      SELECT DISTINCT cd.id, cd.user_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
+    let query = `
+      SELECT DISTINCT cd.id, cd.user_id, cd.folder_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
       FROM collaborative_documents cd
       LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id
-      WHERE cd.user_id = ? OR cdm.user_id = ?
-      ORDER BY cd.updated_at DESC
+      WHERE (cd.user_id = ? OR cdm.user_id = ?)
     `;
-    const [rows] = await pool.query<any[]>(query, [userId, userId]);
+    const params: any[] = [userId, userId];
+
+    if (folderId === null || folderId === '') {
+      query += ' AND cd.folder_id IS NULL';
+    } else if (folderId && folderId !== 'all') {
+      query += ' AND cd.folder_id = ?';
+      params.push(folderId);
+    }
+
+    query += ' ORDER BY cd.updated_at DESC';
+    const [rows] = await pool.query<any[]>(query, params);
     if (Array.isArray(rows)) {
       return rows.map((r) => ({
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
+        folder_id: r.folder_id || null,
         id: r.id,
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
@@ -422,7 +433,13 @@ export async function listCollaborativeDocuments(
           } catch {}
         }
         if (isOwner || isMember) {
-          docs.push(parsed);
+          if (folderId === null || folderId === '') {
+            if (!parsed.folder_id) docs.push(parsed);
+          } else if (folderId && folderId !== 'all') {
+            if (parsed.folder_id === folderId) docs.push(parsed);
+          } else {
+            docs.push(parsed);
+          }
         }
       } catch {}
     }
@@ -437,7 +454,7 @@ export async function getCollaborativeDocument(
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
-      'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (Array.isArray(rows) && rows.length > 0) {
@@ -447,6 +464,7 @@ export async function getCollaborativeDocument(
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
+        folder_id: r.folder_id || null,
         id: r.id,
         members,
         page_count: r.page_count,
@@ -476,6 +494,7 @@ export async function getCollaborativeDocument(
 export async function saveCollaborativeDocument(payload: {
   accessLevel?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
+  folderId?: string | null;
   id: string;
   title: string;
   userId?: number | null;
@@ -488,12 +507,14 @@ export async function saveCollaborativeDocument(payload: {
 
   let existingUserId = payload.userId ?? null;
   let existingAccess: 'anyone_with_link' | 'restricted' = payload.accessLevel || 'restricted';
+  let existingFolderId: string | null = payload.folderId !== undefined ? (payload.folderId || null) : null;
   const existingDocPath = path.join(STORAGE_DIR, `${payload.id}.json`);
   if (fs.existsSync(existingDocPath)) {
     try {
       const prev = JSON.parse(fs.readFileSync(existingDocPath, 'utf-8'));
       if (!payload.accessLevel && prev.access_level) existingAccess = prev.access_level;
       if (existingUserId === null && prev.user_id) existingUserId = prev.user_id;
+      if (payload.folderId === undefined && prev.folder_id) existingFolderId = prev.folder_id;
     } catch {}
   }
 
@@ -501,6 +522,7 @@ export async function saveCollaborativeDocument(payload: {
     access_level: existingAccess,
     content: payload.content,
     created_at: now,
+    folder_id: existingFolderId,
     id: payload.id,
     page_count: pageCount,
     pdf_filename: pdfFilename,
@@ -521,10 +543,10 @@ export async function saveCollaborativeDocument(payload: {
   try {
     const pool = getDbPool();
     await pool.query(
-      `INSERT INTO collaborative_documents (id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-       ON DUPLICATE KEY UPDATE title = VALUES(title), content_json = VALUES(content_json), page_count = VALUES(page_count), updated_at = NOW()`,
-      [payload.id, existingUserId, title, JSON.stringify(payload.content), pdfFilename, pageCount, existingAccess]
+      `INSERT INTO collaborative_documents (id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE title = VALUES(title), content_json = VALUES(content_json), page_count = VALUES(page_count), folder_id = COALESCE(VALUES(folder_id), folder_id), updated_at = NOW()`,
+      [payload.id, existingUserId, existingFolderId, title, JSON.stringify(payload.content), pdfFilename, pageCount, existingAccess]
     );
   } catch (err) {
     logger.db.warn('No se pudo guardar documento colaborativo en MySQL, guardado en disco con éxito', err);
