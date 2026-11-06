@@ -106,8 +106,8 @@ export class WatermarkPdfController implements ViewController {
       void this.handleExecuteWatermark(executeBtn);
     }, { signal });
 
-    const typePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-wm-type"]');
-    const typeButtons = typePill?.querySelectorAll<HTMLButtonElement>('.component-button');
+    const typePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-watermark-type"], [data-ref="toggle-wm-type"]');
+    const typeButtons = typePill?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
     typeButtons?.forEach((btn, index) => {
       btn.addEventListener('click', () => {
         typeButtons.forEach((b) => b.classList.remove('is-active'));
@@ -124,6 +124,17 @@ export class WatermarkPdfController implements ViewController {
           hideElement(textSection);
           showElement(imgSection);
         }
+      }, { signal });
+    });
+
+    const layerToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-layer"]');
+    const layerButtons = layerToggle?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
+    layerButtons?.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        layerButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        layerToggle?.setAttribute('data-active', index.toString());
+        this.layer = (btn.getAttribute('data-layer') || 'over') as 'over' | 'under';
       }, { signal });
     });
 

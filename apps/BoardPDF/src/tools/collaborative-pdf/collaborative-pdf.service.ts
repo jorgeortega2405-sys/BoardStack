@@ -7,7 +7,15 @@ import fs from 'fs';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-const STORAGE_DIR = path.resolve(process.cwd(), 'data', 'collaborative-docs');
+function resolveStorageDir(): string {
+  const p1 = path.resolve(process.cwd(), 'data', 'collaborative-docs');
+  const p2 = path.resolve(process.cwd(), 'apps', 'BoardPDF', 'data', 'collaborative-docs');
+  if (fs.existsSync(p1)) return p1;
+  if (fs.existsSync(p2)) return p2;
+  return p1;
+}
+
+const STORAGE_DIR = resolveStorageDir();
 
 function ensureStorageDir(): void {
   if (!fs.existsSync(STORAGE_DIR)) {
@@ -365,15 +373,21 @@ export async function renderCollaborativePdf(
 export async function listCollaborativeDocuments(
   userId?: number | null
 ): Promise<CollaborativeDocumentRecord[]> {
+  if (!userId) {
+    return [];
+  }
   ensureStorageDir();
   try {
     const pool = getDbPool();
-    const query = userId
-      ? 'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE user_id = ? OR user_id IS NULL ORDER BY updated_at DESC'
-      : 'SELECT id, user_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents ORDER BY updated_at DESC LIMIT 50';
-    const params = userId ? [userId] : [];
-    const [rows] = await pool.query<any[]>(query, params);
-    if (Array.isArray(rows) && rows.length > 0) {
+    const query = `
+      SELECT DISTINCT cd.id, cd.user_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
+      FROM collaborative_documents cd
+      LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id
+      WHERE cd.user_id = ? OR cdm.user_id = ?
+      ORDER BY cd.updated_at DESC
+    `;
+    const [rows] = await pool.query<any[]>(query, [userId, userId]);
+    if (Array.isArray(rows)) {
       return rows.map((r) => ({
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
@@ -398,7 +412,18 @@ export async function listCollaborativeDocuments(
         const raw = fs.readFileSync(path.join(STORAGE_DIR, file), 'utf-8');
         const parsed = JSON.parse(raw);
         if (!parsed.access_level) parsed.access_level = 'restricted';
-        docs.push(parsed);
+        const isOwner = parsed.user_id != null && Number(parsed.user_id) === Number(userId);
+        let isMember = false;
+        const membersFile = path.join(STORAGE_DIR, `${parsed.id}.members.json`);
+        if (fs.existsSync(membersFile)) {
+          try {
+            const members = JSON.parse(fs.readFileSync(membersFile, 'utf-8'));
+            isMember = Array.isArray(members) && members.some((m: any) => Number(m.user_id) === Number(userId));
+          } catch {}
+        }
+        if (isOwner || isMember) {
+          docs.push(parsed);
+        }
       } catch {}
     }
   }

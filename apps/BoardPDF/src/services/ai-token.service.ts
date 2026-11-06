@@ -45,6 +45,9 @@ export function getMonthlyQuotaByPermissions(permissions: string[] = []): number
 }
 
 export function calculatePdfCost(toolId: string, pageCount: number, fileSizeBytes: number): number {
+  if (toolId === 'remove-background' || toolId === 'image-remove-bg') {
+    return 10;
+  }
   const safePages = Math.max(1, Math.floor(pageCount || 1));
   const safeBytes = Math.max(0, fileSizeBytes || 0);
 

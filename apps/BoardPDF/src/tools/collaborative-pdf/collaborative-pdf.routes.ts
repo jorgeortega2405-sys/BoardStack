@@ -1,5 +1,6 @@
-import { optionalAuth, requireAuth } from '../../middlewares/auth.middleware.js';
-import { addCollaborativeDocMemberHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler } from './collaborative-pdf.controller.js';
+import { optionalAuth, requireAuth, requireFeature } from '../../middlewares/auth.middleware.js';
+import { removeBackgroundLimiter } from '../../middlewares/rate-limit.middleware.js';
+import { addCollaborativeDocMemberHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler } from './collaborative-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
 
@@ -10,6 +11,7 @@ const upload = multer({
 
 const router = Router();
 
+router.post('/collaborative-docs/remove-background', requireAuth, requireFeature('pro'), removeBackgroundLimiter, upload.single('file'), removeBackgroundHandler);
 router.get('/collaborative-docs/uploads', optionalAuth, listCollaborativeUploadsHandler);
 router.post('/collaborative-docs/upload', optionalAuth, upload.array('files', 10), uploadCollaborativeAssetHandler);
 router.get('/collaborative-docs/users/search', optionalAuth, searchCollaborativeUsersHandler);

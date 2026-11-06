@@ -57,10 +57,19 @@ export const config = {
     apiKey: process.env.VITE_GOOGLE_API_KEY || '',
     clientId: process.env.VITE_GOOGLE_CLIENT_ID || '',
   },
+  googleOAuth: {
+    adminCallbackUrl: process.env.ADMIN_GOOGLE_CALLBACK_URL || 'http://localhost:3002/api/auth/google/callback',
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
+    clientId: process.env.GOOGLE_CLIENT_ID || '899980904040-n9foado9rou3etjr8d5ouikpa1ivaml2.apps.googleusercontent.com',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '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',
+  },
   nodeEnv: process.env.NODE_ENV || 'development',
   originProtection: {
     enforceCloudflare: process.env.ENFORCE_CLOUDFLARE_ORIGIN === 'true',
     secret: process.env.CLOUDFLARE_ORIGIN_SECRET || '',
+  },
+  photoroom: {
+    apiKey: process.env.PHOTOROOM_API_KEY || 'sandbox_sk_pr_default_745f71ad9846834f110efd4b34e5ae323b14ff43',
   },
   port: parseInt(process.env.PORT || '3000', 10),
   redis: {

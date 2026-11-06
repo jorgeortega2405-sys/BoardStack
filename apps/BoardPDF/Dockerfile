@@ -49,7 +49,8 @@ COPY --from=builder /workspace/apps/BoardPDF/scripts ./scripts
 COPY --from=builder /workspace/apps/BoardPDF/package.json ./package.json
 
 # Garantizar permisos de escritura para directorios operativos en usuario node
-RUN mkdir -p /app/logs /app/uploads && chown -R node:node /app
+RUN mkdir -p /app/logs /app/data /app/uploads /app/public/uploads/collaborative /app/public/uploads/avatars \
+    && chown -R node:node /app/logs /app/data /app/uploads /app/public/uploads
 
 # Ejecución bajo usuario no privilegiado estándar de Node
 USER node

@@ -4,6 +4,9 @@ export interface User {
   avatar_url?: string | null;
   created_at?: string;
   email: string;
+  google_connected?: boolean;
+  google_email?: string | null;
+  has_password?: boolean;
   id: number | string;
   is_sso?: boolean;
   language?: string;

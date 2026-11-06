@@ -1,10 +1,13 @@
 import { login, logout, logoutAll, me, resendRegistrationCode, sendRegistrationCode, switchAccount, validateStage1, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { handleAvatarRequest } from '../controllers/avatar.controller.js';
+import { handleGoogleCallback, initiateGoogleAuth } from '../controllers/google-auth.controller.js';
 import { avatarLimiter, loginLimiter, registerLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
 
 const router = Router();
 
+router.get('/auth/google', initiateGoogleAuth);
+router.get('/auth/google/callback', handleGoogleCallback);
 router.post('/auth/validate-stage-1', registerLimiter, validateStage1);
 router.post('/auth/register-send-code', sendCodeLimiter, sendRegistrationCode);
 router.post('/auth/resend-code', sendCodeLimiter, resendRegistrationCode);

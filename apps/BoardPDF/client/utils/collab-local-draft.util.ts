@@ -13,14 +13,16 @@ export interface LocalCollabDraft {
   isLocalOnly: true;
   title: string;
   updatedAt: string;
+  userId?: number | string | null;
 }
 
 const STORAGE_PREFIX = 'boardpdf_local_draft_';
 const PENDING_SYNC_KEY = 'boardpdf_pending_cloud_sync_draft';
 
-export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>): LocalCollabDraft {
+export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>, userId?: number | string | null): LocalCollabDraft {
   const existing = getLocalDraft(id);
   const now = new Date().toISOString();
+  const effectiveUserId = data.userId !== undefined ? data.userId : (existing?.userId !== undefined ? existing.userId : (userId ?? null));
   const draft: LocalCollabDraft = {
     content: data.content || existing?.content || {
       elements: [],
@@ -35,6 +37,7 @@ export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>): Loc
     isLocalOnly: true,
     title: data.title || existing?.title || 'Documento sin título',
     updatedAt: now,
+    userId: effectiveUserId,
   };
 
   try {
@@ -61,7 +64,18 @@ export function removeLocalDraft(id: string): void {
   } catch {}
 }
 
-export function listLocalDrafts(): LocalCollabDraft[] {
+export function clearAllLocalDrafts(): void {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX) || key?.startsWith('boardpdf_wal_')) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+}
+
+export function listLocalDrafts(forUserId?: number | string | null): LocalCollabDraft[] {
   const drafts: LocalCollabDraft[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -69,7 +83,16 @@ export function listLocalDrafts(): LocalCollabDraft[] {
       if (key?.startsWith(STORAGE_PREFIX)) {
         const raw = localStorage.getItem(key);
         if (raw) {
-          drafts.push(JSON.parse(raw));
+          const parsed = JSON.parse(raw) as LocalCollabDraft;
+          if (forUserId != null) {
+            if (parsed.userId === undefined || parsed.userId === null || String(parsed.userId) === String(forUserId)) {
+              drafts.push(parsed);
+            }
+          } else {
+            if (parsed.userId === undefined || parsed.userId === null) {
+              drafts.push(parsed);
+            }
+          }
         }
       }
     }

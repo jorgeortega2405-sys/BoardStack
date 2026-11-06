@@ -14,6 +14,8 @@ export interface UserRecord extends RowDataPacket {
   avatar_url?: string | null;
   created_at?: Date;
   email: string;
+  google_email?: string | null;
+  google_id?: string | null;
   id: number;
   last_login_at?: Date | null;
   last_login_ip?: string | null;
@@ -49,7 +51,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, google_id, google_email FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
@@ -81,7 +83,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
 
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;
@@ -91,6 +93,52 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
     await redis.setex(cacheKey, 300, JSON.stringify(user));
   } catch {}
   return user;
+}
+
+export async function findUserByGoogleId(googleId: string): Promise<UserRecord | null> {
+  const pool = getDbPool();
+  const [rows] = await pool.query<UserRecord[]>(
+    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE google_id = ? LIMIT 1',
+    [googleId]
+  );
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  user.roles = [user.role || 'USER'];
+  return user;
+}
+
+export async function linkGoogleAccount(userId: number, googleId: string, googleEmail: string): Promise<boolean> {
+  const pool = getDbPool();
+  const [result] = await pool.query<ResultSetHeader>(
+    'UPDATE users SET google_id = ?, google_email = ? WHERE id = ?',
+    [googleId, googleEmail.toLowerCase().trim(), userId]
+  );
+  await invalidateUserProfileCache(userId);
+  return result.affectedRows > 0;
+}
+
+export async function unlinkGoogleAccount(userId: number): Promise<boolean> {
+  const pool = getDbPool();
+  const [result] = await pool.query<ResultSetHeader>(
+    'UPDATE users SET google_id = NULL, google_email = NULL WHERE id = ?',
+    [userId]
+  );
+  await invalidateUserProfileCache(userId);
+  return result.affectedRows > 0;
+}
+
+export async function generateUniqueUsername(preferred: string): Promise<string> {
+  const pool = getDbPool();
+  let base = preferred.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
+  if (base.length < 3) base = `user_${base}`;
+  let candidate = base;
+  let counter = 1;
+  while (true) {
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT id FROM users WHERE username = ? LIMIT 1', [candidate]);
+    if (rows.length === 0) return candidate;
+    candidate = `${base.slice(0, 15)}_${counter}`;
+    counter++;
+  }
 }
 
 export async function invalidateUserProfileCache(userId: number): Promise<void> {
@@ -116,9 +164,11 @@ export async function findUserDuplicates(
 }
 
 export async function createUser(data: {
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   email: string;
-  passwordHash: string;
+  googleEmail?: string | null;
+  googleId?: string | null;
+  passwordHash?: string | null;
   registrationIp?: string | null;
   role?: string;
   username: string;
@@ -131,14 +181,18 @@ export async function createUser(data: {
       username,
       email,
       password_hash,
+      google_id,
+      google_email,
       avatar_url,
       role,
       registration_ip
-    ) VALUES (?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.username.trim(),
       data.email.toLowerCase().trim(),
-      data.passwordHash,
+      data.passwordHash || null,
+      data.googleId || null,
+      data.googleEmail || null,
       data.avatarUrl || null,
       role,
       data.registrationIp || null,
@@ -159,6 +213,9 @@ export async function createUser(data: {
   return {
     avatar_url: data.avatarUrl || null,
     email: data.email.toLowerCase().trim(),
+    google_connected: Boolean(data.googleId),
+    google_email: data.googleEmail || null,
+    has_password: Boolean(data.passwordHash),
     id: userId,
     role,
     roles: [role],

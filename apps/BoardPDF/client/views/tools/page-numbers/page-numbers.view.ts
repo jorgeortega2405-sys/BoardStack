@@ -105,7 +105,7 @@ export class PageNumbersController implements ViewController {
     }, { signal });
 
     const modePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
-    const modeButtons = modePill?.querySelectorAll<HTMLButtonElement>('.component-button');
+    const modeButtons = modePill?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
     modeButtons?.forEach((btn, index) => {
       btn.addEventListener('click', () => {
         modeButtons.forEach((b) => b.classList.remove('is-active'));
@@ -113,6 +113,21 @@ export class PageNumbersController implements ViewController {
         modePill?.setAttribute('data-active', index.toString());
         this.mode = (btn.getAttribute('data-mode') || 'single') as PageNumberMode;
         this.renderPagesView();
+      }, { signal });
+    });
+
+    const marginToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-margin"]');
+    const marginButtons = marginToggle?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
+    marginButtons?.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        marginButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        marginToggle?.setAttribute('data-active', index.toString());
+        const val = btn.getAttribute('data-val');
+        if (val) {
+          this.margin = val as PageNumberMargin;
+          this.updateIndicators();
+        }
       }, { signal });
     });
 

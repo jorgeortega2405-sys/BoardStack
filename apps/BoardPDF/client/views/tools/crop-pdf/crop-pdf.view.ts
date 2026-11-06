@@ -115,6 +115,22 @@ export class CropPdfController implements ViewController {
       this.cropAllPages = false;
     }, { signal });
 
+    const btnCropAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-all"]');
+    const btnCropCurrent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-current"]');
+    const cropModeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-crop-mode"]');
+    btnCropAll?.addEventListener('click', () => {
+      this.cropAllPages = true;
+      btnCropAll.classList.add('is-active', 'active');
+      btnCropCurrent?.classList.remove('is-active', 'active');
+      cropModeToggle?.setAttribute('data-active', '0');
+    }, { signal });
+    btnCropCurrent?.addEventListener('click', () => {
+      this.cropAllPages = false;
+      btnCropCurrent.classList.add('is-active', 'active');
+      btnCropAll?.classList.remove('is-active', 'active');
+      cropModeToggle?.setAttribute('data-active', '1');
+    }, { signal });
+
     const inputMarginTop = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-top"]');
     const inputMarginBottom = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-bottom"]');
     const inputMarginLeft = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-left"]');

@@ -1,6 +1,7 @@
 export const API_ROUTES = {
   auth: {
     forgotPassword: '/api/forgot-password',
+    google: '/api/auth/google',
     login: '/api/login',
     logout: '/api/logout',
     logoutAll: '/api/auth/logout-all',
@@ -21,6 +22,7 @@ export const API_ROUTES = {
     memberDelete: (id: string, userId: number) => `/api/collaborative-docs/${encodeURIComponent(id)}/members/${userId}`,
     members: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/members`,
     pdf: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/pdf`,
+    removeBackground: '/api/collaborative-docs/remove-background',
     searchUsers: (query: string, docId?: string) => `/api/collaborative-docs/users/search?q=${encodeURIComponent(query)}${docId ? `&docId=${encodeURIComponent(docId)}` : ''}`,
     upload: '/api/collaborative-docs/upload',
     uploads: '/api/collaborative-docs/uploads',
@@ -37,6 +39,7 @@ export const API_ROUTES = {
     email: '/api/settings/email',
     emailRequestCode: '/api/settings/email/request-code',
     emailVerifyCode: '/api/settings/email/verify-code',
+    googleDisconnect: '/api/settings/google/disconnect',
     password: '/api/settings/password',
     passwordStatus: '/api/settings/password/status',
     passwordVerify: '/api/settings/password/verify',

@@ -2,6 +2,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { User } from '../types/auth.types.js';
 import { SalesInquiryPayload } from '../types/contact.types.js';
 import { EducationStatusResponse, OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
+import { clearAllLocalDrafts } from '../utils/collab-local-draft.util.js';
 import { wsService } from './websocket.service.js';
 
 export let currentUser: User | null = null;
@@ -293,12 +294,14 @@ export async function logoutApi(userId?: number | string): Promise<{ accounts?: 
         return { accounts: data.accounts, success: true, switched: true, user: data.user };
       }
       clearWalStorage();
+      clearAllLocalDrafts();
       wsService.disconnect();
       setAuthState(null, []);
       return { accounts: [], success: true, switched: false, user: null };
     }
   } catch {}
   clearWalStorage();
+  clearAllLocalDrafts();
   wsService.disconnect();
   setAuthState(null, []);
   return { accounts: [], success: true, switched: false, user: null };
@@ -309,6 +312,7 @@ export async function logoutAllApi(): Promise<boolean> {
     await postApi('/api/auth/logout-all');
   } catch {}
   clearWalStorage();
+  clearAllLocalDrafts();
   wsService.disconnect();
   setAuthState(null, []);
   return true;

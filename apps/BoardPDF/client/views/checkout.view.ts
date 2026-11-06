@@ -80,11 +80,11 @@ export class CheckoutController implements ViewController {
     const btnOneTime = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-mode-one-time"]');
     if (btnRecurring && btnOneTime) {
       if (this.currentMode === 'recurring') {
-        btnRecurring.classList.add('active');
-        btnOneTime.classList.remove('active');
+        btnRecurring.classList.add('is-active', 'active');
+        btnOneTime.classList.remove('is-active', 'active');
       } else {
-        btnOneTime.classList.add('active');
-        btnRecurring.classList.remove('active');
+        btnOneTime.classList.add('is-active', 'active');
+        btnRecurring.classList.remove('is-active', 'active');
       }
     }
 
@@ -303,11 +303,11 @@ export class CheckoutController implements ViewController {
 
     if (btnRecurring && btnOneTime) {
       if (mode === 'recurring') {
-        btnRecurring.classList.add('active');
-        btnOneTime.classList.remove('active');
+        btnRecurring.classList.add('is-active', 'active');
+        btnOneTime.classList.remove('is-active', 'active');
       } else {
-        btnOneTime.classList.add('active');
-        btnRecurring.classList.remove('active');
+        btnOneTime.classList.add('is-active', 'active');
+        btnRecurring.classList.remove('is-active', 'active');
       }
     }
 

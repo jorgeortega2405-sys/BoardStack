@@ -1,7 +1,7 @@
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, inToPx, mmToPx, PageDimension, PagePreset } from '../../config/collab-page-presets.config.js';
-import { currentUser, deleteApi, escapeHtml, getApi, onAuthChange, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, hasSubscriptionFeature, onAuthChange, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
@@ -1533,6 +1533,7 @@ export class CollaborativePdfEditorController implements ViewController {
                   pageTitles: [''],
                 },
                 title: 'Documento sin título',
+                userId: null,
               });
               this.isLocalOnly = true;
               this.docTitle = newDraft.title;
@@ -1561,6 +1562,7 @@ export class CollaborativePdfEditorController implements ViewController {
                 pageTitles: [''],
               },
               title: 'Documento sin título',
+              userId: null,
             });
             this.isLocalOnly = true;
             this.docTitle = newDraft.title;
@@ -1807,6 +1809,7 @@ export class CollaborativePdfEditorController implements ViewController {
       saveLocalDraft(this.docId, {
         content: this.getContentPayload(),
         title: this.docTitle,
+        userId: currentUser?.id ?? null,
       });
       this.lastSavedTimestamp = Date.now();
       this.isModified = false;
@@ -5427,6 +5430,7 @@ export class CollaborativePdfEditorController implements ViewController {
         saveLocalDraft(this.docId, {
           content: this.getContentPayload(),
           title: this.docTitle,
+          userId: currentUser?.id ?? null,
         });
         return;
       }
@@ -6071,8 +6075,48 @@ export class CollaborativePdfEditorController implements ViewController {
     }, { signal });
 
     const btnImageRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-remove-bg"]');
-    btnImageRemoveBg?.addEventListener('click', () => {
-      showToast('Eliminación de fondo con IA próximamente disponible', 'info');
+    btnImageRemoveBg?.addEventListener('click', async () => {
+      if (!currentUser) {
+        showToast('Inicia sesión para eliminar fondos con IA', 'warning');
+        this.openLocalAuthModal();
+        return;
+      }
+      if (!hasSubscriptionFeature('pro')) {
+        showToast('La eliminación de fondos con IA es exclusiva para planes Pro o superiores', 'warning');
+        navigate('/precios');
+        return;
+      }
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((e) => e.id === this.selectedElementId);
+      if (!el || el.type !== 'image' || !el.url) {
+        showToast('Selecciona una imagen válida', 'warning');
+        return;
+      }
+
+      await withButtonLoading(btnImageRemoveBg, async () => {
+        try {
+          const res = await postApi(API_ROUTES.collaborativeDocs.removeBackground, { imageUrl: el.url });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data?.success) {
+            showToast(data?.error || 'No se pudo eliminar el fondo de la imagen', 'error');
+            return;
+          }
+          el.url = data.url;
+          const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
+          const imgNode = elNode?.querySelector<HTMLImageElement>('.collaborative-image-inner');
+          if (imgNode) {
+            imgNode.src = data.url;
+          }
+          this.setModified(true);
+          this.broadcastElementUpdate(el);
+          this.recordHistory();
+          this.loadUploadedAssets();
+          const balanceMsg = data.newBalance !== undefined ? ` (Saldo: ${data.newBalance} tokens)` : '';
+          showToast(`Fondo eliminado exitosamente con IA${balanceMsg}`, 'success');
+        } catch {
+          showToast('Error de conexión al eliminar el fondo', 'error');
+        }
+      });
     }, { signal });
 
     const btnImageCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-crop"]');
@@ -7422,6 +7466,7 @@ export class CollaborativePdfEditorController implements ViewController {
           pageTitles: this.pageTitles,
         },
         title: this.docTitle,
+        userId: currentUser?.id ?? null,
       });
       setPendingCloudSyncDraft(draft);
     };
@@ -7444,6 +7489,7 @@ export class CollaborativePdfEditorController implements ViewController {
       saveLocalDraft(newId, {
         content,
         title: copyTitle,
+        userId: currentUser?.id ?? null,
       });
       window.open(`/d/${newId}`, '_blank');
       showToast('Copia creada en una nueva pestaña', 'success');
@@ -7458,12 +7504,12 @@ export class CollaborativePdfEditorController implements ViewController {
           window.open(`/d/${newId}`, '_blank');
           showToast('Copia creada en una nueva pestaña', 'success');
         } else {
-          saveLocalDraft(newId, { content, title: copyTitle });
+          saveLocalDraft(newId, { content, title: copyTitle, userId: currentUser?.id ?? null });
           window.open(`/d/${newId}`, '_blank');
           showToast('Copia creada en una nueva pestaña', 'success');
         }
       } catch {
-        saveLocalDraft(newId, { content, title: copyTitle });
+        saveLocalDraft(newId, { content, title: copyTitle, userId: currentUser?.id ?? null });
         window.open(`/d/${newId}`, '_blank');
         showToast('Copia creada en una nueva pestaña', 'success');
       }

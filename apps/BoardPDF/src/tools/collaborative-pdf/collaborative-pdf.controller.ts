@@ -1,7 +1,9 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
-import { getCurrentUser } from '../../middlewares/auth.middleware.js';
+import { getCurrentUser, hasSubscriptionFeature } from '../../middlewares/auth.middleware.js';
+import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
+import { removeBackground } from '../../services/photoroom.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
 import crypto from 'crypto';
@@ -531,6 +533,178 @@ export async function listCollaborativeUploadsHandler(req: Request, res: Respons
     });
   } catch (err) {
     logger.app.error('Error al listar archivos subidos del editor colaborativo', err);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+export async function removeBackgroundHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user || !user.id) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para usar la herramienta de eliminación de fondos con IA.',
+        requireLogin: true,
+        success: false,
+      });
+      return;
+    }
+
+    if (!hasSubscriptionFeature(user, 'pro')) {
+      res.status(403).json({
+        error: 'La eliminación de fondos con IA es una función exclusiva para planes Pro y superiores.',
+        requiresUpgrade: true,
+        success: false,
+      });
+      return;
+    }
+
+    let buffer: Buffer | null = null;
+    let mimeType = 'image/png';
+    let originalName = 'image.png';
+
+    if (req.file && req.file.buffer) {
+      buffer = req.file.buffer;
+      mimeType = req.file.mimetype || 'image/png';
+      originalName = req.file.originalname || 'image.png';
+    } else if (req.body && typeof req.body.imageUrl === 'string') {
+      const imageUrl = req.body.imageUrl.trim();
+      if (imageUrl.startsWith('data:image/')) {
+        const match = imageUrl.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          buffer = Buffer.from(match[2], 'base64');
+          originalName = `canvas_image.${mimeType.split('/')[1] || 'png'}`;
+        }
+      } else if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        const cleanUrl = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+        const localPath = path.resolve(process.cwd(), 'public', cleanUrl);
+        if (fs.existsSync(localPath)) {
+          buffer = fs.readFileSync(localPath);
+          originalName = path.basename(localPath);
+          const ext = path.extname(originalName).toLowerCase();
+          mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+        }
+      } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        try {
+          const response = await fetch(imageUrl);
+          if (response.ok) {
+            const ab = await response.arrayBuffer();
+            buffer = Buffer.from(ab);
+            const headerType = response.headers.get('content-type');
+            if (headerType && headerType.startsWith('image/')) {
+              mimeType = headerType.split(';')[0];
+            }
+            originalName = path.basename(new URL(imageUrl).pathname) || 'downloaded.png';
+          }
+        } catch (fetchErr) {
+          logger.app.warn('No se pudo descargar imagen remota para quitar fondo', fetchErr);
+        }
+      }
+    }
+
+    if (!buffer || buffer.length < 4) {
+      res.status(400).json({
+        error: 'No se pudo cargar una imagen válida para procesar.',
+        success: false,
+      });
+      return;
+    }
+
+    const tokenBalance = await getUserTokenBalance(user.id);
+    const requiredTokens = calculatePdfCost('remove-background', 1, buffer.length);
+    if (tokenBalance.balance < requiredTokens) {
+      res.status(402).json({
+        currentBalance: tokenBalance.balance,
+        error: `No cuentas con suficientes tokens de IA para eliminar el fondo. Requiere ${requiredTokens} tokens (saldo disponible: ${tokenBalance.balance}).`,
+        requiredTokens,
+        success: false,
+      });
+      return;
+    }
+
+    const segmentedBuffer = await removeBackground(buffer, mimeType, originalName);
+
+    const { allowed } = await canUserAllocateStorage(Number(user.id), segmentedBuffer.length);
+    if (!allowed) {
+      res.status(413).json({
+        error: 'Has alcanzado el límite de almacenamiento disponible. Por favor elimina archivos para liberar espacio.',
+        success: false,
+      });
+      return;
+    }
+
+    ensureUploadsDir();
+    const randomId = crypto.randomBytes(6).toString('hex');
+    const ext = path.extname(originalName);
+    const safeBasename = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 40) || 'image';
+    const uniqueFilename = `${Date.now()}_${randomId}_${safeBasename}_nobg.png`;
+    const filePath = path.join(UPLOADS_DIR, uniqueFilename);
+
+    fs.writeFileSync(filePath, segmentedBuffer);
+
+    if (isS3Configured()) {
+      try {
+        await s3Client.send(
+          new PutObjectCommand({
+            Body: segmentedBuffer,
+            Bucket: S3_BUCKET_NAME,
+            ContentType: 'image/png',
+            Key: `uploads/collaborative/${uniqueFilename}`,
+          })
+        );
+      } catch (s3Err) {
+        logger.app.warn('Error al subir copia de imagen sin fondo a S3/MinIO', s3Err);
+      }
+    }
+
+    try {
+      await recordUserAsset({
+        assetType: 'upload_image',
+        byteSize: segmentedBuffer.length,
+        fileName: `${safeBasename}_nobg.png`,
+        filePath,
+        mimeType: 'image/png',
+        s3Key: isS3Configured() ? `uploads/collaborative/${uniqueFilename}` : null,
+        userId: Number(user.id),
+      });
+    } catch (quotaErr) {
+      logger.db.warn('No se pudo registrar asset en cuota de almacenamiento', quotaErr);
+    }
+
+    const record = {
+      createdAt: new Date().toISOString(),
+      id: `upl_${randomId}`,
+      mimeType: 'image/png',
+      name: `${safeBasename}_nobg.png`,
+      pageCount: 1,
+      size: segmentedBuffer.length,
+      type: 'image' as const,
+      url: `/uploads/collaborative/${uniqueFilename}`,
+      userId: Number(user.id),
+    };
+
+    const metaPath = path.join(UPLOADS_DIR, `${uniqueFilename}.meta.json`);
+    fs.writeFileSync(metaPath, JSON.stringify(record, null, 2), 'utf-8');
+
+    const consumeResult = await consumeAiTokens({
+      fileSizeBytes: segmentedBuffer.length,
+      pageCount: 1,
+      toolId: 'remove-background',
+      userId: user.id,
+    });
+
+    res.json({
+      file: record,
+      newBalance: consumeResult.balance,
+      success: true,
+      tokensConsumed: consumeResult.consumed,
+      url: record.url,
+    });
+  } catch (err) {
+    logger.app.error('Error al procesar eliminación de fondo con IA', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
       success: false,

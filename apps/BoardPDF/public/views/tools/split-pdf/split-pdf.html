@@ -44,24 +44,22 @@
       </div>
 
       <div class="tool-sidebar__body">
-        <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="split-tabs-nav" data-mode="range">
-          <div class="component-toggle-pill-glider"></div>
-          <button type="button" class="component-button component-button--rounded-pill is-active" data-ref="tab-range" data-mode="range">
+        <div class="component-tabs" data-ref="split-tabs-nav" data-mode="range">
+          <button type="button" class="component-tab is-active" data-ref="tab-range" data-mode="range">
             <span data-i18n="tools.split_pdf_tab_range">Rango</span>
           </button>
-          <button type="button" class="component-button component-button--rounded-pill" data-ref="tab-pages" data-mode="pages">
+          <button type="button" class="component-tab" data-ref="tab-pages" data-mode="pages">
             <span data-i18n="tools.split_pdf_tab_pages">Páginas</span>
           </button>
-          <button type="button" class="component-button component-button--rounded-pill" data-ref="tab-size" data-mode="size">
+          <button type="button" class="component-tab" data-ref="tab-size" data-mode="size">
             <span data-i18n="tools.split_pdf_tab_size">Tamaño</span>
           </button>
         </div>
 
         <div class="split-mode-panel" data-ref="panel-mode-range">
-          <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="split-range-submode-toggle" data-submode="custom">
-            <div class="component-toggle-pill-glider"></div>
-            <button type="button" class="component-button component-button--rounded-pill is-active" data-ref="btn-range-submode-custom" data-i18n="tools.split_pdf_range_custom">Personalizado</button>
-            <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-range-submode-fixed" data-i18n="tools.split_pdf_range_fixed">Fijo</button>
+          <div class="component-tabs" data-ref="split-range-submode-toggle" data-submode="custom">
+            <button type="button" class="component-tab is-active" data-ref="btn-range-submode-custom" data-i18n="tools.split_pdf_range_custom">Personalizado</button>
+            <button type="button" class="component-tab" data-ref="btn-range-submode-fixed" data-i18n="tools.split_pdf_range_fixed">Fijo</button>
           </div>
 
           <div class="split-submode-view" data-ref="section-range-custom">
@@ -98,10 +96,9 @@
         </div>
 
         <div class="split-mode-panel is-hidden" data-ref="panel-mode-pages">
-          <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="split-pages-submode-toggle" data-submode="all">
-            <div class="component-toggle-pill-glider"></div>
-            <button type="button" class="component-button component-button--rounded-pill is-active" data-ref="btn-pages-submode-all" data-i18n="tools.split_pdf_extract_all">Extraer todas</button>
-            <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-pages-submode-custom" data-i18n="tools.split_pdf_select_pages">Seleccionar</button>
+          <div class="component-tabs" data-ref="split-pages-submode-toggle" data-submode="all">
+            <button type="button" class="component-tab is-active" data-ref="btn-pages-submode-all" data-i18n="tools.split_pdf_extract_all">Extraer todas</button>
+            <button type="button" class="component-tab" data-ref="btn-pages-submode-custom" data-i18n="tools.split_pdf_select_pages">Seleccionar</button>
           </div>
 
           <div class="split-submode-view is-hidden" data-ref="section-pages-custom">

@@ -480,10 +480,10 @@ export function createCollaborativeDrawerElement(): HTMLElement {
         </button>
         <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
 
-        <div class="collaborative-upload-tabs" data-ref="upload-tabs">
-          <button type="button" class="collaborative-upload-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
-          <button type="button" class="collaborative-upload-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
-          <button type="button" class="collaborative-upload-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+        <div class="component-tabs" data-ref="upload-tabs">
+          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
+          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
+          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
         </div>
 
         <div class="collaborative-upload-progress is-hidden" data-ref="upload-progress-indicator">
@@ -604,10 +604,9 @@ export function createCollaborativeDrawerElement(): HTMLElement {
       </div>
 
       <div class="collaborative-chart-tabs-nav">
-        <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="chart-tabs-toggle" data-active="0">
-          <div class="component-toggle-pill-glider"></div>
-          <button type="button" class="component-button component-button--rounded-pill is-active" data-ref="btn-tab-chart-data">Datos</button>
-          <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-tab-chart-customize">Personalizar</button>
+        <div class="component-tabs" data-ref="chart-tabs-toggle" data-active="0">
+          <button type="button" class="component-tab is-active" data-ref="btn-tab-chart-data">Datos</button>
+          <button type="button" class="component-tab" data-ref="btn-tab-chart-customize">Personalizar</button>
         </div>
       </div>
 

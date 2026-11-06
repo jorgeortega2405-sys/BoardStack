@@ -50,7 +50,7 @@ export class CollaborativePdfDashboardController implements ViewController {
   }
 
   private async loadDocuments(): Promise<void> {
-    const localDrafts = listLocalDrafts().map((d) => ({
+    const localDrafts = listLocalDrafts(currentUser?.id).map((d) => ({
       access_level: 'restricted',
       content: d.content,
       created_at: d.createdAt,

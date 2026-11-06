@@ -111,6 +111,9 @@ export async function addAccountToSession(
   const accountEntry: SessionAccount = {
     avatar_url: user.avatar_url ?? null,
     email: user.email,
+    google_connected: Boolean(user.google_connected),
+    google_email: user.google_email || null,
+    has_password: Boolean(user.has_password),
     id: user.id,
     last_accessed: now,
     permissions: (user as any).permissions || [],

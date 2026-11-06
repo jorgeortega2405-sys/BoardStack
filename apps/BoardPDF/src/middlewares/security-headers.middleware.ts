@@ -21,9 +21,17 @@ export function buildContentSecurityPolicy(): string {
     'https://*.googleapis.com',
     'https://*.dropboxapi.com',
     'https://api.stripe.com',
+    'http://localhost:*',
+    'https://localhost:*',
+    'ws://localhost:*',
+    'wss://localhost:*',
+    'http://127.0.0.1:*',
+    'https://127.0.0.1:*',
+    'ws://127.0.0.1:*',
+    'wss://127.0.0.1:*',
   ];
   if (isDev) {
-    connectDirectives.push('ws:', 'wss:', 'http://localhost:*', 'ws://localhost:*');
+    connectDirectives.push('ws:', 'wss:');
   } else {
     connectDirectives.push('wss://boardpdf.com', 'wss://www.boardpdf.com');
   }

@@ -92,6 +92,31 @@
         <div class="banner banner--danger" data-ref="email-error" style="display: none; margin: 0 24px 16px 24px;"></div>
       </div>
 
+      <div class="settings-group" data-ref="group-google">
+        <div class="settings-item" data-ref="item-google">
+          <div class="settings-item__content" data-ref="item-google-content">
+            <div class="settings-item__text" data-ref="item-google-text">
+              <h2 class="settings-item__title" data-ref="item-google-title" data-i18n="settings.your_account.google_title">Cuenta de Google</h2>
+              <p class="settings-item__desc" data-ref="item-google-desc" data-i18n="settings.your_account.google_desc">Vincula tu cuenta de Google para iniciar sesión con un solo clic.</p>
+              <div class="settings-item__view-box" data-ref="google-view-box" style="display: none; margin-top: 6px;">
+                <span class="settings-item__value" data-ref="display-google-email">-</span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="google-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-connect-google" data-i18n="settings.your_account.btn_connect_google">
+              <svg class="google-icon" width="16" height="16" style="margin-right: 6px;" aria-hidden="true"><use href="/icons.svg#google_colored"></use></svg>
+              <span>Conectar con Google</span>
+            </button>
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-disconnect-google" data-i18n="settings.your_account.btn_disconnect_google" style="display: none;">
+              Desconectar
+            </button>
+          </div>
+        </div>
+        <div class="banner banner--danger" data-ref="google-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+        <div class="banner banner--success" data-ref="google-success" style="display: none; margin: 0 24px 16px 24px;"></div>
+      </div>
+
       <div class="settings-group" data-ref="group-language">
         <div class="settings-item settings-item--stacked" data-ref="item-language">
           <div class="settings-item__content" data-ref="item-language-content">

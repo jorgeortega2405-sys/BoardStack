@@ -899,6 +899,127 @@ body[data-theme="dark"] .component-toggle-pill .component-button.is-active {
   transform: translateX(200%);
 }
 
+.component-tabs,
+.collaborative-upload-tabs {
+  background-color: var(--bg-hover);
+  border-radius: 10px;
+  box-sizing: border-box;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  width: 100%;
+}
+
+.component-tabs--inline {
+  display: inline-flex;
+  width: auto;
+}
+
+.component-tabs--glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .component-tabs--glass,
+html.dark-theme .component-tabs--glass,
+body[data-theme="dark"] .component-tabs--glass {
+  background-color: rgba(24, 24, 28, 0.55);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.component-tab,
+.collaborative-upload-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+  justify-content: center;
+  line-height: normal;
+  padding: 6px 10px;
+  text-align: center;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.component-tab .component-icon,
+.collaborative-upload-tab .component-icon {
+  fill: currentColor;
+  flex-shrink: 0;
+  height: 16px;
+  width: 16px;
+}
+
+.component-tab:hover,
+.collaborative-upload-tab:hover {
+  color: var(--text-primary);
+}
+
+.component-tab.is-active,
+.component-tab.active,
+.collaborative-upload-tab.is-active,
+.collaborative-upload-tab.active {
+  background-color: var(--bg-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] .component-tab.is-active,
+html[data-theme="dark"] .component-tab.active,
+html.dark-theme .component-tab.is-active,
+html.dark-theme .component-tab.active,
+body[data-theme="dark"] .component-tab.is-active,
+body[data-theme="dark"] .component-tab.active,
+html[data-theme="dark"] .collaborative-upload-tab.is-active,
+html[data-theme="dark"] .collaborative-upload-tab.active,
+html.dark-theme .collaborative-upload-tab.is-active,
+html.dark-theme .collaborative-upload-tab.active,
+body[data-theme="dark"] .collaborative-upload-tab.is-active,
+body[data-theme="dark"] .collaborative-upload-tab.active {
+  background-color: var(--bg-surface-raised, #242429);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: var(--text-primary, #ffffff);
+}
+
+.component-tabs--glass .component-tab.is-active,
+.component-tabs--glass .component-tab.active {
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  color: #111827;
+}
+
+html[data-theme="dark"] .component-tabs--glass .component-tab.is-active,
+html[data-theme="dark"] .component-tabs--glass .component-tab.active,
+html.dark-theme .component-tabs--glass .component-tab.is-active,
+html.dark-theme .component-tabs--glass .component-tab.active,
+body[data-theme="dark"] .component-tabs--glass .component-tab.is-active,
+body[data-theme="dark"] .component-tabs--glass .component-tab.active {
+  background-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.component-tab:disabled,
+.component-tab[disabled],
+.collaborative-upload-tab:disabled,
+.collaborative-upload-tab[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .home-fab-create-doc {
   align-items: center;
   background-color: #111827 !important;

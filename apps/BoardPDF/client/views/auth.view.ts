@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { postApi, setAuthState } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -179,31 +180,102 @@ class LoginViewController implements ViewController {
       navigate(`/register${search}`);
     }, { signal });
 
+    const stepMain = this.container.querySelector<HTMLElement>('[data-ref="login-step-main"]');
+    const stepSso = this.container.querySelector<HTMLElement>('[data-ref="login-step-sso"]');
+    const ssoEmailInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-sso-email"]');
+    const submitSsoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-sso"]');
+    const backFromSsoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-from-sso"]');
+    const bannersSso = createBannerManager(this.container, { errorRef: 'login-sso-error' });
+
+    const showSsoStep = () => {
+      banners.hideAll();
+      bannersSso.hideAll();
+      if (emailInput?.value.trim() && ssoEmailInput) {
+        ssoEmailInput.value = emailInput.value.trim();
+      }
+      if (stepMain) stepMain.style.display = 'none';
+      if (stepSso) stepSso.style.display = '';
+      ssoEmailInput?.focus();
+    };
+
+    const showMainStep = () => {
+      banners.hideAll();
+      bannersSso.hideAll();
+      if (stepSso) stepSso.style.display = 'none';
+      if (stepMain) stepMain.style.display = '';
+      emailInput?.focus();
+    };
+
     const ssoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-sso-login"]');
     ssoBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      banners.hideAll();
-      const email = emailInput?.value.trim() || '';
-      if (email && email.includes('@')) {
-        window.location.href = `/api/sso/saml/login?email=${encodeURIComponent(email)}`;
-      } else {
-        banners.showError('Ingresa tu correo corporativo en el campo de correo para continuar con SSO.');
-        emailInput?.focus();
+      showSsoStep();
+    }, { signal });
+
+    backFromSsoBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showMainStep();
+    }, { signal });
+
+    const executeSso = () => {
+      bannersSso.hideAll();
+      const email = ssoEmailInput?.value.trim() || '';
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        bannersSso.showError(emailValidation.error || 'Ingresa un correo corporativo válido.');
+        ssoEmailInput?.focus();
+        return;
       }
+      window.location.href = `/api/sso/saml/login?email=${encodeURIComponent(email)}`;
+    };
+
+    submitSsoBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      executeSso();
+    }, { signal });
+
+    ssoEmailInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executeSso();
+      }
+    }, { signal });
+
+    const btnGoogleLogin = this.container.querySelector<HTMLElement>('[data-ref="btn-google-login"]');
+    btnGoogleLogin?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const search = window.location.search || '';
+      window.location.href = `${API_ROUTES.auth.google}${search}`;
+    }, { signal });
+
+    const btnDesktopGoogle = this.container.querySelector<HTMLElement>('[data-ref="btn-desktop-google"]');
+    btnDesktopGoogle?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = API_ROUTES.auth.google;
     }, { signal });
 
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const ssoErr = urlParams.get('error');
-      if (ssoErr) {
-        if (ssoErr === 'sso_not_configured') {
-          banners.showError('La organización para este dominio no tiene SSO configurado o habilitado.');
-        } else if (ssoErr === 'invalid_saml_assertion') {
-          banners.showError('La respuesta SAML no pudo ser validada. Verifica el certificado o proveedor.');
-        } else if (ssoErr === 'missing_saml_response') {
-          banners.showError('No se recibió respuesta válida del proveedor de identidad SAML.');
-        } else if (ssoErr === 'sso_failed') {
-          banners.showError('Error al iniciar sesión mediante SSO.');
+      const err = urlParams.get('error');
+      if (err) {
+        if (err === 'sso_not_configured') {
+          showSsoStep();
+          bannersSso.showError('La organización para este dominio no tiene SSO configurado o habilitado.');
+        } else if (err === 'invalid_saml_assertion') {
+          showSsoStep();
+          bannersSso.showError('La respuesta SAML no pudo ser validada. Verifica el certificado o proveedor.');
+        } else if (err === 'missing_saml_response') {
+          showSsoStep();
+          bannersSso.showError('No se recibió respuesta válida del proveedor de identidad SAML.');
+        } else if (err === 'sso_failed') {
+          showSsoStep();
+          bannersSso.showError('Error al iniciar sesión mediante SSO.');
+        } else if (err === 'google_denied' || err === 'google_cancelled') {
+          banners.showError('Se canceló el inicio de sesión con Google.');
+        } else if (err === 'google_token_failed' || err === 'google_profile_failed' || err === 'google_failed') {
+          banners.showError('No se pudo completar el inicio de sesión con Google. Intenta nuevamente.');
+        } else if (err === 'session_expired') {
+          banners.showError('Tu sesión ha expirado. Inicia sesión nuevamente.');
         }
       }
     } catch {}
@@ -489,6 +561,13 @@ class RegisterViewController implements ViewController {
       e.preventDefault();
       const search = window.location.search || '';
       navigate(`/login${search}`);
+    }, { signal });
+
+    const btnGoogleRegister = this.container.querySelector<HTMLElement>('[data-ref="btn-google-register"]');
+    btnGoogleRegister?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const search = window.location.search || '';
+      window.location.href = `${API_ROUTES.auth.google}${search}`;
     }, { signal });
   }
 

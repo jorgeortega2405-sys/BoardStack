@@ -1,3 +1,4 @@
+import { disconnectGoogleHandler } from '../controllers/google-auth.controller.js';
 import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleGetStorageStats, handleRequestEmailChangeCode, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { avatarLimiter, emailCodeLimiter, preferencesLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter } from '../middlewares/rate-limit.middleware.js';
@@ -53,6 +54,8 @@ router.post('/settings/email', verifyEmailCodeLimiter, handleUpdateEmail);
 router.get('/settings/password/status', handleGetPasswordStatus);
 router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurrentPassword);
 router.post('/settings/password', updatePasswordLimiter, handleUpdatePassword);
+
+router.post('/settings/google/disconnect', disconnectGoogleHandler);
 
 router.get('/settings/2fa/status', handleGet2FAStatus);
 router.post('/settings/2fa/generate', twoFactorGenerateLimiter, handleGenerate2FA);

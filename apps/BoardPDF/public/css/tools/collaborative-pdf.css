@@ -1554,42 +1554,6 @@
   height: 100%;
 }
 
-.collaborative-upload-tabs {
-  background-color: var(--bg-hover);
-  border-radius: 10px;
-  box-sizing: border-box;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  width: 100%;
-}
-
-.collaborative-upload-tab {
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  box-sizing: border-box;
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex: 1;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 4px;
-  text-align: center;
-  transition: all 0.15s ease;
-}
-
-.collaborative-upload-tab:hover {
-  color: var(--text-primary);
-}
-
-.collaborative-upload-tab.is-active {
-  background-color: var(--bg-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  color: var(--text-primary);
-}
-
 .collaborative-upload-progress {
   align-items: center;
   background-color: var(--bg-hover);

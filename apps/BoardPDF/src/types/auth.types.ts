@@ -4,6 +4,9 @@ export interface UserPayload {
   avatar_url?: string | null;
   created_at?: string;
   email: string;
+  google_connected?: boolean;
+  google_email?: string | null;
+  has_password?: boolean;
   id: number;
   is_sso?: boolean;
   last_accessed?: number;
@@ -23,6 +26,9 @@ export interface SessionAccount {
   ai_tokens_reset_at?: string;
   avatar_url?: string | null;
   email: string;
+  google_connected?: boolean;
+  google_email?: string | null;
+  has_password?: boolean;
   id: number;
   is_sso?: boolean;
   last_accessed?: number;

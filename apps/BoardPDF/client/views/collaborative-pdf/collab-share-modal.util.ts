@@ -156,13 +156,12 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
 
         <div class="collab-share-section">
           <div class="collab-share-section__title">Tipo de archivo</div>
-          <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="toggle-download-type" data-active="0">
-            <div class="component-toggle-pill-glider"></div>
-            <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-download-type-digital" data-type="digital">
+          <div class="component-tabs" data-ref="toggle-download-type" data-active="0">
+            <button type="button" class="component-tab is-active active" data-ref="btn-download-type-digital" data-type="digital">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
               <span>Digital</span>
             </button>
-            <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-download-type-print" data-type="print">
+            <button type="button" class="component-tab" data-ref="btn-download-type-print" data-type="print">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
               <span>Impresión</span>
             </button>
@@ -191,12 +190,11 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
 
         <div class="collab-share-section">
           <div class="collab-share-section__title">Seleccionar páginas</div>
-          <div class="component-toggle-pill component-toggle-pill--w-full" data-ref="toggle-download-pages" data-active="0">
-            <div class="component-toggle-pill-glider"></div>
-            <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-download-pages-all" data-mode="all">
+          <div class="component-tabs" data-ref="toggle-download-pages" data-active="0">
+            <button type="button" class="component-tab is-active active" data-ref="btn-download-pages-all" data-mode="all">
               <span>Todas las páginas</span>
             </button>
-            <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-download-pages-custom" data-mode="custom">
+            <button type="button" class="component-tab" data-ref="btn-download-pages-custom" data-mode="custom">
               <span>Personalizar</span>
             </button>
           </div>
@@ -477,16 +475,16 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
   btnTypeDigital?.addEventListener('click', () => {
     currentDownloadType = 'digital';
     toggleDownloadType?.setAttribute('data-active', '0');
-    btnTypeDigital.classList.add('active');
-    btnTypePrint?.classList.remove('active');
+    btnTypeDigital.classList.add('is-active', 'active');
+    btnTypePrint?.classList.remove('is-active', 'active');
     sectionDigitalOptions?.classList.remove('is-hidden');
   });
 
   btnTypePrint?.addEventListener('click', () => {
     currentDownloadType = 'print';
     toggleDownloadType?.setAttribute('data-active', '1');
-    btnTypePrint.classList.add('active');
-    btnTypeDigital?.classList.remove('active');
+    btnTypePrint.classList.add('is-active', 'active');
+    btnTypeDigital?.classList.remove('is-active', 'active');
     sectionDigitalOptions?.classList.add('is-hidden');
   });
 
@@ -553,16 +551,16 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
   btnPagesAll?.addEventListener('click', () => {
     currentPagesMode = 'all';
     toggleDownloadPages?.setAttribute('data-active', '0');
-    btnPagesAll.classList.add('active');
-    btnPagesCustom?.classList.remove('active');
+    btnPagesAll.classList.add('is-active', 'active');
+    btnPagesCustom?.classList.remove('is-active', 'active');
     containerCustomPages?.classList.add('is-hidden');
   });
 
   btnPagesCustom?.addEventListener('click', () => {
     currentPagesMode = 'custom';
     toggleDownloadPages?.setAttribute('data-active', '1');
-    btnPagesCustom.classList.add('active');
-    btnPagesAll?.classList.remove('active');
+    btnPagesCustom.classList.add('is-active', 'active');
+    btnPagesAll?.classList.remove('is-active', 'active');
     containerCustomPages?.classList.remove('is-hidden');
   });
 

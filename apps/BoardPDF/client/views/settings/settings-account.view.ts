@@ -26,6 +26,7 @@ export class SettingsAccountController implements ViewController {
     this.populateUserData();
     this.setupLanguageDropdown();
     this.bindEvents();
+    this.checkUrlParams();
     renderIcons(this.container);
     translateElement(this.container);
   }
@@ -498,6 +499,49 @@ export class SettingsAccountController implements ViewController {
         }
       });
     }, { signal });
+
+    const btnConnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-google"]');
+    const btnDisconnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-google"]');
+    const googleErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="google-error"]');
+    const googleSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="google-success"]');
+
+    btnConnectGoogle?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = `${API_ROUTES.auth.google}?action=connect`;
+    }, { signal });
+
+    btnDisconnectGoogle?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (googleErrorBanner) googleErrorBanner.style.display = 'none';
+      if (googleSuccessBanner) googleSuccessBanner.style.display = 'none';
+
+      await withButtonLoading(btnDisconnectGoogle, async () => {
+        try {
+          const res = await postApi(API_ROUTES.settings.googleDisconnect, {});
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            if (googleErrorBanner) {
+              googleErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desconectar la cuenta.');
+              googleErrorBanner.style.display = 'block';
+            }
+            return;
+          }
+
+          if (currentUser) {
+            currentUser.google_connected = false;
+            currentUser.google_email = null;
+            setCurrentUser(currentUser);
+          }
+          this.populateUserData();
+          showToast(t('settings.your_account.google_disconnected_toast', 'Cuenta de Google desconectada exitosamente.'), 'success');
+        } catch (_) {
+          if (googleErrorBanner) {
+            googleErrorBanner.textContent = t('common.error_occurred', 'Error al desconectar la cuenta.');
+            googleErrorBanner.style.display = 'block';
+          }
+        }
+      });
+    }, { signal });
   }
 
   private populateUserData(): void {
@@ -535,6 +579,61 @@ export class SettingsAccountController implements ViewController {
       this.updateAvatarButtonsState('default');
       applyAvatarTier(avatarPreviewBox, 'free');
     }
+
+    const btnConnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-google"]');
+    const btnDisconnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-google"]');
+    const googleViewBox = this.container.querySelector<HTMLElement>('[data-ref="google-view-box"]');
+    const displayGoogleEmail = this.container.querySelector<HTMLElement>('[data-ref="display-google-email"]');
+    const itemGoogleDesc = this.container.querySelector<HTMLElement>('[data-ref="item-google-desc"]');
+
+    if (currentUser?.google_connected) {
+      if (btnConnectGoogle) btnConnectGoogle.style.display = 'none';
+      if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'inline-flex';
+      if (googleViewBox) googleViewBox.style.display = 'block';
+      if (displayGoogleEmail) displayGoogleEmail.textContent = currentUser.google_email || currentUser.email;
+      if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_connected_desc', 'Tu cuenta de Google está vinculada actualmente.');
+    } else {
+      if (btnConnectGoogle) btnConnectGoogle.style.display = 'inline-flex';
+      if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'none';
+      if (googleViewBox) googleViewBox.style.display = 'none';
+      if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_desc', 'Vincula tu cuenta de Google para iniciar sesión con un solo clic.');
+    }
+  }
+
+  private checkUrlParams(): void {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const error = urlParams.get('error');
+      const googleSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="google-success"]');
+      const googleErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="google-error"]');
+
+      if (success === 'google_connected') {
+        if (currentUser) {
+          currentUser.google_connected = true;
+          setCurrentUser(currentUser);
+          this.populateUserData();
+        }
+        if (googleSuccessBanner) {
+          googleSuccessBanner.textContent = t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.');
+          googleSuccessBanner.style.display = 'block';
+        }
+        showToast(t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.'), 'success');
+        window.history.replaceState({}, '', '/settings/your-account');
+      } else if (error === 'google_already_linked') {
+        if (googleErrorBanner) {
+          googleErrorBanner.textContent = t('settings.your_account.google_already_linked', 'Esta cuenta de Google ya está vinculada a otra cuenta de BoardPDF.');
+          googleErrorBanner.style.display = 'block';
+        }
+        window.history.replaceState({}, '', '/settings/your-account');
+      } else if (error === 'google_token_failed' || error === 'google_profile_failed' || error === 'google_failed') {
+        if (googleErrorBanner) {
+          googleErrorBanner.textContent = t('settings.your_account.google_connect_failed', 'No se pudo vincular la cuenta de Google. Intenta nuevamente.');
+          googleErrorBanner.style.display = 'block';
+        }
+        window.history.replaceState({}, '', '/settings/your-account');
+      }
+    } catch (_) {}
   }
 
   private setupLanguageDropdown(): void {

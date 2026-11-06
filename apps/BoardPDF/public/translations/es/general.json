@@ -45,6 +45,13 @@
       "code_required": "Ingresa el código de verificación o código de respaldo.",
       "session_expired": "La sesión de verificación ha expirado. Inicia sesión nuevamente."
     },
+    "login_sso": {
+      "title": "Iniciar sesión con SSO",
+      "subtitle": "Ingresa el correo corporativo o institucional de tu organización.",
+      "email_label": "Correo corporativo",
+      "submit_btn": "Continuar con SSO",
+      "back_to_login": "Volver al inicio de sesión"
+    },
     "register": {
       "title": "Crear cuenta",
       "subtitle": "Ingresa tu correo y contraseña para comenzar",
@@ -591,7 +598,16 @@
       "modal_email_verify_title": "Verifica tu identidad",
       "modal_email_verify_desc": "Ingresa el código de 6 dígitos que enviamos a {{email}}",
       "modal_email_code_placeholder": "Código de 6 dígitos",
-      "language_updated_toast": "Idioma actualizado."
+      "language_updated_toast": "Idioma actualizado.",
+      "google_title": "Cuenta de Google",
+      "google_desc": "Vincula tu cuenta de Google para iniciar sesión con un solo clic.",
+      "google_connected_desc": "Tu cuenta de Google está vinculada actualmente.",
+      "btn_connect_google": "Conectar con Google",
+      "btn_disconnect_google": "Desconectar",
+      "google_connected_success": "Cuenta de Google vinculada exitosamente.",
+      "google_disconnected_toast": "Cuenta de Google desconectada exitosamente.",
+      "google_already_linked": "Esta cuenta de Google ya está vinculada a otra cuenta de BoardPDF.",
+      "google_connect_failed": "No se pudo vincular la cuenta de Google. Intenta nuevamente."
     },
     "security": {
       "title": "Inicio de sesión y seguridad",

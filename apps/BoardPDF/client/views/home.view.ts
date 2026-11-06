@@ -46,17 +46,17 @@ export class HomeController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
+    this.loadWorkflows();
+    await this.loadCollabDocuments();
     const urlParams = new URLSearchParams(window.location.search);
     const catParam = urlParams.get('category') || urlParams.get('cat');
-    if (catParam === 'collaborative') {
+    if (catParam === 'collaborative' && this.collabDocuments.length > 0) {
       this.currentCategory = 'collaborative';
       const pills = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="pill-cat-"]');
       pills.forEach((p) => p.classList.remove('is-active'));
       const collabPill = this.container.querySelector<HTMLButtonElement>('[data-ref="pill-cat-collaborative"]');
       collabPill?.classList.add('is-active');
     }
-    this.loadWorkflows();
-    await this.loadCollabDocuments();
     this.renderTools();
     this.bindEvents();
     this.renderFooter();
@@ -77,7 +77,7 @@ export class HomeController {
   }
 
   private async loadCollabDocuments(): Promise<void> {
-    const localDrafts = listLocalDrafts().map((d) => ({
+    const localDrafts = listLocalDrafts(currentUser?.id).map((d) => ({
       access_level: 'restricted',
       content: d.content,
       created_at: d.createdAt,
@@ -262,6 +262,7 @@ export class HomeController {
     }).join('');
 
     grid.innerHTML = standardToolsHtml + createWorkflowCardHtml + userWorkflowsHtml + userCollabDocsHtml;
+    this.updateCollabCategoryVisibility();
     this.filterCards(this.currentCategory);
     renderIcons(grid);
 
@@ -473,6 +474,7 @@ export class HomeController {
     saveLocalDraft(newDocId, {
       content: initialContent,
       title: titleVal,
+      userId: currentUser?.id ?? null,
     });
 
     if (currentUser) {
@@ -502,6 +504,7 @@ export class HomeController {
     saveLocalDraft(newId, {
       content: newContent,
       title: newTitle,
+      userId: currentUser?.id ?? null,
     });
 
     if (currentUser) {
@@ -589,13 +592,6 @@ export class HomeController {
           e.preventDefault();
           const id = wfCard.getAttribute('data-workflow-id');
           if (id) navigate(`/workflow/${id}`);
-          return;
-        }
-
-        const collabCard = target.closest<HTMLElement>('[data-ref="card-tool-collaborative-pdf"], [data-ref="card-doc-empty"]');
-        if (collabCard) {
-          e.preventDefault();
-          this.createNewCollabDocument();
           return;
         }
 
@@ -716,6 +712,24 @@ export class HomeController {
     footerEl.innerHTML = getFooterHtml();
     const footerCtrl = mountSiteFooter(footerEl, this.abortController?.signal);
     this.dropdownControllers.push(footerCtrl);
+  }
+
+  private updateCollabCategoryVisibility(): void {
+    const collabPill = this.container.querySelector<HTMLButtonElement>('[data-ref="pill-cat-collaborative"]');
+    if (!collabPill) return;
+
+    if (this.collabDocuments.length === 0) {
+      collabPill.classList.add('is-hidden');
+      if (this.currentCategory === 'collaborative') {
+        this.currentCategory = 'all';
+        const pills = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="pill-cat-"]');
+        pills.forEach((p) => p.classList.remove('is-active'));
+        const allPill = this.container.querySelector<HTMLButtonElement>('[data-ref="pill-cat-all"]');
+        allPill?.classList.add('is-active');
+      }
+    } else {
+      collabPill.classList.remove('is-hidden');
+    }
   }
 
   private filterCards(category: string = this.currentCategory): void {
