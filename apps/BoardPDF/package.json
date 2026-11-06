@@ -40,7 +40,6 @@
     "stripe": "^23.1.0"
   },
   "devDependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.2.15",
     "@types/archiver": "^8.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.8.1",

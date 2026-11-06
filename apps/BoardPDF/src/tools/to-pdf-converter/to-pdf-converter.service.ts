@@ -64,6 +64,29 @@ function getBrowserCommand(): string | null {
   return null;
 }
 
+function getLibreOfficeCommand(): string {
+  if (process.platform === 'win32') {
+    const candidates = [
+      'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+      'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+      path.join(process.env.LOCALAPPDATA || '', 'Programs\\LibreOffice\\program\\soffice.exe'),
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return 'soffice';
+  }
+  const candidates = ['/usr/bin/soffice', '/usr/bin/libreoffice', 'libreoffice', 'soffice'];
+  for (const candidate of candidates) {
+    if (candidate.startsWith('/') && fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return 'libreoffice';
+}
+
 export function isValidPublicUrl(rawUrl: string): boolean {
   try {
     const parsed = new URL(rawUrl);
@@ -260,16 +283,7 @@ export async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions
     }
 
     if (!browserSucceeded) {
-      const pdfDoc = await PDFDocument.create();
-      const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const page = pdfDoc.addPage([595, 842]);
-      page.drawText('Página Web Convertida a PDF', { color: rgb(0.1, 0.1, 0.1), font, size: 20, x: 50, y: 750 });
-      page.drawText(`URL de origen: ${rawUrl}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 710 });
-      page.drawText(`Fecha de conversión: ${new Date().toLocaleString()}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 690 });
-      page.drawText('Convertido con BoardPDF Web Engine', { color: rgb(0.5, 0.5, 0.5), font: regularFont, size: 10, x: 50, y: 50 });
-      const pdfBytes = await pdfDoc.save();
-      await fs.promises.writeFile(destinationPath, pdfBytes);
+      throw new Error('No se pudo renderizar la página web indicada hacia PDF.');
     }
 
     if (options?.orientation === 'landscape' && fs.existsSync(destinationPath)) {
@@ -439,8 +453,8 @@ export async function convertToPdf(
       await fs.promises.mkdir(tempOutDir, { recursive: true });
 
       let loSucceeded = false;
+      const loCmd = getLibreOfficeCommand();
       try {
-        const loCmd = process.platform === 'win32' ? 'soffice' : 'libreoffice';
         let loResult = await executeProcessWithTimeout(loCmd, [
           '--headless',
           '--convert-to',
@@ -470,24 +484,16 @@ export async function convertToPdf(
             loSucceeded = true;
           }
         }
-      } catch {} finally {
+      } catch (loErr) {
+        logger.app.error('Error al invocar proceso de conversión LibreOffice', loErr);
+      } finally {
         try {
           await fs.promises.rm(tempOutDir, { force: true, recursive: true });
         } catch {}
       }
 
       if (!loSucceeded) {
-        const pdfDoc = await PDFDocument.create();
-        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const page = pdfDoc.addPage([595, 842]);
-        page.drawText('Documento Convertido a PDF', { color: rgb(0.1, 0.1, 0.1), font, size: 20, x: 50, y: 750 });
-        page.drawText(`Archivo original: ${originalFilename}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 710 });
-        page.drawText(`Tipo de origen: ${sourceType}`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 690 });
-        page.drawText(`Tamaño original: ${(originalSize / 1024).toFixed(1)} KB`, { color: rgb(0.3, 0.3, 0.3), font: regularFont, size: 12, x: 50, y: 670 });
-        page.drawText('Convertido con BoardPDF Document Engine', { color: rgb(0.5, 0.5, 0.5), font: regularFont, size: 10, x: 50, y: 50 });
-        const pdfBytes = await pdfDoc.save();
-        await fs.promises.writeFile(destinationPath, pdfBytes);
+        throw new Error('El motor de conversión de documentos no pudo procesar el archivo.');
       }
     }
 

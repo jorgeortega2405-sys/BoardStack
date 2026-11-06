@@ -2,15 +2,15 @@
 # -------------------------------------------------------------
 # ETAPA 1: Compilación de Código TypeScript y Bundling de Vite
 # -------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /workspace
 
-RUN apk add --no-cache python3 make g++
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Copiar manifiestos y resolver workspaces
 COPY package*.json ./
 COPY apps/BoardPDF/package*.json ./apps/BoardPDF/
-RUN npm ci --workspace=apps/BoardPDF
+RUN npm install --workspace=apps/BoardPDF
 
 # Copiar código y compilar backend y cliente SPA
 COPY tsconfig.json ./
@@ -26,9 +26,15 @@ FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Herramientas de sistema requeridas para manipulación de PDFs
+# Herramientas de sistema requeridas para manipulación de PDFs, conversión de Office y OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip ghostscript qpdf poppler-utils wget \
+    libreoffice-nogui \
+    fonts-dejavu \
+    fonts-liberation \
+    tesseract-ocr \
+    tesseract-ocr-spa \
+    tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependencias de Python para workers (compatibilidad garantizada con binary wheels glibc)

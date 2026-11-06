@@ -12,7 +12,7 @@ export class StripeService {
   private stripe: Stripe;
 
   private constructor() {
-    this.stripe = new Stripe(config.stripe.secretKey, {
+    this.stripe = new Stripe(config.stripe.secretKey || 'sk_test_placeholder_key', {
       apiVersion: '2025-02-24.acacia' as any,
     });
   }
