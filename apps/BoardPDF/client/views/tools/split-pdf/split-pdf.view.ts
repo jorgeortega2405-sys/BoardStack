@@ -634,7 +634,7 @@ export class SplitPdfController implements ViewController {
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.add('is-visible');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput && this.currentFile) {
       const base = this.currentFile.name.replace(/\.[^/.]+$/, '');
       outputNameInput.value = `${base}_dividido.pdf`;
@@ -793,7 +793,7 @@ export class SplitPdfController implements ViewController {
     this.phaseManager?.showUploading(1, 1);
 
     try {
-      const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+      const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
       const customFilename = outputNameInput?.value.trim() || (this.currentFile
         ? this.currentFile.name.replace(/\.pdf$/i, '') + '_dividido.pdf'
         : 'documento_dividido.pdf');
@@ -886,7 +886,7 @@ export class SplitPdfController implements ViewController {
 
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_dividido.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
 

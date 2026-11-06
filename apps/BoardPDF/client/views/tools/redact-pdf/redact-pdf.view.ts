@@ -230,7 +230,7 @@ export class RedactPdfController implements ViewController {
 
     this.phaseManager?.setPhase('workspace');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const baseName = file.name.replace(/\.[^/.]+$/, '');
       outputNameInput.value = `${baseName}_censurado.pdf`;
@@ -280,7 +280,7 @@ export class RedactPdfController implements ViewController {
     this.zoomController?.showFooter(false);
     this.zoomController?.reset();
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       outputNameInput.value = 'documento_censurado.pdf';
     }

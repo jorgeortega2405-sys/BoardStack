@@ -249,6 +249,13 @@ export class CompressPdfController implements ViewController {
         formData.append('pdf', this.currentFile as Blob, this.currentFile?.name);
         formData.append('level', this.selectedLevel);
 
+        const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+        let customFilename = docTitleInput?.value.trim();
+        if (customFilename) {
+          if (!customFilename.toLowerCase().endsWith('.pdf')) customFilename += '.pdf';
+          formData.append('filename', customFilename);
+        }
+
         const response = await postFormWithProgress(
           API_ROUTES.tools.compressPdf.compress,
           formData,
@@ -268,7 +275,7 @@ export class CompressPdfController implements ViewController {
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.compressedSize,
-          filename: result.data.filename,
+          filename: customFilename || result.data.filename,
           returnText: 'Comprimir otro documento PDF',
           returnUrl: '/compress-pdf',
           subtitle: `El archivo "${this.currentFile?.name}" se ha comprimido exitosamente.`,

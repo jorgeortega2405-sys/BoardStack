@@ -38,7 +38,7 @@
                 </div>
               </div>
               <div class="settings-item__actions" data-ref="item-current-plan-actions">
-                <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan">Explorar planes</button>
+                <button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan">Explorar planes</button>
               </div>
             </div>
 
@@ -79,27 +79,43 @@
         </div>
       </div>
 
-      <div class="settings-group" data-ref="group-ai-tokens">
-        <div class="settings-item settings-item--stacked" data-ref="item-ai-tokens">
-          <div class="settings-item__content" data-ref="item-ai-tokens-content">
-            <div class="settings-item__text" data-ref="item-ai-tokens-text" style="width: 100%;">
-              <div class="settings-item__title-row" data-ref="tokens-title-row" style="align-items: center; display: flex; justify-content: space-between;">
-                <h2 class="settings-item__title" data-ref="item-tokens-title">Tokens de Inteligencia Artificial</h2>
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-ai-tokens">
+        <div class="settings-accordion-header" data-ref="accordion-header-tokens">
+          <div class="settings-item__content" data-ref="accordion-tokens-content">
+            <div class="settings-item__icon-box" data-ref="accordion-tokens-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-tokens-text">
+              <div class="settings-item__title-row" data-ref="tokens-title-row" style="align-items: center; display: flex; gap: 8px; flex-wrap: wrap;">
+                <h2 class="settings-item__title" data-ref="item-tokens-title" data-i18n="settings.billing.tokens_title">Tokens de Inteligencia Artificial</h2>
                 <span class="component-badge component-badge--neutral" data-ref="tokens-tier-badge">Plan Free</span>
               </div>
-              <p class="settings-item__desc" data-ref="item-tokens-desc">Créditos mensuales para resumir, redactar preguntas interactivas y chatear con documentos PDF mediante IA. Se restablecen automáticamente al inicio de cada ciclo.</p>
+              <p class="settings-item__desc" data-ref="item-tokens-desc" data-i18n="settings.billing.tokens_desc">Créditos mensuales para resumir, redactar preguntas interactivas y chatear con documentos PDF mediante IA. Se restablecen automáticamente al inicio de cada ciclo.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-tokens-actions">
+            <svg class="component-icon settings-accordion-icon" data-ref="accordion-tokens-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </div>
+        </div>
 
-              <div class="storage-meter" data-ref="tokens-meter-box" style="margin-top: 14px; width: 100%;">
-                <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
-                  <span class="settings-item__value" data-ref="tokens-text-balance" style="font-size: 13px; font-weight: 600;">100 / 100 tokens disponibles</span>
-                  <span class="component-badge component-badge--neutral" data-ref="tokens-badge-percent" style="font-size: 11px;">100%</span>
-                </div>
-                <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
-                  <div data-ref="tokens-bar-fill" style="background-color: var(--primary, #0f172a); border-radius: 9999px; height: 100%; transition: width 0.3s ease; width: 100%;"></div>
-                </div>
-                <div style="align-items: center; color: var(--text-tertiary); display: flex; font-size: 12px; justify-content: space-between; margin-top: 6px;">
-                  <span data-ref="tokens-reset-date-text">Próximo reinicio: Mensual</span>
-                  <a class="link" data-ref="btn-tokens-upgrade" href="/pricing" style="font-size: 12px; text-decoration: underline;">Obtener más tokens</a>
+        <div class="settings-accordion-body" data-ref="accordion-body-tokens">
+          <div class="settings-accordion-content" data-ref="accordion-content-tokens">
+            <div class="settings-item settings-item--stacked" data-ref="item-ai-tokens" style="padding: 20px 24px;">
+              <div class="settings-item__content" data-ref="item-ai-tokens-content" style="width: 100%;">
+                <div class="settings-item__text" data-ref="item-ai-tokens-text" style="width: 100%;">
+                  <div class="storage-meter" data-ref="tokens-meter-box" style="width: 100%;">
+                    <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span class="settings-item__value" data-ref="tokens-text-balance" style="font-size: 13px; font-weight: 600;">100 / 100 tokens disponibles</span>
+                      <span class="component-badge component-badge--neutral" data-ref="tokens-badge-percent" style="font-size: 11px;">100%</span>
+                    </div>
+                    <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
+                      <div data-ref="tokens-bar-fill" style="background-color: var(--primary, #0f172a); border-radius: 9999px; height: 100%; transition: width 0.3s ease; width: 100%;"></div>
+                    </div>
+                    <div style="align-items: center; color: var(--text-tertiary); display: flex; font-size: 12px; justify-content: space-between; margin-top: 6px;">
+                      <span data-ref="tokens-reset-date-text">Próximo reinicio: Mensual</span>
+                      <a class="link" data-ref="btn-tokens-upgrade" href="/pricing" style="font-size: 12px; text-decoration: underline;">Obtener más tokens</a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -107,23 +123,39 @@
         </div>
       </div>
 
-      <div class="settings-group" data-ref="group-storage">
-        <div class="settings-item settings-item--stacked" data-ref="item-storage">
-          <div class="settings-item__content" data-ref="item-storage-content">
-            <div class="settings-item__text" data-ref="item-storage-text" style="width: 100%;">
-              <h2 class="settings-item__title" data-ref="item-storage-title">Almacenamiento de tu cuenta</h2>
-              <p class="settings-item__desc" data-ref="item-storage-desc">Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.</p>
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-storage">
+        <div class="settings-accordion-header" data-ref="accordion-header-storage">
+          <div class="settings-item__content" data-ref="accordion-storage-content">
+            <div class="settings-item__icon-box" data-ref="accordion-storage-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-storage-text">
+              <h2 class="settings-item__title" data-ref="item-storage-title" data-i18n="settings.billing.storage_title">Almacenamiento de tu cuenta</h2>
+              <p class="settings-item__desc" data-ref="item-storage-desc" data-i18n="settings.billing.storage_desc">Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-storage-actions">
+            <svg class="component-icon settings-accordion-icon" data-ref="accordion-storage-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </div>
+        </div>
 
-              <div class="storage-meter" data-ref="storage-meter-box" style="margin-top: 14px; width: 100%;">
-                <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
-                  <span class="settings-item__value" data-ref="storage-text-used" style="font-size: 13px; font-weight: 600;">0.0 MB de 5.0 GB utilizados</span>
-                  <span class="component-badge component-badge--neutral" data-ref="storage-badge-percent" style="font-size: 11px;">0%</span>
-                </div>
-                <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
-                  <div data-ref="storage-bar-fill" style="background-color: var(--primary, #0f172a); border-radius: 9999px; height: 100%; transition: width 0.3s ease; width: 0%;"></div>
-                </div>
-                <div style="color: var(--text-tertiary); font-size: 12px; margin-top: 6px;" data-ref="storage-available-text">
-                  5.0 GB disponibles
+        <div class="settings-accordion-body" data-ref="accordion-body-storage">
+          <div class="settings-accordion-content" data-ref="accordion-content-storage">
+            <div class="settings-item settings-item--stacked" data-ref="item-storage" style="padding: 20px 24px;">
+              <div class="settings-item__content" data-ref="item-storage-content" style="width: 100%;">
+                <div class="settings-item__text" data-ref="item-storage-text" style="width: 100%;">
+                  <div class="storage-meter" data-ref="storage-meter-box" style="width: 100%;">
+                    <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span class="settings-item__value" data-ref="storage-text-used" style="font-size: 13px; font-weight: 600;">0.0 MB de 5.0 GB utilizados</span>
+                      <span class="component-badge component-badge--neutral" data-ref="storage-badge-percent" style="font-size: 11px;">0%</span>
+                    </div>
+                    <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
+                      <div data-ref="storage-bar-fill" style="background-color: var(--primary, #0f172a); border-radius: 9999px; height: 100%; transition: width 0.3s ease; width: 0%;"></div>
+                    </div>
+                    <div style="color: var(--text-tertiary); font-size: 12px; margin-top: 6px;" data-ref="storage-available-text">
+                      5.0 GB disponibles
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

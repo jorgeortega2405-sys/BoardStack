@@ -27,12 +27,14 @@ export interface PaymentMethod {
 
 export interface BillingDetailsResponse {
   amount?: number;
+  billing_period?: string;
   cancel_at_period_end?: boolean;
   current_period_end?: string | null;
   current_period_start?: string | null;
   customer_id?: string | null;
   hasSubscription: boolean;
   interval?: 'month' | 'year';
+  is_one_time?: boolean;
   status?: string;
   stripe_subscription_id?: string | null;
   subscription_id?: string | null;

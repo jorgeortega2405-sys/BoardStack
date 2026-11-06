@@ -46,7 +46,7 @@ export class SettingsSecurityController implements ViewController {
       btnConfigure2fa.className = 'component-button component-button--h34 component-button--danger';
     } else {
       btnConfigure2fa.textContent = t('settings.security.btn_configure_2fa') || 'Configurar';
-      btnConfigure2fa.className = 'component-button component-button--h34 component-button--black';
+      btnConfigure2fa.className = 'component-button component-button--h34';
     }
   }
 

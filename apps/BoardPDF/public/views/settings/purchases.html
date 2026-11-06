@@ -1,10 +1,13 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="purchases-wrapper">
-  <div class="component-top" data-ref="component-top">
-    <div class="component-top-left" data-ref="component-top-left">
-      <h1 class="component-top-title" data-ref="purchases-title" data-i18n="settings.purchases.title">Historial de compras</h1>
-    </div>
+  <div class="component-top" data-ref="component-top" style="border-bottom: none;">
+    <div class="component-top-left" data-ref="component-top-left"></div>
 
     <div class="component-top-right" data-ref="component-top-right">
+      <button type="button" class="component-button component-button--h34 is-hidden" data-ref="btn-action-download-invoice">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+        <span data-i18n="settings.purchases.btn_download_invoice">Descargar factura</span>
+      </button>
+
       <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-i18n-tooltip="settings.purchases.search_tooltip" data-i18n-aria="settings.purchases.search_tooltip" data-tooltip="Buscar compras" aria-label="Buscar compras">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
       </button>
@@ -25,8 +28,8 @@
     </div>
   </div>
 
-  <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-    <div class="component-table-wrapper" data-ref="purchases-table-wrapper">
+  <div class="component-bottom" data-ref="component-bottom" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding: 16px;">
+    <div class="component-table-wrapper" data-ref="purchases-table-wrapper" style="border: 1px solid var(--border-color); border-radius: var(--radius-xl); flex: 1 1 auto; min-height: 0; overflow: auto;">
       <table class="component-table" data-ref="purchases-table">
         <thead class="component-table__head" data-ref="purchases-thead">
           <tr>

@@ -9,6 +9,7 @@ import { showToast } from '../../services/toast.service.js';
 import { BillingDetailsResponse } from '../../types/subscription.types.js';
 
 export async function createBillingView(): Promise<HTMLElement> {
+  await checkAuthSession();
   const container = await loadTemplate('/views/settings/billing.html');
   translateElement(container);
   renderIcons(container);
@@ -18,6 +19,20 @@ export async function createBillingView(): Promise<HTMLElement> {
   accordionHeaderSub?.addEventListener('click', (e) => {
     e.preventDefault();
     groupSub?.classList.toggle('is-active');
+  });
+
+  const accordionHeaderTokens = container.querySelector<HTMLElement>('[data-ref="accordion-header-tokens"]');
+  const groupTokens = container.querySelector<HTMLElement>('[data-ref="group-ai-tokens"]');
+  accordionHeaderTokens?.addEventListener('click', (e) => {
+    e.preventDefault();
+    groupTokens?.classList.toggle('is-active');
+  });
+
+  const accordionHeaderStorage = container.querySelector<HTMLElement>('[data-ref="accordion-header-storage"]');
+  const groupStorage = container.querySelector<HTMLElement>('[data-ref="group-storage"]');
+  accordionHeaderStorage?.addEventListener('click', (e) => {
+    e.preventDefault();
+    groupStorage?.classList.toggle('is-active');
   });
 
   const renderSubscriptionPlan = (info: BillingDetailsResponse) => {
@@ -32,23 +47,47 @@ export async function createBillingView(): Promise<HTMLElement> {
     const itemCancelSub = container.querySelector<HTMLElement>('[data-ref="item-cancel-subscription"]');
     const dividerCancelSub = container.querySelector<HTMLElement>('[data-ref="divider-cancel-sub"]');
 
-    const hasActiveSub = Boolean(info.hasSubscription && info.tier && info.tier !== 'free');
+    const hasActiveSub = Boolean(
+      (info.hasSubscription || (info.tier && info.tier !== 'free')) &&
+      info.tier &&
+      info.tier !== 'free'
+    );
 
     if (hasActiveSub) {
       const tierFormatted = info.tier!.charAt(0).toUpperCase() + info.tier!.slice(1);
-      const intervalText = info.interval === 'year'
-        ? t('pricing.billing_yearly') || 'Anual'
-        : t('pricing.billing_monthly') || 'Mensual';
-      if (planNameEl) planNameEl.textContent = `BoardPDF ${tierFormatted} (${intervalText})`;
+      const isOneTime = Boolean(
+        info.is_one_time ||
+        info.billing_period?.includes('one_time') ||
+        !info.stripe_subscription_id
+      );
+
+      let billingLabel = '';
+      if (isOneTime) {
+        if (info.billing_period === 'one_time_yearly') {
+          billingLabel = 'Pago único (1 año)';
+        } else if (info.billing_period === 'one_time_monthly') {
+          billingLabel = 'Pago único (1 mes)';
+        } else {
+          billingLabel = 'Pago único';
+        }
+      } else {
+        if (info.interval === 'year' || info.billing_period === 'yearly') {
+          billingLabel = t('pricing.billing_yearly') || 'Suscripción Anual';
+        } else {
+          billingLabel = t('pricing.billing_monthly') || 'Suscripción Mensual';
+        }
+      }
+
+      if (planNameEl) planNameEl.textContent = `BoardPDF ${tierFormatted} (${billingLabel})`;
 
       let dateFormatted = '';
       if (info.current_period_end) {
         try {
           const d = new Date(info.current_period_end);
           dateFormatted = d.toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
             day: 'numeric',
+            month: 'long',
+            year: 'numeric',
           });
         } catch (_) {}
       }
@@ -65,11 +104,18 @@ export async function createBillingView(): Promise<HTMLElement> {
       }
 
       if (planDescEl) {
-        if (info.cancel_at_period_end) {
+        const amountVal = info.amount || 0;
+        const amountText = amountVal > 0 ? `USD $${amountVal.toFixed(2)} - ` : '';
+
+        if (isOneTime) {
+          if (dateFormatted) {
+            planDescEl.textContent = `${amountText}Plan activo hasta el ${dateFormatted}. Al ser un pago único, no se realizarán cobros automáticos de renovación.`;
+          } else {
+            planDescEl.textContent = `${amountText}Plan activo mediante pago único. Sin cargos de renovación automática.`;
+          }
+        } else if (info.cancel_at_period_end) {
           planDescEl.textContent = (t('settings.billing.plan_desc_scheduled') || 'Tu plan expirará el {date}. Conservas todos tus beneficios hasta esa fecha.').replace('{date}', dateFormatted);
         } else {
-          const amountVal = info.amount || 0;
-          const amountText = amountVal > 0 ? `USD $${amountVal.toFixed(2)} - ` : '';
           planDescEl.textContent = (t('settings.billing.plan_desc_active') || '{amount}Próximo cobro programado para el {date}.').replace('{amount}', amountText).replace('{date}', dateFormatted);
         }
       }
@@ -82,28 +128,35 @@ export async function createBillingView(): Promise<HTMLElement> {
         };
       }
 
-      if (itemAutoRenewal) itemAutoRenewal.style.display = 'flex';
-      if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'block';
-      if (itemCancelSub) itemCancelSub.style.display = 'flex';
-      if (dividerCancelSub) dividerCancelSub.style.display = 'block';
+      if (isOneTime) {
+        if (itemAutoRenewal) itemAutoRenewal.style.display = 'none';
+        if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'none';
+        if (itemCancelSub) itemCancelSub.style.display = 'none';
+        if (dividerCancelSub) dividerCancelSub.style.display = 'none';
+      } else {
+        if (itemAutoRenewal) itemAutoRenewal.style.display = 'flex';
+        if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'block';
+        if (itemCancelSub) itemCancelSub.style.display = 'flex';
+        if (dividerCancelSub) dividerCancelSub.style.display = 'block';
 
-      if (btnToggleRenewal && autoRenewalDesc) {
-        if (info.cancel_at_period_end) {
-          autoRenewalDesc.textContent = t('settings.billing.auto_renewal_paused_desc') || 'La renovación automática está cancelada. Tu suscripción no se cobrará nuevamente.';
-          btnToggleRenewal.textContent = t('settings.billing.btn_reactivate_renewal') || 'Reactivar renovación';
-          btnToggleRenewal.className = 'component-button component-button--h34 component-button--black';
-          btnToggleRenewal.onclick = (e) => {
-            e.preventDefault();
-            handleToggleAutoRenewal(false);
-          };
-        } else {
-          autoRenewalDesc.textContent = (t('settings.billing.auto_renewal_active_desc') || 'Tu suscripción se renovará automáticamente el {date}.').replace('{date}', dateFormatted);
-          btnToggleRenewal.textContent = t('settings.billing.btn_cancel_renewal') || 'Cancelar renovación';
-          btnToggleRenewal.className = 'component-button component-button--h34';
-          btnToggleRenewal.onclick = (e) => {
-            e.preventDefault();
-            handleToggleAutoRenewal(true, dateFormatted);
-          };
+        if (btnToggleRenewal && autoRenewalDesc) {
+          if (info.cancel_at_period_end) {
+            autoRenewalDesc.textContent = t('settings.billing.auto_renewal_paused_desc') || 'La renovación automática está cancelada. Tu suscripción no se cobrará nuevamente.';
+            btnToggleRenewal.textContent = t('settings.billing.btn_reactivate_renewal') || 'Reactivar renovación';
+            btnToggleRenewal.className = 'component-button component-button--h34';
+            btnToggleRenewal.onclick = (e) => {
+              e.preventDefault();
+              handleToggleAutoRenewal(false);
+            };
+          } else {
+            autoRenewalDesc.textContent = (t('settings.billing.auto_renewal_active_desc') || 'Tu suscripción se renovará automáticamente el {date}.').replace('{date}', dateFormatted);
+            btnToggleRenewal.textContent = t('settings.billing.btn_cancel_renewal') || 'Cancelar renovación';
+            btnToggleRenewal.className = 'component-button component-button--h34';
+            btnToggleRenewal.onclick = (e) => {
+              e.preventDefault();
+              handleToggleAutoRenewal(true, dateFormatted);
+            };
+          }
         }
       }
     } else {
@@ -129,13 +182,35 @@ export async function createBillingView(): Promise<HTMLElement> {
   const loadBillingData = async () => {
     try {
       const res = await getBillingDetailsApi();
-      if (res && res.success) {
+      if (res && res.success && res.tier && res.tier !== 'free') {
+        renderSubscriptionPlan(res);
+      } else if (currentUser?.subscription_tier && currentUser.subscription_tier !== 'free') {
+        renderSubscriptionPlan({
+          billing_period: 'one_time_monthly',
+          hasSubscription: true,
+          is_one_time: true,
+          status: 'active',
+          success: true,
+          tier: currentUser.subscription_tier,
+        });
+      } else if (res && res.success) {
         renderSubscriptionPlan(res);
       } else {
         renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
       }
     } catch {
-      renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
+      if (currentUser?.subscription_tier && currentUser.subscription_tier !== 'free') {
+        renderSubscriptionPlan({
+          billing_period: 'one_time_monthly',
+          hasSubscription: true,
+          is_one_time: true,
+          status: 'active',
+          success: true,
+          tier: currentUser.subscription_tier,
+        });
+      } else {
+        renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
+      }
     }
   };
 

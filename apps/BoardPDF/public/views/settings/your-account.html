@@ -95,12 +95,12 @@
       <div class="settings-group" data-ref="group-google">
         <div class="settings-item" data-ref="item-google">
           <div class="settings-item__content" data-ref="item-google-content">
+            <div class="settings-item__icon-box" data-ref="item-google-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_colored"></use></svg>
+            </div>
             <div class="settings-item__text" data-ref="item-google-text">
               <h2 class="settings-item__title" data-ref="item-google-title" data-i18n="settings.your_account.google_title">Cuenta de Google</h2>
               <p class="settings-item__desc" data-ref="item-google-desc" data-i18n="settings.your_account.google_desc">Vincula tu cuenta de Google para iniciar sesión con un solo clic.</p>
-              <div class="settings-item__view-box" data-ref="google-view-box" style="display: none; margin-top: 6px;">
-                <span class="settings-item__value" data-ref="display-google-email">-</span>
-              </div>
             </div>
           </div>
           <div class="settings-item__actions" data-ref="google-actions">
@@ -115,6 +115,56 @@
         </div>
         <div class="banner banner--danger" data-ref="google-error" style="display: none; margin: 0 24px 16px 24px;"></div>
         <div class="banner banner--success" data-ref="google-success" style="display: none; margin: 0 24px 16px 24px;"></div>
+      </div>
+
+      <div class="settings-group" data-ref="group-cloud-services">
+        <div class="settings-item" data-ref="item-gdrive">
+          <div class="settings-item__content" data-ref="item-gdrive-content">
+            <div class="settings-item__icon-box" data-ref="item-gdrive-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="item-gdrive-text">
+              <h2 class="settings-item__title" data-ref="item-gdrive-title">Google Drive</h2>
+              <p class="settings-item__desc" data-ref="item-gdrive-desc">Conecta tu Google Drive para importar y exportar documentos PDF automáticamente.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="gdrive-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-connect-gdrive">
+              <svg class="component-icon" width="16" height="16" style="margin-right: 6px;" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+              <span>Vincular Google Drive</span>
+            </button>
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-disconnect-gdrive" style="display: none;">
+              Desconectar
+            </button>
+          </div>
+        </div>
+        <div class="banner banner--danger" data-ref="gdrive-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+        <div class="banner banner--success" data-ref="gdrive-success" style="display: none; margin: 0 24px 16px 24px;"></div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item" data-ref="item-dropbox">
+          <div class="settings-item__content" data-ref="item-dropbox-content">
+            <div class="settings-item__icon-box" data-ref="item-dropbox-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+            </div>
+            <div class="settings-item__text" data-ref="item-dropbox-text">
+              <h2 class="settings-item__title" data-ref="item-dropbox-title">Dropbox</h2>
+              <p class="settings-item__desc" data-ref="item-dropbox-desc">Conecta tu cuenta de Dropbox para acceder a tus archivos sin autorizar en cada sesión.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="dropbox-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-connect-dropbox">
+              <svg class="component-icon" width="16" height="16" style="margin-right: 6px;" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+              <span>Vincular Dropbox</span>
+            </button>
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-disconnect-dropbox" style="display: none;">
+              Desconectar
+            </button>
+          </div>
+        </div>
+        <div class="banner banner--danger" data-ref="dropbox-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+        <div class="banner banner--success" data-ref="dropbox-success" style="display: none; margin: 0 24px 16px 24px;"></div>
       </div>
 
       <div class="settings-group" data-ref="group-language">

@@ -135,6 +135,11 @@ class LoginViewController implements ViewController {
             return;
           }
 
+          if (data.requires_2fa && data.temp_token) {
+            show2faStep(data.temp_token);
+            return;
+          }
+
           setAuthState(data.user, data.accounts || []);
           showToast(`¡Bienvenido de nuevo, ${data.user.username}!`, 'success');
           const syncedUrl = await syncPendingDraftIfAny();
@@ -182,18 +187,28 @@ class LoginViewController implements ViewController {
 
     const stepMain = this.container.querySelector<HTMLElement>('[data-ref="login-step-main"]');
     const stepSso = this.container.querySelector<HTMLElement>('[data-ref="login-step-sso"]');
+    const step2fa = this.container.querySelector<HTMLElement>('[data-ref="login-step-2fa"]');
     const ssoEmailInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-sso-email"]');
     const submitSsoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-sso"]');
     const backFromSsoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-from-sso"]');
     const bannersSso = createBannerManager(this.container, { errorRef: 'login-sso-error' });
 
+    const input2faCode = this.container.querySelector<HTMLInputElement>('[data-ref="input-login-2fa-code"]');
+    const submit2faBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-2fa"]');
+    const backFrom2faBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-to-login"]');
+    const banners2fa = createBannerManager(this.container, { errorRef: 'login-2fa-error' });
+
+    let currentTempToken = '';
+
     const showSsoStep = () => {
       banners.hideAll();
       bannersSso.hideAll();
+      banners2fa.hideAll();
       if (emailInput?.value.trim() && ssoEmailInput) {
         ssoEmailInput.value = emailInput.value.trim();
       }
       if (stepMain) stepMain.style.display = 'none';
+      if (step2fa) step2fa.style.display = 'none';
       if (stepSso) stepSso.style.display = '';
       ssoEmailInput?.focus();
     };
@@ -201,10 +216,77 @@ class LoginViewController implements ViewController {
     const showMainStep = () => {
       banners.hideAll();
       bannersSso.hideAll();
+      banners2fa.hideAll();
+      currentTempToken = '';
       if (stepSso) stepSso.style.display = 'none';
+      if (step2fa) step2fa.style.display = 'none';
       if (stepMain) stepMain.style.display = '';
       emailInput?.focus();
     };
+
+    const show2faStep = (token: string) => {
+      banners.hideAll();
+      bannersSso.hideAll();
+      banners2fa.hideAll();
+      currentTempToken = token;
+      if (stepMain) stepMain.style.display = 'none';
+      if (stepSso) stepSso.style.display = 'none';
+      if (step2fa) step2fa.style.display = '';
+      if (input2faCode) {
+        input2faCode.value = '';
+        input2faCode.focus();
+      }
+    };
+
+    const execute2fa = async () => {
+      banners2fa.hideAll();
+      const code = input2faCode?.value.trim() || '';
+      if (!code) {
+        banners2fa.showError('Ingresa el código de verificación.');
+        input2faCode?.focus();
+        return;
+      }
+
+      await withButtonLoading(submit2faBtn, 'Verificando...', async () => {
+        try {
+          const res = await postApi(API_ROUTES.auth.login2fa, { code, temp_token: currentTempToken });
+          const data = await res.json();
+
+          if (!res.ok) {
+            banners2fa.showError(data.error || 'Código de verificación incorrecto.');
+            return;
+          }
+
+          setAuthState(data.user, data.accounts || []);
+          showToast(`¡Bienvenido de nuevo, ${data.user.username}!`, 'success');
+          const syncedUrl = await syncPendingDraftIfAny();
+          if (syncedUrl) {
+            navigate(syncedUrl);
+          } else {
+            navigate(getRedirectTarget());
+          }
+        } catch {
+          banners2fa.showError('Error de conexión al verificar el código.');
+        }
+      });
+    };
+
+    submit2faBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void execute2fa();
+    }, { signal });
+
+    input2faCode?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void execute2fa();
+      }
+    }, { signal });
+
+    backFrom2faBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showMainStep();
+    }, { signal });
 
     const ssoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-sso-login"]');
     ssoBtn?.addEventListener('click', (e) => {

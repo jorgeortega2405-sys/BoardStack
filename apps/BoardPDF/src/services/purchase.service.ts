@@ -101,11 +101,12 @@ export class PurchaseService {
 
       try {
         await redis.del(`user:profile:${userId}`);
+        await permissionService.invalidateUserPermissions(userId);
       } catch {}
 
       if (status === 'active') {
         try {
-          const perms = await permissionService.getUserPermissions(userId, canonicalTier);
+          const perms = await permissionService.getUserPermissions(userId, canonicalTier, status);
           const newQuota = getMonthlyQuotaByPermissions(perms);
           await pool.query(
             'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
@@ -134,6 +135,16 @@ export class PurchaseService {
       [userId]
     );
     return rows as PurchaseRecord[];
+  }
+
+  public async getPurchaseById(purchaseId: number, userId: number): Promise<PurchaseRecord | null> {
+    const pool = getDbPool();
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM purchases WHERE id = ? AND user_id = ? LIMIT 1',
+      [purchaseId, userId]
+    );
+    if (rows.length === 0) return null;
+    return rows[0] as PurchaseRecord;
   }
 
   public async getPurchaseBySessionId(sessionId: string): Promise<PurchaseRecord | null> {
@@ -237,11 +248,12 @@ export class PurchaseService {
 
       try {
         await redis.del(`user:profile:${userId}`);
+        await permissionService.invalidateUserPermissions(userId);
       } catch {}
 
       if (status === 'active') {
         try {
-          const perms = await permissionService.getUserPermissions(userId, canonicalTier);
+          const perms = await permissionService.getUserPermissions(userId, canonicalTier, status);
           const newQuota = getMonthlyQuotaByPermissions(perms);
           await pool.query(
             'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',

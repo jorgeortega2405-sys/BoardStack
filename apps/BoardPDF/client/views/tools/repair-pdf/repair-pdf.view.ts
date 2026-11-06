@@ -125,7 +125,7 @@ export class RepairPdfController implements ViewController {
 
     this.phaseManager?.setPhase('workspace');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
       outputNameInput.value = `${base}_reparado.pdf`;
@@ -180,7 +180,7 @@ export class RepairPdfController implements ViewController {
       canvas.height = 0;
     }
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_reparado.pdf';
 
     this.sidebarModal?.close();
@@ -197,7 +197,7 @@ export class RepairPdfController implements ViewController {
 
     await withButtonLoading(button, async () => {
       try {
-        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
         const customFilename = outputNameInput?.value.trim();
 
         const formData = new FormData();

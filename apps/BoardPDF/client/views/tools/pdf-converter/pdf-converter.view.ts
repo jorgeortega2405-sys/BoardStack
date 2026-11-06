@@ -380,10 +380,15 @@ export class PdfConverterController implements ViewController {
 
         const token = result.data.downloadToken;
         showToast('Documento convertido exitosamente', 'success');
+        const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+        const customTitle = docTitleInput?.value.trim();
+        const baseName = customTitle || (this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '');
+        const finalFilename = `${baseName}${this.config.targetExtension}`;
+
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: this.currentFile?.size || 0,
-          filename: `${(this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '')}${this.config.targetExtension}`,
+          filename: finalFilename,
           returnText: this.config.title,
           returnUrl: window.location.pathname,
           subtitle: `Tu documento PDF ha sido convertido a formato ${this.config.targetBadge} con total precisión.`,

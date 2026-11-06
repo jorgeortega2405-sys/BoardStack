@@ -30,18 +30,6 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 48px;
-}
-
-.projects-hero__back-btn {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
 }
 
 .projects-hero__title {
@@ -59,20 +47,10 @@
   }
 }
 
-.projects-hero__top-actions {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .projects-hero__folder-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .projects-quick-actions {
@@ -189,71 +167,6 @@
 .projects-filter-badges .dropdown {
   position: relative;
   display: inline-flex;
-}
-
-.projects-filter-badges .category-pill {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 32px;
-  min-height: 32px;
-  max-height: 32px;
-  width: auto;
-  max-width: none;
-  padding: 0 16px;
-  border: 1px solid var(--border-default, #e2e8f0);
-  border-radius: var(--sl-border-radius-pill, 9999px);
-  background-color: var(--bg-surface, #ffffff);
-  color: var(--text-secondary, #64748b);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 30px;
-  cursor: pointer;
-  transition: all var(--sl-transition-fast, 0.18s ease);
-  user-select: none;
-  white-space: nowrap;
-}
-
-.projects-filter-badges .category-pill:hover {
-  background-color: var(--bg-subtle, #f8fafc);
-  border-color: var(--border-strong, #cbd5e1);
-  color: var(--text-primary, #0f172a);
-}
-
-.projects-filter-badges .category-pill.is-active {
-  background-color: #0f172a;
-  border-color: #0f172a;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.projects-filter-badges .category-pill .component-icon {
-  width: 14px;
-  height: 14px;
-  margin-left: 2px;
-  pointer-events: none;
-}
-
-[data-theme='dark'] .projects-filter-badges .category-pill {
-  background-color: var(--surface-card, #1e293b);
-  border-color: var(--border-subtle, #334155);
-  color: var(--text-secondary, #94a3b8);
-}
-
-[data-theme='dark'] .projects-filter-badges .category-pill:hover {
-  background-color: var(--surface-hover, #334155);
-  border-color: var(--border-default, #475569);
-  color: #ffffff;
-}
-
-[data-theme='dark'] .projects-filter-badges .category-pill.is-active {
-  background-color: #ffffff;
-  border-color: #ffffff;
-  color: #0f172a;
 }
 
 .projects-section {

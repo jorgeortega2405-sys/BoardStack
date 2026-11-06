@@ -5,10 +5,12 @@ import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.se
 import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
 import { ssoService } from '../services/sso.service.js';
-import { createUser, findUserByEmail, findUserDuplicates, updateUserLastLogin } from '../services/user.service.js';
+import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
+import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserLastLogin, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { generateSixDigitCode, getPendingRegistration, savePendingRegistration, verifyAndConsumeCode } from '../services/verification.service.js';
 import { UserPayload } from '../types/auth.types.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 
 function getClientIp(req: Request): string {
@@ -26,9 +28,9 @@ export function sanitizeUser(user: any): UserPayload {
     avatar_url: user.avatar_url ?? null,
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,
-    google_connected: Boolean(user.google_id),
+    google_connected: Boolean(user.google_id || user.google_connected),
     google_email: user.google_email || null,
-    has_password: Boolean(user.password_hash),
+    has_password: Boolean(user.password_hash || user.has_password),
     id: user.id,
     is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
@@ -38,6 +40,7 @@ export function sanitizeUser(user: any): UserPayload {
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
     subscription_status: user.subscription_status,
     subscription_tier: user.subscription_tier || 'free',
+    two_factor_enabled: Boolean(user.two_factor_enabled),
     username: user.username,
   };
 }
@@ -261,6 +264,17 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    if (Boolean(userRow.two_factor_enabled)) {
+      const twoFactorData = await getUser2FASecret(userRow.id);
+      if (twoFactorData?.two_factor_secret) {
+        const tempToken = crypto.randomBytes(32).toString('hex');
+        await savePending2FALogin(tempToken, { email: userRow.email, userId: userRow.id });
+        logger.security.info('2FA requerido para inicio de sesión', { email: userRow.email, userId: userRow.id });
+        res.status(200).json({ requires_2fa: true, temp_token: tempToken });
+        return;
+      }
+    }
+
     const permissions = await permissionService.getUserPermissions(
       userRow.id,
       userRow.subscription_tier,
@@ -289,6 +303,83 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function loginWith2FA(req: Request, res: Response): Promise<void> {
+  try {
+    const { code, temp_token } = req.body || {};
+
+    if (!temp_token || !code) {
+      res.status(400).json({ error: 'Ingresa el código de verificación.' });
+      return;
+    }
+
+    const cleanToken = String(temp_token).trim();
+    const cleanCode = String(code).trim();
+
+    const pending = await getPending2FALogin(cleanToken);
+    if (!pending) {
+      res.status(400).json({ error: 'La sesión de verificación ha expirado o es inválida. Por favor intenta iniciar sesión nuevamente.' });
+      return;
+    }
+
+    const userRow = await findUserById(pending.userId);
+    if (!userRow) {
+      res.status(400).json({ error: 'Usuario no encontrado.' });
+      return;
+    }
+
+    const twoFactorData = await getUser2FASecret(userRow.id);
+    let isAuthorized = false;
+
+    const numericCode = cleanCode.replace(/[\s-]+/g, '');
+    if (/^\d{6}$/.test(numericCode) && twoFactorData?.two_factor_secret) {
+      if (verifyTotpCode(numericCode, twoFactorData.two_factor_secret, 2)) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      const backupConsumed = await verifyAndConsumeBackupCode(userRow.id, cleanCode);
+      if (backupConsumed) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      logger.security.warn('Intento de 2FA fallido en login', { email: userRow.email, userId: userRow.id });
+      res.status(400).json({ error: 'Código de verificación incorrecto.' });
+      return;
+    }
+
+    await consumePending2FALogin(cleanToken);
+
+    const permissions = await permissionService.getUserPermissions(
+      userRow.id,
+      userRow.subscription_tier,
+      userRow.subscription_status,
+      userRow.role
+    );
+    userRow.permissions = permissions;
+
+    const user = sanitizeUser(userRow);
+    user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
+    const clientIp = getClientIp(req);
+    void updateUserLastLogin(user.id, clientIp);
+
+    const session = await addAccountToSession(res, req, user);
+
+    logger.security.info('Inicio de sesión con 2FA exitoso', { email: user.email, userId: user.id });
+
+    res.status(200).json({
+      accounts: session.accounts.map(sanitizeUser),
+      message: 'Inicio de sesión exitoso.',
+      user,
+    });
+  } catch (error) {
+    logger.security.error('Error al procesar login con 2FA', error);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
 export async function me(req: Request, res: Response): Promise<void> {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -296,6 +387,20 @@ export async function me(req: Request, res: Response): Promise<void> {
     const accounts = getLinkedAccounts(req);
 
     if (user && typeof user.id === 'number') {
+      const dbUser = await findUserById(user.id);
+      if (dbUser) {
+        user.ai_tokens_balance = dbUser.ai_tokens_balance !== undefined ? Number(dbUser.ai_tokens_balance) : user.ai_tokens_balance;
+        user.avatar_url = dbUser.avatar_url ?? null;
+        user.email = dbUser.email;
+        user.google_connected = Boolean(dbUser.google_id);
+        user.google_email = dbUser.google_email || null;
+        user.has_password = Boolean(dbUser.password_hash);
+        user.role = dbUser.role || user.role || 'USER';
+        user.roles = dbUser.roles || (user.role ? [user.role] : ['USER']);
+        user.subscription_tier = dbUser.subscription_tier || user.subscription_tier || 'free';
+        user.two_factor_enabled = Boolean(dbUser.two_factor_enabled);
+        user.username = dbUser.username;
+      }
       const billing = await purchaseService.getUserBillingInfo(user.id);
       if (billing) {
         user.subscription_tier = billing.subscription_tier;
@@ -309,10 +414,20 @@ export async function me(req: Request, res: Response): Promise<void> {
       );
       user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
       updateActiveAccountInSession(res, req, {
+        ai_tokens_balance: user.ai_tokens_balance,
+        avatar_url: user.avatar_url,
+        email: user.email,
+        google_connected: user.google_connected,
+        google_email: user.google_email,
+        has_password: user.has_password,
         is_sso: user.is_sso,
         permissions: user.permissions,
+        role: user.role,
+        roles: user.roles,
         subscription_status: user.subscription_status,
         subscription_tier: user.subscription_tier,
+        two_factor_enabled: user.two_factor_enabled,
+        username: user.username,
       });
     }
 

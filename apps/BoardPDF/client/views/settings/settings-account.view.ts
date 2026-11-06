@@ -1,6 +1,6 @@
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { currentUser, deleteApi, getApi, postApi, postFormApi, setCurrentUser } from '../../services/api.service.js';
+import { checkAuthSession, currentUser, deleteApi, getApi, postApi, postFormApi, setCurrentUser } from '../../services/api.service.js';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
@@ -23,6 +23,7 @@ export class SettingsAccountController implements ViewController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
+    await checkAuthSession();
     this.populateUserData();
     this.setupLanguageDropdown();
     this.bindEvents();
@@ -582,20 +583,15 @@ export class SettingsAccountController implements ViewController {
 
     const btnConnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-google"]');
     const btnDisconnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-google"]');
-    const googleViewBox = this.container.querySelector<HTMLElement>('[data-ref="google-view-box"]');
-    const displayGoogleEmail = this.container.querySelector<HTMLElement>('[data-ref="display-google-email"]');
     const itemGoogleDesc = this.container.querySelector<HTMLElement>('[data-ref="item-google-desc"]');
 
     if (currentUser?.google_connected) {
       if (btnConnectGoogle) btnConnectGoogle.style.display = 'none';
       if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'inline-flex';
-      if (googleViewBox) googleViewBox.style.display = 'block';
-      if (displayGoogleEmail) displayGoogleEmail.textContent = currentUser.google_email || currentUser.email;
       if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_connected_desc', 'Tu cuenta de Google está vinculada actualmente.');
     } else {
       if (btnConnectGoogle) btnConnectGoogle.style.display = 'inline-flex';
       if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'none';
-      if (googleViewBox) googleViewBox.style.display = 'none';
       if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_desc', 'Vincula tu cuenta de Google para iniciar sesión con un solo clic.');
     }
   }

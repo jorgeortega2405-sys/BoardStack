@@ -59,9 +59,9 @@
 .split-pages-grid {
   box-sizing: border-box;
   display: grid;
-  gap: 16px;
+  gap: 8px;
   grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-  padding: 8px 2px 4px 2px;
+  padding: 0 2px 4px 2px;
   width: 100%;
 }
 
@@ -939,10 +939,10 @@
   flex: 1;
   flex-direction: column;
   height: 100%;
-  justify-content: center;
-  margin: auto;
+  justify-content: flex-start;
+  margin: 0;
   min-height: 460px;
-  padding: 48px 24px;
+  padding: 64px 24px 32px;
   position: relative;
   text-align: center;
   width: 100%;

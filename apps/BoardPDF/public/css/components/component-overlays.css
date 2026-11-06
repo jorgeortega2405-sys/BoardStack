@@ -661,9 +661,10 @@ body.modal-open {
   box-sizing: border-box;
   cursor: pointer;
   display: flex;
-  gap: 10px;
-  min-height: 48px;
-  padding: 8px 12px;
+  gap: 12px;
+  min-height: 64px;
+  height: auto;
+  padding: 12px 14px;
   text-align: left;
   text-decoration: none;
   transition: background-color var(--sl-transition-fast, 0.15s ease), border-color var(--sl-transition-fast, 0.15s ease);
@@ -699,13 +700,13 @@ body.modal-open {
   box-shadow: 0 0 0 2px var(--bg-surface, #ffffff);
   display: flex;
   flex-shrink: 0;
-  height: 34px;
+  height: 38px;
   justify-content: center;
-  margin: 4px;
-  min-width: 34px;
+  margin: 0;
+  min-width: 38px;
   overflow: visible !important;
   position: relative;
-  width: 34px;
+  width: 38px;
 }
 
 .account-item__avatar .avatar-img,

@@ -2,6 +2,7 @@ import { config } from '../config/env.config.js';
 import { normalizeTierKey, PLAN_TIER_CONFIGS } from '../config/plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
+import { generateInvoicePdf } from '../services/invoice.service.js';
 import { logger } from '../services/logger.service.js';
 import { purchaseService } from '../services/purchase.service.js';
 import { stripeService } from '../services/stripe.service.js';
@@ -157,6 +158,41 @@ export async function getPurchaseHistory(req: Request, res: Response): Promise<v
     sendSuccess(res, { purchases, success: true });
   } catch (error) {
     sendInternalError(res, 'Error al obtener historial de compras', error, 'Error al obtener el historial de compras.');
+  }
+}
+
+export async function downloadPurchaseInvoice(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res);
+      return;
+    }
+
+    const purchaseId = Number(req.params.id);
+    if (!purchaseId || isNaN(purchaseId)) {
+      sendBadRequest(res, 'ID de compra inválido.');
+      return;
+    }
+
+    const purchase = await purchaseService.getPurchaseById(purchaseId, user.id);
+    if (!purchase) {
+      sendBadRequest(res, 'No se encontró el registro de la compra solicitada.');
+      return;
+    }
+
+    const pdfBytes = await generateInvoicePdf(purchase, {
+      email: user.email,
+      id: user.id,
+      username: user.username,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Factura-BoardPDF-${purchase.id}.pdf"`);
+    res.setHeader('Content-Length', pdfBytes.length);
+    res.status(200).end(Buffer.from(pdfBytes));
+  } catch (error) {
+    sendInternalError(res, 'Error al generar factura de compra', error, 'No se pudo generar la factura solicitada.');
   }
 }
 

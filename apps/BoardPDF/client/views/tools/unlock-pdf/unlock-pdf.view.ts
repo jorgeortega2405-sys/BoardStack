@@ -138,7 +138,7 @@ export class UnlockPdfController implements ViewController {
 
     this.phaseManager?.setPhase('workspace');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
       outputNameInput.value = `${base}_desbloqueado.pdf`;

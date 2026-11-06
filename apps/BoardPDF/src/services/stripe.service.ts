@@ -924,10 +924,32 @@ export class StripeService {
       return { hasSubscription: false, success: true, tier: 'free' };
     }
 
+    const purchases = await purchaseService.getPurchasesByUserId(userId);
+    const latestPurchase = purchases.find((p) => p.status === 'completed') || purchases[0];
+
+    const isNonFree = Boolean(billing.subscription_tier && billing.subscription_tier !== 'free');
+    const isOneTime = Boolean(
+      latestPurchase?.billing_period?.includes('one_time') ||
+      (!billing.stripe_subscription_id && isNonFree)
+    );
+    const periodEndIso = billing.subscription_period_end ? billing.subscription_period_end.toISOString() : null;
+
     if (!billing.stripe_subscription_id) {
+      const isActive = isNonFree && (billing.subscription_status === 'active' || Boolean(billing.subscription_period_end && new Date(billing.subscription_period_end).getTime() > Date.now()));
+      const isYearly = latestPurchase?.billing_period === 'one_time_yearly' || latestPurchase?.billing_period === 'yearly';
+
       return {
-        hasSubscription: false,
-        status: 'inactive',
+        amount: latestPurchase ? Number(latestPurchase.amount_total) : undefined,
+        billing_period: latestPurchase?.billing_period || (isYearly ? 'one_time_yearly' : 'one_time_monthly'),
+        cancel_at_period_end: false,
+        current_period_end: periodEndIso,
+        customer_id: billing.stripe_customer_id,
+        hasSubscription: isActive,
+        interval: isYearly ? 'year' : 'month',
+        is_one_time: true,
+        status: isActive ? 'active' : 'inactive',
+        stripe_subscription_id: null,
+        subscription_id: null,
         success: true,
         tier: billing.subscription_tier,
       };
@@ -939,14 +961,18 @@ export class StripeService {
       const rawStart = (sub as any).current_period_start;
       const item = sub.items?.data?.[0];
       const interval: 'month' | 'year' = item?.price?.recurring?.interval === 'year' ? 'year' : 'month';
+      const unitAmount = item?.price?.unit_amount;
 
       return {
+        amount: typeof unitAmount === 'number' ? unitAmount / 100 : (latestPurchase ? Number(latestPurchase.amount_total) : undefined),
+        billing_period: (latestPurchase?.billing_period as any) || (interval === 'year' ? 'yearly' : 'monthly'),
         cancel_at_period_end: Boolean(sub.cancel_at_period_end),
-        current_period_end: typeof rawEnd === 'number' ? new Date(rawEnd * 1000).toISOString() : null,
+        current_period_end: typeof rawEnd === 'number' ? new Date(rawEnd * 1000).toISOString() : periodEndIso,
         current_period_start: typeof rawStart === 'number' ? new Date(rawStart * 1000).toISOString() : null,
         customer_id: typeof sub.customer === 'string' ? sub.customer : (sub.customer as any)?.id,
         hasSubscription: sub.status === 'active' || sub.status === 'trialing',
         interval,
+        is_one_time: false,
         status: sub.status,
         stripe_subscription_id: sub.id,
         subscription_id: sub.id,
@@ -954,10 +980,19 @@ export class StripeService {
         tier: billing.subscription_tier,
       };
     } catch {
+      const isYearly = latestPurchase?.billing_period === 'yearly' || latestPurchase?.billing_period === 'one_time_yearly';
+      const isActive = billing.subscription_status === 'active' || isNonFree;
+
       return {
-        current_period_end: billing.subscription_period_end ? billing.subscription_period_end.toISOString() : null,
-        hasSubscription: billing.subscription_status === 'active',
-        status: billing.subscription_status,
+        amount: latestPurchase ? Number(latestPurchase.amount_total) : undefined,
+        billing_period: latestPurchase?.billing_period || (isYearly ? 'yearly' : 'monthly'),
+        cancel_at_period_end: false,
+        current_period_end: periodEndIso,
+        customer_id: billing.stripe_customer_id,
+        hasSubscription: isActive,
+        interval: isYearly ? 'year' : 'month',
+        is_one_time: isOneTime,
+        status: billing.subscription_status || 'active',
         stripe_subscription_id: billing.stripe_subscription_id,
         subscription_id: billing.stripe_subscription_id,
         success: true,

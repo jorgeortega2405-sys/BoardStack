@@ -1,6 +1,6 @@
 import { config } from '../config/env.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addAccountToSession } from '../services/auth.service.js';
+import { addAccountToSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { permissionService } from '../services/permission.service.js';
 import { createUser, findUserByEmail, findUserByGoogleId, findUserById, generateUniqueUsername, linkGoogleAccount, unlinkGoogleAccount, updateUserLastLogin } from '../services/user.service.js';
@@ -159,6 +159,10 @@ export async function handleGoogleCallback(req: Request, res: Response): Promise
       }
 
       await linkGoogleAccount(targetUserId, googleId, googleEmail);
+      updateActiveAccountInSession(res, req, {
+        google_connected: true,
+        google_email: googleEmail,
+      });
       logger.security.info('Cuenta de Google vinculada', { googleEmail, targetUserId });
       res.redirect('/settings/your-account?success=google_connected');
       return;
@@ -181,7 +185,7 @@ export async function handleGoogleCallback(req: Request, res: Response): Promise
         .slice(0, 20);
       const uniqueUsername = await generateUniqueUsername(preferred);
       await createUser({
-        avatarUrl: profile.picture || null,
+        avatarUrl: null,
         email: googleEmail,
         googleEmail,
         googleId,
@@ -240,6 +244,10 @@ export async function disconnectGoogleHandler(req: Request, res: Response): Prom
     }
 
     await unlinkGoogleAccount(user.id);
+    updateActiveAccountInSession(res, req, {
+      google_connected: false,
+      google_email: null,
+    });
     logger.security.info('Cuenta de Google desconectada', { userId: user.id });
     res.json({ message: 'Cuenta de Google desconectada exitosamente.', ok: true });
   } catch (err) {

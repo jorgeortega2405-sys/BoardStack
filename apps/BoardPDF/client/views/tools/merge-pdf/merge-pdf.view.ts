@@ -472,23 +472,25 @@ export class MergePdfController implements ViewController {
     const txtTotalFiles = this.container.querySelector<HTMLElement>('[data-ref="txt-total-files"]');
     const txtTotalSize = this.container.querySelector<HTMLElement>('[data-ref="txt-total-size"]');
     const txtTotalPages = this.container.querySelector<HTMLElement>('[data-ref="txt-total-pages"]');
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
 
     if (txtTotalFiles) txtTotalFiles.textContent = totalFiles.toString();
     if (txtTotalSize) txtTotalSize.textContent = formatBytes(totalBytes);
     if (txtTotalPages) txtTotalPages.textContent = totalPages.toString();
 
-    if (outputNameInput && !outputNameInput.value.trim() && this.selectedFiles.length > 0) {
-      const firstBase = this.selectedFiles[0].name.replace(/\.pdf$/i, '');
-      outputNameInput.value = `${firstBase}_unido.pdf`;
+    if (outputNameInput && !outputNameInput.value.trim()) {
+      outputNameInput.value = 'BoardPDF_merged';
     }
   }
 
   private async executeMergePdf(): Promise<void> {
     if (this.selectedFiles.length < 2 || this.isProcessing) return;
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
-    const customFilename = outputNameInput?.value.trim() || 'documento_unido.pdf';
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+    let customFilename = outputNameInput?.value.trim() || 'BoardPDF_merged';
+    if (!customFilename.toLowerCase().endsWith('.pdf')) {
+      customFilename += '.pdf';
+    }
 
     const formData = new FormData();
     formData.append('filename', customFilename);

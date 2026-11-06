@@ -233,7 +233,7 @@ export class WatermarkPdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-watermark"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
-    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
 
     this.phaseManager?.setPhase('workspace');
 
@@ -343,7 +343,7 @@ export class WatermarkPdfController implements ViewController {
 
     await withButtonLoading(button, async () => {
       try {
-        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
         const customFilename = outputNameInput?.value.trim();
 
         const formData = new FormData();
@@ -417,7 +417,7 @@ export class WatermarkPdfController implements ViewController {
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_marca_de_agua.pdf';
     if (this.sidebarModal) this.sidebarModal.close();
 

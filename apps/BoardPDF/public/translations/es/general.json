@@ -667,6 +667,10 @@
       "subtitle": "Gestiona tu plan actual, opciones de renovación y detalles de facturación.",
       "subscription_accordion_title": "Plan y suscripción",
       "subscription_accordion_desc": "Gestiona el estado de tu plan activo y ciclos de facturación.",
+      "tokens_title": "Tokens de Inteligencia Artificial",
+      "tokens_desc": "Créditos mensuales para resumir, redactar preguntas interactivas y chatear con documentos PDF mediante IA. Se restablecen automáticamente al inicio de cada ciclo.",
+      "storage_title": "Almacenamiento de tu cuenta",
+      "storage_desc": "Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.",
       "btn_upgrade_plan": "Explorar planes",
       "btn_change_plan": "Cambiar de plan",
       "btn_explore_plans": "Explorar planes",
@@ -708,7 +712,14 @@
       "empty_title": "No hay compras registradas",
       "empty_desc": "Aún no has realizado ninguna compra o suscripción en BoardPDF.",
       "search_no_results": "No se encontraron compras que coincidan con la búsqueda.",
-      "status_completed": "Completado"
+      "status_completed": "Completado",
+      "col_invoice": "Factura",
+      "btn_download_invoice": "Descargar factura",
+      "download_invoice_tooltip": "Descargar factura en PDF",
+      "invoice_download_success": "Factura descargada con éxito.",
+      "period_one_time": "Pago único",
+      "period_one_time_monthly": "Pago único (1 mes)",
+      "period_one_time_yearly": "Pago único (1 año)"
     }
   },
   "org": {
@@ -775,6 +786,49 @@
       "btn_save": "Guardar configuración",
       "btn_test": "Probar conexión",
       "saved": "Configuración SAML/SSO guardada exitosamente."
+    }
+  },
+  "collab": {
+    "animals": {
+      "squirrel_agile": "Ardilla Ágil",
+      "owl_wise": "Búho Sabio",
+      "chameleon_magic": "Camaleón Mágico",
+      "kangaroo_rebel": "Canguro Rebelde",
+      "beaver_clever": "Castor Ingenioso",
+      "swan_noble": "Cisne Noble",
+      "hummingbird_swift": "Colibrí Veloz",
+      "dolphin_playful": "Delfín Saltarín",
+      "hedgehog_kind": "Erizo Amable",
+      "flamingo_zen": "Flamenco Zen",
+      "seal_playful": "Foca Juguetona",
+      "cat_cosmic": "Gato Cósmico",
+      "cheetah_fast": "Gepardo Rápido",
+      "falcon_sharp": "Halcón Certero",
+      "jaguar_mystic": "Jaguar Místico",
+      "giraffe_curious": "Jirafa Curiosa",
+      "koala_happy": "Koala Feliz",
+      "lemur_playful": "Lémur Travieso",
+      "lion_radiant": "León Radiante",
+      "lynx_arctic": "Lince Ártico",
+      "llama_magic": "Llama Mágica",
+      "wolf_swift": "Lobo Veloz",
+      "raccoon_creative": "Mapache Creativo",
+      "monkey_cheerful": "Mono Alegre",
+      "otter_agile": "Nutria Ágil",
+      "bear_friendly": "Oso Amigable",
+      "panda_curious": "Panda Curioso",
+      "sloth_chill": "Perezoso Relajado",
+      "dog_loyal": "Perro Leal",
+      "penguin_elegant": "Pingüino Elegante",
+      "octopus_genius": "Pulpo Genio",
+      "frog_jumping": "Rana Saltarina",
+      "rhino_strong": "Rinoceronte Fuerte",
+      "meerkat_alert": "Suricato Atento",
+      "badger_bold": "Tejón Audaz",
+      "tiger_brave": "Tigre Valiente",
+      "turtle_wise": "Tortuga Sabia",
+      "toucan_colorful": "Tucán Colorido",
+      "fox_clever": "Zorro Astuto"
     }
   }
 }

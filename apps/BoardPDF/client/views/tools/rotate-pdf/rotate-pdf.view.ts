@@ -154,7 +154,7 @@ export class RotatePdfController implements ViewController {
 
     this.phaseManager?.setPhase('workspace');
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
       outputNameInput.value = `${base}_rotado.pdf`;
@@ -279,7 +279,7 @@ export class RotatePdfController implements ViewController {
 
     await withButtonLoading(button, async () => {
       try {
-        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+        const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
         const customFilename = outputNameInput?.value.trim();
 
         const formData = new FormData();
@@ -350,7 +350,7 @@ export class RotatePdfController implements ViewController {
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="rotate-pages-grid"]');
     if (pagesGrid) pagesGrid.innerHTML = '';
 
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = 'documento_rotado.pdf';
 
     this.sidebarModal?.close();

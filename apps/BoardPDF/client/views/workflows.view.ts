@@ -46,9 +46,6 @@ export class WorkflowsController {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="workflows-grid"]');
     if (!grid) return;
 
-    const count = this.workflows.length;
-    const isAtLimit = count >= MAX_WORKFLOWS_LIMIT;
-
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow">
         <div class="tool-card__icon-box" data-ref="icon-box-create-workflow">
@@ -56,11 +53,6 @@ export class WorkflowsController {
         </div>
         <h3 class="tool-card__title" data-ref="title-create-workflow">Crear flujo de trabajo</h3>
         <p class="tool-card__desc" data-ref="desc-create-workflow">Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.</p>
-        <div class="tool-card__meta" data-ref="meta-create-workflow">
-          <span class="component-badge component-badge--sm${isAtLimit ? ' component-badge--warning' : ''}" data-ref="badge-workflows-limit">
-            ${count} / ${MAX_WORKFLOWS_LIMIT} flujos guardados
-          </span>
-        </div>
       </div>
     `;
 

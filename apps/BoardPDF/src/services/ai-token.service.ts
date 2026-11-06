@@ -103,6 +103,25 @@ export async function getUserTokenBalance(userId: number, permissions?: string[]
     resetAt = nextResetDate;
 
     logger.db.info('Cuota mensual de tokens IA restablecida', { limit: maxLimit, userId });
+  } else if (currentBalance < maxLimit) {
+    try {
+      const [consumedRows] = await pool.query<RowDataPacket[]>(
+        'SELECT COALESCE(SUM(tokens_consumed), 0) AS total_consumed FROM ai_token_logs WHERE user_id = ? AND created_at >= ?',
+        [userId, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)]
+      );
+      const totalConsumed = Number((consumedRows as any[])?.[0]?.total_consumed) || 0;
+      const expectedBalance = Math.max(0, maxLimit - totalConsumed);
+      if (currentBalance < expectedBalance) {
+        await pool.query(
+          'UPDATE users SET ai_tokens_balance = ? WHERE id = ?',
+          [expectedBalance, userId]
+        );
+        currentBalance = expectedBalance;
+        logger.db.info('Balance de tokens ajustado a la cuota del plan activo', { balance: expectedBalance, maxLimit, userId });
+      }
+    } catch (err) {
+      logger.db.warn('Error al verificar balance esperado de tokens', err);
+    }
   }
 
   return {

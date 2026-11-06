@@ -308,7 +308,7 @@ export class CropPdfController implements ViewController {
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
-    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
 
     this.phaseManager?.setPhase('workspace');
 
@@ -511,7 +511,7 @@ export class CropPdfController implements ViewController {
 
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="crop-pdf-workspace"]');
-    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
 
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');

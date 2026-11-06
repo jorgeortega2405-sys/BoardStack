@@ -158,6 +158,12 @@ export class ToolPhaseManager {
       if (settingsBtn) settingsBtn.classList.add('is-visible');
       showElement(fabMore);
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
+
+      const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+      if (docTitleInput && !docTitleInput.value.trim()) {
+        docTitleInput.value = this.getGenericDocumentTitle();
+      }
+
       renderIcons(this.container);
       return;
     }
@@ -266,6 +272,33 @@ export class ToolPhaseManager {
       if (el) return el;
     }
     return this.container.querySelector<HTMLElement>('[data-ref="tool-footer"], .tool-footer, .collaborative-footer');
+  }
+
+  public getGenericDocumentTitle(): string {
+    const titles: Record<string, string> = {
+      'compare-pdf': 'BoardPDF_compared',
+      'compress-pdf': 'BoardPDF_compressed',
+      'crop-pdf': 'BoardPDF_cropped',
+      'edit-pdf': 'BoardPDF_edited',
+      'merge-pdf': 'BoardPDF_merged',
+      'ocr-pdf': 'BoardPDF_ocr',
+      'organize-pdf': 'BoardPDF_organized',
+      'page-numbers': 'BoardPDF_numbered',
+      'pdf-converter': 'BoardPDF_converted',
+      'pdf-to-markdown': 'BoardPDF_markdown',
+      'protect-pdf': 'BoardPDF_protected',
+      'redact-pdf': 'BoardPDF_redacted',
+      'remove-pdf-pages': 'BoardPDF_removed_pages',
+      'repair-pdf': 'BoardPDF_repaired',
+      'rotate-pdf': 'BoardPDF_rotated',
+      'split-pdf': 'BoardPDF_split',
+      'summarize-pdf': 'BoardPDF_summary',
+      'to-pdf-converter': 'BoardPDF_converted',
+      'translate-pdf': 'BoardPDF_translated',
+      'unlock-pdf': 'BoardPDF_unlocked',
+      'watermark-pdf': 'BoardPDF_watermarked',
+    };
+    return titles[this.options.toolId] || `BoardPDF_${(this.options.toolId || 'document').replace(/-/g, '_')}`;
   }
 
   public destroy(): void {

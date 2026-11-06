@@ -435,6 +435,26 @@ export async function getPurchaseHistoryApi(): Promise<{ purchases: any[]; succe
   }
 }
 
+export async function downloadInvoiceApi(purchaseId: number | string): Promise<{ blob?: Blob; error?: string; filename?: string; success: boolean }> {
+  try {
+    const res = await getApi(`/api/subscription/purchases/${encodeURIComponent(purchaseId)}/invoice`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      return { error: data?.error || 'No se pudo descargar la factura.', success: false };
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('content-disposition');
+    let filename = `Factura-BoardPDF-${purchaseId}.pdf`;
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename=["']?([^"';]+)["']?/);
+      if (match && match[1]) filename = match[1];
+    }
+    return { blob, filename, success: true };
+  } catch {
+    return { error: 'Error de red al intentar descargar la factura.', success: false };
+  }
+}
+
 export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<any> {
   try {
     const res = await postApi('/api/subscription/renewal', { cancelAtPeriodEnd });

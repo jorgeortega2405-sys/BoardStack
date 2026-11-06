@@ -1,3 +1,5 @@
+import { API_ROUTES } from '../config/api-routes.js';
+import { getApi, postApi } from './api.service.js';
 import { showToast } from './toast.service.js';
 
 export const GOOGLE_DRIVE_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || '';
@@ -77,6 +79,25 @@ export function getGoogleDriveToken(): string | null {
   }
 }
 
+export async function getOrFetchGoogleDriveToken(): Promise<string | null> {
+  const local = getGoogleDriveToken();
+  if (local) return local;
+
+  try {
+    const res = await getApi(API_ROUTES.settings.cloudIntegrationsToken('google_drive'));
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok && data.accessToken) {
+        sessionStorage.setItem(STORAGE_KEY_TOKEN, data.accessToken);
+        sessionStorage.setItem(STORAGE_KEY_EXPIRES, String(Date.now() + 3500 * 1000));
+        return data.accessToken;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 export function isGoogleDriveConnected(): boolean {
   return Boolean(getGoogleDriveToken());
 }
@@ -118,6 +139,28 @@ export async function connectGoogleDrive(): Promise<{ error?: string; success: b
           sessionStorage.setItem(STORAGE_KEY_TOKEN, response.access_token);
           sessionStorage.setItem(STORAGE_KEY_EXPIRES, String(expiresAt));
 
+          void (async () => {
+            try {
+              let email: string | undefined;
+              try {
+                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${response.access_token}` },
+                });
+                if (userInfoRes.ok) {
+                  const userInfo = await userInfoRes.json();
+                  email = userInfo.email;
+                }
+              } catch {}
+
+              await postApi(API_ROUTES.settings.cloudIntegrationsConnect, {
+                accessToken: response.access_token,
+                accountEmail: email,
+                expiresInSec,
+                provider: 'google_drive',
+              });
+            } catch {}
+          })();
+
           resolve({ success: true, token: response.access_token });
         },
         client_id: GOOGLE_DRIVE_CLIENT_ID,
@@ -139,7 +182,7 @@ export async function pickGoogleDriveFiles(options: {
   mimeTypes?: string[];
   multiselect?: boolean;
 } = {}): Promise<File[]> {
-  let token = getGoogleDriveToken();
+  let token = await getOrFetchGoogleDriveToken();
 
   if (!token) {
     const authResult = await connectGoogleDrive();
@@ -236,7 +279,7 @@ export async function pickGoogleDriveFiles(options: {
 }
 
 export async function exportToGoogleDrive(downloadUrl: string, filename: string): Promise<void> {
-  let token = getGoogleDriveToken();
+  let token = await getOrFetchGoogleDriveToken();
   if (!token) {
     const auth = await connectGoogleDrive();
     if (!auth.success || !auth.token) {

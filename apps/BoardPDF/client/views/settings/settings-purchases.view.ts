@@ -1,9 +1,10 @@
-import { escapeHtml, getPurchaseHistoryApi } from '../../services/api.service.js';
+import { downloadInvoiceApi, escapeHtml, getPurchaseHistoryApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
+import { showToast } from '../../services/toast.service.js';
 import { PurchaseRecord } from '../../types/subscription.types.js';
-import { removeEmptyState, renderEmptyState } from '../../utils/dom.util.js';
+import { removeEmptyState, renderEmptyState, withButtonLoading } from '../../utils/dom.util.js';
 
 export async function createPurchasesView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/purchases.html');
@@ -17,9 +18,45 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
   const searchInput = container.querySelector<HTMLInputElement>('[data-ref="purchases-search-input"]');
   const btnClearSearch = container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+  const btnActionDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-action-download-invoice"]');
 
   let allPurchases: PurchaseRecord[] = [];
+  let currentlyDisplayedPurchases: PurchaseRecord[] = [];
+  let selectedPurchaseId: number | string | null = null;
   let isSearchActive = false;
+
+  const updateSelectionState = () => {
+    if (selectedPurchaseId) {
+      btnActionDownloadInvoice?.classList.remove('is-hidden');
+    } else {
+      btnActionDownloadInvoice?.classList.add('is-hidden');
+    }
+  };
+
+  btnActionDownloadInvoice?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!selectedPurchaseId) return;
+
+    await withButtonLoading(btnActionDownloadInvoice, async () => {
+      const res = await downloadInvoiceApi(selectedPurchaseId!);
+      if (res.success && res.blob) {
+        const url = window.URL.createObjectURL(res.blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = res.filename || `Factura-BoardPDF-${selectedPurchaseId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+        showToast(t('settings.purchases.invoice_download_success') || 'Factura descargada correctamente.', 'success');
+      } else {
+        showToast(res.error || t('common.error_occurred') || 'Error al descargar la factura.', 'danger');
+      }
+    });
+  });
 
   const toggleSearchToolbar = (forceState?: boolean) => {
     isSearchActive = forceState !== undefined ? forceState : !isSearchActive;
@@ -108,6 +145,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   });
 
   const renderRows = (purchases: PurchaseRecord[], isSearchResult = false) => {
+    currentlyDisplayedPurchases = purchases;
     if (!tbody) return;
 
     if (purchases.length === 0) {
@@ -126,6 +164,8 @@ export async function createPurchasesView(): Promise<HTMLElement> {
             : t('settings.purchases.empty_title') || 'No hay compras registradas',
         });
       }
+      selectedPurchaseId = null;
+      updateSelectionState();
       return;
     }
 
@@ -136,13 +176,26 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 
     tbody.innerHTML = '';
     purchases.forEach((p) => {
+      const isSelected = selectedPurchaseId === p.id;
       const row = document.createElement('tr');
+      row.className = `component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}`;
       row.setAttribute('data-ref', `purchase-row-${p.id}`);
 
       const planName = (p.plan_id || 'Pro').toUpperCase();
-      const periodName = p.billing_period === 'yearly'
-        ? t('pricing.billing_yearly') || 'Anual'
-        : t('pricing.billing_monthly') || 'Mensual';
+      const bp = String(p.billing_period || '');
+      let periodName = 'Mensual';
+      if (bp === 'one_time_monthly') {
+        periodName = t('settings.purchases.period_one_time_monthly') || 'Pago único (1 mes)';
+      } else if (bp === 'one_time_yearly') {
+        periodName = t('settings.purchases.period_one_time_yearly') || 'Pago único (1 año)';
+      } else if (bp === 'yearly') {
+        periodName = t('pricing.billing_yearly') || 'Anual';
+      } else if (bp === 'one_time') {
+        periodName = t('settings.purchases.period_one_time') || 'Pago único';
+      } else {
+        periodName = t('pricing.billing_monthly') || 'Mensual';
+      }
+
       const amount = Number(p.amount_total || 0).toFixed(2);
       const currency = (p.currency || 'USD').toUpperCase();
 
@@ -196,9 +249,19 @@ export async function createPurchasesView(): Promise<HTMLElement> {
         </td>
       `;
 
+      row.addEventListener('click', () => {
+        if (p.id !== undefined && selectedPurchaseId === p.id) {
+          selectedPurchaseId = null;
+        } else {
+          selectedPurchaseId = p.id ?? null;
+        }
+        renderRows(currentlyDisplayedPurchases, isSearchResult);
+      });
+
       tbody.appendChild(row);
     });
 
+    updateSelectionState();
     renderIcons(tbody);
   };
 

@@ -1,3 +1,4 @@
+import { handleConnectCloudIntegration, handleDisconnectCloudIntegration, handleGetCloudAccessToken, handleGetCloudIntegrations } from '../controllers/cloud-integration.controller.js';
 import { disconnectGoogleHandler } from '../controllers/google-auth.controller.js';
 import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleGetStorageStats, handleRequestEmailChangeCode, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
@@ -56,6 +57,11 @@ router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurr
 router.post('/settings/password', updatePasswordLimiter, handleUpdatePassword);
 
 router.post('/settings/google/disconnect', disconnectGoogleHandler);
+
+router.get('/settings/cloud-integrations', handleGetCloudIntegrations);
+router.post('/settings/cloud-integrations/connect', handleConnectCloudIntegration);
+router.post('/settings/cloud-integrations/disconnect', handleDisconnectCloudIntegration);
+router.get('/settings/cloud-integrations/token/:provider', handleGetCloudAccessToken);
 
 router.get('/settings/2fa/status', handleGet2FAStatus);
 router.post('/settings/2fa/generate', twoFactorGenerateLimiter, handleGenerate2FA);

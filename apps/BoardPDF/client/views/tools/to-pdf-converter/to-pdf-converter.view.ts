@@ -748,6 +748,13 @@ export class ToPdfConverterController implements ViewController {
           formData.append('file', this.currentFile as Blob, this.currentFile.name);
         }
 
+        const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+        let customFilename = docTitleInput?.value.trim();
+        if (customFilename) {
+          if (!customFilename.toLowerCase().endsWith('.pdf')) customFilename += '.pdf';
+          formData.append('filename', customFilename);
+        }
+
         const response = await postFormWithProgress(
           API_ROUTES.tools.toPdfConverter.convert,
           formData,
@@ -771,7 +778,7 @@ export class ToPdfConverterController implements ViewController {
         this.phaseManager?.navigateToDownload({
           downloadUrl: data.downloadUrl,
           fileSize: data.fileSize,
-          filename: data.filename,
+          filename: customFilename || data.filename,
           returnText: this.config.title,
           returnUrl: window.location.pathname,
           subtitle: this.currentUrl || this.config.sourceType === 'html-to-pdf'
