@@ -1,6 +1,7 @@
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { checkAuthSession, currentUser, deleteApi, getApi, postApi, postFormApi, setCurrentUser } from '../../services/api.service.js';
+import { connectGoogleDrive, disconnectGoogleDrive } from '../../services/google-drive.service.js';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
@@ -25,6 +26,7 @@ export class SettingsAccountController implements ViewController {
     this.abortController = new AbortController();
     await checkAuthSession();
     this.populateUserData();
+    this.loadCloudIntegrations();
     this.setupLanguageDropdown();
     this.bindEvents();
     this.checkUrlParams();
@@ -543,6 +545,169 @@ export class SettingsAccountController implements ViewController {
         }
       });
     }, { signal });
+
+    const btnConnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-gdrive"]');
+    const btnDisconnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-gdrive"]');
+    const gdriveErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="gdrive-error"]');
+    const gdriveSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="gdrive-success"]');
+
+    btnConnectGdrive?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (gdriveErrorBanner) gdriveErrorBanner.style.display = 'none';
+      if (gdriveSuccessBanner) gdriveSuccessBanner.style.display = 'none';
+
+      await withButtonLoading(btnConnectGdrive, async () => {
+        const result = await connectGoogleDrive();
+        if (result.success) {
+          showToast(t('settings.your_account.gdrive_connected_toast', 'Google Drive vinculado exitosamente.'), 'success');
+          await this.loadCloudIntegrations();
+        } else {
+          if (gdriveErrorBanner) {
+            gdriveErrorBanner.textContent = result.error || t('common.error_occurred', 'Error al conectar Google Drive.');
+            gdriveErrorBanner.style.display = 'block';
+          }
+        }
+      });
+    }, { signal });
+
+    btnDisconnectGdrive?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (gdriveErrorBanner) gdriveErrorBanner.style.display = 'none';
+      if (gdriveSuccessBanner) gdriveSuccessBanner.style.display = 'none';
+
+      await withButtonLoading(btnDisconnectGdrive, async () => {
+        try {
+          const res = await postApi(API_ROUTES.settings.cloudIntegrationsDisconnect, { provider: 'google_drive' });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            if (gdriveErrorBanner) {
+              gdriveErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desvincular Google Drive.');
+              gdriveErrorBanner.style.display = 'block';
+            }
+            return;
+          }
+          disconnectGoogleDrive();
+          showToast(t('settings.your_account.gdrive_disconnected_toast', 'Google Drive desvinculado exitosamente.'), 'success');
+          await this.loadCloudIntegrations();
+        } catch (_) {
+          if (gdriveErrorBanner) {
+            gdriveErrorBanner.textContent = t('common.error_occurred', 'Error al desvincular Google Drive.');
+            gdriveErrorBanner.style.display = 'block';
+          }
+        }
+      });
+    }, { signal });
+
+    const btnConnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-dropbox"]');
+    const btnDisconnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-dropbox"]');
+    const dropboxErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="dropbox-error"]');
+    const dropboxSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="dropbox-success"]');
+
+    btnConnectDropbox?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (dropboxErrorBanner) dropboxErrorBanner.style.display = 'none';
+      if (dropboxSuccessBanner) dropboxSuccessBanner.style.display = 'none';
+
+      await withButtonLoading(btnConnectDropbox, async () => {
+        try {
+          const res = await postApi(API_ROUTES.settings.cloudIntegrationsConnect, {
+            accessToken: 'dropbox_active',
+            provider: 'dropbox',
+          });
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            showToast(t('settings.your_account.dropbox_connected_toast', 'Cuenta de Dropbox vinculada exitosamente.'), 'success');
+            await this.loadCloudIntegrations();
+          } else {
+            if (dropboxErrorBanner) {
+              dropboxErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al vincular Dropbox.');
+              dropboxErrorBanner.style.display = 'block';
+            }
+          }
+        } catch (_) {
+          if (dropboxErrorBanner) {
+            dropboxErrorBanner.textContent = t('common.error_occurred', 'Error al vincular Dropbox.');
+            dropboxErrorBanner.style.display = 'block';
+          }
+        }
+      });
+    }, { signal });
+
+    btnDisconnectDropbox?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (dropboxErrorBanner) dropboxErrorBanner.style.display = 'none';
+      if (dropboxSuccessBanner) dropboxSuccessBanner.style.display = 'none';
+
+      await withButtonLoading(btnDisconnectDropbox, async () => {
+        try {
+          const res = await postApi(API_ROUTES.settings.cloudIntegrationsDisconnect, { provider: 'dropbox' });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            if (dropboxErrorBanner) {
+              dropboxErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desvincular Dropbox.');
+              dropboxErrorBanner.style.display = 'block';
+            }
+            return;
+          }
+          showToast(t('settings.your_account.dropbox_disconnected_toast', 'Cuenta de Dropbox desvinculada exitosamente.'), 'success');
+          await this.loadCloudIntegrations();
+        } catch (_) {
+          if (dropboxErrorBanner) {
+            dropboxErrorBanner.textContent = t('common.error_occurred', 'Error al desvincular Dropbox.');
+            dropboxErrorBanner.style.display = 'block';
+          }
+        }
+      });
+    }, { signal });
+  }
+
+  private async loadCloudIntegrations(): Promise<void> {
+    const btnConnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-gdrive"]');
+    const btnDisconnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-gdrive"]');
+    const itemGdriveDesc = this.container.querySelector<HTMLElement>('[data-ref="item-gdrive-desc"]');
+
+    const btnConnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-dropbox"]');
+    const btnDisconnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-dropbox"]');
+    const itemDropboxDesc = this.container.querySelector<HTMLElement>('[data-ref="item-dropbox-desc"]');
+
+    try {
+      const res = await getApi(API_ROUTES.settings.cloudIntegrations);
+      const data = await res.json();
+      if (res.ok && data.ok && Array.isArray(data.integrations)) {
+        const gdrive = data.integrations.find((i: any) => i.provider === 'google_drive' && i.is_active);
+        const dropbox = data.integrations.find((i: any) => i.provider === 'dropbox' && i.is_active);
+
+        if (gdrive) {
+          if (btnConnectGdrive) btnConnectGdrive.style.display = 'none';
+          if (btnDisconnectGdrive) btnDisconnectGdrive.style.display = 'inline-flex';
+          if (itemGdriveDesc) {
+            itemGdriveDesc.textContent = gdrive.account_email
+              ? `Conectado como ${gdrive.account_email}`
+              : t('settings.your_account.gdrive_connected_desc', 'Tu cuenta de Google Drive está vinculada.');
+          }
+        } else {
+          if (btnConnectGdrive) btnConnectGdrive.style.display = 'inline-flex';
+          if (btnDisconnectGdrive) btnDisconnectGdrive.style.display = 'none';
+          if (itemGdriveDesc) {
+            itemGdriveDesc.textContent = t('settings.your_account.gdrive_desc', 'Conecta tu Google Drive para importar y exportar documentos PDF automáticamente.');
+          }
+        }
+
+        if (dropbox) {
+          if (btnConnectDropbox) btnConnectDropbox.style.display = 'none';
+          if (btnDisconnectDropbox) btnDisconnectDropbox.style.display = 'inline-flex';
+          if (itemDropboxDesc) {
+            itemDropboxDesc.textContent = t('settings.your_account.dropbox_connected_desc', 'Tu cuenta de Dropbox está vinculada.');
+          }
+        } else {
+          if (btnConnectDropbox) btnConnectDropbox.style.display = 'inline-flex';
+          if (btnDisconnectDropbox) btnDisconnectDropbox.style.display = 'none';
+          if (itemDropboxDesc) {
+            itemDropboxDesc.textContent = t('settings.your_account.dropbox_desc', 'Conecta tu cuenta de Dropbox para acceder a tus archivos sin autorizar en cada sesión.');
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   private populateUserData(): void {

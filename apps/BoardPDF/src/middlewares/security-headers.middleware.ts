@@ -8,7 +8,9 @@ export function buildContentSecurityPolicy(): string {
     "'self'",
     "'unsafe-inline'",
     'https://challenges.cloudflare.com',
+    'https://accounts.google.com',
     'https://apis.google.com',
+    'https://www.dropbox.com',
     'https://js.stripe.com',
   ];
   if (isDev) {
@@ -18,8 +20,11 @@ export function buildContentSecurityPolicy(): string {
   const connectDirectives = [
     "'self'",
     'https://challenges.cloudflare.com',
+    'https://accounts.google.com',
     'https://*.googleapis.com',
+    'https://*.google.com',
     'https://*.dropboxapi.com',
+    'https://*.dropbox.com',
     'https://api.stripe.com',
     'http://localhost:*',
     'https://localhost:*',
@@ -47,6 +52,9 @@ export function buildContentSecurityPolicy(): string {
       "'self'",
       'https://challenges.cloudflare.com',
       'https://accounts.google.com',
+      'https://docs.google.com',
+      'https://drive.google.com',
+      'https://www.dropbox.com',
       'https://js.stripe.com',
       'https://hooks.stripe.com',
     ],

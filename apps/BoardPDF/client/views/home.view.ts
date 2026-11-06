@@ -84,9 +84,6 @@ export class HomeController {
       `;
     }).join('');
 
-    const count = this.workflows.length;
-    const isAtLimit = count >= MAX_WORKFLOWS_LIMIT;
-
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow" data-category="workflows">
         <div class="tool-card__icon-box" data-ref="icon-box-create-workflow">
@@ -94,11 +91,6 @@ export class HomeController {
         </div>
         <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crear flujo de trabajo')}</h3>
         <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.')}</p>
-        <div class="tool-card__footer" data-ref="footer-create-workflow" style="align-items: center; display: flex; gap: 8px; margin-top: 10px;">
-          <span class="component-badge component-badge--sm${isAtLimit ? ' component-badge--warning' : ''}" data-ref="badge-workflows-limit" style="font-size: 11px;">
-            ${count} / ${MAX_WORKFLOWS_LIMIT} flujos guardados
-          </span>
-        </div>
       </div>
     `;
 

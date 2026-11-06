@@ -22,11 +22,13 @@
 }
 
 .component-button:hover {
-  border-color: var(--border-color-focus);
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
 }
 
 .component-button:active {
-  border-color: var(--border-color-focus);
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
   transform: scale(0.98);
 }
 
@@ -155,9 +157,14 @@
 }
 
 .component-button--icon.component-button--h40,
-.component-button--icon-only.component-button--h40 {
-  width: 40px;
-  min-width: 40px;
+.component-button--icon-only.component-button--h40,
+.dropdown .component-button--icon-only.component-button--h40.dropdown-trigger {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
 }
 
 .component-button--icon.component-button--h44,

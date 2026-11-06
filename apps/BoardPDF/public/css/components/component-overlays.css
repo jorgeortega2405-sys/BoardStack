@@ -653,7 +653,8 @@ body.modal-open {
   }
 }
 
-.account-item {
+.account-item,
+[data-ref="btn-switch-account-menu"] {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
@@ -662,16 +663,17 @@ body.modal-open {
   cursor: pointer;
   display: flex;
   gap: 12px;
-  min-height: 64px;
-  height: auto;
-  padding: 12px 14px;
+  min-height: 70px;
+  height: auto !important;
+  padding: 14px !important;
   text-align: left;
   text-decoration: none;
   transition: background-color var(--sl-transition-fast, 0.15s ease), border-color var(--sl-transition-fast, 0.15s ease);
   width: 100%;
 }
 
-.account-item:hover {
+.account-item:hover,
+[data-ref="btn-switch-account-menu"]:hover {
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
   border-color: var(--border-color-hover);
 }
