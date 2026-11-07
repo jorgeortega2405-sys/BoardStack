@@ -180,16 +180,6 @@ export class HomeController {
       { signal: this.abortController?.signal }
     );
 
-    const fabBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-home-create-doc"]');
-    fabBtn?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        navigate('/projects');
-      },
-      { signal: this.abortController?.signal }
-    );
-
     const pills = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="pill-cat-"]');
 
     pills.forEach((pill) => {

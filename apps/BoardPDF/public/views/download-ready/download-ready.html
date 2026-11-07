@@ -11,9 +11,8 @@
               <a class="component-button component-button--black tool-hero-dropzone__btn-select tool-hero-dropzone__btn-download" data-ref="btn-download-file" href="#" download>
                 <span data-ref="ready-btn-text">Descargar PDF</span>
               </a>
-              <div class="download-continue-badges" data-ref="continue-workflow-grid"></div>
             </div>
-            <div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready">
+            <div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready" data-ref="download-cloud-btns">
               <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-drive" data-tooltip="Google Drive" aria-label="Google Drive">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
               </button>
@@ -26,6 +25,15 @@
               <button type="button" class="tool-hero-dropzone__cloud-btn tool-hero-dropzone__cloud-btn--danger" data-ref="btn-delete-file" data-tooltip="Eliminar ahora" aria-label="Eliminar ahora">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
               </button>
+              <div class="dropdown download-continue-dropdown" data-ref="dropdown-continue-tools">
+                <button type="button" class="tool-hero-dropzone__cloud-btn dropdown-trigger" data-ref="btn-continue-tools" data-tooltip="Continuar con otra herramienta" aria-label="Continuar con otra herramienta">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-continue-tools"></div>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 download-continue-menu" data-ref="menu-continue-tools">
+                  <div class="menu-panel__list" data-ref="list-continue-tools"></div>
+                </div>
+              </div>
             </div>
           </div>
 

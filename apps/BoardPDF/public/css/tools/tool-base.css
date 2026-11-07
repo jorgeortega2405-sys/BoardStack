@@ -2473,10 +2473,25 @@
 }
 
 .tool-hero-dropzone__cloud-btns--ready {
+  align-items: center;
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(2, 36px);
+  grid-template-columns: repeat(3, 36px);
   grid-template-rows: repeat(2, 36px);
+}
+
+.download-continue-dropdown {
+  align-self: center;
+  display: flex;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  justify-self: center;
+  position: relative;
+}
+
+.download-continue-menu {
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .tool-hero-dropzone__cloud-btn--danger {
@@ -2570,16 +2585,16 @@
 }
 
 .tool-thankyou-card__badges {
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  box-sizing: border-box;
+  display: grid;
   gap: 10px;
-  justify-content: center;
+  grid-template-columns: repeat(2, 1fr);
   margin-top: 14px;
+  width: 100%;
 }
 
 .thankyou-badge {
+  align-items: center;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--sl-border-radius-pill, 9999px);
@@ -2591,8 +2606,10 @@
   font-size: 13px;
   font-weight: 500;
   gap: 8px;
+  justify-content: center;
   padding: 8px 16px;
   transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), transform var(--sl-transition-fast);
+  width: 100%;
 }
 
 .thankyou-badge:hover {

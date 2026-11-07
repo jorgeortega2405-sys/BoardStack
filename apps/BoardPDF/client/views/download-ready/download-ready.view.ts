@@ -12,7 +12,7 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { setTransferFile } from '../../services/transfer.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { hideElement, showElement } from '../../utils/dom.util.js';
+import { hideElement, setupDropdown, showElement } from '../../utils/dom.util.js';
 
 interface DownloadReadyData {
   downloadUrl: string;
@@ -44,6 +44,7 @@ export class DownloadReadyController implements ViewController {
   private abortController: AbortController | null = null;
   private cachedBlob: Blob | null = null;
   private container: HTMLElement;
+  private continueDropdownCtrl: { close: () => void; destroy: () => void; open: () => void; toggle: () => void } | null = null;
   private data: DownloadReadyData | null = null;
   private isDeleted = false;
   private thankYouModalOpened = false;
@@ -64,6 +65,10 @@ export class DownloadReadyController implements ViewController {
   }
 
   destroy(): void {
+    if (this.continueDropdownCtrl) {
+      this.continueDropdownCtrl.destroy();
+      this.continueDropdownCtrl = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -163,11 +168,12 @@ export class DownloadReadyController implements ViewController {
   }
 
   private renderContinueWorkflow(): void {
-    const gridEl = this.container.querySelector<HTMLElement>('[data-ref="continue-workflow-grid"]');
-    if (!gridEl) return;
+    const dropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-continue-tools"]');
+    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-continue-tools"]');
+    if (!dropdownWrapper || !listEl) return;
 
     if (!this.data || !this.data.downloadUrl) {
-      gridEl.style.display = 'none';
+      dropdownWrapper.style.display = 'none';
       return;
     }
 
@@ -175,30 +181,34 @@ export class DownloadReadyController implements ViewController {
     const currentLang = getCurrentLanguage();
     const toolsToShow = CONTINUE_TOOL_IDS
       .map((id) => TOOLS_REGISTRY.find((tool) => tool.id === id))
-      .filter((tool): tool is typeof TOOLS_REGISTRY[0] => tool !== undefined && !currentReturn.startsWith(tool.path))
-      .slice(0, 6);
+      .filter((tool): tool is typeof TOOLS_REGISTRY[0] => tool !== undefined && !currentReturn.startsWith(tool.path));
 
-    gridEl.innerHTML = toolsToShow
+    listEl.innerHTML = toolsToShow
       .map((tool) => {
         const toolName = t(tool.nameKey);
         const toolPath = getLocalizedPath(tool.id, currentLang);
         return `
-        <button type="button" class="component-badge component-badge--interactive download-tool-badge" data-ref="btn-continue-${tool.id}" data-tool-path="${toolPath}">
-          ${tool.customSvg || `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>`}
-          <span class="component-badge__text">${toolName}</span>
+        <button type="button" class="menu-item download-continue-item" data-ref="btn-continue-${tool.id}" data-tool-path="${toolPath}">
+          ${tool.customSvg || `<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>`}
+          <span class="menu-item__text">${toolName}</span>
         </button>
       `;
       })
       .join('');
 
-    renderIcons(gridEl);
+    renderIcons(listEl);
+
+    this.continueDropdownCtrl = setupDropdown(dropdownWrapper, {
+      placement: 'bottom-end',
+    });
 
     const signal = this.abortController?.signal;
-    const buttons = gridEl.querySelectorAll<HTMLButtonElement>('.download-tool-badge');
+    const buttons = listEl.querySelectorAll<HTMLButtonElement>('.download-continue-item');
     buttons.forEach((btn) => {
       btn.addEventListener(
         'click',
         async () => {
+          this.continueDropdownCtrl?.close();
           const targetPath = btn.getAttribute('data-tool-path');
           if (!targetPath) return;
           await this.handleContinueToTool(targetPath, btn);
@@ -324,33 +334,30 @@ export class DownloadReadyController implements ViewController {
     modalBody.setAttribute('data-ref', 'thankyou-modal-content');
     modalBody.innerHTML = `
       <div class="thankyou-modal__body" style="align-items: center; display: flex; flex-direction: column; gap: 16px; padding: 12px 8px; text-align: center;">
-        <div style="align-items: center; background-color: var(--bg-hover); border-radius: 50%; display: flex; height: 52px; justify-content: center; margin-bottom: 2px; width: 52px;">
-          <svg class="component-icon" style="color: #ef4444; height: 28px; width: 28px;" aria-hidden="true"><use href="/icons.svg#favorite"></use></svg>
-        </div>
         <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin: 0; max-width: 420px;">
           Por favor, comparte la herramienta para inspirar a más personas y ayudarnos a seguir mejorando BoardPDF.
         </p>
-        <div class="tool-thankyou-card__badges" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 6px;">
-          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--trustpilot" data-ref="badge-modal-trustpilot" aria-label="Trustpilot">
+        <div class="tool-thankyou-card__badges" style="box-sizing: border-box; display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); margin-top: 6px; width: 100%;">
+          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--trustpilot" data-ref="badge-modal-trustpilot" aria-label="Trustpilot" style="box-sizing: border-box; justify-content: center; width: 100%;">
             <svg class="component-badge__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 2l2.9 8.9h9.3l-7.5 5.5 2.9 8.9L12 19.8l-7.6 5.5 2.9-8.9L-.2 10.9h9.3L12 2z" fill="#00B67A"/>
               <path d="M17.6 16.4l-5.6 3.4v-8.9l7.5-5.5h-9.3L12 2l2.9 8.9h9.3l-7.5 5.5 2.9 8.9-2-1.4z" fill="#005128"/>
             </svg>
             <span class="component-badge__text">Trustpilot</span>
           </button>
-          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--facebook" data-ref="badge-modal-facebook" aria-label="Facebook">
+          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--facebook" data-ref="badge-modal-facebook" aria-label="Facebook" style="box-sizing: border-box; justify-content: center; width: 100%;">
             <svg class="component-badge__icon" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
             </svg>
             <span class="component-badge__text">Facebook</span>
           </button>
-          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--twitter" data-ref="badge-modal-twitter" aria-label="Twitter (X)">
+          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--twitter" data-ref="badge-modal-twitter" aria-label="Twitter (X)" style="box-sizing: border-box; justify-content: center; width: 100%;">
             <svg class="component-badge__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
             <span class="component-badge__text">Twitter (X)</span>
           </button>
-          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--linkedin" data-ref="badge-modal-linkedin" aria-label="LinkedIn">
+          <button type="button" class="component-badge component-badge--interactive thankyou-badge thankyou-badge--linkedin" data-ref="badge-modal-linkedin" aria-label="LinkedIn" style="box-sizing: border-box; justify-content: center; width: 100%;">
             <svg class="component-badge__icon" viewBox="0 0 24 24" fill="#0A66C2" aria-hidden="true">
               <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
             </svg>

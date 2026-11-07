@@ -534,6 +534,7 @@ export class ProjectsController implements ViewController {
   private renderRootFoldersGrid(): void {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="grid-folders"]');
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-folders"]');
+    const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-folders"]');
     if (!grid) return;
 
     const filteredFolders = this.getFilteredAndSortedFolders();
@@ -543,18 +544,42 @@ export class ProjectsController implements ViewController {
       counter.textContent = `(${totalCount})`;
     }
 
+    if (totalCount === 0) {
+      grid.innerHTML = '';
+      empty?.classList.remove('is-hidden');
+      return;
+    }
+    empty?.classList.add('is-hidden');
+
     let cardsHtml = '';
 
     if (this.uploadsFolder && (!this.searchQuery || 'subidos'.includes(this.searchQuery.toLowerCase()))) {
       const upCount = this.uploadsFolder.file_count || 0;
       cardsHtml += `
-        <div class="project-folder-card project-folder-card--uploads" data-ref="card-folder-uploads" data-folder-id="${this.uploadsFolder.id}">
-          <div class="project-folder-card__icon-box">
-            <svg class="component-icon" style="width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+        <div class="tool-card tool-card--collab-doc project-folder-card project-folder-card--uploads" data-ref="card-folder-uploads" data-folder-id="${this.uploadsFolder.id}">
+          <div class="tool-card__preview-box project-folder-preview-box">
+            <div class="project-folder-illustration">
+              <svg class="project-folder-illustration__svg" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="project-folder-illustration__back" d="M16 32 C16 23.5 22.5 17 31 17 H92 C98.5 17 103.5 20.5 108.5 26 L115.5 34 C119 38 124 40.5 129.5 40.5 H209 C217.5 40.5 224 47 224 55.5 V150 C224 158.5 217.5 165 209 165 H31 C22.5 165 16 158.5 16 150 Z" />
+                <rect class="project-folder-illustration__front" x="16" y="37" width="208" height="128" rx="14" />
+              </svg>
+              <div class="project-folder-illustration__icon-wrap">
+                <svg class="component-icon project-folder-illustration__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+              </div>
+            </div>
           </div>
-          <div class="project-folder-card__content">
-            <h4 class="project-folder-card__name">Subidos</h4>
-            <span class="project-folder-card__meta">${upCount} ${upCount === 1 ? 'archivo' : 'archivos'}</span>
+          <div class="tool-card__bottom">
+            <div class="tool-card__title-row">
+              <h3 class="tool-card__title" title="Subidos">Subidos</h3>
+              <span class="tool-card__badge-pill">
+                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                <span>${upCount} ${upCount === 1 ? 'archivo' : 'archivos'}</span>
+              </span>
+            </div>
+            <div class="tool-card__meta-row">
+              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <span class="tool-card__meta-text">Carpeta del sistema</span>
+            </div>
           </div>
         </div>
       `;
@@ -563,32 +588,51 @@ export class ProjectsController implements ViewController {
     filteredFolders.forEach((f) => {
       const docCount = f.document_count || 0;
       cardsHtml += `
-        <div class="project-folder-card" data-ref="card-folder-${f.id}" data-folder-id="${f.id}">
-          <div class="project-folder-card__icon-box">
-            <svg class="component-icon" style="width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          </div>
-          <div class="project-folder-card__content">
-            <h4 class="project-folder-card__name" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h4>
-            <span class="project-folder-card__meta">${docCount} ${docCount === 1 ? 'diseño' : 'diseños'}</span>
-          </div>
-          <div class="pdf-card__actions project-folder-card__actions" data-ref="actions-folder-${f.id}">
-            <div class="dropdown" data-ref="dropdown-folder-${f.id}">
-              <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
-              </button>
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-folder-${f.id}">
-                <div class="menu-panel__list">
-                  <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                    <span class="menu-item__text">Renombrar</span>
-                  </button>
-                  <div class="menu-divider"></div>
-                  <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                    <span class="menu-item__text">Eliminar</span>
-                  </button>
+        <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-folder-${f.id}" data-folder-id="${f.id}">
+          <div class="tool-card__preview-box project-folder-preview-box">
+            <div class="pdf-card__actions" data-ref="actions-folder-${f.id}">
+              <div class="dropdown" data-ref="dropdown-folder-${f.id}">
+                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-folder-${f.id}">
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                      <span class="menu-item__text">Renombrar</span>
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                      <span class="menu-item__text">Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div class="project-folder-illustration">
+              <svg class="project-folder-illustration__svg" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="project-folder-illustration__back" d="M16 32 C16 23.5 22.5 17 31 17 H92 C98.5 17 103.5 20.5 108.5 26 L115.5 34 C119 38 124 40.5 129.5 40.5 H209 C217.5 40.5 224 47 224 55.5 V150 C224 158.5 217.5 165 209 165 H31 C22.5 165 16 158.5 16 150 Z" />
+                <rect class="project-folder-illustration__front" x="16" y="37" width="208" height="128" rx="14" />
+              </svg>
+              <div class="project-folder-illustration__icon-wrap">
+                <svg class="component-icon project-folder-illustration__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-card__bottom">
+            <div class="tool-card__title-row">
+              <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
+              <span class="tool-card__badge-pill">
+                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                <span>${docCount} ${docCount === 1 ? 'diseño' : 'diseños'}</span>
+              </span>
+            </div>
+            <div class="tool-card__meta-row">
+              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <span class="tool-card__meta-text">Carpeta</span>
             </div>
           </div>
         </div>
@@ -603,6 +647,7 @@ export class ProjectsController implements ViewController {
   private renderUploadSubfoldersGrid(): void {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="grid-folders"]');
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-folders"]');
+    const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-folders"]');
     if (!grid) return;
 
     const filteredFolders = this.getFilteredAndSortedFolders();
@@ -611,36 +656,62 @@ export class ProjectsController implements ViewController {
       counter.textContent = `(${filteredFolders.length})`;
     }
 
+    if (filteredFolders.length === 0) {
+      grid.innerHTML = '';
+      empty?.classList.remove('is-hidden');
+      return;
+    }
+    empty?.classList.add('is-hidden');
+
     let cardsHtml = '';
     filteredFolders.forEach((f) => {
       const fCount = f.file_count || 0;
       cardsHtml += `
-        <div class="project-folder-card" data-ref="card-subfolder-${f.id}" data-folder-id="${f.id}">
-          <div class="project-folder-card__icon-box">
-            <svg class="component-icon" style="width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          </div>
-          <div class="project-folder-card__content">
-            <h4 class="project-folder-card__name" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h4>
-            <span class="project-folder-card__meta">${fCount} ${fCount === 1 ? 'archivo' : 'archivos'}</span>
-          </div>
-          <div class="pdf-card__actions project-folder-card__actions" data-ref="actions-subfolder-${f.id}">
-            <div class="dropdown" data-ref="dropdown-subfolder-${f.id}">
-              <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-subfolder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
-              </button>
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-subfolder-${f.id}">
-                <div class="menu-panel__list">
-                  <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                    <span class="menu-item__text">Renombrar</span>
-                  </button>
-                  <div class="menu-divider"></div>
-                  <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                    <span class="menu-item__text">Eliminar</span>
-                  </button>
+        <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-subfolder-${f.id}" data-folder-id="${f.id}">
+          <div class="tool-card__preview-box project-folder-preview-box">
+            <div class="pdf-card__actions" data-ref="actions-subfolder-${f.id}">
+              <div class="dropdown" data-ref="dropdown-subfolder-${f.id}">
+                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-subfolder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-subfolder-${f.id}">
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                      <span class="menu-item__text">Renombrar</span>
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                      <span class="menu-item__text">Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div class="project-folder-illustration">
+              <svg class="project-folder-illustration__svg" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="project-folder-illustration__back" d="M16 32 C16 23.5 22.5 17 31 17 H92 C98.5 17 103.5 20.5 108.5 26 L115.5 34 C119 38 124 40.5 129.5 40.5 H209 C217.5 40.5 224 47 224 55.5 V150 C224 158.5 217.5 165 209 165 H31 C22.5 165 16 158.5 16 150 Z" />
+                <rect class="project-folder-illustration__front" x="16" y="37" width="208" height="128" rx="14" />
+              </svg>
+              <div class="project-folder-illustration__icon-wrap">
+                <svg class="component-icon project-folder-illustration__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-card__bottom">
+            <div class="tool-card__title-row">
+              <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
+              <span class="tool-card__badge-pill">
+                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                <span>${fCount} ${fCount === 1 ? 'archivo' : 'archivos'}</span>
+              </span>
+            </div>
+            <div class="tool-card__meta-row">
+              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <span class="tool-card__meta-text">Carpeta</span>
             </div>
           </div>
         </div>
