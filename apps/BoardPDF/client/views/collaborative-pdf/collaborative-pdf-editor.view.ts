@@ -9,6 +9,7 @@ import { checkPdfPagesEditableStatus, extractEditablePdfPage } from '../../servi
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { initWasmEngine } from '../../services/wasm-engine.service.js';
 import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
@@ -155,6 +156,7 @@ export class CollaborativePdfEditorController implements ViewController {
     }
 
     this.setupRailNavigation();
+    void initWasmEngine();
     const loaded = await this.loadDocument();
     if (!loaded) return;
     this.initCollabWebSocket();

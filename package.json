@@ -10,6 +10,7 @@
     "build": "npm run build --workspace=apps/BoardPDF",
     "build:boardpdf": "npm run build --workspace=apps/BoardPDF",
     "build:collab": "cargo build --release --manifest-path apps/collab-server/Cargo.toml",
+    "build:wasm": "cargo build --manifest-path apps/board-wasm/Cargo.toml --target wasm32-unknown-unknown --release && node -e \"fs.copyFileSync('apps/board-wasm/target/wasm32-unknown-unknown/release/board_wasm.wasm', 'apps/BoardPDF/public/vendor/wasm/board_wasm.wasm')\"",
     "collab": "cargo run --manifest-path apps/collab-server/Cargo.toml",
     "dev": "npm run dev --workspace=apps/BoardPDF",
     "dev:boardpdf": "npm run dev --workspace=apps/BoardPDF",
