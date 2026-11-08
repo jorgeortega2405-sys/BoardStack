@@ -1,3 +1,4 @@
+@import './component-avatars.css';
 
 .view-wrapper {
   display: flex;
@@ -198,6 +199,12 @@
   font-weight: 600;
 }
 
+.category-pill__icon {
+  height: 14px;
+  margin-left: 4px;
+  width: 14px;
+}
+
 .tools-section {
   box-sizing: border-box;
   display: flex;
@@ -253,8 +260,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  min-height: 180px;
-  padding: 26px 24px 22px;
+  min-height: 160px;
+  padding: 20px 20px 18px;
   position: relative;
   text-align: left;
   transition: border-color 0.18s ease;
@@ -397,41 +404,28 @@
 
 .tool-card__title {
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.2px;
   line-height: 1.25;
-  margin: 14px 0 8px;
+  margin: 12px 0 6px;
 }
 
 .tool-card__desc {
   color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
   margin: 0;
 }
 
 .tool-card--create-workflow {
-  background-image: url('/images/workflows-bg.svg');
-  background-position: right top;
-  background-repeat: no-repeat;
-  background-size: 158px auto;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
 
 .tool-card--create-workflow .tool-card__title {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.tool-card--create-workflow .tool-card__desc {
-  color: var(--text-secondary);
-  font-size: 13.5px;
-  line-height: 1.5;
-  margin: 0;
+  margin-top: 0;
 }
 
 .tool-card__action-link {
@@ -721,7 +715,6 @@
 
 @media (max-width: 640px) {
   .tool-card--create-workflow {
-    background-size: 130px auto;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -747,6 +740,7 @@
 
   .tool-card__title {
     align-self: center;
+    font-size: 14px;
     grid-area: title;
     margin: 0;
     text-align: left;

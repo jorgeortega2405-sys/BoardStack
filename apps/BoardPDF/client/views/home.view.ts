@@ -4,7 +4,7 @@ import { openModal } from '../components/modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
 import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
-import { SVG_TOOL_CREATE_WORKFLOW, SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
+import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
 import { claimEducationFreeYearApi, currentUser, getEducationStatusApi } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -86,9 +86,6 @@ export class HomeController {
 
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow" data-category="workflows">
-        <div class="tool-card__icon-box" data-ref="icon-box-create-workflow">
-          ${SVG_TOOL_CREATE_WORKFLOW}
-        </div>
         <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crear flujo de trabajo')}</h3>
         <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.')}</p>
       </div>
@@ -105,20 +102,20 @@ export class HomeController {
           <div class="tool-card__icon-box" data-ref="icon-box-workflow-${wf.id}">
             ${SVG_TOOL_WORKFLOW}
           </div>
-          <div class="tool-card__actions" data-ref="actions-workflow-${wf.id}" style="align-items: center; display: flex; gap: 6px; position: absolute; right: 20px; top: 20px;">
-            <span class="component-badge component-badge--sm" data-ref="badge-workflow-${wf.id}" style="font-size: 10.5px;">${wf.steps.length} pasos</span>
+          <div class="tool-card__actions" data-ref="actions-workflow-${wf.id}">
+            <span class="component-badge component-badge--sm" data-ref="badge-workflow-${wf.id}">${wf.steps.length} pasos</span>
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-edit-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Editar flujo" aria-label="Editar flujo">
-              <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
             </button>
             <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-delete-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Eliminar flujo" aria-label="Eliminar flujo">
-              <svg class="component-icon" style="height: 14px; width: 14px;" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
           <h3 class="tool-card__title" data-ref="title-workflow-${wf.id}">${this.escapeHtml(wf.name)}</h3>
           <p class="tool-card__desc" data-ref="desc-workflow-${wf.id}">${this.escapeHtml(stepNames || 'Sin pasos')}</p>
-          <div class="tool-card__footer" data-ref="footer-workflow-${wf.id}" style="align-items: center; display: flex; justify-content: space-between; margin-top: 14px;">
-            <span class="tool-card__status" data-ref="status-workflow-${wf.id}" style="color: var(--text-tertiary); font-size: 11px;">Guardado localmente</span>
-            <span class="tool-card__action-link" data-ref="link-workflow-${wf.id}" style="color: var(--primary); font-size: 12px; font-weight: 600;">Ejecutar flujo →</span>
+          <div class="tool-card__footer" data-ref="footer-workflow-${wf.id}">
+            <span class="tool-card__footer-note" data-ref="status-workflow-${wf.id}">Guardado localmente</span>
+            <span class="tool-card__action-link" data-ref="link-workflow-${wf.id}">Ejecutar flujo →</span>
           </div>
         </div>
       `;

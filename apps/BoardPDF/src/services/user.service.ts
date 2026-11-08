@@ -1,6 +1,6 @@
 import { getDbPool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
 import { UserPayload } from '../types/auth.types.js';
+import { cacheService } from './cache.service.js';
 import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
 import { assignRoleToUser, getUserRoleNames } from './role.service.js';
@@ -82,11 +82,11 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
 }
 
 export async function findUserById(id: number): Promise<UserRecord | null> {
-  const cacheKey = `user:profile:${id}`;
+  const cacheKey = cacheService.CACHE_KEYS.userProfile(String(id));
   try {
-    const cached = await redis.get(cacheKey);
+    const cached = await cacheService.get<UserRecord>(cacheKey);
     if (cached) {
-      return JSON.parse(cached) as UserRecord;
+      return cached;
     }
   } catch {}
 
@@ -103,7 +103,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
     user.role = elevatedRole;
   }
   try {
-    await redis.setex(cacheKey, 300, JSON.stringify(user));
+    await cacheService.set(cacheKey, user, 300);
   } catch {}
   return user;
 }
@@ -160,7 +160,7 @@ export async function generateUniqueUsername(preferred: string): Promise<string>
 
 export async function invalidateUserProfileCache(userId: number): Promise<void> {
   try {
-    await redis.del(`user:profile:${userId}`);
+    await cacheService.invalidateUser(String(userId));
   } catch {}
 }
 
@@ -369,11 +369,11 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
 }
 
 export async function getUserPreferences(userId: number): Promise<UserPreferences> {
-  const cacheKey = `user:prefs:${userId}`;
+  const cacheKey = cacheService.CACHE_KEYS.userPrefs(String(userId));
   try {
-    const cached = await redis.get(cacheKey);
+    const cached = await cacheService.get<UserPreferences>(cacheKey);
     if (cached) {
-      return JSON.parse(cached) as UserPreferences;
+      return cached;
     }
   } catch {}
 
@@ -389,7 +389,7 @@ export async function getUserPreferences(userId: number): Promise<UserPreference
       [userId, DEFAULT_PREFERENCES.theme, DEFAULT_PREFERENCES.language]
     );
     try {
-      await redis.setex(cacheKey, 86400, JSON.stringify(DEFAULT_PREFERENCES));
+      await cacheService.set(cacheKey, DEFAULT_PREFERENCES, 86400);
     } catch {}
     return DEFAULT_PREFERENCES;
   }
@@ -400,7 +400,7 @@ export async function getUserPreferences(userId: number): Promise<UserPreference
   };
 
   try {
-    await redis.setex(cacheKey, 86400, JSON.stringify(prefs));
+    await cacheService.set(cacheKey, prefs, 86400);
   } catch {}
 
   return prefs;
@@ -427,7 +427,7 @@ export async function updateUserPreferences(
   );
 
   try {
-    await redis.del(`user:prefs:${userId}`);
+    await cacheService.invalidateUserPrefs(String(userId));
   } catch {}
 
   return next;
@@ -452,9 +452,9 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
   }
 
   try {
-    await redis.del(`2fa:setup:${userId}`);
-    await redis.del(`user:profile:${userId}`);
-    await redis.del(`user:prefs:${userId}`);
+    await cacheService.del(`2fa:setup:${userId}`);
+    await cacheService.invalidateUser(String(userId));
+    await cacheService.invalidateUserPrefs(String(userId));
   } catch {}
 
   const pool = getDbPool();

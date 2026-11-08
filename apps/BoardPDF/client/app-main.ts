@@ -1,4 +1,5 @@
 import { initRouter, navigate } from './app-router.js';
+import { initGlobalDropzone } from './components/global-dropzone.component.js';
 import { setupLayoutScrollSync } from './components/layout.component.js';
 import { checkAuthSession } from './services/api.service.js';
 import { initI18n, translateElement } from './services/i18n.service.js';
@@ -80,6 +81,7 @@ async function initApp(): Promise<void> {
   }
   await Promise.all([initI18n(), checkAuthSession()]);
   initTooltips();
+  initGlobalDropzone();
   setupGlobalLinks();
   initScrollShadow();
   translateElement(document.body);

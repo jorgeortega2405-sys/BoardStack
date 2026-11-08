@@ -1,4 +1,4 @@
-# apps/collab-server/Dockerfile
+# apps/BoardPDF/collab-server/Dockerfile
 # -------------------------------------------------------------
 # ETAPA 1: Compilación Binaria con Rust Musl (Estático)
 # -------------------------------------------------------------
@@ -6,8 +6,8 @@ FROM rust:alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache musl-dev
 
-COPY apps/collab-server/Cargo.toml apps/collab-server/Cargo.lock ./
-COPY apps/collab-server/src ./src
+COPY apps/BoardPDF/collab-server/Cargo.toml apps/BoardPDF/collab-server/Cargo.lock ./
+COPY apps/BoardPDF/collab-server/src ./src
 RUN cargo build --release
 
 # -------------------------------------------------------------

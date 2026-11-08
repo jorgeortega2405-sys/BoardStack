@@ -1,11 +1,5 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="projects-wrapper">
   <div class="view-backdrop view-backdrop--dots" data-ref="projects-gradient-backdrop"></div>
-  
-  <div class="projects-nav-actions" data-ref="projects-nav-actions">
-    <button type="button" class="component-button component-button--h40 component-button--icon-only is-hidden" data-ref="btn-back-projects" data-tooltip="Volver a todos los proyectos" aria-label="Volver a todos los proyectos">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-    </button>
-  </div>
 
   <div class="projects-quick-actions" data-ref="projects-quick-actions">
     <div class="projects-hero__folder-actions is-hidden" data-ref="folder-header-actions">
@@ -46,7 +40,7 @@
         </div>
       </div>
     </div>
-    <input class="is-hidden" data-ref="input-project-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
+    <input class="is-hidden" data-ref="input-project-upload" type="file" accept="image/*,.pdf,application/pdf" multiple />
   </div>
 
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="projects-scrollable">
@@ -70,7 +64,7 @@
             <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
               <button type="button" class="category-pill" data-ref="btn-filter-type">
                 <span data-ref="label-filter-type">Tipo</span>
-                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
               <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
                 <div class="menu-panel__list">
@@ -97,7 +91,7 @@
             <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
               <button type="button" class="category-pill" data-ref="btn-filter-category">
                 <span data-ref="label-filter-category">Categoría</span>
-                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
               <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-category">
                 <div class="menu-panel__list" data-ref="list-filter-category">
@@ -116,7 +110,7 @@
             <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-date">
               <button type="button" class="category-pill" data-ref="btn-filter-date">
                 <span data-ref="label-filter-date">Fecha de modificación</span>
-                <svg class="component-icon" style="width: 14px; height: 14px; margin-left: 4px;" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
               <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
                 <div class="menu-panel__list">

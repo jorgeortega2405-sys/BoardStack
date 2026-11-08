@@ -307,7 +307,6 @@ export class ProjectsController implements ViewController {
 
   private renderView(): void {
     const mainTitle = this.container.querySelector<HTMLElement>('[data-ref="projects-main-title"]');
-    const backBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-projects"]');
     const folderHeaderActions = this.container.querySelector<HTMLElement>('[data-ref="folder-header-actions"]');
     const uploadsFilterTabs = this.container.querySelector<HTMLElement>('[data-ref="uploads-filter-tabs"]');
     const btnUploadDirect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-upload-direct"]');
@@ -337,7 +336,6 @@ export class ProjectsController implements ViewController {
 
     if (!this.currentFolderId || !this.currentFolder) {
       if (mainTitle) mainTitle.textContent = 'Todos los proyectos';
-      backBtn?.classList.add('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
@@ -350,7 +348,6 @@ export class ProjectsController implements ViewController {
     } else if (this.currentFolder.folder_type === 'project') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
-      backBtn?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
       uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
@@ -362,7 +359,6 @@ export class ProjectsController implements ViewController {
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
       if (mainTitle) mainTitle.textContent = 'Subidos';
-      backBtn?.classList.remove('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       uploadsFilterTabs?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
@@ -376,7 +372,6 @@ export class ProjectsController implements ViewController {
     } else if (this.currentFolder.folder_type === 'upload_folder') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
-      backBtn?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
       uploadsFilterTabs?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
@@ -518,12 +513,12 @@ export class ProjectsController implements ViewController {
             <div class="tool-card__title-row" data-ref="title-row-${doc.id}">
               <h3 class="tool-card__title" data-ref="title-doc-${doc.id}" title="${this.escapeHtml(doc.title)}">${this.escapeHtml(doc.title)}</h3>
               <span class="tool-card__badge-pill" data-ref="badge-doc-${doc.id}">
-                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
                 <span>${badgeText}</span>
               </span>
             </div>
             <div class="tool-card__meta-row" data-ref="meta-row-${doc.id}">
-              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
               <span class="tool-card__meta-text" data-ref="meta-doc-${doc.id}">${relativeTime}</span>
             </div>
           </div>
@@ -582,12 +577,12 @@ export class ProjectsController implements ViewController {
             <div class="tool-card__title-row">
               <h3 class="tool-card__title" title="Subidos">Subidos</h3>
               <span class="tool-card__badge-pill">
-                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
                 <span>${upCount} ${upCount === 1 ? 'archivo' : 'archivos'}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
-              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
               <span class="tool-card__meta-text">Carpeta del sistema</span>
             </div>
           </div>
@@ -636,12 +631,12 @@ export class ProjectsController implements ViewController {
             <div class="tool-card__title-row">
               <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
               <span class="tool-card__badge-pill">
-                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
                 <span>${docCount} ${docCount === 1 ? 'diseño' : 'diseños'}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
-              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
               <span class="tool-card__meta-text">Carpeta</span>
             </div>
           </div>
@@ -715,12 +710,12 @@ export class ProjectsController implements ViewController {
             <div class="tool-card__title-row">
               <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
               <span class="tool-card__badge-pill">
-                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
                 <span>${fCount} ${fCount === 1 ? 'archivo' : 'archivos'}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
-              <svg class="component-icon" style="width: 12px; height: 12px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
               <span class="tool-card__meta-text">Carpeta</span>
             </div>
           </div>
@@ -940,16 +935,6 @@ export class ProjectsController implements ViewController {
       this.sortAscending = !this.sortAscending;
       showToast(this.sortAscending ? 'Orden ascendente' : 'Orden descendente', 'info');
       this.renderView();
-    }, { signal: this.abortController?.signal });
-
-    const backBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-projects"]');
-    backBtn?.addEventListener('click', () => {
-      if (this.currentFolder?.folder_type === 'upload_folder') {
-        const upFolder = this.uploadsFolder?.id || 'local-uploads-folder-uuid';
-        navigate(`/projects/${encodeURIComponent(upFolder)}`);
-      } else {
-        navigate('/projects');
-      }
     }, { signal: this.abortController?.signal });
 
     const plusDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-new-action"]');

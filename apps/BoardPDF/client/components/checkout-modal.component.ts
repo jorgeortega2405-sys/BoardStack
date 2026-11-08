@@ -40,7 +40,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
 
   const intentRes = await createSubscriptionIntentApi(planId, billingPeriod);
   if (!intentRes.success || !intentRes.clientSecret || !intentRes.publishableKey) {
-    showToast(intentRes.error || t('common.error_occurred') || 'Error al conectar con Stripe.', 'danger');
+    showToast(intentRes.error || t('checkout.error_connecting_gateway'), 'danger');
     return null;
   }
 
@@ -48,7 +48,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
   try {
     stripe = await loadStripeSdk(intentRes.publishableKey);
   } catch {
-    showToast('No se pudo inicializar Stripe Elements.', 'danger');
+    showToast(t('checkout.error_initializing_payment'), 'danger');
     return null;
   }
 
@@ -85,12 +85,12 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
 
   backdrop.innerHTML = `
     <div class="modal-card modal-card--checkout" data-ref="modal-card-checkout">
-      <div class="modal-card__header" data-ref="modal-checkout-header" style="position: relative;">
+      <div class="modal-card__header" data-ref="modal-checkout-header">
         <button type="button" class="modal-close-btn" data-ref="btn-checkout-modal-close" aria-label="Cerrar">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
         </button>
-        <h2 class="modal-card__title" data-ref="checkout-title" style="font-size: 18px; margin: 0;">Completa tu suscripción</h2>
-        <p class="modal-card__description" data-ref="checkout-desc" style="font-size: 13px; margin: 0; color: var(--text-secondary);">Acceso instantáneo con procesamiento seguro de Stripe.</p>
+        <h2 class="modal-card__title" data-ref="checkout-title">Completa tu suscripción</h2>
+        <p class="modal-card__description" data-ref="checkout-desc">${t('checkout.modal_desc')}</p>
       </div>
 
       <div class="checkout-plan-summary" data-ref="checkout-plan-summary">
@@ -108,22 +108,22 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
 
       <div class="checkout-elements-box" data-ref="checkout-elements-box">
         <div class="checkout-elements-loading" data-ref="checkout-elements-loading">
-          <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
           <span>Cargando pasarela segura...</span>
         </div>
         <div data-ref="stripe-payment-mount-point"></div>
       </div>
 
-      <div class="modal-card__actions modal-card__actions--stacked" data-ref="checkout-actions" style="margin-top: 4px;">
+      <div class="modal-card__actions modal-card__actions--stacked" data-ref="checkout-actions">
         <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-submit-payment" disabled>
           <span data-ref="btn-submit-text">Pagar USD $${formattedAmount}</span>
         </button>
-        <div class="banner banner--danger" data-ref="checkout-error-banner" style="display: none; margin-top: 12px; width: 100%;"></div>
+        <div class="banner banner--danger is-hidden" data-ref="checkout-error-banner"></div>
       </div>
 
       <div class="checkout-secure-badge">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-        <span>Procesamiento cifrado SSL de 256 bits respaldado por Stripe</span>
+        <span>${t('checkout.secure_processing')}</span>
       </div>
     </div>
   `;
@@ -142,7 +142,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
   if (mountPoint) {
     paymentElement.mount(mountPoint);
     paymentElement.on('ready', () => {
-      if (loadingEl) loadingEl.style.display = 'none';
+      if (loadingEl) loadingEl.classList.add('is-hidden');
       if (btnSubmit) btnSubmit.disabled = false;
     });
     paymentElement.on('change', (e: any) => {
@@ -151,7 +151,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
           if (btnSubmit) btnSubmit.disabled = true;
         } else if (e.complete) {
           if (btnSubmit) btnSubmit.disabled = false;
-          errorBanner.style.display = 'none';
+          errorBanner.classList.add('is-hidden');
         }
       }
     });
@@ -165,7 +165,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
     isSubmitting = true;
     btnSubmit.disabled = true;
     if (btnSubmitText) btnSubmitText.textContent = 'Procesando pago...';
-    if (errorBanner) errorBanner.style.display = 'none';
+    if (errorBanner) errorBanner.classList.add('is-hidden');
 
     try {
       const userLang = navigator.language || 'es-ES';
@@ -190,7 +190,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
       if (error) {
         if (errorBanner) {
           errorBanner.textContent = error.message || 'Error al procesar el pago.';
-          errorBanner.style.display = 'block';
+          errorBanner.classList.remove('is-hidden');
         }
         isSubmitting = false;
         btnSubmit.disabled = false;
@@ -221,7 +221,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
     } catch {
       if (errorBanner) {
         errorBanner.textContent = 'Error inesperado al confirmar la transacción.';
-        errorBanner.style.display = 'block';
+        errorBanner.classList.remove('is-hidden');
       }
       isSubmitting = false;
       btnSubmit.disabled = false;

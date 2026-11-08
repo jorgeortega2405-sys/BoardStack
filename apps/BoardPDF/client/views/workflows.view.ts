@@ -1,6 +1,7 @@
 import { openModal } from '../components/modal.component.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
-import { SVG_TOOL_CREATE_WORKFLOW, SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
+import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -48,11 +49,8 @@ export class WorkflowsController {
 
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow">
-        <div class="tool-card__icon-box" data-ref="icon-box-create-workflow">
-          ${SVG_TOOL_CREATE_WORKFLOW}
-        </div>
-        <h3 class="tool-card__title" data-ref="title-create-workflow">Crear flujo de trabajo</h3>
-        <p class="tool-card__desc" data-ref="desc-create-workflow">Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.</p>
+        <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crear flujo de trabajo')}</h3>
+        <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.')}</p>
       </div>
     `;
 

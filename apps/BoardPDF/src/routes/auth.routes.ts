@@ -1,7 +1,7 @@
 import { login, loginWith2FA, logout, logoutAll, me, resendRegistrationCode, sendRegistrationCode, switchAccount, validateStage1, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { handleAvatarRequest } from '../controllers/avatar.controller.js';
 import { handleGoogleCallback, initiateGoogleAuth } from '../controllers/google-auth.controller.js';
-import { avatarLimiter, loginLimiter, registerLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
+import { loginLimiter, registerLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -19,6 +19,6 @@ router.post('/auth/switch-account', switchAccount);
 router.post('/auth/logout', logout);
 router.post('/auth/logout-all', logoutAll);
 
-router.get('/avatar', avatarLimiter, handleAvatarRequest);
+router.get('/avatar', handleAvatarRequest);
 
 export default router;

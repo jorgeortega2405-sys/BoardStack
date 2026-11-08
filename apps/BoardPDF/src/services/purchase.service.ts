@@ -1,8 +1,8 @@
 import { getDbPool } from '../config/database.config.js';
 import { normalizeTierKey } from '../config/plans.config.js';
-import { redis } from '../config/redis.config.js';
 import { PurchaseRecord, SubscriptionTierId } from '../types/subscription.types.js';
 import { getMonthlyQuotaByPermissions } from './ai-token.service.js';
+import { cacheService } from './cache.service.js';
 import { logger } from './logger.service.js';
 import { permissionService } from './permission.service.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -100,7 +100,8 @@ export class PurchaseService {
       );
 
       try {
-        await redis.del(`user:profile:${userId}`);
+        await cacheService.invalidateUser(String(userId));
+        await cacheService.invalidateUserOrg(String(userId));
         await permissionService.invalidateUserPermissions(userId);
       } catch {}
 
@@ -247,7 +248,8 @@ export class PurchaseService {
       await connection.commit();
 
       try {
-        await redis.del(`user:profile:${userId}`);
+        await cacheService.invalidateUser(String(userId));
+        await cacheService.invalidateUserOrg(String(userId));
         await permissionService.invalidateUserPermissions(userId);
       } catch {}
 

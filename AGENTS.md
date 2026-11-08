@@ -90,7 +90,7 @@ Este documento define las reglas estrictas de desarrollo, seguridad, arquitectur
 ## 4. Idioma en Ecosistemas Ajenos al Sistema Web (Python, Rust, Shell, Docker) y Anotaciones
 
 1. **Código y Documentación 100% en Inglés en Python y Rust**:
-   - En herramientas, microservicios y módulos donde el sistema de traducción web de TypeScript no aplica (como Rust en `apps/board-wasm/` y `apps/collab-server/`, scripts de Python en `scripts/` o tests, Dockerfiles, Shell scripts y archivos de configuración):
+   - En herramientas, microservicios y módulos donde el sistema de traducción web de TypeScript no aplica (como Rust en `apps/BoardPDF/board-wasm/` y `apps/BoardPDF/collab-server/`, scripts de Python en `scripts/` o tests, Dockerfiles, Shell scripts y archivos de configuración):
      - **TODO el código debe escribirse estrictamente en INGLÉS**: nombres de funciones, variables, structs, enums, constantes, logs internos, mensajes de error y argumentos de línea de comandos.
      - Queda estrictamente prohibido usar español en identificadores, comentarios, docstrings o logs dentro de proyectos Rust o Python.
 
@@ -225,9 +225,9 @@ Al escribir o modificar plantillas HTML, los atributos deben ordenarse de acuerd
    - `public/css/`: Hojas de estilo modulares con metodología BEM (`root.css` para tokens de diseño y temas, y carpeta `components/` con componentes atómicos `component-buttons.css`, `component-forms.css`, `component-feedback.css`, `component-layout.css`, `component-overlays.css`, y módulos de dominio/canvas cargados bajo demanda).
    - **Compilador / Bundler**: Vite en modo middleware Express para desarrollo (`npm run dev`) y compilación de producción a `dist/client/` (`npm run build`). Verificación de tipos con `npm run typecheck`.
 
-3. **Estructura Rust y Microservicios (`apps/`)**:
-   - `apps/board-wasm/`: Motor WebAssembly de alto rendimiento en Rust para renderizado, transformaciones vectoriales y procesamiento local de PDFs.
-   - `apps/collab-server/`: Servidor de sincronización WebSocket de alta concurrencia en Rust para edición colaborativa en tiempo real.
+3. **Estructura Rust y Microservicios (`apps/BoardPDF/`)**:
+   - `apps/BoardPDF/board-wasm/`: Motor WebAssembly de alto rendimiento en Rust para renderizado, transformaciones vectoriales y procesamiento local de PDFs.
+   - `apps/BoardPDF/collab-server/`: Servidor de sincronización WebSocket de alta concurrencia en Rust para edición colaborativa en tiempo real.
 
 ---
 

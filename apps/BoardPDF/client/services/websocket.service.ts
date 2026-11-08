@@ -25,6 +25,7 @@ type CollabCallback = (msg: any) => void;
 class WebSocketClientService {
   private activeSubscriptions = new Map<string, Set<ProgressCallback>>();
   private collabCallbacks = new Set<CollabCallback>();
+  private connectingSocket: WebSocket | null = null;
   private currentCollabJoin: Record<string, unknown> | null = null;
   private isConnecting = false;
   private pingInterval: number | null = null;
@@ -32,7 +33,17 @@ class WebSocketClientService {
   private reconnectTimer: number | null = null;
   private socket: WebSocket | null = null;
 
+  private isEditorRoute(): boolean {
+    if (typeof window === 'undefined' || !window.location) return false;
+    const path = window.location.pathname || '';
+    return path.startsWith('/d/') || path === '/d' || path.startsWith('/collaborative-pdf/editor');
+  }
+
   connect(sessionId?: string): Promise<WebSocket | null> {
+    if (!this.isEditorRoute()) {
+      return Promise.resolve(null);
+    }
+
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       if (sessionId) {
         this.sendSubscribe(sessionId);
@@ -46,6 +57,11 @@ class WebSocketClientService {
     if (this.isConnecting) {
       return new Promise((resolve) => {
         const intervalId = window.setInterval(() => {
+          if (!this.isEditorRoute()) {
+            window.clearInterval(intervalId);
+            resolve(null);
+            return;
+          }
           if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             window.clearInterval(intervalId);
             if (sessionId) this.sendSubscribe(sessionId);
@@ -71,10 +87,24 @@ class WebSocketClientService {
         const wsUrl = `${protocol}//${hostname}${portSuffix}/ws/collab${query}`;
 
         const ws = new WebSocket(wsUrl);
+        this.connectingSocket = ws;
 
         ws.onopen = () => {
+          if (this.connectingSocket !== ws || !this.isEditorRoute()) {
+            try {
+              ws.close();
+            } catch (_) {}
+            if (this.connectingSocket === ws) {
+              this.connectingSocket = null;
+            }
+            this.isConnecting = false;
+            resolve(null);
+            return;
+          }
+
           console.log('[WebSocket] Conexión establecida con éxito con BoardPDF WS (Rust).');
           this.socket = ws;
+          this.connectingSocket = null;
           this.isConnecting = false;
           this.reconnectAttempts = 0;
           this.startHeartbeat();
@@ -117,18 +147,30 @@ class WebSocketClientService {
           } catch (_) {}
         };
 
-        ws.onerror = () => {};
+        ws.onerror = () => {
+          if (this.connectingSocket === ws) {
+            this.connectingSocket = null;
+          }
+        };
 
         ws.onclose = () => {
           console.log('[WebSocket] Conexión cerrada.');
-          this.socket = null;
+          if (this.connectingSocket === ws) {
+            this.connectingSocket = null;
+          }
+          if (this.socket === ws) {
+            this.socket = null;
+          }
           this.isConnecting = false;
           this.stopHeartbeat();
-          this.scheduleReconnect();
+          if (this.isEditorRoute()) {
+            this.scheduleReconnect();
+          }
           resolve(null);
         };
       } catch (_) {
         this.isConnecting = false;
+        this.connectingSocket = null;
         resolve(null);
       }
     });
@@ -245,6 +287,7 @@ class WebSocketClientService {
   }
 
   private scheduleReconnect(): void {
+    if (!this.isEditorRoute()) return;
     if (this.reconnectTimer !== null) return;
     if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) return;
 
@@ -254,18 +297,29 @@ class WebSocketClientService {
 
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect();
+      if (this.isEditorRoute()) {
+        void this.connect();
+      }
     }, delay);
   }
 
   disconnect(): void {
     this.stopHeartbeat();
+    this.isConnecting = false;
     if (this.reconnectTimer !== null) {
       window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    if (this.connectingSocket) {
+      try {
+        this.connectingSocket.close();
+      } catch (_) {}
+      this.connectingSocket = null;
+    }
     if (this.socket) {
-      this.socket.close();
+      try {
+        this.socket.close();
+      } catch (_) {}
       this.socket = null;
     }
     this.activeSubscriptions.clear();

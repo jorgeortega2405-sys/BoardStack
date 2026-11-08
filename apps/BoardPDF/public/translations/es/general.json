@@ -105,13 +105,16 @@
       "loading": "Actualizando...",
       "success_msg": "Contraseña actualizada correctamente. Redirigiendo..."
     },
-    "login_required": "Inicia sesión para continuar."
+    "login_required": "Inicia sesión para continuar.",
+    "login_required_upload": "Inicia sesión para subir archivos a tu cuenta"
   },
   "common": {
     "back": "Volver",
     "cancel": "Cancelar",
     "close": "Cerrar",
     "continue": "Continuar",
+    "drop_file_hint": "Suelta tus archivos aquí para subirlos a tu cuenta",
+    "drop_file_overlay": "Soltar archivo",
     "save": "Guardar",
     "search_tools": "Buscar herramienta...",
     "loading": "Cargando..."
@@ -834,5 +837,16 @@
       "toucan_colorful": "Tucán Colorido",
       "fox_clever": "Zorro Astuto"
     }
+  },
+  "projects": {
+    "upload_success": "Archivo subido correctamente",
+    "uploading_files": "Subiendo archivo a tu cuenta..."
+  },
+  "checkout": {
+    "error_connecting_gateway": "Error al conectar con la pasarela de pago.",
+    "error_initializing_payment": "No se pudo inicializar el método de pago.",
+    "modal_desc": "Acceso instantáneo con procesamiento seguro.",
+    "secure_processing": "Procesamiento cifrado SSL de 256 bits.",
+    "step2_benefit_1": "Transacción cifrada y protegida de extremo a extremo."
   }
 }

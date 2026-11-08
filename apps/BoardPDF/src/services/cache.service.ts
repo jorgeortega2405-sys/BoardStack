@@ -10,6 +10,7 @@ export const CACHE_KEYS = {
   userOrg: (userId: string) => `cache:user:org:${userId}`,
   userPerms: (userId: string) => `cache:user:perms:${userId}`,
   userPrefs: (userId: string) => `cache:user:prefs:${userId}`,
+  userProfile: (userId: string) => `user:profile:${userId}`,
   userUsername: (username: string) => `cache:user:username:${username.toLowerCase().trim()}`,
 };
 
@@ -98,9 +99,12 @@ export async function invalidateUser(
 ): Promise<void> {
   const keys = [
     CACHE_KEYS.userById(userId),
+    CACHE_KEYS.userProfile(userId),
     `user:cache:${userId}`,
     CACHE_KEYS.userPerms(userId),
+    `user:permissions:${userId}`,
     CACHE_KEYS.userBilling(userId),
+    CACHE_KEYS.userOrg(userId),
   ];
   if (email) {
     keys.push(CACHE_KEYS.userEmail(email));

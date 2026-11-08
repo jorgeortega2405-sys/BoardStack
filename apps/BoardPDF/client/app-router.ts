@@ -6,6 +6,7 @@ import { getCurrentLanguage, setLanguage, translateElement } from './services/i1
 import { setLanguageSwitchHandler, setNavigationHandler } from './services/navigation.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { consumeTransferFile } from './services/transfer.service.js';
+import { wsService } from './services/websocket.service.js';
 import { ViewController } from './types/common.types.js';
 import { hideElement, showElement } from './utils/dom.util.js';
 
@@ -89,11 +90,19 @@ export function navigate(url: string, replace = false): void {
 setNavigationHandler(navigate);
 setLanguageSwitchHandler(switchLanguage);
 
+function isCollabEditorRoute(pathname: string): boolean {
+  return pathname.startsWith('/d/') || pathname === '/d' || pathname.startsWith('/collaborative-pdf/editor');
+}
+
 export async function render(rawPath = window.location.pathname, options?: RenderOptions): Promise<void> {
   const navigationStartTime = performance.now();
   const { pathname: path, query: targetQuery } = parseRouteUrl(options?.updateHistory?.fullUrl || rawPath);
   closeAllModals();
   hideTooltip();
+
+  if (!isCollabEditorRoute(path)) {
+    wsService.disconnect();
+  }
 
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;

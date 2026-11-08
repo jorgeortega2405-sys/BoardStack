@@ -2,6 +2,7 @@ import { currentUser, linkedAccounts, logoutAllApi, logoutApi, onAuthChange, swi
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
+import { getUserAvatarUrl } from '../utils/avatar.util.js';
 import { applyAvatarTier } from '../utils/tier.util.js';
 
 export function setupUserMenu(sidebar: HTMLElement): () => void {
@@ -13,6 +14,8 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     return () => {};
   }
 
+  avatarContainer.removeAttribute('style');
+
   const avatarBtn = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-avatar"]');
   const avatarImg = avatarContainer.querySelector<HTMLImageElement>('[data-ref="avatar-img"]');
   const avatarBackdrop = avatarContainer.querySelector<HTMLElement>('[data-ref="avatar-menu-backdrop"]');
@@ -20,6 +23,11 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
   const panelMain = avatarContainer.querySelector<HTMLElement>('[data-ref="panel-main-options"]');
   const panelSwitcher = avatarContainer.querySelector<HTMLElement>('[data-ref="panel-account-switcher"]');
+  if (panelSwitcher) {
+    panelSwitcher.removeAttribute('style');
+    panelSwitcher.classList.add('is-hidden');
+  }
+
   const btnSwitchAccountMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-switch-account-menu"]');
   const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
   const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
@@ -38,8 +46,8 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
   const closeMenu = () => {
     if (avatarMenu) avatarMenu.classList.remove('is-open');
     if (avatarBackdrop) avatarBackdrop.classList.remove('is-open');
-    if (panelMain) panelMain.style.display = '';
-    if (panelSwitcher) panelSwitcher.style.display = 'none';
+    if (panelMain) panelMain.classList.remove('is-hidden');
+    if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
   };
 
   const renderAccountList = () => {
@@ -50,7 +58,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
     accounts.forEach((acc) => {
       const isCurrent = currentUser && String(currentUser.id) === String(acc.id);
-      const accAvatarUrl = acc.avatar_url || `/api/avatar?name=${encodeURIComponent(acc.username)}&size=80`;
+      const accAvatarUrl = getUserAvatarUrl(acc, 80);
 
       const itemBtn = document.createElement('button');
       itemBtn.type = 'button';
@@ -64,7 +72,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
       const img = document.createElement('img');
       img.className = 'avatar-img';
       img.src = accAvatarUrl;
-      img.alt = acc.username;
+      img.alt = acc.username || 'User';
 
       avatarBox.appendChild(img);
 
@@ -73,11 +81,11 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
       const nameSpan = document.createElement('span');
       nameSpan.className = 'account-item__name';
-      nameSpan.textContent = acc.username;
+      nameSpan.textContent = acc.username || '';
 
       const emailSpan = document.createElement('span');
       emailSpan.className = 'account-item__email';
-      emailSpan.textContent = acc.email;
+      emailSpan.textContent = acc.email || '';
 
       infoBox.appendChild(nameSpan);
       infoBox.appendChild(emailSpan);
@@ -112,19 +120,19 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
     if (btnAddAccount) {
       if (accounts.length >= 3) {
-        btnAddAccount.style.display = 'none';
+        btnAddAccount.classList.add('is-hidden');
       } else {
-        btnAddAccount.style.display = 'flex';
+        btnAddAccount.classList.remove('is-hidden');
       }
     }
   };
 
   const updateUI = () => {
     if (currentUser) {
-      railItemLogin.style.display = 'none';
-      avatarContainer.style.display = 'inline-flex';
+      railItemLogin.classList.add('is-hidden');
+      avatarContainer.classList.remove('is-hidden');
 
-      const avatarUrl = currentUser.avatar_url || `/api/avatar?name=${encodeURIComponent(currentUser.username)}&size=80`;
+      const avatarUrl = getUserAvatarUrl(currentUser, 80);
       const tier = currentUser.subscription_tier || 'free';
 
       applyAvatarTier(avatarBtn, tier);
@@ -132,17 +140,17 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
       if (avatarImg) {
         avatarImg.src = avatarUrl;
-        avatarImg.alt = currentUser.username;
+        avatarImg.alt = currentUser.username || 'User';
       }
       if (activeAvatar) {
         activeAvatar.src = avatarUrl;
-        activeAvatar.alt = currentUser.username;
+        activeAvatar.alt = currentUser.username || 'User';
       }
       if (activeName) {
-        activeName.textContent = currentUser.username;
+        activeName.textContent = currentUser.username || '';
       }
       if (activeEmail) {
-        activeEmail.textContent = currentUser.email;
+        activeEmail.textContent = currentUser.email || '';
       }
 
       const hasElevatedRole = Boolean(
@@ -154,17 +162,15 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
       );
       if (btnAdminPanel) {
         btnAdminPanel.classList.toggle('is-hidden', !hasElevatedRole);
-        btnAdminPanel.style.display = hasElevatedRole ? 'flex' : 'none';
       }
       if (adminPanelDivider) {
         adminPanelDivider.classList.toggle('is-hidden', !hasElevatedRole);
-        adminPanelDivider.style.display = hasElevatedRole ? 'block' : 'none';
       }
 
       renderAccountList();
     } else {
-      avatarContainer.style.display = 'none';
-      railItemLogin.style.display = '';
+      avatarContainer.classList.add('is-hidden');
+      railItemLogin.classList.remove('is-hidden');
       closeMenu();
     }
   };
@@ -194,8 +200,8 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     } else {
       if (avatarMenu) avatarMenu.classList.add('is-open');
       if (avatarBackdrop) avatarBackdrop.classList.add('is-open');
-      if (panelMain) panelMain.style.display = '';
-      if (panelSwitcher) panelSwitcher.style.display = 'none';
+      if (panelMain) panelMain.classList.remove('is-hidden');
+      if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
       renderIcons(avatarMenu || avatarContainer);
     }
   });
@@ -208,16 +214,16 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
   btnSwitchAccountMenu?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (panelMain) panelMain.style.display = 'none';
-    if (panelSwitcher) panelSwitcher.style.display = 'flex';
+    if (panelMain) panelMain.classList.add('is-hidden');
+    if (panelSwitcher) panelSwitcher.classList.remove('is-hidden');
     renderAccountList();
     renderIcons(panelSwitcher || avatarContainer);
   });
 
   btnBackToMainMenu?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (panelSwitcher) panelSwitcher.style.display = 'none';
-    if (panelMain) panelMain.style.display = '';
+    if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
+    if (panelMain) panelMain.classList.remove('is-hidden');
   });
 
   btnAddAccount?.addEventListener('click', (e) => {

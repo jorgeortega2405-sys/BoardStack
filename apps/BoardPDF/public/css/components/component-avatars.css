@@ -1,0 +1,38 @@
+.table-user-avatar--free::before,
+.table-user-avatar[data-tier="free"]::before {
+  background: #9ca3af;
+}
+
+.table-user-avatar--pro::before,
+.table-user-avatar[data-tier="pro"]::before {
+  background: #3b82f6;
+}
+
+.table-user-avatar--business::before,
+.table-user-avatar--negocios::before,
+.table-user-avatar[data-tier="business"]::before,
+.table-user-avatar[data-tier="negocios"]::before {
+  background: #10b981;
+}
+
+.table-user-avatar--enterprise::before,
+.table-user-avatar--empresas::before,
+.table-user-avatar[data-tier="enterprise"]::before,
+.table-user-avatar[data-tier="empresas"]::before {
+  background: #ef4444;
+}
+
+.table-user-avatar--edu_individual::before,
+.table-user-avatar[data-tier="edu_individual"]::before {
+  background: #6366f1;
+}
+
+.table-user-avatar--edu_school::before,
+.table-user-avatar[data-tier="edu_school"]::before {
+  background: #10b981;
+}
+
+.table-user-avatar--edu_university::before,
+.table-user-avatar[data-tier="edu_university"]::before {
+  background: #ef4444;
+}

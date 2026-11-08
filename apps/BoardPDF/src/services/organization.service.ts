@@ -1,5 +1,6 @@
 import { getDbPool } from '../config/database.config.js';
 import { validateEmail } from '../utils/validators.util.js';
+import { cacheService } from './cache.service.js';
 import { permissionService } from './permission.service.js';
 import crypto from 'crypto';
 
@@ -373,6 +374,8 @@ export async function updateMemberRole(
     [normalizedRole, memberId, orgId]
   );
 
+  await cacheService.invalidateUserOrg(String(member.user_id));
+  await cacheService.invalidateUser(String(member.user_id));
   await permissionService.invalidateUserPermissions(Number(member.user_id));
 
   return {
@@ -420,6 +423,8 @@ export async function removeMember(
     [memberId, orgId]
   );
 
+  await cacheService.invalidateUserOrg(String(member.user_id));
+  await cacheService.invalidateUser(String(member.user_id));
   await permissionService.invalidateUserPermissions(Number(member.user_id));
   return true;
 }

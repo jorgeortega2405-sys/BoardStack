@@ -167,7 +167,21 @@
 .tool-card--collab-doc .tool-card__meta-row {
   align-items: center;
   display: flex;
+  gap: 6px;
   width: 100%;
+}
+
+.tool-card--collab-doc .tool-card__meta-row .component-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  height: 12px;
+  width: 12px;
+}
+
+.tool-card--collab-doc .tool-card__badge-pill .component-icon {
+  flex-shrink: 0;
+  height: 12px;
+  width: 12px;
 }
 
 .tool-card--collab-doc .tool-card__meta-text {

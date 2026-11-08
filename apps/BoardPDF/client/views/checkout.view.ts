@@ -498,7 +498,7 @@ export class CheckoutController implements ViewController {
         const res = await createSubscriptionIntentApi(this.currentPlan, this.recurringCycle);
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
-            errorBanner.textContent = res.error || 'Error al conectar con la pasarela de Stripe.';
+            errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
             errorBanner.style.display = 'block';
           }
           if (loadingEl) loadingEl.style.display = 'none';
@@ -509,7 +509,7 @@ export class CheckoutController implements ViewController {
         const res = await createOneTimePaymentIntentApi(this.currentPlan, this.oneTimeDuration);
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
-            errorBanner.textContent = res.error || 'Error al conectar con la pasarela de Stripe.';
+            errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
             errorBanner.style.display = 'block';
           }
           if (loadingEl) loadingEl.style.display = 'none';

@@ -83,6 +83,7 @@ function sanitize(obj: unknown): unknown {
 
 class CategoryLogger {
   private category: LogCategory;
+  private currentDir = '';
 
   constructor(category: LogCategory) {
     this.category = category;
@@ -90,15 +91,19 @@ class CategoryLogger {
 
   private write(level: LogLevel, message: string, meta?: unknown): void {
     try {
-      if (!fs.existsSync(LOGS_ROOT_DIR)) {
-        fs.mkdirSync(LOGS_ROOT_DIR, { recursive: true });
-      }
-
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const timeStr = now.toISOString();
 
-      const logFile = path.join(LOGS_ROOT_DIR, `${this.category}-${dateStr}.log`);
+      const targetDir = path.join(LOGS_ROOT_DIR, this.category, dateStr);
+      if (this.currentDir !== targetDir) {
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        this.currentDir = targetDir;
+      }
+
+      const logFile = path.join(targetDir, `${this.category}.log`);
 
       const payload: Record<string, unknown> = {
         category: this.category,

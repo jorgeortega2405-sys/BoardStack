@@ -121,7 +121,7 @@ services:
   collab:
     build:
       context: .
-      dockerfile: apps/collab-server/Dockerfile
+      dockerfile: apps/BoardPDF/collab-server/Dockerfile
     container_name: boardpdf-collab
     ports:
       - "3001:3001"

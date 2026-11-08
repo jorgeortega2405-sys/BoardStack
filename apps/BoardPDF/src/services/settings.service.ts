@@ -12,7 +12,7 @@ import fs from 'fs';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 
-const AVATARS_DIR = path.resolve(process.cwd(), 'public/uploads/avatars');
+
 
 export function detectMagicBytes(buffer: Buffer): { extension: string; mimeType: string } | null {
   if (!buffer || buffer.length < 12) {
@@ -86,90 +86,82 @@ export async function updateAvatar(
   ip?: string | null,
   ua?: string | null
 ): Promise<{ avatar_url?: string; error?: string; success: boolean }> {
-  if (!file) {
-    return { error: 'No se ha subido ningún archivo.', success: false };
-  }
-
-  const maxBytes = 2 * 1024 * 1024;
-  if (file.size > maxBytes) {
-    if (file.path) {
-      await safeUnlink(file.path);
+  try {
+    if (!file) {
+      return { error: 'No se ha subido ningún archivo.', success: false };
     }
-    return { error: 'La imagen supera el límite permitido de 2 MB.', success: false };
-  }
 
-  let buffer: Buffer | null = null;
-  if (file.buffer) {
-    buffer = file.buffer;
-  } else if (file.path) {
-    try {
-      buffer = await fs.promises.readFile(file.path);
-      await safeUnlink(file.path);
-    } catch {}
-  }
+    const maxBytes = 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return { error: 'La imagen supera el límite permitido de 2 MB.', success: false };
+    }
 
-  if (!buffer) {
-    return { error: 'No se pudo leer el archivo de imagen.', success: false };
-  }
+    let buffer: Buffer | null = null;
+    if (file.buffer) {
+      buffer = file.buffer;
+    } else if (file.path) {
+      try {
+        buffer = await fs.promises.readFile(file.path);
+      } catch {}
+    }
 
-  const detected = detectMagicBytes(buffer);
-  if (!detected) {
-    return { error: 'Formato de imagen no compatible. Usa PNG, JPG o WEBP.', success: false };
-  }
+    if (!buffer) {
+      return { error: 'No se pudo leer el archivo de imagen.', success: false };
+    }
 
-  const user = await findUserById(userId);
-  if (!user) {
-    return { error: 'Usuario no encontrado.', success: false };
-  }
+    const detected = detectMagicBytes(buffer);
+    if (!detected) {
+      return { error: 'Formato de imagen no compatible. Usa PNG, JPG o WEBP.', success: false };
+    }
 
-  if (!fs.existsSync(AVATARS_DIR)) {
-    fs.mkdirSync(AVATARS_DIR, { recursive: true });
-  }
+    const user = await findUserById(userId);
+    if (!user) {
+      return { error: 'Usuario no encontrado.', success: false };
+    }
 
-  const oldAvatarUrl = user.avatar_url;
-  if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
-    const oldFileName = path.basename(oldAvatarUrl);
-    const oldFilePath = path.join(AVATARS_DIR, oldFileName);
-    await safeUnlink(oldFilePath);
+    const oldAvatarUrl = user.avatar_url;
+    if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
+      const oldFileName = path.basename(oldAvatarUrl);
+      const oldLegacyPath = path.resolve(process.cwd(), 'public', 'uploads', 'avatars', oldFileName);
+      await safeUnlink(oldLegacyPath);
+
+      if (isS3Configured()) {
+        try {
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: S3_BUCKET_NAME,
+            Key: `uploads/avatars/${oldFileName}`,
+          }));
+        } catch {}
+      }
+    }
+
+    const newFileName = `avatar_${userId}_${Date.now()}.${detected.extension}`;
+    const s3Key = `uploads/avatars/${newFileName}`;
 
     if (isS3Configured()) {
       try {
-        await s3Client.send(new DeleteObjectCommand({
+        await s3Client.send(new PutObjectCommand({
+          Body: buffer,
           Bucket: S3_BUCKET_NAME,
-          Key: `uploads/avatars/${oldFileName}`,
+          ContentType: detected.mimeType,
+          Key: s3Key,
         }));
-      } catch {}
+      } catch (s3Err) {
+        logger.app.error('Error al persistir avatar en bucket S3', s3Err);
+        return { error: 'No se pudo guardar la imagen en el servidor de almacenamiento.', success: false };
+      }
+    }
+
+    const newAvatarUrl = `/uploads/avatars/${newFileName}`;
+    await updateUserAvatarInDb(userId, newAvatarUrl);
+    await logUserAudit(userId, 'update_avatar', oldAvatarUrl || null, newAvatarUrl, ip, ua);
+
+    return { avatar_url: newAvatarUrl, success: true };
+  } finally {
+    if (file?.path) {
+      await safeUnlink(file.path);
     }
   }
-
-  const newFileName = `avatar_${userId}_${Date.now()}.${detected.extension}`;
-  const localTarget = path.join(AVATARS_DIR, newFileName);
-
-  try {
-    await fs.promises.writeFile(localTarget, buffer);
-  } catch (err) {
-    logger.app.error('Error al guardar archivo local de avatar', err);
-    return { error: 'No se pudo guardar la imagen en el servidor.', success: false };
-  }
-
-  if (isS3Configured()) {
-    try {
-      await s3Client.send(new PutObjectCommand({
-        Body: buffer,
-        Bucket: S3_BUCKET_NAME,
-        ContentType: detected.mimeType,
-        Key: `uploads/avatars/${newFileName}`,
-      }));
-    } catch (s3Err) {
-      logger.app.warn('Aviso al persistir avatar en bucket S3', s3Err);
-    }
-  }
-
-  const newAvatarUrl = `/uploads/avatars/${newFileName}`;
-  await updateUserAvatarInDb(userId, newAvatarUrl);
-  await logUserAudit(userId, 'update_avatar', oldAvatarUrl || null, newAvatarUrl, ip, ua);
-
-  return { avatar_url: newAvatarUrl, success: true };
 }
 
 export async function deleteAvatar(
@@ -185,8 +177,8 @@ export async function deleteAvatar(
   const oldAvatarUrl = user.avatar_url;
   if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
     const oldFileName = path.basename(oldAvatarUrl);
-    const oldFilePath = path.join(AVATARS_DIR, oldFileName);
-    await safeUnlink(oldFilePath);
+    const oldLegacyPath = path.resolve(process.cwd(), 'public', 'uploads', 'avatars', oldFileName);
+    await safeUnlink(oldLegacyPath);
 
     if (isS3Configured()) {
       try {

@@ -1,4 +1,5 @@
 import { getDbPool } from '../config/database.config.js';
+import { cacheService } from './cache.service.js';
 import { logger } from './logger.service.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
@@ -70,6 +71,8 @@ export async function assignRoleToUser(userId: number, roleName: string): Promis
       'INSERT IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
       [userId, roleId]
     );
+    await cacheService.invalidateUser(String(userId));
+    await cacheService.invalidateRolePermsCache(roleName);
     return true;
   } catch (err) {
     logger.db.warn('Error al asignar rol a usuario', err);
@@ -92,6 +95,8 @@ export async function removeRoleFromUser(userId: number, roleName: string): Prom
       'DELETE FROM user_roles WHERE user_id = ? AND role_id = ?',
       [userId, roleId]
     );
+    await cacheService.invalidateUser(String(userId));
+    await cacheService.invalidateRolePermsCache(roleName);
     return result.affectedRows > 0;
   } catch (err) {
     logger.db.warn('Error al remover rol de usuario', err);
