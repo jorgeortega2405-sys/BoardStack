@@ -26,9 +26,10 @@ export function preloadTemplates(urls: string[]): void {
 }
 
 export async function loadTemplate(url: string): Promise<HTMLElement> {
-  let html = templateCache.get(url);
+  const isDev = Boolean((import.meta as any).env?.DEV);
+  let html = isDev ? undefined : templateCache.get(url);
   if (!html) {
-    let pending = templatePending.get(url);
+    let pending = isDev ? undefined : templatePending.get(url);
     if (!pending) {
       pending = fetch(url)
         .then((res) => {
@@ -38,15 +39,21 @@ export async function loadTemplate(url: string): Promise<HTMLElement> {
           return res.text();
         })
         .then((text) => {
-          templateCache.set(url, text);
-          templatePending.delete(url);
+          if (!isDev) {
+            templateCache.set(url, text);
+            templatePending.delete(url);
+          }
           return text;
         })
         .catch((err) => {
-          templatePending.delete(url);
+          if (!isDev) {
+            templatePending.delete(url);
+          }
           throw err;
         });
-      templatePending.set(url, pending);
+      if (!isDev) {
+        templatePending.set(url, pending);
+      }
     }
     html = await pending;
   }

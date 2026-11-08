@@ -796,6 +796,11 @@ export class SettingsAccountController implements ViewController {
         }
         await setLanguage(langVal);
         renderLanguagesList(langVal);
+        translateElement(this.container);
+        const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+        if (sidebar) {
+          translateElement(sidebar);
+        }
         try {
           await postApi(API_ROUTES.settings.preferences, { language: langVal });
           showToast(t('settings.your_account.language_updated_toast') || 'Idioma actualizado.', 'success');

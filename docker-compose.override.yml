@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: apps/BoardPDF/Dockerfile
+      target: runner-dev
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./apps/BoardPDF/src:/workspace/apps/BoardPDF/src
+      - ./apps/BoardPDF/client:/workspace/apps/BoardPDF/client
+      - ./apps/BoardPDF/public:/workspace/apps/BoardPDF/public
+      - ./apps/BoardPDF/scripts:/workspace/apps/BoardPDF/scripts
+      - ./apps/BoardPDF/logs:/workspace/apps/BoardPDF/logs
+      - ./apps/BoardPDF/index.html:/workspace/apps/BoardPDF/index.html
+      - ./apps/BoardPDF/vite.config.ts:/workspace/apps/BoardPDF/vite.config.ts
+      - ./apps/BoardPDF/tsconfig.json:/workspace/apps/BoardPDF/tsconfig.json
+      - ./apps/BoardPDF/tsconfig.server.json:/workspace/apps/BoardPDF/tsconfig.server.json
+      - ./apps/BoardPDF/tsconfig.client.json:/workspace/apps/BoardPDF/tsconfig.client.json
+      - .env:/workspace/.env:ro
+      - .env:/workspace/apps/BoardPDF/.env:ro
+    command: ["npm", "run", "dev"]

@@ -49,7 +49,7 @@ export async function switchLanguage(newLang: string): Promise<void> {
   const targetBase = getLocalizedPath(currentActiveRouteId, newLang);
   const searchAndHash = `${window.location.search}${window.location.hash}`;
   await setLanguage(newLang);
-  navigate(`${targetBase}${searchAndHash}`);
+  navigate(`${targetBase}${searchAndHash}`, true);
 }
 
 export interface RenderOptions {
@@ -203,6 +203,7 @@ export async function render(rawPath = window.location.pathname, options?: Rende
       updateSidebarAuthState(currentSidebar);
       updateSidebarActiveState(currentSidebar, internalPath);
       translateElement(currentSidebar);
+      translateElement(document.body);
       if (hasDesignatedMenuItems(internalPath)) {
         if (window.innerWidth > 768) {
           const drawerMode = internalPath.startsWith('/settings')

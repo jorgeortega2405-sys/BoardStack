@@ -2,6 +2,7 @@ import { DEFAULT_LANGUAGE, detectBrowserLanguage, isSupportedLanguage, normalize
 
 let currentLanguage = DEFAULT_LANGUAGE;
 let currentTranslations: Record<string, unknown> = {};
+let isLanguageBundleAvailable = true;
 
 const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
   app: {
@@ -125,6 +126,11 @@ const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
     card_title: 'Página de Inicio',
     subtitle: 'Layout y arquitectura SPA modular con diseño enterprise.',
     title: 'Bienvenido a BoardPDF',
+    trust_desc: 'BoardPDF es tu aplicación web para gestionar y editar archivos PDF fácilmente. Disfruta de todas las herramientas para trabajar de forma eficiente con tus documentos digitales mientras mantienes tus datos seguros.',
+    trust_encryption: 'Cifrado de 256 bits',
+    trust_security_info: 'Seguridad de la Información',
+    trust_standard: 'Estándar Internacional',
+    trust_title: 'El software PDF en el que confían millones de usuarios',
   },
   nav: {
     accounts: 'Cuentas',
@@ -181,6 +187,9 @@ export function t(
   paramsOrFallback?: Record<string, number | string> | string,
   explicitFallback?: string
 ): string {
+  if (!isLanguageBundleAvailable) {
+    return key;
+  }
   let params: Record<string, number | string> = {};
   let fallback: string | undefined = explicitFallback;
 
@@ -211,13 +220,21 @@ export function getCurrentLanguage(): string {
   return currentLanguage;
 }
 
+export function isTranslationBundleAvailable(): boolean {
+  return isLanguageBundleAvailable;
+}
+
 const LEGAL_MODULES = ['privacy', 'terms', 'cookies', 'security'] as const;
 
 async function fetchJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
   try {
     const res = await fetch(filePath);
-    if (res.ok) {
-      return (await res.json()) as Record<string, unknown>;
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && (!contentType || contentType.includes('application/json'))) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        return data as Record<string, unknown>;
+      }
     }
   } catch {}
   return null;
@@ -257,24 +274,24 @@ async function loadTranslationFile(code: string): Promise<void> {
   const bundle = await fetchLanguageBundle(norm);
   if (bundle) {
     currentTranslations = bundle;
+    isLanguageBundleAvailable = true;
     try {
       sessionStorage.setItem(`boardpdf_i18n_${norm}`, JSON.stringify(currentTranslations));
     } catch {}
     return;
   }
 
-  if (norm !== DEFAULT_LANGUAGE) {
-    const fallbackBundle = await fetchLanguageBundle(DEFAULT_LANGUAGE);
-    if (fallbackBundle) {
-      currentTranslations = fallbackBundle;
-      try {
-        sessionStorage.setItem(`boardpdf_i18n_${DEFAULT_LANGUAGE}`, JSON.stringify(currentTranslations));
-      } catch {}
-      return;
-    }
+  if (norm === DEFAULT_LANGUAGE) {
+    currentTranslations = FALLBACK_TRANSLATIONS;
+    isLanguageBundleAvailable = true;
+    return;
   }
 
-  currentTranslations = FALLBACK_TRANSLATIONS;
+  isLanguageBundleAvailable = false;
+  currentTranslations = {};
+  try {
+    sessionStorage.removeItem(`boardpdf_i18n_${norm}`);
+  } catch {}
 }
 
 export async function initI18n(initialLang?: string): Promise<string> {
@@ -291,9 +308,13 @@ export async function initI18n(initialLang?: string): Promise<string> {
   try {
     const cached = sessionStorage.getItem(`boardpdf_i18n_${currentLanguage}`);
     if (cached) {
-      currentTranslations = JSON.parse(cached);
-      void loadTranslationFile(currentLanguage);
-      return currentLanguage;
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+        currentTranslations = parsed;
+        isLanguageBundleAvailable = true;
+        void loadTranslationFile(currentLanguage);
+        return currentLanguage;
+      }
     }
   } catch {}
   await loadTranslationFile(currentLanguage);

@@ -90,7 +90,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
       server: {
         middlewareMode: true,
         watch: {
-          binaryInterval: 2000,
+          binaryInterval: 1000,
           ignored: [
             '**/node_modules/**',
             '**/dist/**',
@@ -102,7 +102,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
             '**/tests/**',
             '**/scripts/**',
           ],
-          interval: 1500,
+          interval: 500,
           usePolling: true,
         },
         ws: { server },
@@ -243,7 +243,11 @@ async function startServer(): Promise<void> {
           if (filePath.endsWith('index.html')) {
             res.setHeader('Cache-Control', 'no-cache');
           } else if (filePath.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+            if (config.nodeEnv !== 'production') {
+              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            } else {
+              res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+            }
           } else if (filePath.endsWith('.css') || filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
             if (config.nodeEnv !== 'production') {
               res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -251,7 +255,11 @@ async function startServer(): Promise<void> {
               res.setHeader('Cache-Control', 'no-cache, must-revalidate');
             }
           } else if (filePath.endsWith('.json')) {
-            res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+            if (config.nodeEnv !== 'production') {
+              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            } else {
+              res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+            }
           } else if (filePath.endsWith('.svg') || filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.webp') || filePath.endsWith('.woff2')) {
             res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=2592000');
           }

@@ -1,6 +1,6 @@
 import { getLocalizedPath } from '../config/seo.config.js';
 import { escapeHtml } from '../services/api.service.js';
-import { getCurrentLanguage, t } from '../services/i18n.service.js';
+import { getCurrentLanguage, t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { switchLanguage } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -29,50 +29,50 @@ export function getFooterHtml(): string {
                 <text x="50" y="30" font-family="'Inter', -apple-system, sans-serif" font-size="25" font-weight="700" fill="currentColor" letter-spacing="-0.5">Board<tspan fill="#E11D48" font-weight="900">PDF</tspan></text>
               </svg>
             </a>
-            <p class="footer-col__desc" data-ref="footer-brand-desc">${t('footer.tagline') || 'Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.'}</p>
+            <p class="footer-col__desc" data-ref="footer-brand-desc" data-i18n="footer.tagline">${t('footer.tagline') || 'Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.'}</p>
           </div>
 
           <div class="footer-col" data-ref="footer-col-producto">
-            <h4 class="footer-col__title" data-ref="footer-title-producto">${t('footer.col_product') || 'Producto'}</h4>
+            <h4 class="footer-col__title" data-ref="footer-title-producto" data-i18n="footer.col_product">${t('footer.col_product') || 'Producto'}</h4>
             <ul class="footer-col__list" data-ref="footer-list-producto">
               <li class="footer-col__item" data-ref="footer-item-inicio">
-                <a class="footer-col__link" data-ref="footer-link-inicio" href="${getLocalizedPath('home', currentLang)}">${t('footer.link_home') || 'Inicio'}</a>
+                <a class="footer-col__link" data-ref="footer-link-inicio" data-i18n="footer.link_home" href="${getLocalizedPath('home', currentLang)}">${t('footer.link_home') || 'Inicio'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-pricing">
-                <a class="footer-col__link" data-ref="footer-link-pricing" href="${getLocalizedPath('pricing', currentLang)}">${t('footer.link_pricing') || 'Precios'}</a>
+                <a class="footer-col__link" data-ref="footer-link-pricing" data-i18n="footer.link_pricing" href="${getLocalizedPath('pricing', currentLang)}">${t('footer.link_pricing') || 'Precios'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-faq">
-                <a class="footer-col__link" data-ref="footer-link-faq" href="${getLocalizedPath('help-faq', currentLang)}">${t('footer.link_faq') || 'Preguntas frecuentes'}</a>
+                <a class="footer-col__link" data-ref="footer-link-faq" data-i18n="footer.link_faq" href="${getLocalizedPath('help-faq', currentLang)}">${t('footer.link_faq') || 'Preguntas frecuentes'}</a>
               </li>
             </ul>
           </div>
 
           <div class="footer-col" data-ref="footer-col-legal">
-            <h4 class="footer-col__title" data-ref="footer-title-legal">${t('footer.col_legal') || 'Legal'}</h4>
+            <h4 class="footer-col__title" data-ref="footer-title-legal" data-i18n="footer.col_legal">${t('footer.col_legal') || 'Legal'}</h4>
             <ul class="footer-col__list" data-ref="footer-list-legal">
               <li class="footer-col__item" data-ref="footer-item-seguridad">
-                <a class="footer-col__link" data-ref="footer-link-seguridad" href="${getLocalizedPath('help-security', currentLang)}">${t('footer.link_security') || 'Política de seguridad'}</a>
+                <a class="footer-col__link" data-ref="footer-link-seguridad" data-i18n="footer.link_security" href="${getLocalizedPath('help-security', currentLang)}">${t('footer.link_security') || 'Política de seguridad'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-privacidad">
-                <a class="footer-col__link" data-ref="footer-link-privacidad" href="${getLocalizedPath('help-privacy', currentLang)}">${t('footer.link_privacy') || 'Política de Privacidad'}</a>
+                <a class="footer-col__link" data-ref="footer-link-privacidad" data-i18n="footer.link_privacy" href="${getLocalizedPath('help-privacy', currentLang)}">${t('footer.link_privacy') || 'Política de Privacidad'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-terminos">
-                <a class="footer-col__link" data-ref="footer-link-terminos" href="${getLocalizedPath('help-terms', currentLang)}">${t('footer.link_terms') || 'Términos y Condiciones'}</a>
+                <a class="footer-col__link" data-ref="footer-link-terminos" data-i18n="footer.link_terms" href="${getLocalizedPath('help-terms', currentLang)}">${t('footer.link_terms') || 'Términos y Condiciones'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-cookies">
-                <a class="footer-col__link" data-ref="footer-link-cookies" href="${getLocalizedPath('help-cookies', currentLang)}">${t('footer.link_cookies') || 'Política de cookies'}</a>
+                <a class="footer-col__link" data-ref="footer-link-cookies" data-i18n="footer.link_cookies" href="${getLocalizedPath('help-cookies', currentLang)}">${t('footer.link_cookies') || 'Política de cookies'}</a>
               </li>
             </ul>
           </div>
 
           <div class="footer-col" data-ref="footer-col-empresa">
-            <h4 class="footer-col__title" data-ref="footer-title-empresa">${t('footer.col_company') || 'Empresa'}</h4>
+            <h4 class="footer-col__title" data-ref="footer-title-empresa" data-i18n="footer.col_company">${t('footer.col_company') || 'Empresa'}</h4>
             <ul class="footer-col__list" data-ref="footer-list-empresa">
               <li class="footer-col__item" data-ref="footer-item-nosotros">
-                <a class="footer-col__link" data-ref="footer-link-nosotros" href="${getLocalizedPath('about', currentLang)}">${t('footer.link_about') || 'Sobre nosotros'}</a>
+                <a class="footer-col__link" data-ref="footer-link-nosotros" data-i18n="footer.link_about" href="${getLocalizedPath('about', currentLang)}">${t('footer.link_about') || 'Sobre nosotros'}</a>
               </li>
               <li class="footer-col__item" data-ref="footer-item-contacto">
-                <a class="footer-col__link" data-ref="footer-link-contacto" href="${getLocalizedPath('contact', currentLang)}">${t('footer.link_contact') || 'Contacto'}</a>
+                <a class="footer-col__link" data-ref="footer-link-contacto" data-i18n="footer.link_contact" href="${getLocalizedPath('contact', currentLang)}">${t('footer.link_contact') || 'Contacto'}</a>
               </li>
             </ul>
           </div>
@@ -138,7 +138,7 @@ export function getFooterHtml(): string {
                 </svg>
               </a>
             </div>
-            <span class="site-footer__copyright" data-ref="footer-copyright">${t('footer.copyright') || '© BoardPDF 2026 ® - Tu editor de PDF'}</span>
+            <span class="site-footer__copyright" data-ref="footer-copyright" data-i18n="footer.copyright">${t('footer.copyright') || '© BoardPDF 2026 ® - Tu editor de PDF'}</span>
           </div>
         </div>
       </div>
@@ -147,6 +147,7 @@ export function getFooterHtml(): string {
 }
 
 export function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): { destroy: () => void } {
+  translateElement(container);
   const langDropdown = container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-footer-language"]');
   const langSelectedText = container.querySelector<HTMLElement>('[data-ref="footer-language-selected-text"]');
   const langListEl = container.querySelector<HTMLElement>('[data-ref="list-footer-languages"]');
@@ -225,8 +226,8 @@ export function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): {
         if (langSelectedText) {
           langSelectedText.textContent = getLanguageName(lang);
         }
-        showToast(t('toasts.language_updated', 'Idioma actualizado'), 'success');
         await switchLanguage(lang);
+        showToast(t('toasts.language_updated', 'Idioma actualizado'), 'success');
       },
     });
   }

@@ -28,7 +28,7 @@ export default defineConfig({
   server: {
     port: 5174,
     watch: {
-      binaryInterval: 2000,
+      binaryInterval: 1000,
       ignored: [
         '**/node_modules/**',
         '**/dist/**',
@@ -39,7 +39,7 @@ export default defineConfig({
         '**/tests/**',
         '**/scripts/**',
       ],
-      interval: 1500,
+      interval: 500,
       usePolling: true,
     },
   },
