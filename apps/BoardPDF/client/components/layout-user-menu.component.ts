@@ -126,7 +126,9 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
   };
 
   const updateUI = () => {
+    const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
     if (currentUser) {
+      itemProjects?.classList.remove('is-hidden');
       railItemLogin.classList.add('is-hidden');
       avatarContainer.classList.remove('is-hidden');
 
@@ -153,6 +155,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
 
       renderAccountList();
     } else {
+      itemProjects?.classList.add('is-hidden');
       avatarContainer.classList.add('is-hidden');
       railItemLogin.classList.remove('is-hidden');
       closeMenu();

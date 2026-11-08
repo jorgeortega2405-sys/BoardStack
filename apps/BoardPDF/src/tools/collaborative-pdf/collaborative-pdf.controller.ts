@@ -1,4 +1,4 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getDbPool } from '../../config/database.config.js';
 import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
 import { getCurrentUser, hasSubscriptionFeature } from '../../middlewares/auth.middleware.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
@@ -6,6 +6,7 @@ import { logger } from '../../services/logger.service.js';
 import { removeBackground } from '../../services/photoroom.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
 import fs from 'fs';
@@ -23,9 +24,17 @@ function ensureUploadsDir(): void {
 export async function listCollaborativeDocsHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
+    if (!user || !user.id) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para ver tus proyectos.',
+        requireLogin: true,
+        success: false,
+      });
+      return;
+    }
     const folderParam = req.query.folderId as string | undefined;
     const folderId = folderParam === 'root' ? '' : folderParam;
-    const documents = await listCollaborativeDocuments(user?.id, folderId);
+    const documents = await listCollaborativeDocuments(Number(user.id), folderId);
     res.json({
       documents,
       success: true,
@@ -387,7 +396,6 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
 
 export async function uploadCollaborativeAssetHandler(req: Request, res: Response): Promise<void> {
   try {
-    ensureUploadsDir();
     const files = req.files as Express.Multer.File[] | undefined;
     const file = req.file as Express.Multer.File | undefined;
     const targetFiles: Express.Multer.File[] = files && Array.isArray(files) ? files : file ? [file] : [];
@@ -402,15 +410,61 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
 
     const user = getCurrentUser(req);
     const totalIncomingBytes = targetFiles.reduce((acc, f) => acc + (f.size || f.buffer?.length || 0), 0);
+    let targetUserId: number | null = user?.id ? Number(user.id) : null;
+    let targetDocId: string | null = null;
 
-    if (user?.id) {
-      const { allowed } = await canUserAllocateStorage(Number(user.id), totalIncomingBytes);
+    if (!targetUserId) {
+      const docId = typeof req.body.docId === 'string' ? req.body.docId.trim() : null;
+      if (!docId) {
+        res.status(401).json({
+          error: 'Debes iniciar sesión para subir archivos a tu cuenta.',
+          requireLogin: true,
+          success: false,
+        });
+        return;
+      }
+
+      const doc = await getCollaborativeDocument(docId);
+      if (!doc || doc.access_level !== 'anyone_with_link' || !doc.user_id) {
+        res.status(403).json({
+          error: 'No tienes permisos para agregar archivos a este documento.',
+          success: false,
+        });
+        return;
+      }
+
+      const hasNonImage = targetFiles.some((f) => !f.mimetype.startsWith('image/'));
+      if (hasNonImage || totalIncomingBytes > 5 * 1024 * 1024) {
+        res.status(400).json({
+          error: 'Solo se permite adjuntar imágenes de hasta 5 MB en modo invitado.',
+          success: false,
+        });
+        return;
+      }
+
+      const ownerId = Number(doc.user_id);
+      const { allowed } = await canUserAllocateStorage(ownerId, totalIncomingBytes);
+      if (!allowed) {
+        res.status(413).json({
+          error: 'El propietario del documento no cuenta con suficiente espacio de almacenamiento disponible.',
+          success: false,
+        });
+        return;
+      }
+
+      targetUserId = ownerId;
+      targetDocId = doc.id;
+    } else {
+      const { allowed } = await canUserAllocateStorage(targetUserId, totalIncomingBytes);
       if (!allowed) {
         res.status(413).json({
           error: 'Has alcanzado el límite de almacenamiento disponible (5 GB). Por favor elimina documentos o archivos para liberar espacio.',
           success: false,
         });
         return;
+      }
+      if (typeof req.body.docId === 'string' && req.body.docId.trim().length > 0) {
+        targetDocId = req.body.docId.trim();
       }
     }
 
@@ -425,6 +479,8 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
       url: string;
       userId?: number | null;
     }> = [];
+
+    const targetFolderId = typeof req.body.folderId === 'string' && req.body.folderId.trim().length > 0 ? req.body.folderId.trim() : null;
 
     for (const item of targetFiles) {
       const ext = path.extname(item.originalname).toLowerCase();
@@ -443,9 +499,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
       const randomId = crypto.randomBytes(6).toString('hex');
       const safeBasename = path.basename(item.originalname, ext).replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 40);
       const uniqueFilename = `${Date.now()}_${randomId}_${safeBasename}${ext}`;
-      const filePath = path.join(UPLOADS_DIR, uniqueFilename);
-
-      fs.writeFileSync(filePath, item.buffer);
+      const s3Key = `uploads/collaborative/${uniqueFilename}`;
 
       if (isS3Configured()) {
         try {
@@ -454,48 +508,49 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
               Body: item.buffer,
               Bucket: S3_BUCKET_NAME,
               ContentType: item.mimetype || 'application/octet-stream',
-              Key: `uploads/collaborative/${uniqueFilename}`,
+              Key: s3Key,
             })
           );
         } catch (s3Err) {
-          logger.app.warn('Error al subir copia de archivo colaborativo a S3/MinIO', s3Err);
+          logger.app.error('Error al subir archivo colaborativo a S3/MinIO', s3Err);
+          res.status(500).json({
+            error: 'No se pudo guardar el archivo en el almacenamiento en la nube.',
+            success: false,
+          });
+          return;
         }
       }
 
-      const targetFolderId = typeof req.body.folderId === 'string' && req.body.folderId.trim().length > 0 ? req.body.folderId.trim() : null;
-
-      if (user?.id) {
-        try {
-          await recordUserAsset({
-            assetType: isPdf ? 'upload_pdf' : 'upload_image',
-            byteSize: item.size || item.buffer?.length || 0,
-            fileName: item.originalname,
-            filePath,
-            folderId: targetFolderId,
-            mimeType: item.mimetype || (isPdf ? 'application/pdf' : 'image/png'),
-            s3Key: isS3Configured() ? `uploads/collaborative/${uniqueFilename}` : null,
-            userId: Number(user.id),
-          });
-        } catch (quotaErr) {
-          logger.db.warn('No se pudo registrar asset en cuota de almacenamiento', quotaErr);
-        }
+      const assetRecordId = `upl_${randomId}`;
+      try {
+        await recordUserAsset({
+          assetType: isPdf ? 'upload_pdf' : 'upload_image',
+          byteSize: item.size || item.buffer?.length || 0,
+          documentId: targetDocId,
+          fileName: item.originalname,
+          filePath: s3Key,
+          folderId: targetFolderId,
+          mimeType: item.mimetype || (isPdf ? 'application/pdf' : 'image/png'),
+          s3Key: isS3Configured() ? s3Key : null,
+          userId: targetUserId,
+        });
+      } catch (quotaErr) {
+        logger.db.warn('No se pudo registrar asset en cuota de almacenamiento', quotaErr);
       }
 
       const record = {
         createdAt: new Date().toISOString(),
         folderId: targetFolderId,
-        id: `upl_${randomId}`,
+        id: assetRecordId,
         mimeType: item.mimetype,
         name: item.originalname,
         pageCount,
         size: item.size,
         type: (isPdf ? 'pdf' : 'image') as 'image' | 'pdf',
         url: `/uploads/collaborative/${uniqueFilename}`,
-        userId: user?.id ? Number(user.id) : null,
+        userId: targetUserId,
       };
 
-      const metaPath = path.join(UPLOADS_DIR, `${uniqueFilename}.meta.json`);
-      fs.writeFileSync(metaPath, JSON.stringify(record, null, 2), 'utf-8');
       uploadedRecords.push(record);
     }
 
@@ -515,31 +570,41 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
 
 export async function listCollaborativeUploadsHandler(req: Request, res: Response): Promise<void> {
   try {
-    ensureUploadsDir();
     const user = getCurrentUser(req);
-    const userId = user?.id ? Number(user.id) : null;
-    const folderIdParam = req.query.folderId as string | undefined;
-    const files = fs.readdirSync(UPLOADS_DIR);
-    const metaFiles = files.filter((f) => f.endsWith('.meta.json'));
-    const records = [];
-
-    for (const mf of metaFiles) {
-      try {
-        const content = fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8');
-        const parsed = JSON.parse(content);
-        if (!userId || !parsed.userId || parsed.userId === userId) {
-          if (folderIdParam === 'root') {
-            if (!parsed.folderId) records.push(parsed);
-          } else if (folderIdParam && folderIdParam !== 'all') {
-            if (parsed.folderId === folderIdParam) records.push(parsed);
-          } else {
-            records.push(parsed);
-          }
-        }
-      } catch {}
+    if (!user || !user.id) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para ver tus archivos subidos.',
+        requireLogin: true,
+        success: false,
+      });
+      return;
     }
+    const folderIdParam = req.query.folderId as string | undefined;
+    const pool = getDbPool();
+    let query = 'SELECT id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at FROM user_storage_assets WHERE user_id = ? AND asset_type IN ("upload_image", "upload_pdf")';
+    const params: any[] = [user.id];
 
-    records.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    if (folderIdParam === 'root') {
+      query += ' AND folder_id IS NULL';
+    } else if (folderIdParam && folderIdParam !== 'all') {
+      query += ' AND folder_id = ?';
+      params.push(folderIdParam);
+    }
+    query += ' ORDER BY created_at DESC';
+
+    const [rows] = await pool.query<any[]>(query, params);
+    const records = (Array.isArray(rows) ? rows : []).map((r) => ({
+      createdAt: new Date(r.created_at).toISOString(),
+      folderId: r.folder_id || null,
+      id: r.id,
+      mimeType: r.mime_type,
+      name: r.file_name,
+      pageCount: 1,
+      size: Number(r.byte_size) || 0,
+      type: r.asset_type === 'upload_pdf' ? 'pdf' : 'image',
+      url: `/uploads/collaborative/${path.basename(r.s3_key || r.file_name)}`,
+      userId: user.id,
+    }));
 
     res.json({
       files: records,

@@ -84,6 +84,18 @@ services:
       RETENTION_SECONDS: 3600
     restart: unless-stopped
 
+  collab:
+    build:
+      context: ../..
+      dockerfile: apps/BoardPDF/collab-server/Dockerfile
+    container_name: boardpdf-collab
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      MAX_COLLABORATORS: 12
+    restart: always
+
 volumes:
   s3_data:
   mysql_data:

@@ -55,7 +55,17 @@ export function hasDesignatedMenuItems(pathname: string): boolean {
   return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings');
 }
 
-export function updateSidebarAuthState(_sidebar?: HTMLElement): void {
+export function updateSidebarAuthState(sidebar?: HTMLElement): void {
+  const target = sidebar || sidebarInstance;
+  if (!target) return;
+  const itemProjects = target.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
+  if (itemProjects) {
+    if (currentUser) {
+      itemProjects.classList.remove('is-hidden');
+    } else {
+      itemProjects.classList.add('is-hidden');
+    }
+  }
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
@@ -97,6 +107,13 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
   const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
   const btnProjects = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-projects"]');
+  if (itemProjects) {
+    if (currentUser) {
+      itemProjects.classList.remove('is-hidden');
+    } else {
+      itemProjects.classList.add('is-hidden');
+    }
+  }
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const railItemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
@@ -170,9 +187,20 @@ function setupRailNavigation(sidebar: HTMLElement): void {
 
   const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
   const btnProjects = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-projects"]');
+  if (itemProjects) {
+    if (currentUser) {
+      itemProjects.classList.remove('is-hidden');
+    } else {
+      itemProjects.classList.add('is-hidden');
+    }
+  }
 
   const goProjects = (e: Event) => {
     e.preventDefault();
+    if (!currentUser) {
+      navigate('/login?redirect=/projects');
+      return;
+    }
     if (isDrawerOpen) {
       toggleDrawer(false);
     }

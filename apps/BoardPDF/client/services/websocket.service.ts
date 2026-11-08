@@ -88,8 +88,10 @@ class WebSocketClientService {
 
         const ws = new WebSocket(wsUrl);
         this.connectingSocket = ws;
+        let wasOpened = false;
 
         ws.onopen = () => {
+          wasOpened = true;
           if (this.connectingSocket !== ws || !this.isEditorRoute()) {
             try {
               ws.close();
@@ -154,7 +156,9 @@ class WebSocketClientService {
         };
 
         ws.onclose = () => {
-          console.log('[WebSocket] Conexión cerrada.');
+          if (wasOpened) {
+            console.log('[WebSocket] Conexión cerrada.');
+          }
           if (this.connectingSocket === ws) {
             this.connectingSocket = null;
           }
@@ -291,8 +295,9 @@ class WebSocketClientService {
     if (this.reconnectTimer !== null) return;
     if (this.activeSubscriptions.size === 0 && this.collabCallbacks.size === 0) return;
 
-    const maxBackoff = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts), 30000);
-    const delay = Math.floor(Math.random() * maxBackoff);
+    const baseDelay = Math.min(2000 * Math.pow(1.5, Math.min(this.reconnectAttempts, 8)), 30000);
+    const jitter = Math.floor(Math.random() * 1000);
+    const delay = baseDelay + jitter;
     this.reconnectAttempts++;
 
     this.reconnectTimer = window.setTimeout(() => {

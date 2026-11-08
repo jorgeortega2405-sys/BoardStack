@@ -2,6 +2,7 @@ import { getDbPool } from '../config/database.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { createProjectFolder, deleteProjectFolder, getProjectFolderById, listProjectFolders, moveDocToFolder, moveUploadToFolder, renameProjectFolder } from '../services/project-folders.service.js';
+import { reclaimUserAsset } from '../services/storage-quota.service.js';
 import { listCollaborativeDocuments } from '../tools/collaborative-pdf/collaborative-pdf.service.js';
 import type { Request, Response } from 'express';
 import fs from 'fs';
@@ -82,35 +83,45 @@ export async function getProjectFolderHandler(req: Request, res: Response): Prom
       const sub = await listProjectFolders(user?.id ?? null, folder.id, 'upload_folder');
       subfolders = sub.folders;
 
-      if (fs.existsSync(UPLOADS_DIR)) {
-        try {
-          const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-          for (const mf of metaFiles) {
-            try {
-              const parsed = JSON.parse(fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8'));
-              if ((!user?.id || parsed.userId === user.id) && (!parsed.folderId || parsed.folderId === folder.id)) {
-                files.push(parsed);
-              }
-            } catch {}
-          }
-        } catch {}
+      if (user?.id) {
+        const pool = getDbPool();
+        const [assetRows] = await pool.query<any[]>(
+          'SELECT id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at FROM user_storage_assets WHERE user_id = ? AND asset_type IN ("upload_image", "upload_pdf") AND (folder_id IS NULL OR folder_id = ?) ORDER BY created_at DESC',
+          [user.id, folder.id]
+        );
+        files = (Array.isArray(assetRows) ? assetRows : []).map((r) => ({
+          createdAt: new Date(r.created_at).toISOString(),
+          folderId: r.folder_id || null,
+          id: r.id,
+          mimeType: r.mime_type,
+          name: r.file_name,
+          pageCount: 1,
+          size: Number(r.byte_size) || 0,
+          type: r.asset_type === 'upload_pdf' ? 'pdf' : 'image',
+          url: `/uploads/collaborative/${path.basename(r.s3_key || r.file_name)}`,
+          userId: user.id,
+        }));
       }
-      files.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     } else if (folder.folder_type === 'upload_folder') {
-      if (fs.existsSync(UPLOADS_DIR)) {
-        try {
-          const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-          for (const mf of metaFiles) {
-            try {
-              const parsed = JSON.parse(fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8'));
-              if ((!user?.id || parsed.userId === user.id) && parsed.folderId === folder.id) {
-                files.push(parsed);
-              }
-            } catch {}
-          }
-        } catch {}
+      if (user?.id) {
+        const pool = getDbPool();
+        const [assetRows] = await pool.query<any[]>(
+          'SELECT id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at FROM user_storage_assets WHERE user_id = ? AND asset_type IN ("upload_image", "upload_pdf") AND folder_id = ? ORDER BY created_at DESC',
+          [user.id, folder.id]
+        );
+        files = (Array.isArray(assetRows) ? assetRows : []).map((r) => ({
+          createdAt: new Date(r.created_at).toISOString(),
+          folderId: r.folder_id || null,
+          id: r.id,
+          mimeType: r.mime_type,
+          name: r.file_name,
+          pageCount: 1,
+          size: Number(r.byte_size) || 0,
+          type: r.asset_type === 'upload_pdf' ? 'pdf' : 'image',
+          url: `/uploads/collaborative/${path.basename(r.s3_key || r.file_name)}`,
+          userId: user.id,
+        }));
       }
-      files.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     }
 
     res.json({
@@ -254,32 +265,8 @@ export async function deleteUploadAssetHandler(req: Request, res: Response): Pro
     }
 
     const user = getCurrentUser(req);
-    const pool = getDbPool();
-
-    try {
-      await pool.query('DELETE FROM user_storage_assets WHERE id = ? AND (user_id <=> ? OR user_id IS NULL)', [
-        id,
-        user?.id ?? null,
-      ]);
-    } catch {}
-
-    if (fs.existsSync(UPLOADS_DIR)) {
-      try {
-        const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-        for (const mf of metaFiles) {
-          try {
-            const metaPath = path.join(UPLOADS_DIR, mf);
-            const data = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-            if (data.id === id) {
-              const actualFileName = mf.replace(/\.meta\.json$/, '');
-              const actualFilePath = path.join(UPLOADS_DIR, actualFileName);
-              if (fs.existsSync(actualFilePath)) fs.unlinkSync(actualFilePath);
-              if (fs.existsSync(metaPath)) fs.unlinkSync(metaPath);
-              break;
-            }
-          } catch {}
-        }
-      } catch {}
+    if (user?.id) {
+      await reclaimUserAsset(id, Number(user.id));
     }
 
     res.json({ success: true });

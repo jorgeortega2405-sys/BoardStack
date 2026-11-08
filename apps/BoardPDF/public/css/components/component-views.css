@@ -888,6 +888,112 @@
   z-index: 1;
 }
 
+.home-design-pdf-card {
+  align-items: center;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+  box-sizing: border-box;
+  display: flex;
+  margin-bottom: 32px;
+  overflow: hidden;
+  padding: 48px 56px;
+  position: relative;
+  width: 100%;
+}
+
+.home-design-pdf__inner {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  gap: 48px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.home-design-pdf__content {
+  align-items: flex-start;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 55%;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 620px;
+  text-align: left;
+}
+
+.home-design-pdf__badge {
+  align-items: center;
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 9999px;
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 6px 14px;
+}
+
+.home-design-pdf__badge-icon {
+  color: var(--primary, #000000);
+  height: 16px;
+  width: 16px;
+}
+
+.home-design-pdf__badge-text {
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.home-design-pdf__title {
+  color: var(--text-primary, #0f172a);
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0 0 14px;
+  text-align: left;
+}
+
+.home-design-pdf__desc {
+  color: var(--text-secondary, #64748b);
+  font-size: 15.5px;
+  line-height: 1.6;
+  margin: 0 0 28px;
+  text-align: left;
+}
+
+.home-design-pdf__actions {
+  align-items: center;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.home-design-pdf__cta {
+  font-weight: 600;
+  min-width: 180px;
+  padding: 0 28px;
+}
+
+.home-design-pdf__media {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 45%;
+  justify-content: center;
+  max-width: 480px;
+}
+
+.home-design-pdf__img {
+  display: block;
+  height: auto;
+  max-height: 380px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .home-trust-card {
   align-items: center;
   background-color: var(--bg-surface, #ffffff);
@@ -1137,6 +1243,26 @@
 }
 
 @media (max-width: 900px) {
+  .home-design-pdf__inner {
+    flex-direction: column-reverse;
+    gap: 32px;
+  }
+
+  .home-design-pdf__content {
+    align-items: center;
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .home-design-pdf__media {
+    max-width: 420px;
+    width: 100%;
+  }
+
+  .home-design-pdf-card {
+    padding: 40px 28px;
+  }
+
   .site-footer__grid {
     gap: 40px 48px;
   }
@@ -1146,7 +1272,9 @@
   .home-feature-section {
     padding: 0 16px 18px;
   }
-  .home-trust-card {
+
+  .home-trust-card,
+  .home-design-pdf-card {
     border-radius: 18px;
     padding: 36px 20px 32px;
   }

@@ -2,15 +2,15 @@ import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi, putApi } from '../../services/api.service.js';
+import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
-import { createLocalFolder, deleteLocalFolder, getLocalFolderById, getLocalUploadsFolder, listLocalFolders, moveDocToLocalFolder, renameLocalFolder } from '../../utils/project-local-folders.util.js';
+
 
 interface ProjectFolder {
   color?: string | null;
@@ -31,7 +31,6 @@ interface DocItem {
   created_at: string;
   folder_id?: string | null;
   id: string;
-  is_local?: boolean;
   page_count: number;
   pdf_filename?: string;
   title: string;
@@ -73,6 +72,10 @@ export class ProjectsController implements ViewController {
   }
 
   public async init(): Promise<void> {
+    if (!currentUser) {
+      navigate('/login?redirect=%2Fprojects', true);
+      return;
+    }
     this.abortController = new AbortController();
     await this.loadData();
     this.renderView();
@@ -97,48 +100,17 @@ export class ProjectsController implements ViewController {
 
   private async loadRootProjectsData(): Promise<void> {
     this.currentFolder = null;
-    const localDrafts = listLocalDrafts();
-    const localDocItems: DocItem[] = localDrafts
-      .filter((d) => !d.folderId)
-      .map((d) => ({
-        access_level: 'private',
-        content: d.content,
-        created_at: d.updatedAt,
-        folder_id: null,
-        id: d.id,
-        is_local: true,
-        page_count: d.content?.pageCount || 1,
-        pdf_filename: undefined,
-        title: d.title || 'Documento sin título',
-        updated_at: d.updatedAt,
-      }));
-
-    if (!currentUser) {
-      this.documents = localDocItems;
-      const localFoldersRes = listLocalFolders(null, 'project');
-      this.folders = localFoldersRes.folders;
-      this.uploadsFolder = getLocalUploadsFolder();
-      this.files = [];
-      return;
-    }
-
     try {
       const docsRes = await getApi(API_ROUTES.collaborativeDocs.base);
       if (docsRes.ok) {
         const data = await docsRes.json();
         const serverDocs: DocItem[] = Array.isArray(data.documents) ? data.documents : [];
-        const rootServerDocs = serverDocs.filter((d) => !d.folder_id);
-        const serverDocIds = new Set(rootServerDocs.map((d) => d.id));
-        const mergedDocs = [
-          ...rootServerDocs,
-          ...localDocItems.filter((ld) => !serverDocIds.has(ld.id)),
-        ];
-        this.documents = mergedDocs;
+        this.documents = serverDocs.filter((d) => !d.folder_id);
       } else {
-        this.documents = localDocItems;
+        this.documents = [];
       }
     } catch {
-      this.documents = localDocItems;
+      this.documents = [];
     }
 
     try {
@@ -155,53 +127,10 @@ export class ProjectsController implements ViewController {
   }
 
   private async loadFolderDetailData(folderId: string): Promise<void> {
-    if (!currentUser) {
-      if (folderId === 'local-uploads-folder-uuid') {
-        this.currentFolder = getLocalUploadsFolder();
-        this.documents = [];
-        this.folders = listLocalFolders('local-uploads-folder-uuid', 'upload_folder').folders;
-        this.files = [];
-        return;
-      }
-
-      const localFolder = getLocalFolderById(folderId);
-      if (!localFolder) {
-        showToast('Carpeta no encontrada', 'warning');
-        navigate('/projects');
-        return;
-      }
-
-      this.currentFolder = localFolder;
-      if (localFolder.folder_type === 'project') {
-        const localDrafts = listLocalDrafts();
-        this.documents = localDrafts
-          .filter((d) => d.folderId === folderId)
-          .map((d) => ({
-            access_level: 'private',
-            content: d.content,
-            created_at: d.updatedAt,
-            folder_id: folderId,
-            id: d.id,
-            is_local: true,
-            page_count: d.content?.pageCount || 1,
-            pdf_filename: undefined,
-            title: d.title || 'Documento sin título',
-            updated_at: d.updatedAt,
-          }));
-        this.folders = [];
-        this.files = [];
-      } else {
-        this.documents = [];
-        this.folders = [];
-        this.files = [];
-      }
-      return;
-    }
-
     try {
       const res = await getApi(API_ROUTES.projectFolders.byId(folderId));
       if (!res.ok) {
-        showToast('Carpeta no encontrada', 'warning');
+        showToast(t('projects.folder_not_found', 'Carpeta no encontrada'), 'warning');
         navigate('/projects');
         return;
       }
@@ -211,7 +140,7 @@ export class ProjectsController implements ViewController {
       this.files = Array.isArray(data.files) ? data.files : [];
       this.folders = Array.isArray(data.subfolders) ? data.subfolders : [];
     } catch {
-      showToast('Error al cargar carpeta', 'danger');
+      showToast(t('projects.folder_load_error', 'Error al cargar carpeta'), 'danger');
       navigate('/projects');
     }
   }
@@ -453,7 +382,6 @@ export class ProjectsController implements ViewController {
     empty.classList.add('is-hidden');
 
     grid.innerHTML = filteredDocs.map((doc) => {
-      const isLocal = !!doc.is_local;
       const isPublic = doc.access_level === 'anyone_with_link';
       const badgeIcon = isPublic ? 'lock_open' : 'lock';
       const badgeText = isPublic ? 'Público' : 'Privado';
@@ -492,7 +420,7 @@ export class ProjectsController implements ViewController {
                       <span class="menu-item__text">Copiar enlace</span>
                     </button>
                     <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
-                    <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}" data-is-local="${isLocal ? '1' : '0'}">
+                    <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
                       <span class="menu-item__text">Eliminar</span>
                     </button>
@@ -1050,8 +978,7 @@ export class ProjectsController implements ViewController {
           showToast('Generando descarga del documento...', 'info');
           window.open(`/api/collaborative-docs/${encodeURIComponent(id)}/export`, '_blank');
         } else if (action === 'delete' && id) {
-          const isLocal = actionBtn.getAttribute('data-is-local') === '1';
-          void this.handleDeleteDoc(id, isLocal);
+          void this.handleDeleteDoc(id);
         } else if (action === 'rename-folder' && id) {
           const name = actionBtn.getAttribute('data-name') || '';
           void this.promptRenameFolder(id, name);
@@ -1112,19 +1039,15 @@ export class ProjectsController implements ViewController {
         }
 
         try {
-          if (!currentUser) {
-            createLocalFolder({ folderType, name, parentId });
-          } else {
-            const res = await postApi(API_ROUTES.projectFolders.base, {
-              folderType,
-              name,
-              parentId,
-            });
-            if (!res.ok) {
-              const data = await res.json();
-              showToast(data.error || 'No se pudo crear la carpeta', 'danger');
-              return false;
-            }
+          const res = await postApi(API_ROUTES.projectFolders.base, {
+            folderType,
+            name,
+            parentId,
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'No se pudo crear la carpeta', 'danger');
+            return false;
           }
           showToast('Carpeta creada exitosamente', 'info');
           await this.loadData();
@@ -1169,15 +1092,11 @@ export class ProjectsController implements ViewController {
         }
 
         try {
-          if (!currentUser) {
-            renameLocalFolder(folderId, newName);
-          } else {
-            const res = await patchApi(API_ROUTES.projectFolders.byId(folderId), { name: newName });
-            if (!res.ok) {
-              const data = await res.json();
-              showToast(data.error || 'No se pudo renombrar la carpeta', 'danger');
-              return false;
-            }
+          const res = await patchApi(API_ROUTES.projectFolders.byId(folderId), { name: newName });
+          if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'No se pudo renombrar la carpeta', 'danger');
+            return false;
           }
           showToast('Carpeta renombrada exitosamente', 'info');
           await this.loadData();
@@ -1208,15 +1127,11 @@ export class ProjectsController implements ViewController {
       description: '¿Estás seguro de que deseas eliminar esta carpeta? Los archivos y documentos dentro se moverán a la sección principal.',
       onConfirm: async () => {
         try {
-          if (!currentUser) {
-            deleteLocalFolder(folderId);
-          } else {
-            const res = await deleteApi(API_ROUTES.projectFolders.byId(folderId));
-            if (!res.ok) {
-              const data = await res.json();
-              showToast(data.error || 'No se pudo eliminar la carpeta', 'danger');
-              return false;
-            }
+          const res = await deleteApi(API_ROUTES.projectFolders.byId(folderId));
+          if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'No se pudo eliminar la carpeta', 'danger');
+            return false;
           }
           showToast('Carpeta eliminada', 'info');
           if (this.currentFolderId === folderId) {
@@ -1240,17 +1155,13 @@ export class ProjectsController implements ViewController {
 
   private async promptMoveDoc(docId: string): Promise<void> {
     let availableFolders: ProjectFolder[] = [];
-    if (!currentUser) {
-      availableFolders = listLocalFolders(null, 'project').folders;
-    } else {
-      try {
-        const res = await getApi(API_ROUTES.projectFolders.base);
-        if (res.ok) {
-          const data = await res.json();
-          availableFolders = Array.isArray(data.folders) ? data.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
-        }
-      } catch {}
-    }
+    try {
+      const res = await getApi(API_ROUTES.projectFolders.base);
+      if (res.ok) {
+        const data = await res.json();
+        availableFolders = Array.isArray(data.folders) ? data.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
+      }
+    } catch {}
 
     const currentDoc = this.documents.find((d) => d.id === docId);
     const activeFolderId = currentDoc?.folder_id || this.currentFolderId || null;
@@ -1288,15 +1199,11 @@ export class ProjectsController implements ViewController {
         const targetId = selectedRadio ? selectedRadio.value || null : null;
 
         try {
-          if (!currentUser) {
-            moveDocToLocalFolder(docId, targetId);
-          } else {
-            const res = await patchApi(API_ROUTES.projectFolders.docFolder(docId), { folderId: targetId });
-            if (!res.ok) {
-              const data = await res.json();
-              showToast(data.error || 'No se pudo mover el documento', 'danger');
-              return false;
-            }
+          const res = await patchApi(API_ROUTES.projectFolders.docFolder(docId), { folderId: targetId });
+          if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'No se pudo mover el documento', 'danger');
+            return false;
           }
           showToast('Documento movido exitosamente', 'info');
           await this.loadData();
@@ -1316,11 +1223,8 @@ export class ProjectsController implements ViewController {
 
   private async promptMoveUpload(uploadId: string): Promise<void> {
     let availableSubfolders: ProjectFolder[] = [];
-    const uploadsFldId = this.uploadsFolder?.id || 'local-uploads-folder-uuid';
-
-    if (!currentUser) {
-      availableSubfolders = listLocalFolders(uploadsFldId, 'upload_folder').folders;
-    } else {
+    const uploadsFldId = this.uploadsFolder?.id || '';
+    if (uploadsFldId) {
       try {
         const res = await getApi(`${API_ROUTES.projectFolders.base}?parentId=${encodeURIComponent(uploadsFldId)}&folderType=upload_folder`);
         if (res.ok) {
@@ -1475,23 +1379,14 @@ export class ProjectsController implements ViewController {
       pageTitles: [''],
     };
 
-    saveLocalDraft(newDocId, {
-      content: initialContent,
-      folderId: targetFolderId,
-      title: titleVal,
-      userId: currentUser?.id ?? null,
-    });
-
-    if (currentUser) {
-      try {
-        void putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
-          content: initialContent,
-          folderId: targetFolderId,
-          id: newDocId,
-          title: titleVal,
-        });
-      } catch {}
-    }
+    try {
+      void putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
+        content: initialContent,
+        folderId: targetFolderId,
+        id: newDocId,
+        title: titleVal,
+      });
+    } catch {}
 
     const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
     navigate(navUrl);
@@ -1507,30 +1402,21 @@ export class ProjectsController implements ViewController {
     const newTitle = `${doc.title} (Copia)`;
     const newContent = doc.content ? JSON.parse(JSON.stringify(doc.content)) : {};
 
-    saveLocalDraft(newId, {
-      content: newContent,
-      folderId: doc.folder_id || null,
-      title: newTitle,
-      userId: currentUser?.id ?? null,
-    });
-
-    if (currentUser) {
-      try {
-        await putApi(API_ROUTES.collaborativeDocs.byId(newId), {
-          content: newContent,
-          folderId: doc.folder_id || null,
-          id: newId,
-          title: newTitle,
-        });
-      } catch {}
-    }
+    try {
+      await putApi(API_ROUTES.collaborativeDocs.byId(newId), {
+        content: newContent,
+        folderId: doc.folder_id || null,
+        id: newId,
+        title: newTitle,
+      });
+    } catch {}
 
     showToast('Copia creada exitosamente', 'info');
     await this.loadData();
     this.renderView();
   }
 
-  private async handleDeleteDoc(docId: string, isLocal: boolean): Promise<void> {
+  private async handleDeleteDoc(docId: string): Promise<void> {
     const doc = this.documents.find((d) => d.id === docId);
     const docTitle = doc?.title || 'este documento';
 
@@ -1540,18 +1426,9 @@ export class ProjectsController implements ViewController {
       confirmText: 'Eliminar',
       description: `¿Estás seguro de que deseas eliminar permanentemente "${docTitle}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
-        if (isLocal || !currentUser) {
-          removeLocalDraft(docId);
-        } else {
-          try {
-            const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
-            if (!res.ok) {
-              removeLocalDraft(docId);
-            }
-          } catch {
-            removeLocalDraft(docId);
-          }
-        }
+        try {
+          await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
+        } catch {}
         showToast('Documento eliminado correctamente', 'info');
         await this.loadData();
         this.renderView();
@@ -1672,7 +1549,11 @@ export class ProjectsController implements ViewController {
   }
 }
 
-export async function createProjectsView(folderId?: string | null): Promise<HTMLElement> {
+export async function createProjectsView(folderId?: string | null): Promise<HTMLElement | null> {
+  if (!currentUser) {
+    navigate('/login?redirect=%2Fprojects', true);
+    return null;
+  }
   const container = await loadTemplate('/views/projects/projects.html');
   const controller = new ProjectsController(container, folderId);
   await controller.init();

@@ -319,9 +319,15 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params, query }) => {
+      const docId = params.id || query.get('id') || '';
+      const { currentUser } = await import('../services/api.service.js');
+      if (!docId && !currentUser) {
+        const { navigate } = await import('../services/navigation.service.js');
+        navigate(`/login?redirect=${encodeURIComponent('/projects')}`, true);
+        return null;
+      }
       await loadStylesheet('/css/tools/collaborative-pdf.css');
       const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
-      const docId = params.id || query.get('id') || '';
       return await createCollaborativePdfEditorView(docId, query);
     },
     id: 'collaborative-pdf-editor',
@@ -335,6 +341,13 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
+      const { currentUser } = await import('../services/api.service.js');
+      if (!currentUser) {
+        const { navigate } = await import('../services/navigation.service.js');
+        const targetPath = window.location.pathname || '/projects';
+        navigate(`/login?redirect=${encodeURIComponent(targetPath)}`, true);
+        return null;
+      }
       await loadStylesheet('/css/tools/collaborative-pdf.css');
       await loadStylesheet('/css/components/component-projects.css');
       const { createProjectsView } = await import('../views/projects/projects.view.js');
@@ -354,8 +367,13 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { currentUser } = await import('../services/api.service.js');
       const { navigate } = await import('../services/navigation.service.js');
-      navigate('/projects');
+      if (!currentUser) {
+        navigate('/login?redirect=%2Fprojects', true);
+      } else {
+        navigate('/projects', true);
+      }
       return null;
     },
     id: 'collaborative-pdf',

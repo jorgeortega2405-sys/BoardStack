@@ -98,6 +98,8 @@ services:
         condition: service_healthy
       s3:
         condition: service_healthy
+      collab:
+        condition: service_started
     ports:
       - "3000:3000"
     environment:
@@ -128,7 +130,7 @@ services:
     environment:
       PORT: 3001
       MAX_COLLABORATORS: 12
-    restart: unless-stopped
+    restart: always
 
 volumes:
   s3_data:

@@ -5,6 +5,7 @@ import { getLocalizedPath } from '../config/seo.config.js';
 import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
+import { currentUser } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -201,6 +202,20 @@ export class HomeController {
       () => {
         this.loadWorkflows();
         this.renderTools();
+      },
+      { signal: this.abortController?.signal }
+    );
+
+    const btnHomeDesignPdf = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-home-design-pdf"]');
+    btnHomeDesignPdf?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (currentUser) {
+          navigate('/projects');
+        } else {
+          navigate('/login?redirect=/projects');
+        }
       },
       { signal: this.abortController?.signal }
     );

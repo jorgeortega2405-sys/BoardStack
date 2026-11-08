@@ -12,17 +12,17 @@ const upload = multer({
 const router = Router();
 
 router.post('/collaborative-docs/remove-background', requireAuth, requireFeature('pro'), removeBackgroundLimiter, upload.single('file'), removeBackgroundHandler);
-router.get('/collaborative-docs/uploads', optionalAuth, listCollaborativeUploadsHandler);
+router.get('/collaborative-docs/uploads', requireAuth, listCollaborativeUploadsHandler);
 router.post('/collaborative-docs/upload', optionalAuth, upload.array('files', 10), uploadCollaborativeAssetHandler);
 router.get('/collaborative-docs/users/search', optionalAuth, searchCollaborativeUsersHandler);
-router.get('/collaborative-docs', optionalAuth, listCollaborativeDocsHandler);
+router.get('/collaborative-docs', requireAuth, listCollaborativeDocsHandler);
 router.get('/collaborative-docs/:id/members', optionalAuth, getCollaborativeDocMembersHandler);
 router.post('/collaborative-docs/:id/members', optionalAuth, addCollaborativeDocMemberHandler);
 router.delete('/collaborative-docs/:id/members/:userId', optionalAuth, removeCollaborativeDocMemberHandler);
 router.patch('/collaborative-docs/:id/access-level', optionalAuth, updateCollaborativeDocAccessLevelHandler);
 router.get('/collaborative-docs/:id', optionalAuth, getCollaborativeDocHandler);
 router.get('/collaborative-docs/:id/pdf', optionalAuth, downloadCollaborativeDocPdfHandler);
-router.post('/collaborative-docs', optionalAuth, saveCollaborativeDocHandler);
+router.post('/collaborative-docs', requireAuth, saveCollaborativeDocHandler);
 router.put('/collaborative-docs/:id', optionalAuth, saveCollaborativeDocHandler);
 router.delete('/collaborative-docs/:id', requireAuth, deleteCollaborativeDocHandler);
 

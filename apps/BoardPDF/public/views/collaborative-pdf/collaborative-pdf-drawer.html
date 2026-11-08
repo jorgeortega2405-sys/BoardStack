@@ -188,27 +188,34 @@
       <div class="collaborative-uploads-main" data-ref="uploads-main-view">
         <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-upload-file">
           <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
-          <span class="component-button__text">Subir archivos</span>
+          <span class="component-button__text" data-i18n="collaborative.upload_btn_text"></span>
         </button>
-        <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
+        <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple />
 
         <div class="component-tabs" data-ref="upload-tabs">
-          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all" data-i18n="collaborative.upload_tab_all"></button>
+          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images" data-i18n="collaborative.upload_tab_images"></button>
+          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs" data-i18n="collaborative.upload_tab_pdfs"></button>
         </div>
 
         <div class="collaborative-upload-progress is-hidden" data-ref="upload-progress-indicator">
           <div class="collaborative-upload-spinner"></div>
-          <span class="collaborative-upload-progress__text">Subiendo archivos...</span>
+          <span class="collaborative-upload-progress__text" data-i18n="collaborative.upload_in_progress"></span>
         </div>
 
         <div class="collaborative-uploads-grid" data-ref="uploads-grid"></div>
 
         <div class="collaborative-empty-state" data-ref="empty-uploads">
           <svg class="component-icon collaborative-empty-state__icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
-          <span class="collaborative-empty-state__title">Sin archivos subidos</span>
-          <span class="collaborative-empty-state__subtitle">Sube imágenes o documentos PDF para usarlos aquí</span>
+          <span class="collaborative-empty-state__title" data-i18n="collaborative.empty_uploads_title"></span>
+          <span class="collaborative-empty-state__subtitle" data-i18n="collaborative.empty_uploads_desc"></span>
+        </div>
+
+        <div class="collaborative-empty-state is-hidden" data-ref="uploads-guest-gate">
+          <svg class="component-icon collaborative-empty-state__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <span class="collaborative-empty-state__title" data-i18n="collaborative.guest_uploads_title"></span>
+          <span class="collaborative-empty-state__subtitle" data-i18n="collaborative.guest_uploads_desc"></span>
+          <a class="component-button component-button--black component-button--h36 component-button--w-full" data-ref="btn-guest-login-uploads" href="/login" data-i18n="collaborative.guest_login_btn"></a>
         </div>
       </div>
 

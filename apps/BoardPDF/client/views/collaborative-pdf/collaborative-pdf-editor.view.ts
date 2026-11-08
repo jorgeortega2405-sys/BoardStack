@@ -2,7 +2,7 @@ import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, PageDimension, PagePreset, inToPx, mmToPx } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, hasSubscriptionFeature, onAuthChange, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
-import { translateElement } from '../../services/i18n.service.js';
+import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { checkPdfPagesEditableStatus, extractEditablePdfPage } from '../../services/pdf-editable-extractor.service.js';
@@ -13,7 +13,6 @@ import { initWasmEngine } from '../../services/wasm-engine.service.js';
 import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
-import { getLocalDraft, removeLocalDraft, saveLocalDraft, setPendingCloudSyncDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { CollabActionDispatcher } from './collab-action-dispatcher.service.js';
@@ -23,7 +22,6 @@ import { alignElementToPage, moveElementLayer, reorderElementLayer } from './col
 import { findSearchMatches, replaceAllMatches, replaceCurrentMatch } from './collab-find-replace.util.js';
 import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABELS } from './collab-fonts.config.js';
 import { renderLayersList } from './collab-layers-panel.util.js';
-import { openLocalAuthModal } from './collab-local-auth-modal.util.js';
 import { openCollabPageSizeModal } from './collab-page-size-modal.util.js';
 import { addPeerPresenceBubble, removePeerPresenceBubble, renderPresenceList, renderRemoteCursor } from './collab-presence.util.js';
 import { renderPersistentGuidesSvg, updateRulers } from './collab-rulers.util.js';
@@ -553,6 +551,11 @@ export class CollaborativePdfEditorController implements ViewController {
     const fileInput = this.queryPanel<HTMLInputElement>('[data-ref="input-file-upload"]');
 
     btnUpload?.addEventListener('click', () => {
+      if (!currentUser) {
+        showToast(t('collaborative.login_required_upload'), 'warning');
+        navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
       fileInput?.click();
     }, { signal });
 
@@ -1433,121 +1436,40 @@ export class CollaborativePdfEditorController implements ViewController {
     let serverDoc: any = null;
 
     try {
-
       if (!currentUser) {
-        const localDraft = getLocalDraft(this.docId);
-
-        if (localDraft) {
-          this.isLocalOnly = true;
-          this.docTitle = localDraft.title;
-          this.docAccessLevel = 'restricted';
-          this.isDocOwner = true;
-          this.canEditDoc = true;
-          this.docMembers = [];
-          this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
-          this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
-          this.pageTitles = Array.isArray(localDraft.content?.pageTitles) && localDraft.content.pageTitles.length > 0 ? localDraft.content.pageTitles : [''];
-          this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) && localDraft.content.pageBackgrounds.length > 0 ? localDraft.content.pageBackgrounds : ['#ffffff'];
-          this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) && localDraft.content.pagePdfSources.length > 0 ? localDraft.content.pagePdfSources : [null];
-          this.initPageSizesFromContent(localDraft.content);
-
-          if (this.initialUrlDimensions && this.elements.length === 0) {
-            this.docDefaultPageSize = { ...this.initialUrlDimensions };
-            this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
-          }
-        } else {
-          try {
-            const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
-            const res = await getApi(getUrl);
-            if (res.ok) {
-              const data = await res.json();
-              serverDoc = data.document;
-              if (data.document) {
-                this.isLocalOnly = false;
-                this.docTitle = data.document.title || 'Documento sin título';
-                this.docAccessLevel = data.document.access_level || 'restricted';
-                this.isDocOwner = data.isOwner ?? false;
-                this.canEditDoc = data.canEdit ?? true;
-                this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
-                this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
-                this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
-                this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
-                this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
-                this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
-                this.initPageSizesFromContent(data.document.content);
-
-                const serverElements = data.document.content?.elements || [];
-                const freshDraft = getLocalDraft(this.docId);
-                const targetPageSize = this.initialUrlDimensions || freshDraft?.content?.pageSize;
-                if (serverElements.length === 0 && targetPageSize?.width && targetPageSize?.height) {
-                  this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
-                  this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
-                  if (freshDraft?.title) this.docTitle = freshDraft.title;
-                  this.scheduleAutoSave(500);
-                }
-              }
-            } else if (res.status === 403) {
-              this.isRestrictedAccess = true;
-              this.renderRestrictedScreen();
-              return false;
-            } else {
-              const initialDim = this.initialUrlDimensions || { height: 1123, width: 794 };
-              const newDraft = saveLocalDraft(this.docId, {
-                content: {
-                  elements: [],
-                  pageBackgrounds: ['#ffffff'],
-                  pageCount: 1,
-                  pagePdfSources: [null],
-                  pageSize: initialDim,
-                  pageSizes: [initialDim],
-                  pageTitles: [''],
-                },
-                title: 'Documento sin título',
-                userId: null,
-              });
-              this.isLocalOnly = true;
-              this.docTitle = newDraft.title;
-              this.docAccessLevel = 'restricted';
-              this.isDocOwner = true;
-              this.canEditDoc = true;
-              this.docMembers = [];
-              this.pageCount = 1;
-              this.elements = [];
-              this.pageTitles = [''];
-              this.pageBackgrounds = ['#ffffff'];
-              this.pagePdfSources = [null];
-              this.docDefaultPageSize = { ...initialDim };
-              this.pageSizes = [{ ...initialDim }];
+        try {
+          const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
+          const res = await getApi(getUrl);
+          if (res.ok) {
+            const data = await res.json();
+            serverDoc = data.document;
+            if (data.document) {
+              this.isLocalOnly = false;
+              this.docTitle = data.document.title || t('collaborative.untitled_doc');
+              this.docAccessLevel = data.document.access_level || 'anyone_with_link';
+              this.isDocOwner = false;
+              this.canEditDoc = data.canEdit ?? (this.docAccessLevel === 'anyone_with_link');
+              this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+              this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+              this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+              this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
+              this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
+              this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
+              this.initPageSizesFromContent(data.document.content);
             }
-          } catch {
-            const initialDim = this.initialUrlDimensions || { height: 1123, width: 794 };
-            const newDraft = saveLocalDraft(this.docId, {
-              content: {
-                elements: [],
-                pageBackgrounds: ['#ffffff'],
-                pageCount: 1,
-                pagePdfSources: [null],
-                pageSize: initialDim,
-                pageSizes: [initialDim],
-                pageTitles: [''],
-              },
-              title: 'Documento sin título',
-              userId: null,
-            });
-            this.isLocalOnly = true;
-            this.docTitle = newDraft.title;
-            this.docAccessLevel = 'restricted';
-            this.isDocOwner = true;
-            this.canEditDoc = true;
-            this.docMembers = [];
-            this.pageCount = 1;
-            this.elements = [];
-            this.pageTitles = [''];
-            this.pageBackgrounds = ['#ffffff'];
-            this.pagePdfSources = [null];
-            this.docDefaultPageSize = { ...initialDim };
-            this.pageSizes = [{ ...initialDim }];
+          } else if (res.status === 403) {
+            this.isRestrictedAccess = true;
+            this.renderRestrictedScreen();
+            return false;
+          } else {
+            showToast(t('collaborative.login_required_design'), 'warning');
+            navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return false;
           }
+        } catch {
+          showToast(t('collaborative.login_required_design'), 'warning');
+          navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+          return false;
         }
       } else {
         try {
@@ -1565,7 +1487,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
             if (data.document) {
               this.isLocalOnly = false;
-              this.docTitle = data.document.title || 'Documento sin título';
+              this.docTitle = data.document.title || t('collaborative.untitled_doc');
               this.docAccessLevel = data.document.access_level || 'restricted';
               this.isDocOwner = data.isOwner ?? true;
               this.canEditDoc = data.canEdit ?? true;
@@ -1576,47 +1498,15 @@ export class CollaborativePdfEditorController implements ViewController {
               this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
               this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
               this.initPageSizesFromContent(data.document.content);
-
-              const localDraft = getLocalDraft(this.docId);
-              const serverElements = data.document.content?.elements || [];
-              const targetPageSize = this.initialUrlDimensions || localDraft?.content?.pageSize;
-
-              if (serverElements.length === 0 && targetPageSize?.width && targetPageSize?.height) {
-                this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
-                this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
-                if (localDraft?.title) this.docTitle = localDraft.title;
-                this.scheduleAutoSave(500);
-              }
             }
           } else {
-            const localDraft = getLocalDraft(this.docId);
-            if (localDraft) {
-              this.isLocalOnly = true;
-              this.docTitle = localDraft.title;
-              this.docAccessLevel = 'restricted';
-              this.isDocOwner = true;
-              this.canEditDoc = true;
-              this.docMembers = [];
-              this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
-              this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
-              this.pageTitles = Array.isArray(localDraft.content?.pageTitles) && localDraft.content.pageTitles.length > 0 ? localDraft.content.pageTitles : [''];
-              this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) && localDraft.content.pageBackgrounds.length > 0 ? localDraft.content.pageBackgrounds : ['#ffffff'];
-              this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) && localDraft.content.pagePdfSources.length > 0 ? localDraft.content.pagePdfSources : [null];
-              this.initPageSizesFromContent(localDraft.content);
-
-              const targetPageSize = this.initialUrlDimensions || localDraft.content?.pageSize;
-              if (targetPageSize?.width && targetPageSize?.height) {
-                this.docDefaultPageSize = { height: targetPageSize.height, width: targetPageSize.width };
-                this.pageSizes = Array.from({ length: this.pageCount }, () => ({ ...this.docDefaultPageSize }));
-              }
-              this.scheduleAutoSave(500);
-            } else {
-              showToast('El documento no existe o fue eliminado.', 'danger');
-              navigate('/collaborative-pdf');
-              return false;
-            }
+            showToast(t('collaborative.doc_not_found'), 'danger');
+            navigate('/projects');
+            return false;
           }
-        } catch (netErr) {
+        } catch {
+          showToast(t('collaborative.doc_not_found'), 'danger');
+          navigate('/projects');
           return false;
         }
       }
@@ -1638,8 +1528,7 @@ export class CollaborativePdfEditorController implements ViewController {
             this.scheduleAutoSave(500);
           }
         }
-      } catch (walErr) {
-      }
+      } catch {}
 
       const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
       if (titleInput) {
@@ -1654,17 +1543,18 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private renderRestrictedScreen(): void {
     this.container.innerHTML = `
-      <div class="component-wrapper component-wrapper--full view-wrapper" style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;box-sizing:border-box;">
-        <div class="collab-share-card" style="text-align:center;align-items:center;max-width:420px;">
-          <div class="collab-access-icon-circle" style="width:64px;height:64px;margin-bottom:8px;">
-            <svg class="component-icon" style="width:32px;height:32px;color:#ef4444;" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+      <div class="component-wrapper component-wrapper--full view-wrapper collab-restricted-wrapper">
+        <div class="collab-share-card collab-restricted-card">
+          <div class="collab-access-icon-circle collab-restricted-icon-circle">
+            <svg class="component-icon collab-restricted-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
           </div>
-          <h2 class="collab-share-title">Acceso restringido</h2>
-          <p style="color:var(--text-muted,#6b7280);font-size:14px;line-height:1.5;margin:0 0 16px 0;">Solo las personas invitadas por el creador del diseño pueden acceder a este enlace.</p>
-          <a class="component-button component-button--black component-button--h44" href="/collaborative-pdf" style="width:100%;">Volver a Mis Documentos</a>
+          <h2 class="collab-share-title" data-i18n="collaborative.restricted_title"></h2>
+          <p class="collab-restricted-desc" data-i18n="collaborative.restricted_desc"></p>
+          <a class="component-button component-button--black component-button--h44 component-button--w-full" href="/projects" data-i18n="collaborative.back_to_projects"></a>
         </div>
       </div>
     `;
+    translateElement(this.container);
     renderIcons(this.container);
   }
 
@@ -1775,21 +1665,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.hasPendingSave = false;
     this.setSaveStatus('saving');
 
-    if (this.isLocalOnly) {
-      saveLocalDraft(this.docId, {
-        content: this.getContentPayload(),
-        title: this.docTitle,
-        userId: currentUser?.id ?? null,
-      });
-      this.lastSavedTimestamp = Date.now();
-      this.isModified = false;
-      this.setSaveStatus('saved');
-      this.isAutoSaving = false;
-      if (this.hasPendingSave) {
-        this.scheduleAutoSave(200);
-      }
-      return;
-    }
+
 
     const payload = {
       content: this.getContentPayload(),
@@ -4221,19 +4097,38 @@ export class CollaborativePdfEditorController implements ViewController {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const dataUrl = reader.result as string;
-            this.addImageElement({
-              id: `pasted_${Date.now()}`,
-              name: file.name || 'Imagen pegada',
-              size: file.size || 0,
-              type: 'image',
-              url: dataUrl,
-            });
-            showToast('Imagen pegada', 'info');
-          };
-          reader.readAsDataURL(file);
+          const formData = new FormData();
+          formData.append('file', file);
+          if (this.docId) {
+            formData.append('docId', this.docId);
+          }
+          try {
+            const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
+            if (res.ok) {
+              const data = await res.json();
+              const uploaded = data.file || (data.files && data.files[0]);
+              if (uploaded && uploaded.url) {
+                this.addImageElement({
+                  id: uploaded.id || `pasted_${Date.now()}`,
+                  name: uploaded.name || file.name || 'image',
+                  size: uploaded.size || file.size || 0,
+                  type: 'image',
+                  url: uploaded.url,
+                });
+                showToast(t('collaborative.image_pasted'), 'info');
+              }
+            } else {
+              if (res.status === 401) {
+                showToast(t('collaborative.login_required_upload'), 'danger');
+              } else if (res.status === 413) {
+                showToast(t('collaborative.storage_quota_exceeded'), 'danger');
+              } else {
+                showToast(t('collaborative.upload_failed'), 'danger');
+              }
+            }
+          } catch {
+            showToast(t('collaborative.upload_failed'), 'danger');
+          }
           return;
         }
       }
@@ -5396,14 +5291,6 @@ export class CollaborativePdfEditorController implements ViewController {
 
     window.addEventListener('beforeunload', () => {
       this.writeLocalWal();
-      if (this.isLocalOnly) {
-        saveLocalDraft(this.docId, {
-          content: this.getContentPayload(),
-          title: this.docTitle,
-          userId: currentUser?.id ?? null,
-        });
-        return;
-      }
       if (this.hasPendingSave || this.autoSaveTimer) {
         const payload = JSON.stringify({
           content: this.getContentPayload(),
@@ -6050,8 +5937,8 @@ export class CollaborativePdfEditorController implements ViewController {
     const btnImageRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-remove-bg"]');
     btnImageRemoveBg?.addEventListener('click', async () => {
       if (!currentUser) {
-        showToast('Inicia sesión para eliminar fondos con IA', 'warning');
-        this.openLocalAuthModal();
+        showToast(t('collaborative.login_required_ai_bg'), 'warning');
+        navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
         return;
       }
       if (!hasSubscriptionFeature('pro')) {
@@ -6884,7 +6771,23 @@ export class CollaborativePdfEditorController implements ViewController {
   private renderUploadsGrid(): void {
     const grid = this.queryPanel<HTMLElement>('[data-ref="uploads-grid"]');
     const emptyState = this.queryPanel<HTMLElement>('[data-ref="empty-uploads"]');
+    const guestGate = this.queryPanel<HTMLElement>('[data-ref="uploads-guest-gate"]');
+    const btnUpload = this.queryPanel<HTMLElement>('[data-ref="btn-upload-file"]');
+    const tabs = this.queryPanel<HTMLElement>('[data-ref="upload-tabs"]');
     if (!grid) return;
+
+    if (!currentUser) {
+      if (guestGate) showElement(guestGate);
+      if (btnUpload) hideElement(btnUpload);
+      if (tabs) hideElement(tabs);
+      if (emptyState) hideElement(emptyState);
+      grid.innerHTML = '';
+      return;
+    }
+
+    if (guestGate) hideElement(guestGate);
+    if (btnUpload) showElement(btnUpload);
+    if (tabs) showElement(tabs);
 
     grid.innerHTML = '';
     const filtered = this.uploadedAssets.filter((a) => {
@@ -7364,8 +7267,9 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private openShareModal(openInDownloadView: boolean = false): void {
-    if (this.isLocalOnly) {
-      this.openLocalAuthModal();
+    if (!openInDownloadView && !currentUser) {
+      showToast(t('collaborative.login_required_share'), 'warning');
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
 
@@ -7413,69 +7317,33 @@ export class CollaborativePdfEditorController implements ViewController {
   }
 
   private openLocalAuthModal(): void {
-    if (this.shareModalElement) {
-      this.shareModalElement.remove();
-      this.shareModalElement = null;
-    }
-
-    const storeCurrentAsPending = () => {
-      const draft = saveLocalDraft(this.docId, {
-        content: {
-          elements: this.elements,
-          pageBackgrounds: this.pageBackgrounds,
-          pageCount: this.pageCount,
-          pagePdfSources: this.pagePdfSources,
-          pageSize: { height: PAGE_HEIGHT, width: PAGE_WIDTH },
-          pageTitles: this.pageTitles,
-        },
-        title: this.docTitle,
-        userId: currentUser?.id ?? null,
-      });
-      setPendingCloudSyncDraft(draft);
-    };
-
-    this.shareModalElement = openLocalAuthModal(
-      this.docId,
-      storeCurrentAsPending,
-      () => {
-        this.shareModalElement = null;
-      }
-    );
+    navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
   }
 
   private async createDocumentCopy(): Promise<void> {
+    if (!currentUser) {
+      showToast(t('collaborative.login_required_duplicate'), 'warning');
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
     const copyTitle = `${this.docTitle} (Copia)`;
     const content = this.getContentPayload();
 
-    if (this.isLocalOnly || !currentUser) {
-      saveLocalDraft(newId, {
+    try {
+      const res = await postApi(API_ROUTES.collaborativeDocs.base, {
         content,
+        id: newId,
         title: copyTitle,
-        userId: currentUser?.id ?? null,
       });
-      window.open(`/d/${newId}`, '_blank');
-      showToast('Copia creada en una nueva pestaña', 'success');
-    } else {
-      try {
-        const res = await postApi(API_ROUTES.collaborativeDocs.base, {
-          content,
-          id: newId,
-          title: copyTitle,
-        });
-        if (res.ok) {
-          window.open(`/d/${newId}`, '_blank');
-          showToast('Copia creada en una nueva pestaña', 'success');
-        } else {
-          saveLocalDraft(newId, { content, title: copyTitle, userId: currentUser?.id ?? null });
-          window.open(`/d/${newId}`, '_blank');
-          showToast('Copia creada en una nueva pestaña', 'success');
-        }
-      } catch {
-        saveLocalDraft(newId, { content, title: copyTitle, userId: currentUser?.id ?? null });
+      if (res.ok) {
         window.open(`/d/${newId}`, '_blank');
         showToast('Copia creada en una nueva pestaña', 'success');
+      } else {
+        showToast('No se pudo duplicar el documento en la nube', 'danger');
       }
+    } catch {
+      showToast('Error de red al duplicar documento', 'danger');
     }
   }
 
@@ -7667,20 +7535,22 @@ export class CollaborativePdfEditorController implements ViewController {
       confirmText: 'Eliminar',
       description: `¿Estás seguro de que deseas eliminar permanentemente "${this.docTitle}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
-        if (this.isLocalOnly || !currentUser) {
-          removeLocalDraft(this.docId);
-        } else {
-          try {
-            const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(this.docId));
-            if (!res.ok) {
-              removeLocalDraft(this.docId);
-            }
-          } catch {
-            removeLocalDraft(this.docId);
-          }
+        if (!currentUser || !this.isDocOwner) {
+          showToast('Solo el creador del documento puede eliminarlo', 'danger');
+          return true;
         }
-        showToast('Documento eliminado correctamente', 'info');
-        navigate('/');
+        try {
+          const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(this.docId));
+          if (res.ok) {
+            showToast('Documento eliminado correctamente', 'info');
+            navigate('/projects');
+          } else {
+            showToast('No se pudo eliminar el documento', 'danger');
+          }
+        } catch {
+          showToast('Error de red al eliminar documento', 'danger');
+        }
+        return true;
         return true;
       },
       title: 'Eliminar documento',
@@ -7889,11 +7759,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private async saveDocument(): Promise<void> {
     await this.flushAutoSave();
-    if (this.isLocalOnly) {
-      showToast('Borrador guardado localmente', 'success');
-    } else {
-      showToast('Documento guardado en la nube', 'success');
-    }
+    showToast(t('collaborative.doc_saved_cloud'), 'success');
   }
 
   private togglePagesCarousel(): void {

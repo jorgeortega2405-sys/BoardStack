@@ -325,7 +325,11 @@
     "tool_redact_pdf_desc": "Oculta y elimina de forma irreversible información confidencial, texto o páginas completas de tu PDF.",
     "tool_redact_pdf_title": "Censurar PDF",
     "tool_unlock_pdf_desc": "Elimina la contraseña y restricciones de seguridad de tus documentos PDF para usarlos libremente.",
-    "tool_unlock_pdf_title": "Desbloquear PDF"
+    "tool_unlock_pdf_title": "Desbloquear PDF",
+    "design_pdf_badge": "Estudio de Diseño y Colaboración en Tiempo Real",
+    "design_pdf_title": "Diseña documentos PDF profesionales en la nube",
+    "design_pdf_desc": "Crea desde cero, añade textos, fotos, tablas y formas con guardado automático en la nube. Colabora en tiempo real con tu equipo o comparte con enlaces públicos sin límites.",
+    "design_pdf_cta": "Diseñar PDF"
   },
   "tools": {
     "organize_pdf_badge": "1 archivo PDF",
@@ -772,7 +776,8 @@
   },
   "projects": {
     "upload_success": "Archivo subido correctamente",
-    "uploading_files": "Subiendo archivo a tu cuenta..."
+    "uploading_files": "Subiendo archivo a tu cuenta...",
+    "login_required": "Debes iniciar sesión para acceder a tus proyectos y documentos."
   },
   "checkout": {
     "error_connecting_gateway": "Error al conectar con la pasarela de pago.",
@@ -780,5 +785,36 @@
     "modal_desc": "Acceso instantáneo con procesamiento seguro.",
     "secure_processing": "Procesamiento cifrado SSL de 256 bits.",
     "step2_benefit_1": "Transacción cifrada y protegida de extremo a extremo."
+  },
+  "collaborative": {
+    "untitled_doc": "Documento sin título",
+    "upload_btn": "Subir archivos",
+    "upload_btn_text": "Subir archivos",
+    "upload_tab_all": "Todos",
+    "upload_tab_images": "Imágenes",
+    "upload_tab_pdfs": "PDFs",
+    "upload_in_progress": "Subiendo archivos...",
+    "empty_uploads_title": "Sin archivos subidos",
+    "empty_uploads_desc": "Sube imágenes o documentos PDF para usarlos aquí",
+    "guest_uploads_title": "Archivos en la nube",
+    "guest_uploads_desc": "Inicia sesión para subir fotos, imágenes y documentos directamente a tu almacenamiento en la nube.",
+    "guest_login_btn": "Iniciar sesión",
+    "login_required_upload": "Debes iniciar sesión para subir archivos a la nube.",
+    "login_required_design": "Debes iniciar sesión para crear y diseñar documentos PDF.",
+    "login_required_share": "Inicia sesión para invitar miembros y cambiar permisos.",
+    "login_required_duplicate": "Inicia sesión para duplicar este documento en tu cuenta.",
+    "doc_not_found": "El documento no existe o fue eliminado.",
+    "doc_saved_cloud": "Documento guardado en la nube",
+    "storage_quota_exceeded": "Has alcanzado el límite de almacenamiento disponible (5 GB).",
+    "image_pasted": "Imagen pegada y subida a la nube.",
+    "upload_failed": "No se pudo subir la imagen a la nube.",
+    "login_required_ai_bg": "Inicia sesión para eliminar fondos con IA.",
+    "restricted_title": "Acceso restringido",
+    "restricted_desc": "Solo las personas invitadas por el creador del diseño pueden acceder a este enlace.",
+    "back_to_projects": "Volver a Mis Documentos",
+    "elements": "Elementos",
+    "write": "Escribir",
+    "uploads": "Subidos",
+    "tools": "Herramientas"
   }
 }

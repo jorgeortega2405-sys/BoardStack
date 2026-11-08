@@ -1,7 +1,7 @@
 import { checkDatabaseConnection, getDbPool } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection, redis } from './config/redis.config.js';
-import { ensureBucketExists } from './config/s3.config.js';
+import { ensureBucketExists, isS3Configured, S3_BUCKET_NAME, s3Client } from './config/s3.config.js';
 import { injectHtmlSeo, isSupportedLanguage, normalizeLanguageCode } from './config/seo.config.js';
 import { csrfProtection } from './middlewares/csrf.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
@@ -16,6 +16,7 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import { startColdStorageCron } from './services/storage-quota.service.js';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
@@ -276,11 +277,12 @@ async function startServer(): Promise<void> {
   }
 
   app.use(express.json({
+    limit: '50mb',
     verify: (req, _res, buf) => {
       (req as any).rawBody = buf;
     },
   }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   app.use(cookieParser());
   app.use(requestLogger);
   app.use(csrfProtection);
@@ -353,6 +355,49 @@ async function startServer(): Promise<void> {
   app.use('/api', subscriptionRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);
+
+  app.get('/uploads/collaborative/:filename', async (req: Request, res: Response) => {
+    const filename = path.basename(req.params.filename);
+    const s3Key = `uploads/collaborative/${filename}`;
+
+    if (isS3Configured()) {
+      try {
+        const s3Res = await s3Client.send(
+          new GetObjectCommand({
+            Bucket: S3_BUCKET_NAME,
+            Key: s3Key,
+          })
+        );
+        if (s3Res.Body) {
+          const ext = path.extname(filename).toLowerCase();
+          let mime = s3Res.ContentType || 'application/octet-stream';
+          if (ext === '.png') mime = 'image/png';
+          else if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg';
+          else if (ext === '.webp') mime = 'image/webp';
+          else if (ext === '.svg') mime = 'image/svg+xml';
+          else if (ext === '.pdf') mime = 'application/pdf';
+
+          res.setHeader('Content-Type', mime);
+          res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=2592000');
+          if (s3Res.ETag) res.setHeader('ETag', s3Res.ETag);
+          (s3Res.Body as any).pipe(res);
+          return;
+        }
+      } catch (err: any) {
+        if (err?.name !== 'NoSuchKey') {
+          logger.app.warn('Aviso al recuperar archivo de S3', err);
+        }
+      }
+    }
+
+    const localPath = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative', filename);
+    if (fs.existsSync(localPath)) {
+      res.sendFile(localPath);
+      return;
+    }
+
+    res.status(404).end();
+  });
 
   await setupClient(app, server);
 
