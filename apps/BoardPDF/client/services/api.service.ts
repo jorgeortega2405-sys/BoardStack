@@ -1,7 +1,6 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { User } from '../types/auth.types.js';
-import { SalesInquiryPayload } from '../types/contact.types.js';
-import { EducationStatusResponse, OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
+import { OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
 import { clearAllLocalDrafts } from '../utils/collab-local-draft.util.js';
 import { wsService } from './websocket.service.js';
 
@@ -45,10 +44,6 @@ export function hasPermission(permission: string): boolean {
 
 export function hasSubscriptionFeature(feature: string): boolean {
   return hasPermission(`subscription:feature:${feature}`);
-}
-
-export function hasOrganizationAccess(): boolean {
-  return hasSubscriptionFeature('organization') || hasPermission('org:manage') || hasPermission('org:view');
 }
 
 export function getCsrfToken(): string {
@@ -470,46 +465,6 @@ export async function cancelSubscriptionImmediateApi(): Promise<any> {
     return await res.json();
   } catch {
     return { error: 'Error de red al cancelar suscripción', success: false };
-  }
-}
-
-export async function getEducationStatusApi(): Promise<EducationStatusResponse | null> {
-  try {
-    const res = await getApi('/api/education/status');
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body.ok ? body : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function claimEducationFreeYearApi(): Promise<{ error?: string; success: boolean; user?: any }> {
-  try {
-    const res = await postApi('/api/education/claim-free-year', {});
-    const body = await res.json();
-    if (res.ok && body.ok) {
-      if (currentUser && body.user) {
-        setCurrentUser({ ...currentUser, ...body.user });
-      }
-      return { success: true, user: body.user };
-    }
-    return { error: body.error || 'No se pudo reclamar el beneficio educativo.', success: false };
-  } catch {
-    return { error: 'Error de conexión al reclamar el beneficio.', success: false };
-  }
-}
-
-export async function submitSalesInquiryApi(payload: SalesInquiryPayload): Promise<{ error?: string; ok: boolean }> {
-  try {
-    const res = await postApi('/api/contact/sales', payload);
-    const body = await res.json();
-    if (res.ok && body.ok) {
-      return { ok: true };
-    }
-    return { error: body.error || 'No se pudo enviar la solicitud.', ok: false };
-  } catch {
-    return { error: 'Error de conexión con el servidor. Intenta nuevamente.', ok: false };
   }
 }
 

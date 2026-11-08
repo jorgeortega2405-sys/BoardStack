@@ -23,7 +23,6 @@ export function getCurrentUserToolLimits(toolId: string): { isPremium: boolean; 
   const tool = ALL_TOOLS_LIMITS[toolId];
   const isPremium = perms.includes('subscription:feature:pro') ||
     perms.includes('subscription:feature:business') ||
-    perms.includes('subscription:feature:enterprise') ||
     (tool ? limits.maxFiles > tool.free.maxFiles : false);
 
   return {

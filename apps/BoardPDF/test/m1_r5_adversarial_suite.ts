@@ -178,7 +178,7 @@ async function runAdversarialM1Suite(): Promise<void> {
   const isRedisOnline = await checkRedisConnection(2, 200);
 
   if (isRedisOnline) {
-    await test('cacheService.invalidateUser evicts all 7 base keys plus email and username', async () => {
+    await test('cacheService.invalidateUser evicts all base keys plus email and username', async () => {
       const testUserId = 'test_stress_user_42';
       const testEmail = 'StressTester@Example.COM';
       const testUsername = '  StressUser42  ';
@@ -193,7 +193,6 @@ async function runAdversarialM1Suite(): Promise<void> {
         CACHE_KEYS.userPerms(testUserId),
         `user:permissions:${testUserId}`,
         CACHE_KEYS.userBilling(testUserId),
-        CACHE_KEYS.userOrg(testUserId),
         CACHE_KEYS.userEmail(normalizedEmail),
         CACHE_KEYS.userUsername(normalizedUsername),
       ];
@@ -223,26 +222,6 @@ async function runAdversarialM1Suite(): Promise<void> {
       await redis.del(controlKey);
     });
 
-    await test('cacheService.invalidateUserOrg evicts org and permission keys', async () => {
-      const testUserId = 'test_org_stress_77';
-      const orgKeys = [
-        CACHE_KEYS.userOrg(testUserId),
-        `user:org:${testUserId}`,
-        CACHE_KEYS.userPerms(testUserId),
-      ];
-
-      for (const k of orgKeys) {
-        await redis.set(k, '1');
-      }
-
-      await cacheService.invalidateUserOrg(testUserId);
-
-      for (const k of orgKeys) {
-        const val = await redis.get(k);
-        assert.strictEqual(val, null, `Org key ${k} must be evicted`);
-      }
-    });
-
     await test('cacheService.invalidateUserPrefs evicts prefs key', async () => {
       const testUserId = 'test_prefs_stress_88';
       const prefKey = CACHE_KEYS.userPrefs(testUserId);
@@ -251,16 +230,6 @@ async function runAdversarialM1Suite(): Promise<void> {
       await cacheService.invalidateUserPrefs(testUserId);
       const val = await redis.get(prefKey);
       assert.strictEqual(val, null, `Prefs key ${prefKey} must be evicted`);
-    });
-
-    await test('cacheService.invalidateRolePermsCache evicts role permissions key', async () => {
-      const roleName = 'admin_stress_role';
-      const roleKey = CACHE_KEYS.rolePerms(roleName);
-      await redis.set(roleKey, '["perm:all"]');
-
-      await cacheService.invalidateRolePermsCache(roleName);
-      const val = await redis.get(roleKey);
-      assert.strictEqual(val, null, `Role key ${roleKey} must be evicted`);
     });
 
     await test('cacheService handles edge cases (undefined identifiers, empty del) gracefully', async () => {
@@ -381,7 +350,7 @@ async function runAdversarialM1Suite(): Promise<void> {
     assert.ok(sql.includes('ai_tokens_balance'), 'Must include ai_tokens_balance');
     assert.ok(sql.includes('project_folders'), 'Must include project_folders');
     assert.ok(sql.includes('user_cloud_integrations'), 'Must include user_cloud_integrations');
-    assert.ok(sql.includes('user_roles'), 'Must include user_roles');
+    assert.ok(!sql.includes('user_roles'), 'Must NOT include user_roles');
   });
 
   await test('apps/BoardPDF/collab-server and apps/BoardPDF/board-wasm are present in new locations', () => {

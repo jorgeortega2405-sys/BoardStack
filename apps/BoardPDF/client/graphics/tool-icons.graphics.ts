@@ -1,322 +1,180 @@
 export const SVG_TOOL_MERGE_PDF = `
   <div class="icon-outline icon-outline--red" data-ref="icon-outline-merge-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 15V4a2 2 0 0 1 2-2h8" />
-      <rect x="8" y="6" width="12" height="15" rx="2" />
-      <path d="M14 10.5v6" />
-      <path d="M11 13.5h6" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect fill="currentColor" fill-opacity=".14" x="3" y="8" width="13" height="13" rx="3.5"/><path d="M8 8V6a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2"/><path d="M9.5 12v5M7 14.5h5"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_SPLIT_PDF = `
   <div class="icon-outline icon-outline--red" data-ref="icon-outline-split-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-      <path d="M16 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
-      <line x1="12" y1="2" x2="12" y2="22" stroke-dasharray="3 3" />
-      <path d="m7 12-3 0m0 0 1.5-1.5M4 12l1.5 1.5" />
-      <path d="m17 12 3 0m0 0-1.5-1.5M20 12l-1.5 1.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M10 4H8a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2"/><path fill="currentColor" fill-opacity=".14" d="M14 4h2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-2"/><path d="M12 3v18" stroke-dasharray="2 3.2"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_REMOVE_PDF_PAGES = `
   <div class="icon-outline icon-outline--red" data-ref="icon-outline-remove-pdf-pages">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h6" />
-      <path d="M14 2v6h6" />
-      <circle cx="16" cy="16" r="5" />
-      <line x1="13.5" y1="16" x2="18.5" y2="16" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14 3H8a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8z"/><path d="M14 3v3.5A1.5 1.5 0 0 0 15.5 8H19"/><path d="M9 14.5h6"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_EXTRACT_PDF_PAGES = `
   <div class="icon-outline icon-outline--red" data-ref="icon-outline-extract-pdf-pages">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v3" />
-      <path d="M14 3v5h5" />
-      <path d="M10.5 16H21" />
-      <path d="M17.5 12.5L21 16l-3.5 3.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14 3H8a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8z"/><path d="M14 3v3.5A1.5 1.5 0 0 0 15.5 8H19"/><path d="M9 15h6M12.5 12.5L15 15l-2.5 2.5"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_ORGANIZE_PDF = `
   <div class="icon-outline icon-outline--red" data-ref="icon-outline-organize-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="7" height="8" rx="1.5" />
-      <rect x="14" y="3" width="7" height="8" rx="1.5" />
-      <rect x="3" y="13" width="7" height="8" rx="1.5" />
-      <rect x="14" y="13" width="7" height="8" rx="1.5" />
-      <path d="m10.5 7 3 0" />
-      <path d="m13.5 17-3 0" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="8" height="8" rx="2.5"/><rect x="13" y="3" width="8" height="8" rx="2.5"/><rect x="3" y="13" width="8" height="8" rx="2.5"/><rect fill="currentColor" fill-opacity=".14" x="13" y="13" width="8" height="8" rx="2.5"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_COMPRESS_PDF = `
   <div class="icon-outline icon-outline--orange" data-ref="icon-outline-compress-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 14h6v6" />
-      <path d="m10 14-7 7" />
-      <path d="M20 10h-6V4" />
-      <path d="m14 10 7-7" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6m0 0-2.5-2.5M12 9l2.5-2.5"/><path d="M12 21v-6m0 0-2.5 2.5M12 15l2.5 2.5"/><path d="M5 12h14"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_REPAIR_PDF = `
   <div class="icon-outline icon-outline--orange" data-ref="icon-outline-repair-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_OCR_PDF = `
   <div class="icon-outline icon-outline--orange" data-ref="icon-outline-ocr-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-      <path d="m8 17 4-10 4 10" />
-      <line x1="9.6" y1="13" x2="14.4" y2="13" />
-      <line x1="2" y1="12" x2="22" y2="12" opacity="0.4" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V7a3 3 0 0 1 3-3h2"/><path d="M15 4h2a3 3 0 0 1 3 3v2"/><path d="M20 15v2a3 3 0 0 1-3 3h-2"/><path d="M9 20H7a3 3 0 0 1-3-3v-2"/><path d="M9.5 16l2.5-7 2.5 7M10.4 13.6h3.2"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_JPG_TO_PDF = `
   <div class="icon-outline icon-outline--blue" data-ref="icon-outline-jpg-to-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <circle cx="8.5" cy="8.5" r="1.8" />
-      <path d="m21 15-5-5L5 21" />
-      <path d="m14 14 2-2 5 5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-jpg-to-pdf"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-jpg-to-pdf)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><circle cx="7.6" cy="7.6" r="1.1"/><path d="M3.5 14.5l3.4-3.4a1.6 1.6 0 0 1 2.2 0L15 17"/></g><mask id="m-jpg-to-pdf"><rect width="24" height="24" fill="#fff"/><path d="M15.3 17.5h4.4M18 15.7l1.8 1.8-1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-jpg-to-pdf)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_WORD_TO_PDF = `
   <div class="icon-outline icon-outline--blue" data-ref="icon-outline-word-to-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <path d="M6.5 8l2.5 8 3-5.5 3 5.5 2.5-8" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-word-to-pdf"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-word-to-pdf)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M7 8h6M7 11h6M7 14h3"/></g><mask id="m-word-to-pdf"><rect width="24" height="24" fill="#fff"/><path d="M15.3 17.5h4.4M18 15.7l1.8 1.8-1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-word-to-pdf)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_POWERPOINT_TO_PDF = `
   <div class="icon-outline icon-outline--blue" data-ref="icon-outline-powerpoint-to-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <path d="M8.5 17V7h4.5a3.5 3.5 0 0 1 0 7H8.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-powerpoint-to-pdf"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-powerpoint-to-pdf)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="10" rx="3"/><path d="M8.5 13v3.5M6 16.5h5"/></g><mask id="m-powerpoint-to-pdf"><rect width="24" height="24" fill="#fff"/><path d="M15.3 17.5h4.4M18 15.7l1.8 1.8-1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-powerpoint-to-pdf)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_EXCEL_TO_PDF = `
   <div class="icon-outline icon-outline--blue" data-ref="icon-outline-excel-to-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <path d="m8 8 8 8" />
-      <path d="m16 8-8 8" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-excel-to-pdf"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-excel-to-pdf)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M3 8.5h14M10 8.5V17"/></g><mask id="m-excel-to-pdf"><rect width="24" height="24" fill="#fff"/><path d="M15.3 17.5h4.4M18 15.7l1.8 1.8-1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-excel-to-pdf)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_HTML_TO_PDF = `
   <div class="icon-outline icon-outline--blue" data-ref="icon-outline-html-to-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="16 18 22 12 16 6" />
-      <polyline points="8 6 2 12 8 18" />
-      <line x1="14" y1="4" x2="10" y2="20" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-html-to-pdf"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-html-to-pdf)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M3 8h14"/><path d="M8 10.5l-1.6 2 1.6 2M12 10.5l1.6 2-1.6 2"/></g><mask id="m-html-to-pdf"><rect width="24" height="24" fill="#fff"/><path d="M15.3 17.5h4.4M18 15.7l1.8 1.8-1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-html-to-pdf)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_JPG = `
   <div class="icon-outline icon-outline--green" data-ref="icon-outline-pdf-to-jpg">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3.5" />
-      <circle cx="8.5" cy="8.5" r="1.8" />
-      <path d="m21 15-5-5L5 21" />
-      <path d="m14 14 2-2 5 5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-pdf-to-jpg"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-pdf-to-jpg)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><circle cx="7.6" cy="7.6" r="1.1"/><path d="M3.5 14.5l3.4-3.4a1.6 1.6 0 0 1 2.2 0L15 17"/></g><mask id="m-pdf-to-jpg"><rect width="24" height="24" fill="#fff"/><path d="M19.7 17.5h-4.4M17.4 15.7l-1.8 1.8 1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-pdf-to-jpg)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_WORD = `
   <div class="icon-outline icon-outline--green" data-ref="icon-outline-pdf-to-word">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="8" y1="16" x2="14" y2="16" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-pdf-to-word"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-pdf-to-word)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M7 8h6M7 11h6M7 14h3"/></g><mask id="m-pdf-to-word"><rect width="24" height="24" fill="#fff"/><path d="M19.7 17.5h-4.4M17.4 15.7l-1.8 1.8 1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-pdf-to-word)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_POWERPOINT = `
   <div class="icon-outline icon-outline--green" data-ref="icon-outline-pdf-to-powerpoint">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <path d="M8 21h8" />
-      <path d="M12 17v4" />
-      <path d="M9 7h6" />
-      <path d="M9 10h4" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-pdf-to-powerpoint"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-pdf-to-powerpoint)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="10" rx="3"/><path d="M8.5 13v3.5M6 16.5h5"/></g><mask id="m-pdf-to-powerpoint"><rect width="24" height="24" fill="#fff"/><path d="M19.7 17.5h-4.4M17.4 15.7l-1.8 1.8 1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-pdf-to-powerpoint)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_EXCEL = `
   <div class="icon-outline icon-outline--green" data-ref="icon-outline-pdf-to-excel">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3.5" width="18" height="17" rx="3" />
-      <line x1="3" y1="9" x2="21" y2="9" />
-      <line x1="3" y1="14.5" x2="21" y2="14.5" />
-      <line x1="9" y1="3.5" x2="9" y2="20.5" />
-      <line x1="15" y1="3.5" x2="15" y2="20.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-pdf-to-excel"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-pdf-to-excel)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M3 8.5h14M10 8.5V17"/></g><mask id="m-pdf-to-excel"><rect width="24" height="24" fill="#fff"/><path d="M19.7 17.5h-4.4M17.4 15.7l-1.8 1.8 1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-pdf-to-excel)"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_PDFA = `
   <div class="icon-outline icon-outline--green" data-ref="icon-outline-pdf-to-pdfa">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M12 3l7 2.5v5.5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V5.5z"/><path d="M9 12l2 2 4-4"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_ROTATE_PDF = `
   <div class="icon-outline icon-outline--purple" data-ref="icon-outline-rotate-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.4 2.6L21 8" />
-      <polyline points="21 3 21 8 16 8" />
-      <rect x="8" y="8" width="8" height="8" rx="1.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PAGE_NUMBERS = `
   <div class="icon-outline icon-outline--purple" data-ref="icon-outline-page-numbers">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <circle cx="12" cy="15" r="4" />
-      <path d="M11 14l1-1v4" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14 3H8a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8z"/><path d="M14 3v3.5A1.5 1.5 0 0 0 15.5 8H19"/><path d="M10.5 14l1.5-1.2V18"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_WATERMARK_PDF = `
   <div class="icon-outline icon-outline--purple" data-ref="icon-outline-watermark-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
-      <path d="M12 22.5A8 8 0 0 0 20 14.5c0-3.5-3-7.5-8-11.5" opacity="0.4" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M12 3.5c3 3.5 6 6.2 6 10a6 6 0 0 1-12 0c0-3.8 3-6.5 6-10z"/><path d="M9.5 14a2.5 2.5 0 0 0 2.5 2.5"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_CROP_PDF = `
   <div class="icon-outline icon-outline--purple" data-ref="icon-outline-crop-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
-      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v11a3 3 0 0 0 3 3h11"/><path d="M17 21V10a3 3 0 0 0-3-3H3"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_EDIT_PDF = `
   <div class="icon-outline icon-outline--purple" data-ref="icon-outline-edit-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9" />
-      <path d="M13 2v5h5" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M15.5 4.5l4 4L9 19l-5 1 1-5z"/><path d="M13.5 6.5l4 4"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PROTECT_PDF = `
   <div class="icon-outline icon-outline--crimson" data-ref="icon-outline-protect-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="10" width="16" height="11" rx="2.5" />
-      <path d="M7 10V7a5 5 0 0 1 10 0v3" />
-      <circle cx="12" cy="15" r="1.2" fill="currentColor" />
-      <path d="M12 16.2v2" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect fill="currentColor" fill-opacity=".14" x="5" y="11" width="14" height="10" rx="3.5"/><path d="M12 15.5v2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_UNLOCK_PDF = `
   <div class="icon-outline icon-outline--crimson" data-ref="icon-outline-unlock-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="10" width="16" height="11" rx="2.5" />
-      <path d="M7 10V6.5a5 5 0 0 1 9.8-1.5" />
-      <circle cx="12" cy="15" r="1.2" fill="currentColor" />
-      <path d="M12 16.2v2" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect fill="currentColor" fill-opacity=".14" x="5" y="11" width="14" height="10" rx="3.5"/><path d="M12 15.5v2"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 6.8-1.2"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_REDACT_PDF = `
   <div class="icon-outline icon-outline--crimson" data-ref="icon-outline-redact-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <rect x="7" y="11" width="10" height="2.8" rx="0.6" fill="currentColor" />
-      <rect x="7" y="15.5" width="6.5" height="2.8" rx="0.6" fill="currentColor" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14 3H8a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8z"/><path d="M14 3v3.5A1.5 1.5 0 0 0 15.5 8H19"/><path d="M8.5 12.5h4"/><rect x="8.5" y="15" width="7" height="3" rx="1.5" fill="currentColor" stroke="none"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_COMPARE_PDF = `
   <div class="icon-outline icon-outline--crimson" data-ref="icon-outline-compare-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="4" width="8" height="16" rx="2" />
-      <rect x="13" y="4" width="8" height="16" rx="2" />
-      <path d="m10 16-2-2 2-2" />
-      <path d="m14 12 2 2-2 2" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect fill="currentColor" fill-opacity=".14" x="3" y="4" width="8.5" height="16" rx="3"/><rect x="12.5" y="4" width="8.5" height="16" rx="3"/><path d="M15.7 9h2.1"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_SUMMARIZE_PDF = `
   <div class="icon-outline icon-outline--cyan" data-ref="icon-outline-summarize-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="8" y1="16" x2="13" y2="16" />
-      <path d="m18.5 2 .6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z" fill="currentColor" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" fill-opacity=".14" d="M14 3H8a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8z"/><path d="M14 3v3.5A1.5 1.5 0 0 0 15.5 8H19"/><path d="M8.5 12.5h7M8.5 16h4"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_TRANSLATE_PDF = `
   <div class="icon-outline icon-outline--cyan" data-ref="icon-outline-translate-pdf">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 5h7M7.5 2v3M9.5 5a9 9 0 0 1-4.5 7M5.5 8.5a8 8 0 0 0 4.5 3.5" />
-      <path d="m12 20 3.5-9 3.5 9" />
-      <line x1="13.5" y1="16.5" x2="17.5" y2="16.5" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle fill="currentColor" fill-opacity=".14" cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 4 5.6 4 9s-1.4 6.4-4 9c-2.6-2.6-4-5.6-4-9s1.4-6.4 4-9z"/></svg>
   </div>
 `;
 
 export const SVG_TOOL_PDF_TO_MARKDOWN = `
   <div class="icon-outline icon-outline--cyan" data-ref="icon-outline-pdf-to-markdown">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M7 16.5v-5l2 2 2-2v5" />
-      <path d="M15 11.5v5" />
-      <path d="m13.2 14.8 1.8 1.8 1.8-1.8" />
-    </svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><mask id="c-pdf-to-markdown"><rect width="24" height="24" fill="#fff"/><circle cx="17.5" cy="17.5" r="6.6" fill="#000"/></mask><g mask="url(#c-pdf-to-markdown)"><rect fill="currentColor" fill-opacity=".14" x="3" y="3" width="14" height="14" rx="4"/><path d="M8 6.5l-.6 8M12 6.5l-.6 8M5.5 9h8M5.2 12h8"/></g><mask id="m-pdf-to-markdown"><rect width="24" height="24" fill="#fff"/><path d="M19.7 17.5h-4.4M17.4 15.7l-1.8 1.8 1.8 1.8" stroke="#000" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"/></mask><circle cx="17.5" cy="17.5" r="5" fill="currentColor" stroke="none" mask="url(#m-pdf-to-markdown)"/></svg>
   </div>
 `;
 

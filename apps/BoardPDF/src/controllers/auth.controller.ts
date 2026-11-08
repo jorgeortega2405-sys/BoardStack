@@ -34,8 +34,6 @@ export function sanitizeUser(user: any): UserPayload {
     id: user.id,
     is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
-    role: user.role || 'USER',
-    roles: user.roles || (user.role ? [user.role] : ['USER']),
     storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
     subscription_status: user.subscription_status,
@@ -215,8 +213,7 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     const permissions = await permissionService.getUserPermissions(
       newUser.id,
       newUser.subscription_tier,
-      newUser.subscription_status,
-      newUser.role
+      newUser.subscription_status
     );
     (newUser as any).permissions = permissions;
 
@@ -278,8 +275,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     const permissions = await permissionService.getUserPermissions(
       userRow.id,
       userRow.subscription_tier,
-      userRow.subscription_status,
-      userRow.role
+      userRow.subscription_status
     );
     userRow.permissions = permissions;
 
@@ -355,8 +351,7 @@ export async function loginWith2FA(req: Request, res: Response): Promise<void> {
     const permissions = await permissionService.getUserPermissions(
       userRow.id,
       userRow.subscription_tier,
-      userRow.subscription_status,
-      userRow.role
+      userRow.subscription_status
     );
     userRow.permissions = permissions;
 
@@ -395,8 +390,6 @@ export async function me(req: Request, res: Response): Promise<void> {
         user.google_connected = Boolean(dbUser.google_id);
         user.google_email = dbUser.google_email || null;
         user.has_password = Boolean(dbUser.password_hash);
-        user.role = dbUser.role || user.role || 'USER';
-        user.roles = dbUser.roles || (user.role ? [user.role] : ['USER']);
         user.subscription_tier = dbUser.subscription_tier || user.subscription_tier || 'free';
         user.two_factor_enabled = Boolean(dbUser.two_factor_enabled);
         user.username = dbUser.username;
@@ -409,8 +402,7 @@ export async function me(req: Request, res: Response): Promise<void> {
       user.permissions = await permissionService.getUserPermissions(
         user.id,
         user.subscription_tier,
-        user.subscription_status,
-        user.role
+        user.subscription_status
       );
       user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
       updateActiveAccountInSession(res, req, {
@@ -422,8 +414,6 @@ export async function me(req: Request, res: Response): Promise<void> {
         has_password: user.has_password,
         is_sso: user.is_sso,
         permissions: user.permissions,
-        role: user.role,
-        roles: user.roles,
         subscription_status: user.subscription_status,
         subscription_tier: user.subscription_tier,
         two_factor_enabled: user.two_factor_enabled,

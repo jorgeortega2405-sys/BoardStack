@@ -439,26 +439,6 @@ export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
       await loadStylesheet('/css/components/component-views.css');
-      await loadStylesheet('/css/components/component-contact-sales.css');
-      const { createContactSalesView } = await import('../views/contact-sales.view.js');
-      return await createContactSalesView();
-    },
-    id: 'contact-sales',
-    match: (path) => path === '/contact/sales' || path === '/contact-sales' || path === '/contacto/ventas' || path === '/contacto-ventas',
-  },
-  {
-    handler: async () => {
-      await loadStylesheet('/css/components/component-views.css');
-      await loadStylesheet('/css/components/component-contact-sales.css');
-      const { createContactEducationView } = await import('../views/contact-education.view.js');
-      return await createContactEducationView();
-    },
-    id: 'contact-education',
-    match: (path) => path === '/contact/education' || path === '/contact-education' || path === '/contacto/educacion' || path === '/contacto-educacion',
-  },
-  {
-    handler: async () => {
-      await loadStylesheet('/css/components/component-views.css');
       const { createContactView } = await import('../views/contact.view.js');
       return await createContactView();
     },
@@ -499,22 +479,6 @@ export const APP_ROUTES: RouteDefinition[] = [
         case '/sobre-nosotros': {
           const { createAboutView } = await import('../views/about.view.js');
           return await createAboutView();
-        }
-        case '/contact/sales':
-        case '/contact-sales':
-        case '/contacto/ventas':
-        case '/contacto-ventas': {
-          await loadStylesheet('/css/components/component-contact-sales.css');
-          const { createContactSalesView } = await import('../views/contact-sales.view.js');
-          return await createContactSalesView();
-        }
-        case '/contact/education':
-        case '/contact-education':
-        case '/contacto/educacion':
-        case '/contacto-educacion': {
-          await loadStylesheet('/css/components/component-contact-sales.css');
-          const { createContactEducationView } = await import('../views/contact-education.view.js');
-          return await createContactEducationView();
         }
         case '/help/contact':
         case '/contact':
@@ -614,35 +578,6 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
     id: 'settings',
     match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
-  },
-  {
-    handler: async ({ path }) => {
-      await loadStylesheet('/css/components/component-settings.css');
-      const { currentUser, hasOrganizationAccess } = await import('../services/api.service.js');
-      const { navigate } = await import('../services/navigation.service.js');
-
-      if (!currentUser) {
-        navigate('/login');
-        return null;
-      }
-
-      if (!hasOrganizationAccess()) {
-        const { showToast } = await import('../services/toast.service.js');
-        showToast('Acceso restringido a organizaciones Enterprise', 'danger');
-        navigate('/pricing');
-        return null;
-      }
-
-      const { createOrganizationView } = await import('../views/organization/organization.view.js');
-
-      if (path === '/organization' || path === '/organization/') {
-        window.history.replaceState({}, '', '/organization/dashboard');
-      }
-
-      return await createOrganizationView(path);
-    },
-    id: 'organization',
-    match: (path) => path === '/organization' || path === '/organization/' || path.startsWith('/organization/'),
   },
   {
     handler: async () => {

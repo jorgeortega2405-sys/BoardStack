@@ -11,8 +11,6 @@ export interface UserPayload {
   is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
-  role?: string;
-  roles?: string[];
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
   subscription_status?: string;
@@ -33,8 +31,6 @@ export interface SessionAccount {
   is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
-  role?: string;
-  roles?: string[];
   sessionId?: string;
   storage_limit_bytes?: number;
   storage_used_bytes?: number;

@@ -352,7 +352,6 @@ export async function createBillingView(): Promise<HTMLElement> {
     let limit = 100;
     if (currentUser?.subscription_tier === 'pro') limit = 2000;
     else if (currentUser?.subscription_tier === 'business') limit = 5000;
-    else if (currentUser?.subscription_tier === 'enterprise') limit = 10000;
 
     let resetAtStr = '';
     const tokenData = await fetchAiTokenBalance();

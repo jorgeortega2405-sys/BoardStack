@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS users (
   google_id VARCHAR(255) NULL UNIQUE,
   google_email VARCHAR(255) NULL,
   avatar_url VARCHAR(512) NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'USER',
   subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
   stripe_customer_id VARCHAR(255) NULL,
   stripe_subscription_id VARCHAR(255) NULL,
@@ -199,38 +198,6 @@ CREATE TABLE IF NOT EXISTS permissions (
   INDEX idx_permission_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS roles (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL UNIQUE,
-  display_name VARCHAR(100) NOT NULL DEFAULT '',
-  description VARCHAR(255) NULL,
-  category VARCHAR(50) NOT NULL DEFAULT 'platform',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_role_name (name),
-  INDEX idx_role_category (category)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS role_permissions (
-  role_id INT NOT NULL,
-  permission_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (role_id, permission_id),
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS user_roles (
-  user_id INT NOT NULL,
-  role_id INT NOT NULL,
-  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id, role_id),
-  INDEX idx_user_roles_user (user_id),
-  INDEX idx_user_roles_role (role_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS subscription_tier_permissions (
   tier VARCHAR(50) NOT NULL,
   permission_id INT NOT NULL,
@@ -241,154 +208,13 @@ CREATE TABLE IF NOT EXISTS subscription_tier_permissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==============================================================================
--- 2. Organization, Members, Invitations & SSO
--- ==============================================================================
-
-CREATE TABLE IF NOT EXISTS organizations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  uuid VARCHAR(36) NOT NULL UNIQUE,
-  name VARCHAR(100) NOT NULL,
-  slug VARCHAR(100) NOT NULL UNIQUE,
-  owner_id INT NOT NULL,
-  logo_url VARCHAR(512) NULL,
-  domain VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_org_owner (owner_id),
-  INDEX idx_org_slug (slug),
-  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_members (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  user_id INT NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'member',
-  status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
-  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_org_user (organization_id, user_id),
-  INDEX idx_org_members_user (user_id),
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_invitations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'member',
-  token VARCHAR(64) NOT NULL UNIQUE,
-  invited_by INT NOT NULL,
-  status ENUM('pending', 'accepted', 'revoked', 'expired') NOT NULL DEFAULT 'pending',
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_org_invitations_token (token),
-  INDEX idx_org_invitations_email (email),
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_sso_configs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL UNIQUE,
-  enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  entity_id VARCHAR(512) NOT NULL DEFAULT '',
-  acs_url VARCHAR(512) NOT NULL DEFAULT '',
-  idp_sso_url VARCHAR(512) NULL,
-  idp_certificate TEXT NULL,
-  idp_metadata_xml MEDIUMTEXT NULL,
-  allow_unlinked_users BOOLEAN NOT NULL DEFAULT FALSE,
-  enforce_sso BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ==============================================================================
 -- 3. Initial Seeds: Permissions & Tier Grants
 -- ==============================================================================
 
 INSERT IGNORE INTO permissions (name, description, category) VALUES
   ('tools:access', 'Acceso general a herramientas de procesamiento PDF', 'tools'),
   ('subscription:feature:pro', 'Acceso a características Pro', 'subscription'),
-  ('subscription:feature:business', 'Acceso a características Business y trabajo colaborativo', 'subscription'),
-  ('subscription:feature:enterprise', 'Acceso a infraestructura y seguridad corporativa Enterprise', 'subscription'),
-  ('subscription:feature:organization', 'Acceso completo al módulo y dashboard de Organización', 'organization'),
-  ('subscription:feature:sso', 'Acceso a configuración de inicio de sesión único (SSO)', 'organization'),
-  ('org:view', 'Visualizar dashboard e información general de la organización', 'organization'),
-  ('org:manage', 'Modificar parámetros de la organización', 'organization'),
-  ('members:view', 'Listar miembros e invitaciones de la organización', 'organization'),
-  ('members:invite', 'Invitar nuevos miembros a la organización', 'organization'),
-  ('members:modify_role', 'Modificar roles de miembros de la organización', 'organization'),
-  ('members:remove', 'Remover miembros de la organización', 'organization'),
-  ('sso:view', 'Visualizar configuración SAML/SSO de la organización', 'organization'),
-  ('sso:manage', 'Actualizar y activar/desactivar configuración SAML/SSO', 'organization');
-
-INSERT INTO roles (name, display_name, description, category) VALUES
-  ('SUPER_ADMIN', 'Super Admin', 'Acceso excepcional a toda la plataforma.', 'platform'),
-  ('PLATFORM_ADMIN', 'Platform Admin', 'Administración general de la plataforma.', 'platform'),
-  ('SECURITY_ADMIN', 'Security Admin', 'IAM, MFA, SSO, sesiones, políticas de seguridad.', 'platform'),
-  ('IAM_ADMIN', 'IAM Admin', 'Usuarios, grupos, roles, permisos y provisioning.', 'platform'),
-  ('COMPLIANCE_ADMIN', 'Compliance Admin', 'Compliance, retención, controles regulatorios.', 'platform'),
-  ('AUDITOR', 'Auditor', 'Acceso prácticamente global de solo lectura.', 'platform'),
-  ('READ_ONLY_ADMIN', 'Read-Only Admin', 'Administración/diagnóstico de solo lectura.', 'platform'),
-  ('SUPPORT_L1', 'Support L1', 'Soporte básico y resolución de incidencias comunes.', 'support'),
-  ('SUPPORT_L2', 'Support L2', 'Soporte técnico avanzado.', 'support'),
-  ('SUPPORT_L3', 'Support L3', 'Soporte técnico/infraestructura avanzado.', 'support'),
-  ('SUPPORT_MANAGER', 'Support Manager', 'Supervisión del equipo de soporte.', 'support'),
-  ('CUSTOMER_SUCCESS', 'Customer Success', 'Gestión de clientes, cuentas y adopción.', 'support'),
-  ('INCIDENT_MANAGER', 'Incident Manager', 'Coordinación de incidentes críticos.', 'support'),
-  ('ENGINEER', 'Engineer', 'Herramientas técnicas y diagnóstico.', 'engineering'),
-  ('SENIOR_ENGINEER', 'Senior Engineer', 'Acceso técnico más amplio.', 'engineering'),
-  ('DEVOPS', 'DevOps', 'Infraestructura, deployments y servicios.', 'engineering'),
-  ('SRE', 'SRE', 'Observabilidad, disponibilidad y operaciones de producción.', 'engineering'),
-  ('RELEASE_MANAGER', 'Release Manager', 'Releases y deployments controlados.', 'engineering'),
-  ('DATA_ANALYST', 'Data Analyst', 'Analytics y reportes.', 'data'),
-  ('DATA_ENGINEER', 'Data Engineer', 'Pipelines y procesamiento de datos.', 'data'),
-  ('DATA_ADMIN', 'Data Admin', 'Administración de datasets/recursos de datos.', 'data'),
-  ('PRIVACY_ADMIN', 'Privacy Admin', 'Privacidad, solicitudes de datos y políticas.', 'data'),
-  ('DATA_AUDITOR', 'Data Auditor', 'Auditoría de acceso y uso de datos.', 'data'),
-  ('BILLING_AGENT', 'Billing Agent', 'Consultas y operaciones de billing.', 'finance'),
-  ('BILLING_MANAGER', 'Billing Manager', 'Gestión financiera avanzada.', 'finance'),
-  ('FINANCE_ADMIN', 'Finance Admin', 'Configuración financiera.', 'finance'),
-  ('REFUNDS_ADMIN', 'Refunds Admin', 'Refunds/credits con permisos específicos.', 'finance'),
-  ('OPERATIONS_AGENT', 'Operations Agent', 'Operaciones diarias.', 'operations'),
-  ('OPERATIONS_MANAGER', 'Operations Manager', 'Supervisión operacional.', 'operations'),
-  ('WORKFLOW_ADMIN', 'Workflow Admin', 'Workflows, jobs y procesos.', 'operations'),
-  ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones sensibles sobre sistemas.', 'operations'),
-  ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
-  ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de personal.', 'operations'),
-  ('USER', 'User', 'Standard platform user.', 'general'),
-  ('ADMIN', 'Admin', 'Administrador de plataforma', 'platform')
-ON DUPLICATE KEY UPDATE
-  display_name = VALUES(display_name),
-  description = VALUES(description),
-  category = VALUES(category);
-
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name IN ('SUPER_ADMIN', 'PLATFORM_ADMIN', 'ADMIN');
-
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name = 'USER' AND p.name = 'tools:access';
-
-INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
-SELECT 'enterprise', id FROM permissions WHERE name IN (
-  'subscription:feature:pro',
-  'subscription:feature:business',
-  'subscription:feature:enterprise',
-  'subscription:feature:organization',
-  'subscription:feature:sso',
-  'org:view',
-  'org:manage',
-  'members:view',
-  'members:invite',
-  'members:modify_role',
-  'members:remove',
-  'sso:view',
-  'sso:manage'
-);
+  ('subscription:feature:business', 'Acceso a características Business y trabajo colaborativo', 'subscription');
 
 INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
 SELECT 'business', id FROM permissions WHERE name IN (
@@ -400,84 +226,6 @@ INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
 SELECT 'pro', id FROM permissions WHERE name IN (
   'subscription:feature:pro'
 );
-
-CREATE TABLE IF NOT EXISTS education_claims (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL UNIQUE,
-  institutional_email VARCHAR(255) NOT NULL,
-  institution_domain VARCHAR(100) NOT NULL,
-  claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMP NOT NULL,
-  status ENUM('active', 'expired', 'revoked') NOT NULL DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_edu_claims_email (institutional_email),
-  INDEX idx_edu_claims_domain (institution_domain),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
-SELECT 'edu_individual', id FROM permissions WHERE name IN (
-  'subscription:feature:pro'
-);
-
-INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
-SELECT 'edu_school', id FROM permissions WHERE name IN (
-  'subscription:feature:pro',
-  'subscription:feature:business',
-  'subscription:feature:organization',
-  'subscription:feature:sso',
-  'org:view',
-  'org:manage',
-  'members:view',
-  'members:invite',
-  'members:modify_role',
-  'members:remove',
-  'sso:view',
-  'sso:manage'
-);
-
-INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
-SELECT 'edu_university', id FROM permissions WHERE name IN (
-  'subscription:feature:pro',
-  'subscription:feature:business',
-  'subscription:feature:enterprise',
-  'subscription:feature:organization',
-  'subscription:feature:sso',
-  'org:view',
-  'org:manage',
-  'members:view',
-  'members:invite',
-  'members:modify_role',
-  'members:remove',
-  'sso:view',
-  'sso:manage'
-);
-
--- ==============================================================================
--- Solicitudes de Contacto y Ventas Institucionales / Enterprise
--- ==============================================================================
-
-CREATE TABLE IF NOT EXISTS sales_inquiries (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  category ENUM('enterprise', 'education_school', 'education_university') NOT NULL,
-  first_name VARCHAR(100) NOT NULL,
-  last_name VARCHAR(100) NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  phone VARCHAR(50) NULL,
-  organization_name VARCHAR(255) NOT NULL,
-  job_title VARCHAR(150) NULL,
-  role_type VARCHAR(100) NULL,
-  organization_size VARCHAR(100) NULL,
-  primary_use_case VARCHAR(255) NULL,
-  message TEXT NULL,
-  status ENUM('new', 'contacted', 'qualified', 'closed') NOT NULL DEFAULT 'new',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_sales_inquiries_email (email),
-  INDEX idx_sales_inquiries_cat (category),
-  INDEX idx_sales_inquiries_created (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==============================================================================
 -- Servicios en la Nube Vinculados (Google Drive, Dropbox)

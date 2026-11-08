@@ -101,7 +101,6 @@ export class PurchaseService {
 
       try {
         await cacheService.invalidateUser(String(userId));
-        await cacheService.invalidateUserOrg(String(userId));
         await permissionService.invalidateUserPermissions(userId);
       } catch {}
 
@@ -249,7 +248,6 @@ export class PurchaseService {
 
       try {
         await cacheService.invalidateUser(String(userId));
-        await cacheService.invalidateUserOrg(String(userId));
         await permissionService.invalidateUserPermissions(userId);
       } catch {}
 

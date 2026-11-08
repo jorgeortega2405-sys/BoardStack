@@ -61,12 +61,12 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
       assert.ok(Object.keys(ALL_TOOLS_LIMITS).length >= 32);
     });
 
-    it('enforces strict proportionality and monotonicity across Free <= Pro <= Business <= Enterprise', () => {
+    it('enforces strict proportionality and monotonicity across Free <= Pro <= Business', () => {
       for (const toolId of ALL_EXPECTED_TOOL_KEYS) {
         const limits = ALL_TOOLS_LIMITS[toolId];
         assert.ok(limits, `Missing limits for ${toolId}`);
 
-        for (const tier of ['free', 'pro', 'business', 'enterprise', 'premium'] as const) {
+        for (const tier of ['free', 'pro', 'business'] as const) {
           const tierLimits = limits[tier];
           assert.ok(tierLimits, `Missing ${tier} for ${toolId}`);
           assert.ok(Number.isInteger(tierLimits.maxFiles) && tierLimits.maxFiles > 0, `${toolId} ${tier} maxFiles invalid`);
@@ -85,34 +85,26 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
         assert.ok(limits.business.maxFiles >= limits.pro.maxFiles, `${toolId} Business maxFiles < Pro`);
         assert.ok(limits.business.maxFileSizeMB >= limits.pro.maxFileSizeMB, `${toolId} Business maxFileSizeMB < Pro`);
         assert.ok(limits.business.maxTotalSizeMB >= limits.pro.maxTotalSizeMB, `${toolId} Business maxTotalSizeMB < Pro`);
-
-        assert.ok(limits.enterprise.maxFiles >= limits.business.maxFiles, `${toolId} Enterprise maxFiles < Business`);
-        assert.ok(limits.enterprise.maxFileSizeMB >= limits.business.maxFileSizeMB, `${toolId} Enterprise maxFileSizeMB < Business`);
-        assert.ok(limits.enterprise.maxTotalSizeMB >= limits.business.maxTotalSizeMB, `${toolId} Enterprise maxTotalSizeMB < Business`);
-
-        assert.strictEqual(limits.premium.maxFiles, limits.pro.maxFiles, `${toolId} premium maxFiles != pro`);
-        assert.strictEqual(limits.premium.maxFileSizeMB, limits.pro.maxFileSizeMB, `${toolId} premium maxFileSizeMB != pro`);
-        assert.strictEqual(limits.premium.maxTotalSizeMB, limits.pro.maxTotalSizeMB, `${toolId} premium maxTotalSizeMB != pro`);
       }
     });
 
-    it('enforces rational boundary constraints on Free and Enterprise tiers', () => {
+    it('enforces rational boundary constraints on Free and Business tiers', () => {
       for (const toolId of ALL_EXPECTED_TOOL_KEYS) {
         const free = ALL_TOOLS_LIMITS[toolId].free;
         assert.ok(free.maxFiles <= 25, `${toolId} free maxFiles (${free.maxFiles}) exceeds ceiling 25`);
         assert.ok(free.maxFileSizeMB <= 100, `${toolId} free maxFileSizeMB (${free.maxFileSizeMB}) exceeds ceiling 100`);
         assert.ok(free.maxTotalSizeMB <= 100, `${toolId} free maxTotalSizeMB (${free.maxTotalSizeMB}) exceeds ceiling 100`);
 
-        const ent = ALL_TOOLS_LIMITS[toolId].enterprise;
-        assert.ok(ent.maxFiles >= 5, `${toolId} enterprise maxFiles too low`);
-        assert.ok(ent.maxFileSizeMB >= 500, `${toolId} enterprise maxFileSizeMB too low`);
-        assert.ok(ent.maxTotalSizeMB >= 1000, `${toolId} enterprise maxTotalSizeMB too low`);
+        const biz = ALL_TOOLS_LIMITS[toolId].business;
+        assert.ok(biz.maxFiles >= 3, `${toolId} business maxFiles too low`);
+        assert.ok(biz.maxFileSizeMB >= 200, `${toolId} business maxFileSizeMB too low`);
+        assert.ok(biz.maxTotalSizeMB >= 300, `${toolId} business maxTotalSizeMB too low`);
       }
     });
   });
 
   describe('Suite 2: Plan Benefits, Corporate Capabilities & Security Flags', () => {
-    it('strictly isolates Free plan from corporate capabilities and charges', () => {
+    it('strictly isolates Free plan from paid capabilities and charges', () => {
       const free = PLAN_TIER_BENEFITS.free;
       assert.strictEqual(free.id, 'free');
       assert.strictEqual(free.storageGB, 5);
@@ -157,27 +149,11 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
       assert.strictEqual(business.supportLevel, 'priority');
     });
 
-    it('verifies Enterprise plan grants full corporate suite with 24/7 support', () => {
-      const enterprise = PLAN_TIER_BENEFITS.enterprise;
-      assert.strictEqual(enterprise.id, 'enterprise');
-      assert.ok(enterprise.storageGB >= 1000);
-      assert.strictEqual(enterprise.priceMonthly, 0);
-      assert.strictEqual(enterprise.priceYearly, 0);
-      assert.strictEqual(enterprise.hasSso, true);
-      assert.strictEqual(enterprise.hasSaml, true);
-      assert.strictEqual(enterprise.hasOrganization, true);
-      assert.strictEqual(enterprise.hasAdvancedAi, true);
-      assert.strictEqual(enterprise.hasBatchProcessing, true);
-      assert.strictEqual(enterprise.maxWorkflows, 1000);
-      assert.strictEqual(enterprise.supportLevel, 'dedicated_24_7');
-    });
-
     it('verifies workflow quotas consistency with WORKFLOW_LIMITS', () => {
-      const tiers: SubscriptionTierKey[] = ['free', 'pro', 'business', 'enterprise', 'edu_individual', 'edu_school', 'edu_university'];
+      const tiers: SubscriptionTierKey[] = ['free', 'pro', 'business'];
       for (const tier of tiers) {
         assert.strictEqual(PLAN_TIER_BENEFITS[tier].maxWorkflows, WORKFLOW_LIMITS[tier]);
       }
-      assert.ok(WORKFLOW_LIMITS.enterprise >= WORKFLOW_LIMITS.business);
       assert.ok(WORKFLOW_LIMITS.business >= WORKFLOW_LIMITS.pro);
       assert.ok(WORKFLOW_LIMITS.pro >= WORKFLOW_LIMITS.free);
     });
@@ -189,11 +165,6 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
       assert.strictEqual(normalizeTierKey('  pro  '), 'pro');
       assert.strictEqual(normalizeTierKey('NEGOCIOS'), 'business');
       assert.strictEqual(normalizeTierKey('business'), 'business');
-      assert.strictEqual(normalizeTierKey('empresas'), 'enterprise');
-      assert.strictEqual(normalizeTierKey('ENTERPRISE'), 'enterprise');
-      assert.strictEqual(normalizeTierKey('escuelas'), 'edu_school');
-      assert.strictEqual(normalizeTierKey('universidades'), 'edu_university');
-      assert.strictEqual(normalizeTierKey('educacion_individual'), 'edu_individual');
     });
 
     it('falls back safely to free for null, undefined, empty, or unknown strings', () => {
@@ -219,29 +190,13 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
     });
   });
 
-  describe('Suite 4: getToolTierLimits & Academic Mapping Stress Tests', () => {
-    it('correctly maps academic tiers to corresponding operational limits', () => {
-      for (const toolId of ALL_EXPECTED_TOOL_KEYS) {
-        const eduInd = getToolTierLimits(toolId, 'edu_individual');
-        const pro = getToolTierLimits(toolId, 'pro');
-        assert.deepStrictEqual(eduInd, pro, `edu_individual must match pro for ${toolId}`);
-
-        const eduSchool = getToolTierLimits(toolId, 'edu_school');
-        const biz = getToolTierLimits(toolId, 'business');
-        assert.deepStrictEqual(eduSchool, biz, `edu_school must match business for ${toolId}`);
-
-        const eduUniv = getToolTierLimits(toolId, 'edu_university');
-        const ent = getToolTierLimits(toolId, 'enterprise');
-        assert.deepStrictEqual(eduUniv, ent, `edu_university must match enterprise for ${toolId}`);
-      }
-    });
-
+  describe('Suite 4: getToolTierLimits Stress Tests', () => {
     it('handles unknown tool IDs with safe fallback in getToolTierLimits', () => {
       const unknownFree = getToolTierLimits('non-existent-tool-id', 'free');
       assert.deepStrictEqual(unknownFree, { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 });
 
-      const unknownEnt = getToolTierLimits('another-fake-tool', 'enterprise');
-      assert.deepStrictEqual(unknownEnt, { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 });
+      const unknownBiz = getToolTierLimits('another-fake-tool', 'business');
+      assert.deepStrictEqual(unknownBiz, { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 });
     });
   });
 
@@ -264,28 +219,19 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
       }
     });
 
-    it('evaluates hierarchy precedence: Enterprise > Business > Pro > Legacy', () => {
+    it('evaluates hierarchy precedence: Business > Pro > Legacy', () => {
       const toolId = 'merge-pdf';
 
-      const resEnt = resolveToolLimits(toolId, ['subscription:feature:enterprise']);
-      assert.strictEqual(resEnt.maxFiles, 1000);
-      assert.strictEqual(resEnt.maxFileSizeMB, 2000);
-
-      const resEntMulti = resolveToolLimits(toolId, [
-        'subscription:feature:pro',
-        'subscription:feature:business',
-        'subscription:feature:enterprise',
-        'tools:merge:batch_500',
-      ]);
-      assert.strictEqual(resEntMulti.maxFiles, 1000, 'Enterprise must take precedence over Business, Pro, and Legacy');
+      const resBiz = resolveToolLimits(toolId, ['subscription:feature:business']);
+      assert.strictEqual(resBiz.maxFiles, 500);
+      assert.strictEqual(resBiz.maxFileSizeMB, 1000);
 
       const resBizMulti = resolveToolLimits(toolId, [
         'subscription:feature:pro',
         'subscription:feature:business',
         'tools:merge:batch_500',
       ]);
-      assert.strictEqual(resBizMulti.maxFiles, 500);
-      assert.strictEqual(resBizMulti.maxFileSizeMB, 1000);
+      assert.strictEqual(resBizMulti.maxFiles, 500, 'Business must take precedence over Pro and Legacy');
     });
 
     it('preserves legacy mock permissions backward compatibility across all 30 tools', () => {
@@ -326,15 +272,15 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
     });
 
     it('safely handles unknown tool ID with default fallback', () => {
-      const unknownEnt = resolveToolLimits('unknown-tool', ['subscription:feature:enterprise']);
-      assert.deepStrictEqual(unknownEnt, { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 });
+      const unknownBiz = resolveToolLimits('unknown-tool', ['subscription:feature:business']);
+      assert.deepStrictEqual(unknownBiz, { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 });
     });
   });
 
   describe('Suite 6: Backward Compatibility Bridges (Server & Client)', () => {
     it('server bridge src/config/tools-limits.config.ts delegates seamlessly', () => {
       assert.strictEqual(SERVER_TOOLS_LIMITS['merge-pdf'].free.maxFiles, 25);
-      assert.strictEqual(SERVER_TOOLS_LIMITS['merge-pdf'].premium.maxFiles, 500);
+      assert.strictEqual(SERVER_TOOLS_LIMITS['merge-pdf'].pro.maxFiles, 500);
 
       const limitsFree = getToolLimits('merge-pdf', []);
       assert.strictEqual(limitsFree.maxFiles, 25);
@@ -348,24 +294,24 @@ describe('CHALLENGER 1: Adversarial Master Config & Limits Stress Tests', () => 
       assert.strictEqual(limitsUnknown.maxFiles, 1);
 
       assert.strictEqual(SERVER_WORKFLOW_LIMITS.free, 5);
-      assert.strictEqual(SERVER_WORKFLOW_LIMITS.enterprise, 1000);
+      assert.strictEqual(SERVER_WORKFLOW_LIMITS.business, 200);
       assert.ok(getServerMaxWorkflows() >= 100);
     });
 
     it('client bridge client/config/tools-limits.config.ts preserves client expectations', () => {
       assert.strictEqual(CLIENT_TOOLS_LIMITS['merge-pdf'].free.maxFiles, 25);
-      assert.strictEqual(CLIENT_TOOLS_LIMITS['merge-pdf'].premium.maxFiles, 500);
+      assert.strictEqual(CLIENT_TOOLS_LIMITS['merge-pdf'].pro.maxFiles, 500);
 
       const clientLimits = getCurrentUserToolLimits('merge-pdf');
-      assert.strictEqual(clientLimits.isPremium, true);
-      assert.strictEqual(clientLimits.maxFiles, 500);
-      assert.strictEqual(clientLimits.maxFileSizeMB, 1000);
+      assert.strictEqual(clientLimits.isPremium, false);
+      assert.strictEqual(clientLimits.maxFiles, 25);
+      assert.strictEqual(clientLimits.maxFileSizeMB, 50);
 
       const clientUnknown = getCurrentUserToolLimits('unknown-tool');
-      assert.strictEqual(clientUnknown.isPremium, true);
-      assert.strictEqual(clientUnknown.maxFiles, 50);
+      assert.strictEqual(clientUnknown.isPremium, false);
+      assert.strictEqual(clientUnknown.maxFiles, 1);
 
-      assert.strictEqual(CLIENT_WORKFLOW_LIMITS.enterprise, 1000);
+      assert.strictEqual(CLIENT_WORKFLOW_LIMITS.business, 200);
       assert.ok(getClientMaxWorkflows() >= 100);
     });
 

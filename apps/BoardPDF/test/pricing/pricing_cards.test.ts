@@ -73,20 +73,10 @@ describe('Pricing View HTML Template & Cards Compliance', () => {
     }
   });
 
-  it('includes the Free plan card in the general pricing grid with proper limits', () => {
-    assert.ok(templateHtml.includes('data-ref="plan-card-free"'));
-    assert.ok(templateHtml.includes('data-tier="free"'));
-    assert.ok(templateHtml.includes('data-ref="btn-subscribe-free"'));
-    assert.ok(templateHtml.includes('5 GB de almacenamiento'));
-    assert.ok(templateHtml.includes('data-ref="plan-price-free"'));
-  });
-
-  it('includes all 4 general plan cards with 5 structured features each', () => {
+  it('includes active paid plans (Pro and Business) with 5 structured features each', () => {
     const cards = [
-      { tier: 'free', prefix: 'feature-free-' },
       { tier: 'pro', prefix: 'feature-pro-' },
       { tier: 'business', prefix: 'feature-business-' },
-      { tier: 'enterprise', prefix: 'feature-enterprise-' },
     ];
 
     for (const card of cards) {
@@ -100,9 +90,11 @@ describe('Pricing View HTML Template & Cards Compliance', () => {
     }
   });
 
-  it('removes contact-to-sales route and references from enterprise action button', () => {
+  it('strictly excludes Enterprise and Education plans from pricing template', () => {
+    assert.ok(!templateHtml.includes('data-ref="plan-card-enterprise"'));
+    assert.ok(!templateHtml.includes('data-ref="pricing-grid-education"'));
+    assert.ok(!templateHtml.includes('data-ref="category-toggle-pill"'));
     assert.ok(!templateHtml.includes('/contact/sales'));
-    assert.ok(!templateHtml.includes('data-action="contact-sales" data-tier="enterprise"'));
-    assert.ok(templateHtml.includes('data-ref="btn-subscribe-enterprise"'));
+    assert.ok(!templateHtml.includes('/contact/education'));
   });
 });

@@ -117,8 +117,6 @@ export async function addAccountToSession(
     id: user.id,
     last_accessed: now,
     permissions: (user as any).permissions || [],
-    role: user.role || 'USER',
-    roles: user.roles || (user.role ? [user.role] : ['USER']),
     storage_limit_bytes: user.storage_limit_bytes || 5368709120,
     storage_used_bytes: user.storage_used_bytes || 0,
     subscription_tier: user.subscription_tier || 'free',

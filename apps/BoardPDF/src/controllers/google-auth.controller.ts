@@ -200,8 +200,7 @@ export async function handleGoogleCallback(req: Request, res: Response): Promise
       const permissions = await permissionService.getUserPermissions(
         userRow.id,
         userRow.subscription_tier,
-        userRow.subscription_status,
-        userRow.role
+        userRow.subscription_status
       );
       userRow.permissions = permissions;
       const user = sanitizeUser(userRow);

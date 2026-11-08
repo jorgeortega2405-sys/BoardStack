@@ -33,8 +33,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       user.permissions = await permissionService.getUserPermissions(
         user.id,
         user.subscription_tier,
-        user.subscription_status,
-        user.role
+        user.subscription_status
       );
     } catch {}
   }
@@ -48,8 +47,7 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
       user.permissions = await permissionService.getUserPermissions(
         user.id,
         user.subscription_tier,
-        user.subscription_status,
-        user.role
+        user.subscription_status
       );
     } catch {}
   }

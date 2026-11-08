@@ -32,9 +32,6 @@ export interface ConsumeAiTokenResult {
 }
 
 export function getMonthlyQuotaByPermissions(permissions: string[] = []): number {
-  if (permissions.includes('subscription:feature:enterprise')) {
-    return 25000;
-  }
   if (permissions.includes('subscription:feature:business')) {
     return 5000;
   }

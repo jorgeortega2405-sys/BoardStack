@@ -4,8 +4,8 @@ import { ALL_TOOLS_LIMITS, getPlanBenefits, getToolTierLimits, PLAN_TIER_BENEFIT
 import { getToolLimits, TOOLS_LIMITS } from '../../src/config/tools-limits.config.js';
 
 describe('Subscription Plans Master Configuration', () => {
-  it('covers all general and academic subscription tiers in PLAN_TIER_BENEFITS', () => {
-    const requiredTiers = ['free', 'pro', 'business', 'enterprise', 'edu_individual', 'edu_school', 'edu_university'];
+  it('covers all active subscription tiers in PLAN_TIER_BENEFITS', () => {
+    const requiredTiers = ['free', 'pro', 'business'];
     for (const tier of requiredTiers) {
       assert.ok(PLAN_TIER_BENEFITS[tier as keyof typeof PLAN_TIER_BENEFITS]);
       const def = getPlanBenefits(tier);
@@ -16,29 +16,15 @@ describe('Subscription Plans Master Configuration', () => {
     }
   });
 
-  it('correctly maps storage quotas, SSO and Organization capabilities across plans', () => {
+  it('correctly maps storage quotas across plans', () => {
     const free = getPlanBenefits('free');
     assert.strictEqual(free.storageGB, 5);
-    assert.strictEqual(free.hasSso, false);
-    assert.strictEqual(free.hasSaml, false);
-    assert.strictEqual(free.hasOrganization, false);
 
     const pro = getPlanBenefits('pro');
     assert.strictEqual(pro.storageGB, 100);
-    assert.strictEqual(pro.hasSso, false);
-    assert.strictEqual(pro.hasSaml, false);
-    assert.strictEqual(pro.hasOrganization, false);
 
     const business = getPlanBenefits('business');
     assert.strictEqual(business.storageGB, 500);
-    assert.strictEqual(business.hasSso, false);
-    assert.strictEqual(business.hasOrganization, true);
-
-    const enterprise = getPlanBenefits('enterprise');
-    assert.ok(enterprise.storageGB >= 1000);
-    assert.strictEqual(enterprise.hasSso, true);
-    assert.strictEqual(enterprise.hasSaml, true);
-    assert.strictEqual(enterprise.hasOrganization, true);
   });
 
   it('contains explicit limits for all 30 PDF tools plus collaborative-pdf and workflows', () => {
@@ -88,8 +74,8 @@ describe('Subscription Plans Master Configuration', () => {
       assert.ok(limits.pro.maxFiles >= limits.free.maxFiles);
       assert.ok(limits.pro.maxFileSizeMB >= limits.free.maxFileSizeMB);
 
-      assert.ok(limits.enterprise.maxFiles >= limits.pro.maxFiles);
-      assert.ok(limits.enterprise.maxFileSizeMB >= limits.pro.maxFileSizeMB);
+      assert.ok(limits.business.maxFiles >= limits.pro.maxFiles);
+      assert.ok(limits.business.maxFileSizeMB >= limits.pro.maxFileSizeMB);
     }
 
     assert.ok(ALL_TOOLS_LIMITS['collaborative-pdf']);
@@ -105,9 +91,9 @@ describe('Subscription Plans Master Configuration', () => {
     assert.strictEqual(proMerge.maxFiles, 500);
     assert.strictEqual(proMerge.maxFileSizeMB, 1000);
 
-    const enterpriseMerge = resolveToolLimits('merge-pdf', ['subscription:feature:enterprise']);
-    assert.strictEqual(enterpriseMerge.maxFiles, 1000);
-    assert.strictEqual(enterpriseMerge.maxFileSizeMB, 2000);
+    const businessMerge = resolveToolLimits('merge-pdf', ['subscription:feature:business']);
+    assert.strictEqual(businessMerge.maxFiles, 500);
+    assert.strictEqual(businessMerge.maxFileSizeMB, 1000);
 
     const legacyMerge = resolveToolLimits('merge-pdf', ['tools:merge:batch_500']);
     assert.strictEqual(legacyMerge.maxFiles, 500);
@@ -118,14 +104,14 @@ describe('Subscription Plans Master Configuration', () => {
     const legacyAi = resolveToolLimits('summarize-pdf', ['tools:ai:advanced']);
     assert.strictEqual(legacyAi.maxFileSizeMB, 200);
 
-    const fallbackUnknown = resolveToolLimits('non-existent-tool', ['subscription:feature:enterprise']);
+    const fallbackUnknown = resolveToolLimits('non-existent-tool', ['subscription:feature:business']);
     assert.strictEqual(fallbackUnknown.maxFiles, 1);
     assert.strictEqual(fallbackUnknown.maxFileSizeMB, 50);
   });
 
   it('maintains backward compatibility with tools-limits bridge', () => {
     assert.strictEqual(TOOLS_LIMITS['merge-pdf'].free.maxFiles, 25);
-    assert.strictEqual(TOOLS_LIMITS['merge-pdf'].premium.maxFiles, 500);
+    assert.strictEqual(TOOLS_LIMITS['merge-pdf'].pro.maxFiles, 500);
 
     const limitsDefault = getToolLimits('merge-pdf');
     assert.strictEqual(limitsDefault.maxFiles, 25);
@@ -144,17 +130,13 @@ describe('Subscription Plans Master Configuration', () => {
     const proLimits = getToolTierLimits('merge-pdf', 'pro');
     assert.strictEqual(proLimits.maxFiles, 500);
 
-    const enterpriseLimits = getToolTierLimits('merge-pdf', 'enterprise');
-    assert.strictEqual(enterpriseLimits.maxFiles, 1000);
-
-    const eduSchoolLimits = getToolTierLimits('merge-pdf', 'edu_school');
-    assert.strictEqual(eduSchoolLimits.maxFiles, 500);
+    const businessLimits = getToolTierLimits('merge-pdf', 'business');
+    assert.strictEqual(businessLimits.maxFiles, 500);
   });
 
   it('defines workflow quotas consistently across plans', () => {
     assert.strictEqual(WORKFLOW_LIMITS.free, 5);
     assert.strictEqual(WORKFLOW_LIMITS.pro, 50);
     assert.strictEqual(WORKFLOW_LIMITS.business, 200);
-    assert.strictEqual(WORKFLOW_LIMITS.enterprise, 1000);
   });
 });

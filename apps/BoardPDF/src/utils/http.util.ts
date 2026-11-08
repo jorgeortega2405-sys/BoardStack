@@ -12,8 +12,6 @@ export function sanitizeUser(user: any): UserPayload {
     email: user.email,
     id: user.id,
     is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
-    role: user.role || 'USER',
-    roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
     subscription_tier: tier,
     two_factor_enabled: Boolean(user.two_factor_enabled),
     username: user.username,

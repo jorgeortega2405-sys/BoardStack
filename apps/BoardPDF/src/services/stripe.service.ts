@@ -68,7 +68,7 @@ export class StripeService {
       const normalizedPlan = normalizeTierKey(planId);
       const tier = PLAN_TIER_CONFIGS[normalizedPlan];
 
-      if (!tier || normalizedPlan === 'free' || normalizedPlan === 'enterprise') {
+      if (!tier || normalizedPlan === 'free') {
         throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
       }
 
@@ -184,7 +184,7 @@ export class StripeService {
       const normalizedPlan = normalizeTierKey(planId);
       const tier = PLAN_TIER_CONFIGS[normalizedPlan];
 
-      if (!tier || normalizedPlan === 'free' || normalizedPlan === 'enterprise') {
+      if (!tier || normalizedPlan === 'free') {
         throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
       }
 
@@ -401,7 +401,7 @@ export class StripeService {
       const normalizedPlan = normalizeTierKey(planId);
       const tier = PLAN_TIER_CONFIGS[normalizedPlan];
 
-      if (!tier || normalizedPlan === 'free' || normalizedPlan === 'enterprise') {
+      if (!tier || normalizedPlan === 'free') {
         throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
       }
 

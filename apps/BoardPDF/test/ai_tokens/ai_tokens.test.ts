@@ -18,15 +18,6 @@ describe('AI Tokens Engine & PBAC Quotas', () => {
     assert.strictEqual(quota, 5000);
   });
 
-  it('assigns 25,000 tokens to Enterprise accounts via subscription:feature:enterprise', () => {
-    const quota = getMonthlyQuotaByPermissions([
-      'subscription:feature:pro',
-      'subscription:feature:business',
-      'subscription:feature:enterprise',
-    ]);
-    assert.strictEqual(quota, 25000);
-  });
-
   it('calculates summarize-pdf cost based on page count and file size', () => {
     const cost1 = calculatePdfCost('summarize-pdf', 1, 500 * 1024);
     assert.strictEqual(cost1, 4);

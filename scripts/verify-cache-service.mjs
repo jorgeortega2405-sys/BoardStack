@@ -15,7 +15,6 @@ async function run() {
     CACHE_KEYS.userPerms(testUserId),
     `user:permissions:${testUserId}`,
     CACHE_KEYS.userBilling(testUserId),
-    CACHE_KEYS.userOrg(testUserId),
     CACHE_KEYS.userEmail(testEmail),
     CACHE_KEYS.userUsername(testUsername),
   ];
@@ -54,26 +53,7 @@ async function run() {
     process.exit(1);
   }
 
-  console.log('--- 2. Testing invalidateUserOrg eviction ---');
-  const orgKeys = [
-    CACHE_KEYS.userOrg(testUserId),
-    `user:org:${testUserId}`,
-    CACHE_KEYS.userPerms(testUserId),
-  ];
-  for (const k of orgKeys) {
-    await redis.set(k, JSON.stringify({ seededOrg: true }));
-  }
-  await cacheService.invalidateUserOrg(testUserId);
-  for (const k of orgKeys) {
-    const exists = await redis.exists(k);
-    if (exists) {
-      console.error(`FAIL: Key ${k} was NOT evicted by invalidateUserOrg!`);
-      process.exit(1);
-    }
-  }
-  console.log(`PASS: All org keys successfully evicted by invalidateUserOrg.`);
-
-  console.log('--- 3. Testing invalidateUserPrefs eviction ---');
+  console.log('--- 2. Testing invalidateUserPrefs eviction ---');
   const prefKey = CACHE_KEYS.userPrefs(testUserId);
   await redis.set(prefKey, JSON.stringify({ theme: 'dark' }));
   await cacheService.invalidateUserPrefs(testUserId);
@@ -83,17 +63,7 @@ async function run() {
   }
   console.log(`PASS: User preferences cache successfully evicted.`);
 
-  console.log('--- 4. Testing invalidateRolePermsCache eviction ---');
-  const roleKey = CACHE_KEYS.rolePerms('SUPER_ADMIN');
-  await redis.set(roleKey, JSON.stringify(['tools:access']));
-  await cacheService.invalidateRolePermsCache('SUPER_ADMIN');
-  if (await redis.exists(roleKey)) {
-    console.error(`FAIL: Role perms key ${roleKey} was NOT evicted!`);
-    process.exit(1);
-  }
-  console.log(`PASS: Role permissions cache successfully evicted.`);
-
-  console.log('--- 5. Testing edge cases & boundary conditions ---');
+  console.log('--- 3. Testing edge cases & boundary conditions ---');
   // Empty del call
   const emptyDel = await cacheService.del();
   console.log('PASS: Empty del returns false without crashing:', emptyDel === false);

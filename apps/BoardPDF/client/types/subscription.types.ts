@@ -1,4 +1,4 @@
-export type SubscriptionTierId = 'business' | 'edu_individual' | 'edu_school' | 'edu_university' | 'enterprise' | 'free' | 'pro';
+export type SubscriptionTierId = 'business' | 'free' | 'pro';
 
 export interface PurchaseRecord {
   amount_total: number;
@@ -82,13 +82,4 @@ export interface OneTimePaymentIntentResponse {
   planName: string;
   publishableKey: string;
   success: boolean;
-}
-
-export interface EducationStatusResponse {
-  claimed_at?: string;
-  domain?: string;
-  expires_at?: string;
-  has_claimed: boolean;
-  is_eligible: boolean;
-  tier?: SubscriptionTierId;
 }

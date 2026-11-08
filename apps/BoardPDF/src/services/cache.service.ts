@@ -2,12 +2,9 @@ import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
 export const CACHE_KEYS = {
-  eduPartnerDomains: () => 'cache:edu:partner_domains',
-  rolePerms: (role: string) => `cache:role:perms:${role}`,
   userBilling: (userId: string) => `cache:user:billing:${userId}`,
   userById: (userId: string) => `cache:user:id:${userId}`,
   userEmail: (email: string) => `cache:user:email:${email.toLowerCase().trim()}`,
-  userOrg: (userId: string) => `cache:user:org:${userId}`,
   userPerms: (userId: string) => `cache:user:perms:${userId}`,
   userPrefs: (userId: string) => `cache:user:prefs:${userId}`,
   userProfile: (userId: string) => `user:profile:${userId}`,
@@ -15,12 +12,9 @@ export const CACHE_KEYS = {
 };
 
 export const CACHE_TTL = {
-  eduPartnerDomains: 86400,
-  rolePerms: 3600,
   userBilling: 300,
   userById: 300,
   userEmail: 300,
-  userOrg: 300,
   userPerms: 300,
   userPrefs: 600,
   userUsername: 300,
@@ -104,7 +98,6 @@ export async function invalidateUser(
     CACHE_KEYS.userPerms(userId),
     `user:permissions:${userId}`,
     CACHE_KEYS.userBilling(userId),
-    CACHE_KEYS.userOrg(userId),
   ];
   if (email) {
     keys.push(CACHE_KEYS.userEmail(email));
@@ -122,24 +115,8 @@ export async function invalidateUserCache(
   await invalidateUser(userId, identifiers?.email, identifiers?.username);
 }
 
-export async function invalidateUserOrg(userId: string): Promise<void> {
-  await del(
-    CACHE_KEYS.userOrg(userId),
-    `user:org:${userId}`,
-    CACHE_KEYS.userPerms(userId)
-  );
-}
-
-export async function invalidateUserOrgCache(userId: string): Promise<void> {
-  await invalidateUserOrg(userId);
-}
-
 export async function invalidateUserPrefs(userId: string): Promise<void> {
   await del(CACHE_KEYS.userPrefs(userId));
-}
-
-export async function invalidateRolePermsCache(role: string): Promise<void> {
-  await del(CACHE_KEYS.rolePerms(role));
 }
 
 export const cacheService = {
@@ -147,11 +124,8 @@ export const cacheService = {
   CACHE_TTL,
   del,
   get,
-  invalidateRolePermsCache,
   invalidateUser,
   invalidateUserCache,
-  invalidateUserOrg,
-  invalidateUserOrgCache,
   invalidateUserPrefs,
   remember,
   set,

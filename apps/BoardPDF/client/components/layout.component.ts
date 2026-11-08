@@ -1,6 +1,6 @@
 import { getLocalizedPath, resolveRouteFromSlug } from '../config/seo.config.js';
 import { TOOLS_REGISTRY } from '../config/tools.registry.js';
-import { currentUser, escapeHtml, hasOrganizationAccess, onAuthChange } from '../services/api.service.js';
+import { currentUser, escapeHtml, onAuthChange } from '../services/api.service.js';
 import { getCurrentLanguage, t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -11,7 +11,7 @@ import { isSupportedLanguage } from '../utils/languages.util.js';
 import { setupUserMenu } from './layout-user-menu.component.js';
 
 export let isDrawerOpen = false;
-export let currentDrawerMode: 'apps' | 'help' | 'organization' | 'settings' | 'workflows' = 'workflows';
+export let currentDrawerMode: 'apps' | 'help' | 'settings' | 'workflows' = 'workflows';
 let activeResizeObserver: ResizeObserver | null = null;
 let activeMutationObserver: MutationObserver | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -52,54 +52,10 @@ function getActiveHelpSection(raw: string): 'faq' | 'security' | 'privacy' | 'te
 
 export function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
-  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings') || pathname.startsWith('/organization');
+  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings');
 }
 
-export function updateSidebarAuthState(sidebar?: HTMLElement): void {
-  const sb = sidebar || sidebarInstance || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
-  if (!sb) return;
-  const orgRailItem = sb.querySelector<HTMLElement>('[data-ref="rail-item-organization"]');
-  const orgMenuItem = sb.querySelector<HTMLElement>('[data-ref="btn-menu-organization"]');
-  const orgDivider = sb.querySelector<HTMLElement>('[data-ref="organization-divider"]');
-  const canAccessOrg = Boolean(
-    hasOrganizationAccess() ||
-    currentUser?.subscription_tier === 'enterprise' ||
-    currentUser?.subscription_tier === 'empresas' ||
-    currentUser?.subscription_tier === 'edu_school' ||
-    currentUser?.subscription_tier === 'edu_university'
-  );
-
-  if (orgRailItem) {
-    orgRailItem.classList.toggle('is-hidden', !canAccessOrg);
-    if (orgRailItem.style) orgRailItem.style.display = canAccessOrg ? 'flex' : 'none';
-  }
-  if (orgMenuItem) {
-    orgMenuItem.classList.toggle('is-hidden', !canAccessOrg);
-    if (orgMenuItem.style) orgMenuItem.style.display = canAccessOrg ? 'flex' : 'none';
-  }
-  if (orgDivider) {
-    orgDivider.classList.toggle('is-hidden', !canAccessOrg);
-    if (orgDivider.style) orgDivider.style.display = canAccessOrg ? 'block' : 'none';
-  }
-
-  const btnAdminPanel = sb.querySelector<HTMLElement>('[data-ref="btn-menu-admin-panel"]');
-  const adminPanelDivider = sb.querySelector<HTMLElement>('[data-ref="admin-panel-divider"]');
-  const hasElevatedRole = Boolean(
-    currentUser &&
-    (
-      (Array.isArray(currentUser.roles) && currentUser.roles.some((r) => r.toUpperCase() !== 'USER')) ||
-      (currentUser.role && currentUser.role.toUpperCase() !== 'USER')
-    )
-  );
-
-  if (btnAdminPanel) {
-    btnAdminPanel.classList.toggle('is-hidden', !hasElevatedRole);
-    if (btnAdminPanel.style) btnAdminPanel.style.display = hasElevatedRole ? 'flex' : 'none';
-  }
-  if (adminPanelDivider) {
-    adminPanelDivider.classList.toggle('is-hidden', !hasElevatedRole);
-    if (adminPanelDivider.style) adminPanelDivider.style.display = hasElevatedRole ? 'block' : 'none';
-  }
+export function updateSidebarAuthState(_sidebar?: HTMLElement): void {
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
@@ -108,7 +64,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isHelp = getActiveHelpSection(cleanPath) !== null;
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
   const isSettings = cleanPath.startsWith('/settings');
-  const isOrg = cleanPath.startsWith('/organization');
   const isProjects = cleanPath === '/projects' || cleanPath.startsWith('/projects/');
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
@@ -142,8 +97,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnApps = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-apps"]');
   const itemProjects = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
   const btnProjects = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-projects"]');
-  const itemOrg = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-organization"]');
-  const btnOrg = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-organization"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const railItemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
@@ -156,8 +109,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnApps?.classList.toggle('is-active', isDrawerOpen && currentDrawerMode === 'apps');
   itemProjects?.classList.toggle('is-active', isProjects && !isDrawerOpen);
   btnProjects?.classList.toggle('is-active', isProjects && !isDrawerOpen);
-  itemOrg?.classList.toggle('is-active', (isOrg && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'organization'));
-  btnOrg?.classList.toggle('is-active', (isOrg && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'organization'));
   btnToggle?.classList.toggle('is-active', (isDrawerOpen && currentDrawerMode === 'workflows') || (!isDrawerOpen && isWorkflows));
   railItemHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
   btnRailHelp?.classList.toggle('is-active', (isHelp && !isDrawerOpen) || (isDrawerOpen && currentDrawerMode === 'help'));
@@ -167,8 +118,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   if (isDrawerOpen) {
     if (isSettings && currentDrawerMode !== 'settings') {
       currentDrawerMode = 'settings';
-    } else if (isOrg && currentDrawerMode !== 'organization') {
-      currentDrawerMode = 'organization';
     } else if (isHelp && currentDrawerMode !== 'help') {
       currentDrawerMode = 'help';
     } else if (isWorkflows && currentDrawerMode !== 'workflows') {
@@ -235,46 +184,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     if (e.target !== btnProjects && !btnProjects?.contains(e.target as Node)) {
       goProjects(e);
     }
-  });
-
-  const itemOrg = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-organization"]');
-  const btnOrg = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-organization"]');
-  const btnMenuOrg = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-organization"]');
-
-  const goOrg = (e: Event) => {
-    e.preventDefault();
-    if (isDrawerOpen && currentDrawerMode === 'organization') {
-      toggleDrawer(false);
-    } else {
-      navigate('/organization');
-      if (window.innerWidth > 768) {
-        toggleDrawer(true, 'organization');
-      }
-    }
-  };
-
-  btnOrg?.addEventListener('click', goOrg);
-  itemOrg?.addEventListener('click', (e) => {
-    if (e.target !== btnOrg && !btnOrg?.contains(e.target as Node)) {
-      goOrg(e);
-    }
-  });
-
-  btnMenuOrg?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const avatarBackdrop = sidebar.querySelector<HTMLElement>('[data-ref="avatar-menu-backdrop"]');
-    const avatarMenu = sidebar.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
-    avatarMenu?.classList.remove('is-open');
-    avatarBackdrop?.classList.remove('is-open');
-    navigate('/organization');
-    if (window.innerWidth > 768) {
-      toggleDrawer(true, 'organization');
-    }
-  });
-
-  const btnMenuAdminPanel = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-admin-panel"]');
-  btnMenuAdminPanel?.addEventListener('click', (e) => {
-    e.preventDefault();
   });
 
   const toggleHelp = (e: Event) => {
@@ -360,8 +269,6 @@ export async function populateDrawerContent(drawer: HTMLElement, activePath?: st
 
   if (currentDrawerMode === 'settings') {
     renderSettingsDrawerContent(drawerBody, drawerFooter, activePath);
-  } else if (currentDrawerMode === 'organization') {
-    renderOrganizationDrawerContent(drawerBody, drawerFooter, activePath);
   } else if (currentDrawerMode === 'help') {
     renderHelpDrawerContent(drawerBody, drawerFooter, activePath);
   } else if (currentDrawerMode === 'apps') {
@@ -581,63 +488,6 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
   renderIcons(drawerBody);
 }
 
-function renderOrganizationDrawerContent(drawerBody: HTMLElement, drawerFooter: HTMLElement | null, activePath?: string): void {
-  const currentPath = activePath || window.location.pathname;
-
-  const bindNavLink = (btn: HTMLElement | null, path: string) => {
-    btn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
-      }
-      navigate(path);
-    });
-  };
-
-  drawerBody.innerHTML = `
-    <div class="drawer-section__header" data-ref="drawer-org-header">
-      <span class="drawer-section__title" data-ref="drawer-org-title" data-i18n="nav.organization">${t('nav.organization', 'Organización')}</span>
-    </div>
-    <button type="button" class="menu-item" data-ref="btn-nav-org-dashboard">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-      <span class="menu-item__text" data-i18n="org.nav_dashboard">${t('org.nav_dashboard', 'Dashboard')}</span>
-    </button>
-    <button type="button" class="menu-item" data-ref="btn-nav-org-members">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-      <span class="menu-item__text" data-i18n="org.nav_members">${t('org.nav_members', 'Miembros')}</span>
-    </button>
-    <button type="button" class="menu-item" data-ref="btn-nav-org-sso">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#vpn_key"></use></svg>
-      <span class="menu-item__text" data-i18n="org.nav_sso">${t('org.nav_sso', 'Configuración SSO')}</span>
-    </button>
-  `;
-
-  translateElement(drawerBody);
-
-  const btnDashboard = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-org-dashboard"]');
-  const btnMembers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-org-members"]');
-  const btnSso = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-org-sso"]');
-
-  if (currentPath === '/organization' || currentPath === '/organization/' || currentPath === '/organization/dashboard') {
-    btnDashboard?.classList.add('is-active');
-  } else if (currentPath === '/organization/members' || currentPath === '/organization/invitations') {
-    btnMembers?.classList.add('is-active');
-  } else if (currentPath === '/organization/sso' || currentPath === '/organization/saml') {
-    btnSso?.classList.add('is-active');
-  }
-
-  bindNavLink(btnDashboard, '/organization/dashboard');
-  bindNavLink(btnMembers, '/organization/members');
-  bindNavLink(btnSso, '/organization/sso');
-
-  if (drawerFooter) {
-    drawerFooter.innerHTML = '';
-    hideElement(drawerFooter);
-  }
-
-  renderIcons(drawerBody);
-}
-
 function renderAppsDrawerContent(drawerBody: HTMLElement): void {
   const categoriesConfig = [
     { id: 'organize', name: t('home.cat_organize') || 'Ordenar PDF' },
@@ -732,15 +582,14 @@ function closeDynamicDrawer(): void {
   }
 }
 
-export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'organization' | 'settings' | 'workflows'): void {
+export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'settings' | 'workflows'): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const currentPath = window.location.pathname;
   const cleanPath = (currentPath || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
   const isWorkflows = cleanPath.includes('/workflows') || cleanPath.includes('/workflow/');
   const isSettings = cleanPath.startsWith('/settings');
-  const isOrg = cleanPath.startsWith('/organization');
   const isHelp = getActiveHelpSection(cleanPath) !== null;
-  const targetMode = mode || (isSettings ? 'settings' : (isOrg ? 'organization' : (isHelp ? 'help' : (isWorkflows ? 'workflows' : 'workflows'))));
+  const targetMode = mode || (isSettings ? 'settings' : (isHelp ? 'help' : (isWorkflows ? 'workflows' : 'workflows')));
 
   if (forceState === undefined) {
     if (isDrawerOpen && currentDrawerMode === targetMode) {
@@ -794,11 +643,9 @@ function setupDrawerContent(sidebar: HTMLElement): void {
       const currentPath = window.location.pathname;
       const mode = currentPath.startsWith('/settings')
         ? 'settings'
-        : currentPath.startsWith('/organization')
-          ? 'organization'
-          : getActiveHelpSection(currentPath) !== null
-            ? 'help'
-            : 'workflows';
+        : getActiveHelpSection(currentPath) !== null
+          ? 'help'
+          : 'workflows';
       toggleDrawer(true, mode);
     }
 

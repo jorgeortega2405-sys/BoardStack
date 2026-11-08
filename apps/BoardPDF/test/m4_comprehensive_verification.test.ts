@@ -242,20 +242,13 @@ describe('Milestone 4 Comprehensive Automated Verification (F15, F16, F17)', () 
         CACHE_KEYS.userPerms(testUserId),
         `user:permissions:${testUserId}`,
         CACHE_KEYS.userBilling(testUserId),
-        CACHE_KEYS.userOrg(testUserId),
         CACHE_KEYS.userEmail(normEmail),
         CACHE_KEYS.userUsername(normUsername),
       ];
       for (const k of userKeys) await redis.set(k, '1');
 
-      const orgKeys = [CACHE_KEYS.userOrg(testUserId), `user:org:${testUserId}`];
-      for (const k of orgKeys) await redis.set(k, '1');
-
       const prefKey = CACHE_KEYS.userPrefs(testUserId);
       await redis.set(prefKey, '{"theme":"dark"}');
-
-      const roleKey = CACHE_KEYS.rolePerms(testRole);
-      await redis.set(roleKey, '["perm:all"]');
 
       // 1. Invalidate user
       await cacheService.invalidateUser(testUserId, testEmail, testUsername);
@@ -264,40 +257,9 @@ describe('Milestone 4 Comprehensive Automated Verification (F15, F16, F17)', () 
         assert.strictEqual(val, null, `Key ${k} must be evicted by invalidateUser`);
       }
 
-      // 2. Invalidate org
-      await cacheService.invalidateUserOrg(testUserId);
-      for (const k of orgKeys) {
-        const val = await redis.get(k);
-        assert.strictEqual(val, null, `Org key ${k} must be evicted by invalidateUserOrg`);
-      }
-
       // 3. Invalidate prefs
       await cacheService.invalidateUserPrefs(testUserId);
       assert.strictEqual(await redis.get(prefKey), null, `Prefs key must be evicted by invalidateUserPrefs`);
-
-      // 4. Invalidate role permissions
-      await cacheService.invalidateRolePermsCache(testRole);
-      assert.strictEqual(await redis.get(roleKey), null, `Role perms key must be evicted by invalidateRolePermsCache`);
-    });
-
-    it('1.3: GET /api/avatar has zero rate-limiting middleware attached and answers rapid requests with HTTP 200', () => {
-      const avatarRoute = (authRouter as any).stack.find((layer: any) => layer.route && layer.route.path === '/avatar');
-      assert.ok(avatarRoute, 'Route /avatar must exist in authRouter');
-      assert.strictEqual(avatarRoute.route.methods.get, true, '/avatar must support GET');
-
-      const middlewareNames = avatarRoute.route.stack.map((s: any) => s.name);
-      assert.ok(!middlewareNames.includes('avatarLimiter'), 'avatarLimiter must NOT be attached to /avatar');
-      assert.ok(!middlewareNames.some((n: string) => n.toLowerCase().includes('limiter')), 'No rate limiters allowed on /avatar');
-
-      // Execute 30 rapid calls without 429
-      for (let i = 0; i < 30; i++) {
-        const req: any = { query: { name: `Tester ${i}`, size: '64' } };
-        const res = createMockResponse();
-        handleAvatarRequest(req, res as any);
-        assert.strictEqual(res.statusCode, 200, `Call ${i} must return HTTP 200`);
-        assert.ok(res.headers['content-type'].includes('image/svg+xml'), 'Must return image/svg+xml');
-        assert.ok(typeof res.body === 'string' && res.body.startsWith('<svg'), 'Must return SVG string');
-      }
     });
 
     it('1.4: Stateless S3 avatar upload safely cleans up temporary disk files in finally blocks', async () => {
@@ -325,7 +287,7 @@ describe('Milestone 4 Comprehensive Automated Verification (F15, F16, F17)', () 
       assert.ok(sqlContent.includes('ai_tokens_balance'), 'Must include ai_tokens_balance');
       assert.ok(sqlContent.includes('project_folders'), 'Must include project_folders table');
       assert.ok(sqlContent.includes('user_cloud_integrations'), 'Must include user_cloud_integrations table');
-      assert.ok(sqlContent.includes('user_roles'), 'Must include user_roles table');
+      assert.ok(!sqlContent.includes('user_roles'), 'Must not include user_roles table');
     });
 
     it('1.6: Monorepo relocation: board-wasm and collab-server are inside apps/BoardPDF and removed from root apps/', () => {

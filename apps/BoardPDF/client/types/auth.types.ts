@@ -11,8 +11,6 @@ export interface User {
   is_sso?: boolean;
   language?: string;
   permissions?: string[];
-  role?: string;
-  roles?: string[];
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
   subscription_status?: string;

@@ -3,7 +3,6 @@ import { UserPayload } from '../types/auth.types.js';
 import { cacheService } from './cache.service.js';
 import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
-import { assignRoleToUser, getUserRoleNames } from './role.service.js';
 import { hashBackupCode } from './two-factor.service.js';
 import fs from 'fs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -22,8 +21,6 @@ export interface UserRecord extends RowDataPacket {
   last_login_ip?: string | null;
   password_hash?: string;
   registration_ip?: string | null;
-  role?: string;
-  roles?: string[];
   subscription_tier?: string;
   two_factor_enabled?: boolean | number;
   two_factor_recovery_codes?: string | null;
@@ -52,33 +49,21 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, google_id, google_email FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, google_id, google_email FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
-  const user = rows[0];
-  user.roles = await getUserRoleNames(user.id, user.role);
-  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
-  if (elevatedRole) {
-    user.role = elevatedRole;
-  }
-  return user;
+  return rows[0];
 }
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   if (rows.length === 0) return null;
-  const user = rows[0];
-  user.roles = await getUserRoleNames(user.id, user.role);
-  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
-  if (elevatedRole) {
-    user.role = elevatedRole;
-  }
-  return user;
+  return rows[0];
 }
 
 export async function findUserById(id: number): Promise<UserRecord | null> {
@@ -92,16 +77,11 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
 
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;
   const user = rows[0];
-  user.roles = await getUserRoleNames(user.id, user.role);
-  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
-  if (elevatedRole) {
-    user.role = elevatedRole;
-  }
   try {
     await cacheService.set(cacheKey, user, 300);
   } catch {}
@@ -111,17 +91,11 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
 export async function findUserByGoogleId(googleId: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE google_id = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE google_id = ? LIMIT 1',
     [googleId]
   );
   if (rows.length === 0) return null;
-  const user = rows[0];
-  user.roles = await getUserRoleNames(user.id, user.role);
-  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
-  if (elevatedRole) {
-    user.role = elevatedRole;
-  }
-  return user;
+  return rows[0];
 }
 
 export async function linkGoogleAccount(userId: number, googleId: string, googleEmail: string): Promise<boolean> {
@@ -187,11 +161,9 @@ export async function createUser(data: {
   googleId?: string | null;
   passwordHash?: string | null;
   registrationIp?: string | null;
-  role?: string;
   username: string;
 }): Promise<UserPayload> {
   const pool = getDbPool();
-  const role = data.role || 'USER';
 
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO users (
@@ -201,9 +173,8 @@ export async function createUser(data: {
       google_id,
       google_email,
       avatar_url,
-      role,
       registration_ip
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       data.username.trim(),
       data.email.toLowerCase().trim(),
@@ -211,7 +182,6 @@ export async function createUser(data: {
       data.googleId || null,
       data.googleEmail || null,
       data.avatarUrl || null,
-      role,
       data.registrationIp || null,
     ]
   );
@@ -227,8 +197,6 @@ export async function createUser(data: {
     logger.db.warn('No se pudieron crear las preferencias iniciales del usuario', err);
   }
 
-  await assignRoleToUser(userId, role);
-
   return {
     avatar_url: data.avatarUrl || null,
     email: data.email.toLowerCase().trim(),
@@ -236,8 +204,6 @@ export async function createUser(data: {
     google_email: data.googleEmail || null,
     has_password: Boolean(data.passwordHash),
     id: userId,
-    role,
-    roles: [role],
     subscription_tier: 'free',
     two_factor_enabled: false,
     username: data.username.trim(),

@@ -15,7 +15,6 @@
     "start": "node dist/index.js",
     "start:cluster": "node dist/cluster.js",
     "test": "python test/main.py 8",
-    "test:organization": "npx tsx --test test/organization/organization_pbac.test.ts test/organization/organization_navigation.test.ts test/organization/organization_members.test.ts test/organization/organization_sso.test.ts test/organization/organization_negative.test.ts",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "typecheck:all": "npm run typecheck"
   },
