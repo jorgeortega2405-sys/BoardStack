@@ -70,7 +70,6 @@ class WebSocketClientService {
         const query = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
         const wsUrl = `${protocol}//${hostname}${portSuffix}/ws/collab${query}`;
 
-        console.log(`[WebSocket] Conectando a ${wsUrl}...`);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
@@ -115,14 +114,10 @@ class WebSocketClientService {
                 }
               }
             }
-          } catch (err) {
-            console.warn('[WebSocket] Error al analizar mensaje entrante:', err);
-          }
+          } catch (_) {}
         };
 
-        ws.onerror = (err) => {
-          console.warn('[WebSocket] Advertencia en conexión WebSocket:', err);
-        };
+        ws.onerror = () => {};
 
         ws.onclose = () => {
           console.log('[WebSocket] Conexión cerrada.');
@@ -132,8 +127,7 @@ class WebSocketClientService {
           this.scheduleReconnect();
           resolve(null);
         };
-      } catch (err) {
-        console.error('[WebSocket] Error al instanciar WebSocket:', err);
+      } catch (_) {
         this.isConnecting = false;
         resolve(null);
       }
@@ -260,7 +254,6 @@ class WebSocketClientService {
 
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null;
-      console.log(`[WebSocket] Reintentando conexión (intento ${this.reconnectAttempts})...`);
       this.connect();
     }, delay);
   }

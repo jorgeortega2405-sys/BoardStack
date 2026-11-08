@@ -25,14 +25,14 @@ export const config = {
   db: {
     database: process.env.DB_NAME || 'boardpdf_db',
     host: process.env.DB_HOST || '127.0.0.1',
-    password: process.env.DB_PASSWORD || 'boardpdf_secure_password_2026',
+    password: process.env.DB_PASSWORD || '',
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER || 'boardpdf_user',
   },
   deepl: {
     apiKey: process.env.DEEPL_API_KEY || '',
   },
-  downloadSecret: process.env.DOWNLOAD_TOKEN_SECRET || process.env.SESSION_SECRET || 'boardpdf_secure_cryptographic_download_token_master_secret_2026',
+  downloadSecret: process.env.DOWNLOAD_TOKEN_SECRET || process.env.SESSION_SECRET || '',
   dropbox: {
     appKey: process.env.DROPBOX_APP_KEY || '',
     appSecret: process.env.DROPBOX_APP_SECRET || '',
@@ -60,8 +60,8 @@ export const config = {
   googleOAuth: {
     adminCallbackUrl: process.env.ADMIN_GOOGLE_CALLBACK_URL || 'http://localhost:3002/api/auth/google/callback',
     callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
-    clientId: process.env.GOOGLE_CLIENT_ID || '899980904040-n9foado9rou3etjr8d5ouikpa1ivaml2.apps.googleusercontent.com',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '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',
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   },
   nodeEnv: process.env.NODE_ENV || 'development',
   originProtection: {
@@ -69,7 +69,7 @@ export const config = {
     secret: process.env.CLOUDFLARE_ORIGIN_SECRET || '',
   },
   photoroom: {
-    apiKey: process.env.PHOTOROOM_API_KEY || 'sandbox_sk_pr_default_745f71ad9846834f110efd4b34e5ae323b14ff43',
+    apiKey: process.env.PHOTOROOM_API_KEY || '',
   },
   port: parseInt(process.env.PORT || '3000', 10),
   redis: {
@@ -85,7 +85,7 @@ export const config = {
     region: process.env.AWS_S3_REGION || process.env.AWS_REGION || process.env.S3_REGION || 'us-east-1',
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY || '',
   },
-  sessionSecret: process.env.SESSION_SECRET || 'boardpdf_session_secret_key_2026',
+  sessionSecret: process.env.SESSION_SECRET || '',
   smtp: {
     fromEmail: process.env.SMTP_FROM_EMAIL || 'no-reply@boardpdf.com',
     fromName: process.env.SMTP_FROM_NAME || 'BoardPDF',
