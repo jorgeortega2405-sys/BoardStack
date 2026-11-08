@@ -8,9 +8,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { fileURLToPath } from 'url';
 
-
-const TO_PDF_DIR = path.resolve(process.cwd(), 'data/to-pdf');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const TO_PDF_DIR = path.resolve(__dirname, '../../../data/to-pdf');
 const UPLOADS_DIR = path.join(TO_PDF_DIR, 'uploads');
 const OUTPUT_DIR = path.join(TO_PDF_DIR, 'output');
 

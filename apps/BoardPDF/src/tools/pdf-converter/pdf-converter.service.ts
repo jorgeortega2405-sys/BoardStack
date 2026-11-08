@@ -4,8 +4,11 @@ import { LocalConverterEngine } from './engine/local-converter.engine.js';
 import { ConversionType, ConvertJobResult, PdfConversionOptions } from './pdf-converter.types.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const CONVERTER_DIR = path.resolve(process.cwd(), 'data/converter');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CONVERTER_DIR = path.resolve(__dirname, '../../../data/converter');
 const UPLOADS_DIR = path.join(CONVERTER_DIR, 'uploads');
 const OUTPUT_DIR = path.join(CONVERTER_DIR, 'output');
 

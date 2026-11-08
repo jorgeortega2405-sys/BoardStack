@@ -5,7 +5,7 @@ import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../se
 import { logger } from '../../services/logger.service.js';
 import { removeBackground } from '../../services/photoroom.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
-import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
+import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
@@ -342,9 +342,9 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
     }
 
     const doc = await getCollaborativeDocument(id);
-    const pdfPath = await getRenderedPdfPath(id);
+    const pdfBuffer = await getRenderedPdfBuffer(id);
 
-    if (!doc || !pdfPath || !fs.existsSync(pdfPath)) {
+    if (!doc || !pdfBuffer || pdfBuffer.length === 0) {
       res.status(404).json({
         error: 'El archivo PDF no está disponible para descarga.',
         success: false,
@@ -354,6 +354,8 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
 
     const safeFilename = `${encodeURIComponent(doc.title.replace(/[^a-zA-Z0-9_\-\. ]/g, '_')) || 'document'}.pdf`;
     const pagesParam = typeof req.query.pages === 'string' ? req.query.pages.trim() : null;
+    let finalBuffer = pdfBuffer;
+
     if (pagesParam && pagesParam !== 'all') {
       const pageNums = pagesParam
         .split(',')
@@ -361,8 +363,7 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
         .filter((p) => !isNaN(p) && p > 0);
 
       if (pageNums.length > 0) {
-        const existingBytes = fs.readFileSync(pdfPath);
-        const srcDoc = await PDFDocument.load(existingBytes);
+        const srcDoc = await PDFDocument.load(pdfBuffer);
         const totalPages = srcDoc.getPageCount();
         const validIndices = pageNums
           .map((p) => p - 1)
@@ -373,18 +374,15 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
           const copiedPages = await outDoc.copyPages(srcDoc, validIndices);
           copiedPages.forEach((p) => outDoc.addPage(p));
           const pdfBytes = await outDoc.save();
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
-          res.send(Buffer.from(pdfBytes));
-          return;
+          finalBuffer = Buffer.from(pdfBytes);
         }
       }
     }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
-    const stream = fs.createReadStream(pdfPath);
-    stream.pipe(res);
+    res.setHeader('Content-Length', finalBuffer.length.toString());
+    res.send(finalBuffer);
   } catch (err) {
     logger.app.error('Error al descargar PDF colaborativo', err);
     res.status(500).json({
