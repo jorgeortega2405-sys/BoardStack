@@ -3,6 +3,7 @@ import { redis } from '../config/redis.config.js';
 import { UserPayload } from '../types/auth.types.js';
 import { decryptAtRest, encryptAtRest } from './crypto.service.js';
 import { logger } from './logger.service.js';
+import { assignRoleToUser, getUserRoleNames } from './role.service.js';
 import { hashBackupCode } from './two-factor.service.js';
 import fs from 'fs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -56,7 +57,11 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
   );
   if (rows.length === 0) return null;
   const user = rows[0];
-  user.roles = [user.role || 'USER'];
+  user.roles = await getUserRoleNames(user.id, user.role);
+  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
+  if (elevatedRole) {
+    user.role = elevatedRole;
+  }
   return user;
 }
 
@@ -68,7 +73,11 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
   );
   if (rows.length === 0) return null;
   const user = rows[0];
-  user.roles = [user.role || 'USER'];
+  user.roles = await getUserRoleNames(user.id, user.role);
+  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
+  if (elevatedRole) {
+    user.role = elevatedRole;
+  }
   return user;
 }
 
@@ -88,7 +97,11 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   );
   if (rows.length === 0) return null;
   const user = rows[0];
-  user.roles = [user.role || 'USER'];
+  user.roles = await getUserRoleNames(user.id, user.role);
+  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
+  if (elevatedRole) {
+    user.role = elevatedRole;
+  }
   try {
     await redis.setex(cacheKey, 300, JSON.stringify(user));
   } catch {}
@@ -103,7 +116,11 @@ export async function findUserByGoogleId(googleId: string): Promise<UserRecord |
   );
   if (rows.length === 0) return null;
   const user = rows[0];
-  user.roles = [user.role || 'USER'];
+  user.roles = await getUserRoleNames(user.id, user.role);
+  const elevatedRole = user.roles.find((r) => r.toUpperCase() !== 'USER');
+  if (elevatedRole) {
+    user.role = elevatedRole;
+  }
   return user;
 }
 
@@ -209,6 +226,8 @@ export async function createUser(data: {
   } catch (err) {
     logger.db.warn('No se pudieron crear las preferencias iniciales del usuario', err);
   }
+
+  await assignRoleToUser(userId, role);
 
   return {
     avatar_url: data.avatarUrl || null,

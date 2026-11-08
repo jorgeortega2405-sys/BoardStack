@@ -23,6 +23,8 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
   const btnSwitchAccountMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-switch-account-menu"]');
   const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
   const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
+  const btnAdminPanel = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-admin-panel"]');
+  const adminPanelDivider = avatarContainer.querySelector<HTMLElement>('[data-ref="admin-panel-divider"]');
   const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
   const btnLogout = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout"]');
   const btnLogoutAll = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout-all"]');
@@ -142,6 +144,23 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
       if (activeEmail) {
         activeEmail.textContent = currentUser.email;
       }
+
+      const hasElevatedRole = Boolean(
+        currentUser &&
+        (
+          (Array.isArray(currentUser.roles) && currentUser.roles.some((r) => r.toUpperCase() !== 'USER')) ||
+          (currentUser.role && currentUser.role.toUpperCase() !== 'USER')
+        )
+      );
+      if (btnAdminPanel) {
+        btnAdminPanel.classList.toggle('is-hidden', !hasElevatedRole);
+        btnAdminPanel.style.display = hasElevatedRole ? 'flex' : 'none';
+      }
+      if (adminPanelDivider) {
+        adminPanelDivider.classList.toggle('is-hidden', !hasElevatedRole);
+        adminPanelDivider.style.display = hasElevatedRole ? 'block' : 'none';
+      }
+
       renderAccountList();
     } else {
       avatarContainer.style.display = 'none';
@@ -209,6 +228,10 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
       return;
     }
     navigate('/login');
+  });
+
+  btnAdminPanel?.addEventListener('click', (e) => {
+    e.preventDefault();
   });
 
   btnSettings?.addEventListener('click', (e) => {

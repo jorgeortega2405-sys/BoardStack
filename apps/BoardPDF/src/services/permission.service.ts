@@ -61,8 +61,8 @@ export async function getUserPermissions(
 
   try {
     const [roleRows] = await pool.query<any[]>(
-      'SELECT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN roles r ON r.id = rp.role_id WHERE r.name = ?',
-      [userRole]
+      'SELECT DISTINCT p.name FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id JOIN roles r ON r.id = rp.role_id WHERE r.name = ? OR r.id IN (SELECT role_id FROM user_roles WHERE user_id = ?)',
+      [userRole, userId]
     );
     if (Array.isArray(roleRows)) {
       for (const row of roleRows) {

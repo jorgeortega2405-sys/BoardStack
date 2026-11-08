@@ -81,6 +81,25 @@ export function updateSidebarAuthState(sidebar?: HTMLElement): void {
     orgDivider.classList.toggle('is-hidden', !canAccessOrg);
     if (orgDivider.style) orgDivider.style.display = canAccessOrg ? 'block' : 'none';
   }
+
+  const btnAdminPanel = sb.querySelector<HTMLElement>('[data-ref="btn-menu-admin-panel"]');
+  const adminPanelDivider = sb.querySelector<HTMLElement>('[data-ref="admin-panel-divider"]');
+  const hasElevatedRole = Boolean(
+    currentUser &&
+    (
+      (Array.isArray(currentUser.roles) && currentUser.roles.some((r) => r.toUpperCase() !== 'USER')) ||
+      (currentUser.role && currentUser.role.toUpperCase() !== 'USER')
+    )
+  );
+
+  if (btnAdminPanel) {
+    btnAdminPanel.classList.toggle('is-hidden', !hasElevatedRole);
+    if (btnAdminPanel.style) btnAdminPanel.style.display = hasElevatedRole ? 'flex' : 'none';
+  }
+  if (adminPanelDivider) {
+    adminPanelDivider.classList.toggle('is-hidden', !hasElevatedRole);
+    if (adminPanelDivider.style) adminPanelDivider.style.display = hasElevatedRole ? 'block' : 'none';
+  }
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
@@ -251,6 +270,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     if (window.innerWidth > 768) {
       toggleDrawer(true, 'organization');
     }
+  });
+
+  const btnMenuAdminPanel = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-admin-panel"]');
+  btnMenuAdminPanel?.addEventListener('click', (e) => {
+    e.preventDefault();
   });
 
   const toggleHelp = (e: Event) => {
