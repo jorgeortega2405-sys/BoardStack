@@ -30,49 +30,32 @@
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
                 </div>
                 <div class="component-item__text" data-ref="item-current-plan-text">
-                  <div class="component-item__title-row" data-ref="plan-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <div class="component-item__title-row" data-ref="plan-title-row">
                     <h3 class="component-item__title" data-ref="current-plan-name">-</h3>
-                    <span class="component-badge component-badge--sm" data-ref="current-plan-status-badge" style="display: none;"></span>
+                    <span class="component-badge component-badge--sm is-hidden" data-ref="current-plan-status-badge"></span>
                   </div>
                   <p class="component-item__desc" data-ref="current-plan-desc">-</p>
                 </div>
               </div>
               <div class="component-item__actions" data-ref="item-current-plan-actions">
-                <button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan">Explorar planes</button>
+                <button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan"></button>
               </div>
             </div>
 
-            <hr class="component-divider" data-ref="divider-auto-renewal" style="display: none;" />
+            <hr class="component-divider is-hidden" data-ref="divider-cancel-sub" />
 
-            <div class="component-item" data-ref="item-auto-renewal" style="display: none;">
-              <div class="component-item__content" data-ref="item-auto-renewal-content">
-                <div class="component-item__icon-box" data-ref="item-auto-renewal-icon-box">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                </div>
-                <div class="component-item__text" data-ref="item-auto-renewal-text">
-                  <h3 class="component-item__title" data-ref="item-auto-renewal-title" data-i18n="settings.billing.auto_renewal_title">Renovación automática</h3>
-                  <p class="component-item__desc" data-ref="auto-renewal-desc" data-i18n="settings.billing.auto_renewal_desc">Tu suscripción se renovará automáticamente al término del período actual.</p>
-                </div>
-              </div>
-              <div class="component-item__actions" data-ref="item-auto-renewal-actions">
-                <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-auto-renewal">Cancelar renovación</button>
-              </div>
-            </div>
-
-            <hr class="component-divider" data-ref="divider-cancel-sub" style="display: none;" />
-
-            <div class="component-item" data-ref="item-cancel-subscription" style="display: none;">
+            <div class="component-item is-hidden" data-ref="item-cancel-subscription">
               <div class="component-item__content" data-ref="item-cancel-subscription-content">
                 <div class="component-item__icon-box" data-ref="item-cancel-subscription-icon-box">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                  <svg class="component-icon" data-ref="icon-cancel-sub" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
                 </div>
                 <div class="component-item__text" data-ref="item-cancel-subscription-text">
-                  <h3 class="component-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title">Cancelar suscripción</h3>
-                  <p class="component-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc">Cancela tu plan de inmediato.</p>
+                  <h3 class="component-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title"></h3>
+                  <p class="component-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc"></p>
                 </div>
               </div>
               <div class="component-item__actions" data-ref="item-cancel-subscription-actions">
-                <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-cancel-subscription-immediate" data-i18n="settings.billing.btn_cancel_subscription">Cancelar ahora</button>
+                <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-subscription" data-i18n="settings.billing.btn_cancel_subscription"></button>
               </div>
             </div>
           </div>

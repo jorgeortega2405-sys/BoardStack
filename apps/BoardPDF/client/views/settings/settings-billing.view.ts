@@ -1,7 +1,7 @@
 import { navigate } from '../../app-router.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { cancelSubscriptionImmediateApi, checkAuthSession, currentUser, fetchAiTokenBalance, getApi, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
+import { checkAuthSession, currentUser, fetchAiTokenBalance, getApi, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
@@ -40,12 +40,12 @@ export async function createBillingView(): Promise<HTMLElement> {
     const planStatusBadge = container.querySelector<HTMLElement>('[data-ref="current-plan-status-badge"]');
     const planDescEl = container.querySelector<HTMLElement>('[data-ref="current-plan-desc"]');
     const btnUpgrade = container.querySelector<HTMLElement>('[data-ref="btn-upgrade-plan"]');
-    const itemAutoRenewal = container.querySelector<HTMLElement>('[data-ref="item-auto-renewal"]');
-    const dividerAutoRenewal = container.querySelector<HTMLElement>('[data-ref="divider-auto-renewal"]');
-    const autoRenewalDesc = container.querySelector<HTMLElement>('[data-ref="auto-renewal-desc"]');
-    const btnToggleRenewal = container.querySelector<HTMLElement>('[data-ref="btn-toggle-auto-renewal"]');
     const itemCancelSub = container.querySelector<HTMLElement>('[data-ref="item-cancel-subscription"]');
     const dividerCancelSub = container.querySelector<HTMLElement>('[data-ref="divider-cancel-sub"]');
+    const cancelTitleEl = container.querySelector<HTMLElement>('[data-ref="item-cancel-subscription-title"]');
+    const cancelDescEl = container.querySelector<HTMLElement>('[data-ref="item-cancel-subscription-desc"]');
+    const btnToggleSub = container.querySelector<HTMLElement>('[data-ref="btn-toggle-subscription"]');
+    const iconCancelSubUse = container.querySelector<SVGUseElement>('[data-ref="icon-cancel-sub"] use');
 
     const hasActiveSub = Boolean(
       (info.hasSubscription || (info.tier && info.tier !== 'free')) &&
@@ -93,7 +93,7 @@ export async function createBillingView(): Promise<HTMLElement> {
       }
 
       if (planStatusBadge) {
-        planStatusBadge.style.display = 'inline-flex';
+        planStatusBadge.classList.remove('is-hidden');
         if (info.cancel_at_period_end) {
           planStatusBadge.className = 'component-badge component-badge--sm component-badge--warning';
           planStatusBadge.textContent = t('settings.billing.status_cancel_scheduled') || 'Cancelación programada';
@@ -129,39 +129,39 @@ export async function createBillingView(): Promise<HTMLElement> {
       }
 
       if (isOneTime) {
-        if (itemAutoRenewal) itemAutoRenewal.style.display = 'none';
-        if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'none';
-        if (itemCancelSub) itemCancelSub.style.display = 'none';
-        if (dividerCancelSub) dividerCancelSub.style.display = 'none';
+        itemCancelSub?.classList.add('is-hidden');
+        dividerCancelSub?.classList.add('is-hidden');
       } else {
-        if (itemAutoRenewal) itemAutoRenewal.style.display = 'flex';
-        if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'block';
-        if (itemCancelSub) itemCancelSub.style.display = 'flex';
-        if (dividerCancelSub) dividerCancelSub.style.display = 'block';
+        itemCancelSub?.classList.remove('is-hidden');
+        dividerCancelSub?.classList.remove('is-hidden');
 
-        if (btnToggleRenewal && autoRenewalDesc) {
+        if (btnToggleSub && cancelTitleEl && cancelDescEl) {
           if (info.cancel_at_period_end) {
-            autoRenewalDesc.textContent = t('settings.billing.auto_renewal_paused_desc') || 'La renovación automática está cancelada. Tu suscripción no se cobrará nuevamente.';
-            btnToggleRenewal.textContent = t('settings.billing.btn_reactivate_renewal') || 'Reactivar renovación';
-            btnToggleRenewal.className = 'component-button component-button--h34';
-            btnToggleRenewal.onclick = (e) => {
+            iconCancelSubUse?.setAttribute('href', '/icons.svg#autorenew');
+            cancelTitleEl.textContent = t('settings.billing.reactivate_sub_title') || 'Reactivar suscripción';
+            cancelDescEl.textContent = (t('settings.billing.reactivate_sub_desc') || 'Tu suscripción finalizará el {date}. Puedes reactivarla en cualquier momento para seguir disfrutando de todas las funciones sin interrupciones.').replace('{date}', dateFormatted);
+            btnToggleSub.textContent = t('settings.billing.btn_reactivate_sub') || 'Reactivar suscripción';
+            btnToggleSub.className = 'component-button component-button--h34 component-button--black';
+            btnToggleSub.onclick = (e) => {
               e.preventDefault();
-              handleToggleAutoRenewal(false);
+              handleToggleSubscription(false);
             };
           } else {
-            autoRenewalDesc.textContent = (t('settings.billing.auto_renewal_active_desc') || 'Tu suscripción se renovará automáticamente el {date}.').replace('{date}', dateFormatted);
-            btnToggleRenewal.textContent = t('settings.billing.btn_cancel_renewal') || 'Cancelar renovación';
-            btnToggleRenewal.className = 'component-button component-button--h34';
-            btnToggleRenewal.onclick = (e) => {
+            iconCancelSubUse?.setAttribute('href', '/icons.svg#close');
+            cancelTitleEl.textContent = t('settings.billing.cancel_sub_title') || 'Cancelar suscripción';
+            cancelDescEl.textContent = t('settings.billing.cancel_sub_desc') || 'Cancela la renovación automática de tu suscripción. Conservarás todos tus beneficios premium hasta el final del período facturado.';
+            btnToggleSub.textContent = t('settings.billing.btn_cancel_subscription') || 'Cancelar suscripción';
+            btnToggleSub.className = 'component-button component-button--h34';
+            btnToggleSub.onclick = (e) => {
               e.preventDefault();
-              handleToggleAutoRenewal(true, dateFormatted);
+              handleToggleSubscription(true, dateFormatted);
             };
           }
         }
       }
     } else {
       if (planNameEl) planNameEl.textContent = t('settings.billing.free_plan_title') || 'Plan Gratuito';
-      if (planStatusBadge) planStatusBadge.style.display = 'none';
+      if (planStatusBadge) planStatusBadge.classList.add('is-hidden');
       if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc') || 'Actualmente disfrutas del plan básico gratuito de BoardPDF.';
 
       if (btnUpgrade) {
@@ -172,10 +172,8 @@ export async function createBillingView(): Promise<HTMLElement> {
         };
       }
 
-      if (itemAutoRenewal) itemAutoRenewal.style.display = 'none';
-      if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'none';
-      if (itemCancelSub) itemCancelSub.style.display = 'none';
-      if (dividerCancelSub) dividerCancelSub.style.display = 'none';
+      itemCancelSub?.classList.add('is-hidden');
+      dividerCancelSub?.classList.add('is-hidden');
     }
   };
 
@@ -214,20 +212,20 @@ export async function createBillingView(): Promise<HTMLElement> {
     }
   };
 
-  const handleToggleAutoRenewal = (cancelAtPeriodEnd: boolean, dateFormatted = '') => {
+  const handleToggleSubscription = (cancelAtPeriodEnd: boolean, dateFormatted = '') => {
     if (cancelAtPeriodEnd) {
       openModal({
         confirmClass: 'component-button--black',
-        confirmText: t('settings.billing.btn_confirm_cancel_renewal') || 'Confirmar cancelación',
-        description: (t('settings.billing.modal_cancel_renewal_desc') || 'Tu suscripción no se renovará al concluir el ciclo actual. Mantendrás todas tus funciones premium hasta el {date}.').replace('{date}', dateFormatted),
-        title: t('settings.billing.modal_cancel_renewal_title') || '¿Cancelar renovación automática?',
+        confirmText: t('settings.billing.btn_confirm_cancel_sub') || 'Confirmar cancelación',
+        description: (t('settings.billing.modal_cancel_sub_desc') || 'Tu suscripción no se renovará al concluir el período actual. Mantendrás todas tus funciones premium hasta el {date} y después no se realizará ningún cobro.').replace('{date}', dateFormatted),
+        title: t('settings.billing.modal_cancel_sub_title') || '¿Cancelar suscripción?',
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);
           try {
             const res = await updateAutoRenewalApi(true);
             if (res.success) {
               inst.close();
-              showToast(t('settings.billing.toast_renewal_paused') || 'Renovación automática cancelada.', 'info');
+              showToast(t('settings.billing.toast_subscription_cancelled') || 'Tu suscripción no se renovará. Mantendrás tu plan hasta el término del ciclo.', 'info');
               await loadBillingData();
             } else {
               inst.setConfirmLoading(false);
@@ -241,45 +239,20 @@ export async function createBillingView(): Promise<HTMLElement> {
       });
     } else {
       (async () => {
-        const res = await updateAutoRenewalApi(false);
-        if (res.success) {
-          showToast(t('settings.billing.toast_renewal_active') || 'Renovación automática reactivada.', 'success');
-          await loadBillingData();
-        } else {
-          showToast(res.error || t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+        try {
+          const res = await updateAutoRenewalApi(false);
+          if (res.success) {
+            showToast(t('settings.billing.toast_subscription_reactivated') || 'Suscripción reactivada exitosamente.', 'success');
+            await loadBillingData();
+          } else {
+            showToast(res.error || t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+          }
+        } catch {
+          showToast(t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
         }
       })();
     }
   };
-
-  const btnCancelImmediate = container.querySelector<HTMLElement>('[data-ref="btn-cancel-subscription-immediate"]');
-  btnCancelImmediate?.addEventListener('click', (e) => {
-    e.preventDefault();
-    openModal({
-      confirmClass: 'component-button--danger',
-      confirmText: t('settings.billing.btn_confirm_cancel_immediate') || 'Cancelar suscripción ahora',
-      description: t('settings.billing.modal_cancel_immediate_desc') || 'Esta acción cancelará tu suscripción de inmediato. Volverás al plan gratuito en este momento.',
-      title: t('settings.billing.modal_cancel_immediate_title') || '¿Cancelar tu suscripción ahora?',
-      onConfirm: async (inst) => {
-        inst.setConfirmLoading(true);
-        try {
-          const res = await cancelSubscriptionImmediateApi();
-          if (res.success) {
-            await checkAuthSession();
-            inst.close();
-            showToast(t('settings.billing.toast_subscription_cancelled') || 'Tu suscripción ha sido cancelada exitosamente.', 'info');
-            await loadBillingData();
-          } else {
-            inst.setConfirmLoading(false);
-            showToast(res.error || t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
-          }
-        } catch {
-          inst.setConfirmLoading(false);
-          showToast(t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
-        }
-      },
-    });
-  });
 
   const formatBytes = (bytes: number): string => {
     if (bytes <= 0) return '0.0 MB';

@@ -701,12 +701,16 @@
       "toast_renewal_paused": "Renovación automática cancelada.",
       "toast_renewal_active": "Renovación automática reactivada.",
       "cancel_sub_title": "Cancelar suscripción",
-      "cancel_sub_desc": "Cancela tu suscripción de inmediato y regresa al plan gratuito de BoardPDF.",
+      "cancel_sub_desc": "Cancela la renovación automática de tu suscripción. Conservarás todos tus beneficios premium hasta el final del período facturado.",
       "btn_cancel_subscription": "Cancelar suscripción",
-      "modal_cancel_immediate_title": "¿Cancelar tu suscripción ahora?",
-      "modal_cancel_immediate_desc": "Esta acción cancelará tu suscripción de inmediato. Volverás al plan gratuito en este momento.",
-      "btn_confirm_cancel_immediate": "Cancelar suscripción ahora",
-      "toast_subscription_cancelled": "Tu suscripción ha sido cancelada exitosamente."
+      "reactivate_sub_title": "Reactivar suscripción",
+      "reactivate_sub_desc": "Tu suscripción finalizará el {date}. Puedes reactivarla en cualquier momento para seguir disfrutando de todas las funciones sin interrupciones.",
+      "btn_reactivate_sub": "Reactivar suscripción",
+      "modal_cancel_sub_title": "¿Cancelar suscripción?",
+      "modal_cancel_sub_desc": "Tu suscripción no se renovará al concluir el período actual. Mantendrás todas tus funciones premium hasta el {date} y después no se realizará ningún cobro.",
+      "btn_confirm_cancel_sub": "Confirmar cancelación",
+      "toast_subscription_cancelled": "Tu suscripción no se renovará. Mantendrás tu plan hasta el término del ciclo.",
+      "toast_subscription_reactivated": "Suscripción reactivada exitosamente."
     },
     "purchases": {
       "title": "Historial de compras",
