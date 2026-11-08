@@ -1,77 +1,77 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
-    <div class="settings-layout" data-ref="settings-layout">
-      <div class="settings-header" data-ref="settings-header">
-        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.billing.title">Facturación y suscripción</h1>
-        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.billing.subtitle">Gestiona tu plan actual, opciones de renovación y detalles de facturación.</p>
+    <div class="component-layout" data-ref="settings-layout">
+      <div class="component-header" data-ref="settings-header">
+        <h1 class="component-title" data-ref="settings-title" data-i18n="settings.billing.title">Facturación y suscripción</h1>
+        <p class="component-subtitle" data-ref="settings-subtitle" data-i18n="settings.billing.subtitle">Gestiona tu plan actual, opciones de renovación y detalles de facturación.</p>
       </div>
 
-      <div class="settings-group settings-group--accordion is-active" data-ref="group-subscription-plan">
-        <div class="settings-accordion-header" data-ref="accordion-header-subscription">
-          <div class="settings-item__content" data-ref="accordion-sub-content">
-            <div class="settings-item__icon-box" data-ref="accordion-sub-icon-box">
+      <div class="component-group component-group--accordion is-active" data-ref="group-subscription-plan">
+        <div class="component-accordion-header" data-ref="accordion-header-subscription">
+          <div class="component-item__content" data-ref="accordion-sub-content">
+            <div class="component-item__icon-box" data-ref="accordion-sub-icon-box">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
             </div>
-            <div class="settings-item__text" data-ref="accordion-sub-text">
-              <h2 class="settings-item__title" data-ref="accordion-sub-title" data-i18n="settings.billing.subscription_accordion_title">Plan y suscripción</h2>
-              <p class="settings-item__desc" data-ref="accordion-sub-desc" data-i18n="settings.billing.subscription_accordion_desc">Gestiona el estado de tu plan activo y ciclos de facturación.</p>
+            <div class="component-item__text" data-ref="accordion-sub-text">
+              <h2 class="component-item__title" data-ref="accordion-sub-title" data-i18n="settings.billing.subscription_accordion_title">Plan y suscripción</h2>
+              <p class="component-item__desc" data-ref="accordion-sub-desc" data-i18n="settings.billing.subscription_accordion_desc">Gestiona el estado de tu plan activo y ciclos de facturación.</p>
             </div>
           </div>
-          <div class="settings-item__actions" data-ref="accordion-sub-actions">
-            <svg class="component-icon settings-accordion-icon" data-ref="accordion-sub-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <div class="component-item__actions" data-ref="accordion-sub-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-sub-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </div>
         </div>
 
-        <div class="settings-accordion-body" data-ref="accordion-body-subscription">
-          <div class="settings-accordion-content" data-ref="accordion-content-subscription">
-            <div class="settings-item" data-ref="item-current-plan">
-              <div class="settings-item__content" data-ref="item-current-plan-content">
-                <div class="settings-item__icon-box" data-ref="item-current-plan-icon-box">
+        <div class="component-accordion-body" data-ref="accordion-body-subscription">
+          <div class="component-accordion-content" data-ref="accordion-content-subscription">
+            <div class="component-item" data-ref="item-current-plan">
+              <div class="component-item__content" data-ref="item-current-plan-content">
+                <div class="component-item__icon-box" data-ref="item-current-plan-icon-box">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
                 </div>
-                <div class="settings-item__text" data-ref="item-current-plan-text">
-                  <div class="settings-item__title-row" data-ref="plan-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <h3 class="settings-item__title" data-ref="current-plan-name">-</h3>
+                <div class="component-item__text" data-ref="item-current-plan-text">
+                  <div class="component-item__title-row" data-ref="plan-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h3 class="component-item__title" data-ref="current-plan-name">-</h3>
                     <span class="component-badge component-badge--sm" data-ref="current-plan-status-badge" style="display: none;"></span>
                   </div>
-                  <p class="settings-item__desc" data-ref="current-plan-desc">-</p>
+                  <p class="component-item__desc" data-ref="current-plan-desc">-</p>
                 </div>
               </div>
-              <div class="settings-item__actions" data-ref="item-current-plan-actions">
+              <div class="component-item__actions" data-ref="item-current-plan-actions">
                 <button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan">Explorar planes</button>
               </div>
             </div>
 
-            <hr class="settings-divider" data-ref="divider-auto-renewal" style="display: none;" />
+            <hr class="component-divider" data-ref="divider-auto-renewal" style="display: none;" />
 
-            <div class="settings-item" data-ref="item-auto-renewal" style="display: none;">
-              <div class="settings-item__content" data-ref="item-auto-renewal-content">
-                <div class="settings-item__icon-box" data-ref="item-auto-renewal-icon-box">
+            <div class="component-item" data-ref="item-auto-renewal" style="display: none;">
+              <div class="component-item__content" data-ref="item-auto-renewal-content">
+                <div class="component-item__icon-box" data-ref="item-auto-renewal-icon-box">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
                 </div>
-                <div class="settings-item__text" data-ref="item-auto-renewal-text">
-                  <h3 class="settings-item__title" data-ref="item-auto-renewal-title" data-i18n="settings.billing.auto_renewal_title">Renovación automática</h3>
-                  <p class="settings-item__desc" data-ref="auto-renewal-desc" data-i18n="settings.billing.auto_renewal_desc">Tu suscripción se renovará automáticamente al término del período actual.</p>
+                <div class="component-item__text" data-ref="item-auto-renewal-text">
+                  <h3 class="component-item__title" data-ref="item-auto-renewal-title" data-i18n="settings.billing.auto_renewal_title">Renovación automática</h3>
+                  <p class="component-item__desc" data-ref="auto-renewal-desc" data-i18n="settings.billing.auto_renewal_desc">Tu suscripción se renovará automáticamente al término del período actual.</p>
                 </div>
               </div>
-              <div class="settings-item__actions" data-ref="item-auto-renewal-actions">
+              <div class="component-item__actions" data-ref="item-auto-renewal-actions">
                 <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-auto-renewal">Cancelar renovación</button>
               </div>
             </div>
 
-            <hr class="settings-divider" data-ref="divider-cancel-sub" style="display: none;" />
+            <hr class="component-divider" data-ref="divider-cancel-sub" style="display: none;" />
 
-            <div class="settings-item" data-ref="item-cancel-subscription" style="display: none;">
-              <div class="settings-item__content" data-ref="item-cancel-subscription-content">
-                <div class="settings-item__icon-box" data-ref="item-cancel-subscription-icon-box">
+            <div class="component-item" data-ref="item-cancel-subscription" style="display: none;">
+              <div class="component-item__content" data-ref="item-cancel-subscription-content">
+                <div class="component-item__icon-box" data-ref="item-cancel-subscription-icon-box">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
                 </div>
-                <div class="settings-item__text" data-ref="item-cancel-subscription-text">
-                  <h3 class="settings-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title">Cancelar suscripción</h3>
-                  <p class="settings-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc">Cancela tu plan de inmediato.</p>
+                <div class="component-item__text" data-ref="item-cancel-subscription-text">
+                  <h3 class="component-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title">Cancelar suscripción</h3>
+                  <p class="component-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc">Cancela tu plan de inmediato.</p>
                 </div>
               </div>
-              <div class="settings-item__actions" data-ref="item-cancel-subscription-actions">
+              <div class="component-item__actions" data-ref="item-cancel-subscription-actions">
                 <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-cancel-subscription-immediate" data-i18n="settings.billing.btn_cancel_subscription">Cancelar ahora</button>
               </div>
             </div>
@@ -79,33 +79,32 @@
         </div>
       </div>
 
-      <div class="settings-group settings-group--accordion is-active" data-ref="group-ai-tokens">
-        <div class="settings-accordion-header" data-ref="accordion-header-tokens">
-          <div class="settings-item__content" data-ref="accordion-tokens-content">
-            <div class="settings-item__icon-box" data-ref="accordion-tokens-icon-box">
+      <div class="component-group component-group--accordion is-active" data-ref="group-ai-tokens">
+        <div class="component-accordion-header" data-ref="accordion-header-tokens">
+          <div class="component-item__content" data-ref="accordion-tokens-content">
+            <div class="component-item__icon-box" data-ref="accordion-tokens-icon-box">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
             </div>
-            <div class="settings-item__text" data-ref="accordion-tokens-text">
-              <div class="settings-item__title-row" data-ref="tokens-title-row" style="align-items: center; display: flex; gap: 8px; flex-wrap: wrap;">
-                <h2 class="settings-item__title" data-ref="item-tokens-title" data-i18n="settings.billing.tokens_title">Tokens de Inteligencia Artificial</h2>
-                <span class="component-badge component-badge--neutral" data-ref="tokens-tier-badge">Plan Free</span>
+            <div class="component-item__text" data-ref="accordion-tokens-text">
+              <div class="component-item__title-row" data-ref="tokens-title-row" style="align-items: center; display: flex; gap: 8px; flex-wrap: wrap;">
+                <h2 class="component-item__title" data-ref="item-tokens-title" data-i18n="settings.billing.tokens_title">Tokens de Inteligencia Artificial</h2>
               </div>
-              <p class="settings-item__desc" data-ref="item-tokens-desc" data-i18n="settings.billing.tokens_desc">Créditos mensuales para resumir, redactar preguntas interactivas y chatear con documentos PDF mediante IA. Se restablecen automáticamente al inicio de cada ciclo.</p>
+              <p class="component-item__desc" data-ref="item-tokens-desc" data-i18n="settings.billing.tokens_desc">Créditos mensuales para resumir, redactar preguntas interactivas y chatear con documentos PDF mediante IA. Se restablecen automáticamente al inicio de cada ciclo.</p>
             </div>
           </div>
-          <div class="settings-item__actions" data-ref="accordion-tokens-actions">
-            <svg class="component-icon settings-accordion-icon" data-ref="accordion-tokens-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <div class="component-item__actions" data-ref="accordion-tokens-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-tokens-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </div>
         </div>
 
-        <div class="settings-accordion-body" data-ref="accordion-body-tokens">
-          <div class="settings-accordion-content" data-ref="accordion-content-tokens">
-            <div class="settings-item settings-item--stacked" data-ref="item-ai-tokens" style="padding: 20px 24px;">
-              <div class="settings-item__content" data-ref="item-ai-tokens-content" style="width: 100%;">
-                <div class="settings-item__text" data-ref="item-ai-tokens-text" style="width: 100%;">
+        <div class="component-accordion-body" data-ref="accordion-body-tokens">
+          <div class="component-accordion-content" data-ref="accordion-content-tokens">
+            <div class="component-item component-item--stacked" data-ref="item-ai-tokens" style="padding: 20px 24px;">
+              <div class="component-item__content" data-ref="item-ai-tokens-content" style="width: 100%;">
+                <div class="component-item__text" data-ref="item-ai-tokens-text" style="width: 100%;">
                   <div class="storage-meter" data-ref="tokens-meter-box" style="width: 100%;">
                     <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
-                      <span class="settings-item__value" data-ref="tokens-text-balance" style="font-size: 13px; font-weight: 600;">100 / 100 tokens disponibles</span>
+                      <span class="component-item__value" data-ref="tokens-text-balance" style="font-size: 13px; font-weight: 600;">100 / 100 tokens disponibles</span>
                       <span class="component-badge component-badge--neutral" data-ref="tokens-badge-percent" style="font-size: 11px;">100%</span>
                     </div>
                     <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">
@@ -123,30 +122,30 @@
         </div>
       </div>
 
-      <div class="settings-group settings-group--accordion is-active" data-ref="group-storage">
-        <div class="settings-accordion-header" data-ref="accordion-header-storage">
-          <div class="settings-item__content" data-ref="accordion-storage-content">
-            <div class="settings-item__icon-box" data-ref="accordion-storage-icon-box">
+      <div class="component-group component-group--accordion is-active" data-ref="group-storage">
+        <div class="component-accordion-header" data-ref="accordion-header-storage">
+          <div class="component-item__content" data-ref="accordion-storage-content">
+            <div class="component-item__icon-box" data-ref="accordion-storage-icon-box">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
             </div>
-            <div class="settings-item__text" data-ref="accordion-storage-text">
-              <h2 class="settings-item__title" data-ref="item-storage-title" data-i18n="settings.billing.storage_title">Almacenamiento de tu cuenta</h2>
-              <p class="settings-item__desc" data-ref="item-storage-desc" data-i18n="settings.billing.storage_desc">Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.</p>
+            <div class="component-item__text" data-ref="accordion-storage-text">
+              <h2 class="component-item__title" data-ref="item-storage-title" data-i18n="settings.billing.storage_title">Almacenamiento de tu cuenta</h2>
+              <p class="component-item__desc" data-ref="item-storage-desc" data-i18n="settings.billing.storage_desc">Espacio total utilizado para guardar documentos PDF, borradores colaborativos e imágenes.</p>
             </div>
           </div>
-          <div class="settings-item__actions" data-ref="accordion-storage-actions">
-            <svg class="component-icon settings-accordion-icon" data-ref="accordion-storage-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <div class="component-item__actions" data-ref="accordion-storage-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-storage-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </div>
         </div>
 
-        <div class="settings-accordion-body" data-ref="accordion-body-storage">
-          <div class="settings-accordion-content" data-ref="accordion-content-storage">
-            <div class="settings-item settings-item--stacked" data-ref="item-storage" style="padding: 20px 24px;">
-              <div class="settings-item__content" data-ref="item-storage-content" style="width: 100%;">
-                <div class="settings-item__text" data-ref="item-storage-text" style="width: 100%;">
+        <div class="component-accordion-body" data-ref="accordion-body-storage">
+          <div class="component-accordion-content" data-ref="accordion-content-storage">
+            <div class="component-item component-item--stacked" data-ref="item-storage" style="padding: 20px 24px;">
+              <div class="component-item__content" data-ref="item-storage-content" style="width: 100%;">
+                <div class="component-item__text" data-ref="item-storage-text" style="width: 100%;">
                   <div class="storage-meter" data-ref="storage-meter-box" style="width: 100%;">
                     <div style="align-items: center; display: flex; justify-content: space-between; margin-bottom: 8px;">
-                      <span class="settings-item__value" data-ref="storage-text-used" style="font-size: 13px; font-weight: 600;">0.0 MB de 5.0 GB utilizados</span>
+                      <span class="component-item__value" data-ref="storage-text-used" style="font-size: 13px; font-weight: 600;">0.0 MB de 5.0 GB utilizados</span>
                       <span class="component-badge component-badge--neutral" data-ref="storage-badge-percent" style="font-size: 11px;">0%</span>
                     </div>
                     <div style="background-color: var(--border-color); border-radius: 9999px; height: 8px; overflow: hidden; width: 100%;">

@@ -14,8 +14,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   const tbody = container.querySelector<HTMLElement>('[data-ref="purchases-tbody"]');
   const tableEl = container.querySelector<HTMLElement>('[data-ref="purchases-table"]');
   const tableWrapper = container.querySelector<HTMLElement>('[data-ref="purchases-table-wrapper"]');
-  const btnToggleSearch = container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
-  const searchToolbar = container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
   const searchInput = container.querySelector<HTMLInputElement>('[data-ref="purchases-search-input"]');
   const btnClearSearch = container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
   const btnActionDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-action-download-invoice"]');
@@ -23,7 +21,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   let allPurchases: PurchaseRecord[] = [];
   let currentlyDisplayedPurchases: PurchaseRecord[] = [];
   let selectedPurchaseId: number | string | null = null;
-  let isSearchActive = false;
 
   const updateSelectionState = () => {
     if (selectedPurchaseId) {
@@ -58,51 +55,11 @@ export async function createPurchasesView(): Promise<HTMLElement> {
     });
   });
 
-  const toggleSearchToolbar = (forceState?: boolean) => {
-    isSearchActive = forceState !== undefined ? forceState : !isSearchActive;
-    if (searchToolbar) {
-      searchToolbar.classList.toggle('is-active', isSearchActive);
-      searchToolbar.classList.toggle('is-hidden', !isSearchActive);
-    }
-    if (btnToggleSearch) {
-      btnToggleSearch.classList.toggle('is-active', isSearchActive);
-    }
-    if (isSearchActive && searchInput) {
-      setTimeout(() => {
-        searchInput.focus();
-      }, 50);
-    }
-  };
-
-  btnToggleSearch?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleSearchToolbar();
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!isSearchActive) return;
-    if (
-      searchToolbar &&
-      !searchToolbar.contains(e.target as Node) &&
-      btnToggleSearch &&
-      !btnToggleSearch.contains(e.target as Node)
-    ) {
-      toggleSearchToolbar(false);
-    }
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isSearchActive) {
-      toggleSearchToolbar(false);
-    }
-  });
-
   btnClearSearch?.addEventListener('click', (e) => {
     e.preventDefault();
     if (searchInput) {
       searchInput.value = '';
-      btnClearSearch.style.display = 'none';
+      btnClearSearch.classList.add('is-hidden');
       renderRows(allPurchases);
       searchInput.focus();
     }
@@ -111,7 +68,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   searchInput?.addEventListener('input', () => {
     const query = searchInput.value.trim().toLowerCase();
     if (btnClearSearch) {
-      btnClearSearch.style.display = query.length > 0 ? 'inline-flex' : 'none';
+      btnClearSearch.classList.toggle('is-hidden', query.length === 0);
     }
 
     if (!query) {
@@ -217,6 +174,12 @@ export async function createPurchasesView(): Promise<HTMLElement> {
         ? t('settings.purchases.status_completed') || 'Completado'
         : t(`settings.purchases.status_${p.status}`) || p.status;
 
+      const statusBadgeClass = p.status === 'completed'
+        ? 'component-badge--success'
+        : p.status === 'pending'
+          ? 'component-badge--warning'
+          : 'component-badge--neutral';
+
       const refId = String(
         p.stripe_subscription_id ||
         p.stripe_payment_intent_id ||
@@ -226,26 +189,26 @@ export async function createPurchasesView(): Promise<HTMLElement> {
       const shortRef = refId.length > 20 ? `${refId.slice(0, 10)}...${refId.slice(-6)}` : refId;
 
       row.innerHTML = `
-        <td data-ref="cell-date-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-date-${p.id}">${escapeHtml(dateFormatted)}</span>
+        <td class="component-table__cell" style="padding-left: 20px;" data-ref="cell-plan-${p.id}">
+          <div style="align-items: center; display: flex; gap: 8px;">
+            <svg class="component-icon" aria-hidden="true" style="color: var(--action-primary);"><use href="/icons.svg#star"></use></svg>
+            <span style="color: var(--text-primary); font-weight: 600;" data-ref="text-plan-${p.id}">BoardPDF ${escapeHtml(planName)}</span>
+          </div>
         </td>
-        <td data-ref="cell-plan-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-plan-${p.id}">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 14px; margin-right: 4px;"><use href="/icons.svg#star"></use></svg>
-            <span>BoardPDF ${escapeHtml(planName)}</span>
-          </span>
+        <td class="component-table__cell" data-ref="cell-period-${p.id}">
+          <span style="color: var(--text-secondary);">${escapeHtml(periodName)}</span>
         </td>
-        <td data-ref="cell-period-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-period-${p.id}">${escapeHtml(periodName)}</span>
+        <td class="component-table__cell" data-ref="cell-amount-${p.id}">
+          <span style="color: var(--text-primary); font-weight: 600;">$${escapeHtml(amount)} <small style="color: var(--text-secondary); font-size: 11px; font-weight: normal;">${escapeHtml(currency)}</small></span>
         </td>
-        <td data-ref="cell-amount-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-amount-${p.id}">${escapeHtml(currency)} $${escapeHtml(amount)}</span>
+        <td class="component-table__cell" data-ref="cell-status-${p.id}">
+          <span class="component-badge component-badge--sm ${statusBadgeClass}">${escapeHtml(statusText || '')}</span>
         </td>
-        <td data-ref="cell-status-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-status-${p.id}">${escapeHtml(statusText || '')}</span>
+        <td class="component-table__cell" data-ref="cell-date-${p.id}">
+          <span style="color: var(--text-secondary);">${escapeHtml(dateFormatted)}</span>
         </td>
-        <td data-ref="cell-ref-${p.id}">
-          <span class="component-badge component-badge--sm" data-ref="badge-ref-${p.id}" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
+        <td class="component-table__cell" style="padding-right: 20px;" data-ref="cell-ref-${p.id}">
+          <span style="color: var(--text-tertiary); font-family: monospace; font-size: 12px;" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
         </td>
       `;
 

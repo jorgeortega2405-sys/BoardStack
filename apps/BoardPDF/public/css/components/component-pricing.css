@@ -56,11 +56,10 @@
 
 .pricing-cycle-bar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 0;
-  transition: padding-left var(--sl-transition-fast);
 }
 
 .component-pricing-grid.is-hidden {

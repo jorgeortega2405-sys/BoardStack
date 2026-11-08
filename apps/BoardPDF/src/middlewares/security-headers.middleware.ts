@@ -45,7 +45,7 @@ export function buildContentSecurityPolicy(): string {
     'base-uri': ["'self'"],
     'connect-src': connectDirectives,
     'default-src': ["'self'"],
-    'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+    'font-src': ["'self'", 'https://fonts.gstatic.com', 'https://*.gstatic.com', 'https://fonts.googleapis.com', 'data:', 'blob:'],
     'form-action': ["'self'"],
     'frame-ancestors': ["'none'"],
     'frame-src': [

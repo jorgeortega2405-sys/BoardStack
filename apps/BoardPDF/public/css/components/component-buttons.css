@@ -158,13 +158,17 @@
 
 .component-button--icon.component-button--h40,
 .component-button--icon-only.component-button--h40,
-.dropdown .component-button--icon-only.component-button--h40.dropdown-trigger {
+.dropdown .component-button--icon-only.component-button--h40.dropdown-trigger,
+.dropdown .component-button--icon-only.component-button--h40 {
   width: 40px !important;
   min-width: 40px !important;
   max-width: 40px !important;
   height: 40px !important;
   min-height: 40px !important;
   padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .component-button--icon.component-button--h44,

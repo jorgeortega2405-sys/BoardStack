@@ -7,7 +7,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES } from '../../utils/languages.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { validateAndSanitizeFile, validateEmail, validateUsername } from '../../utils/validators.util.js';
@@ -125,10 +125,9 @@ export class SettingsAccountController implements ViewController {
     const btnDeleteAvatar = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-delete-avatar"]');
     const btnCancelAvatar = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-avatar"]');
     const btnSaveAvatar = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-save-avatar"]');
-    const avatarErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="avatar-error"]');
-
+    
     const triggerFileInput = () => {
-      if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
+      this.hideBanner('avatar-error');
       fileInput?.click();
     };
 
@@ -152,7 +151,7 @@ export class SettingsAccountController implements ViewController {
       const file = target.files?.[0];
       if (!file) return;
 
-      if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
+      this.hideBanner('avatar-error');
 
       const validation = validateAndSanitizeFile(file, {
         allowedMimes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
@@ -160,10 +159,7 @@ export class SettingsAccountController implements ViewController {
       });
 
       if (!validation.valid) {
-        if (avatarErrorBanner) {
-          avatarErrorBanner.textContent = validation.error || t('common.error_occurred');
-          avatarErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-avatar', 'avatar-error', validation.error || t('common.error_occurred'));
         target.value = '';
         return;
       }
@@ -188,7 +184,7 @@ export class SettingsAccountController implements ViewController {
       e.preventDefault();
       this.selectedAvatarFile = null;
       if (fileInput) fileInput.value = '';
-      if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
+      this.hideBanner('avatar-error');
       this.refreshAvatarsInDom(currentUser?.avatar_url || null);
       this.updateAvatarButtonsState(this.hasCustomAvatar() ? 'custom' : 'default');
     }, { signal });
@@ -198,7 +194,7 @@ export class SettingsAccountController implements ViewController {
       if (!this.selectedAvatarFile) return;
 
       await withButtonLoading(btnSaveAvatar, t('common.loading') || 'Cargando...', async () => {
-        if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
+        this.hideBanner('avatar-error');
 
         const formData = new FormData();
         formData.append('avatar', this.selectedAvatarFile!);
@@ -216,16 +212,10 @@ export class SettingsAccountController implements ViewController {
             this.updateAvatarButtonsState('custom');
             showToast(t('settings.your_account.avatar_updated_toast') || 'Foto de perfil actualizada exitosamente.', 'success');
           } else {
-            if (avatarErrorBanner) {
-              avatarErrorBanner.textContent = data.error || t('common.error_occurred');
-              avatarErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-avatar', 'avatar-error', data.error || t('common.error_occurred'));
           }
         } catch (_) {
-          if (avatarErrorBanner) {
-            avatarErrorBanner.textContent = t('common.error_occurred');
-            avatarErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-avatar', 'avatar-error', t('common.error_occurred'));
         }
       });
     }, { signal });
@@ -233,7 +223,7 @@ export class SettingsAccountController implements ViewController {
     btnDeleteAvatar?.addEventListener('click', async (e) => {
       e.preventDefault();
       await withButtonLoading(btnDeleteAvatar, t('common.loading') || 'Cargando...', async () => {
-        if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
+        this.hideBanner('avatar-error');
 
         try {
           const res = await deleteApi(API_ROUTES.settings.avatar);
@@ -248,16 +238,10 @@ export class SettingsAccountController implements ViewController {
             this.updateAvatarButtonsState('default');
             showToast(t('settings.your_account.avatar_deleted_toast') || 'Foto de perfil eliminada.', 'success');
           } else {
-            if (avatarErrorBanner) {
-              avatarErrorBanner.textContent = data.error || t('common.error_occurred');
-              avatarErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-avatar', 'avatar-error', data.error || t('common.error_occurred'));
           }
         } catch (_) {
-          if (avatarErrorBanner) {
-            avatarErrorBanner.textContent = t('common.error_occurred');
-            avatarErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-avatar', 'avatar-error', t('common.error_occurred'));
         }
       });
     }, { signal });
@@ -270,11 +254,10 @@ export class SettingsAccountController implements ViewController {
     const usernameEditRow = this.container.querySelector<HTMLElement>('[data-ref="username-edit-row"]');
     const inputUsername = this.container.querySelector<HTMLInputElement>('[data-ref="input-username"]');
     const displayUsername = this.container.querySelector<HTMLElement>('[data-ref="display-username"]');
-    const usernameErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="username-error"]');
-
+    
     btnEditUsername?.addEventListener('click', (e) => {
       e.preventDefault();
-      if (usernameErrorBanner) usernameErrorBanner.style.display = 'none';
+      this.hideBanner('username-error');
       if (inputUsername) inputUsername.value = currentUser?.username || '';
       if (usernameViewBox) usernameViewBox.style.display = 'none';
       if (usernameViewActions) usernameViewActions.style.display = 'none';
@@ -284,7 +267,7 @@ export class SettingsAccountController implements ViewController {
 
     btnCancelUsername?.addEventListener('click', (e) => {
       e.preventDefault();
-      if (usernameErrorBanner) usernameErrorBanner.style.display = 'none';
+      this.hideBanner('username-error');
       if (usernameEditRow) usernameEditRow.style.display = 'none';
       if (usernameViewBox) usernameViewBox.style.display = '';
       if (usernameViewActions) usernameViewActions.style.display = '';
@@ -296,10 +279,7 @@ export class SettingsAccountController implements ViewController {
 
       const validation = validateUsername(newUsername);
       if (!validation.valid) {
-        if (usernameErrorBanner) {
-          usernameErrorBanner.textContent = validation.error || t('common.error_occurred');
-          usernameErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-username', 'username-error', validation.error || t('common.error_occurred'));
         return;
       }
 
@@ -311,7 +291,7 @@ export class SettingsAccountController implements ViewController {
       }
 
       await withButtonLoading(btnSaveUsername, t('common.loading') || 'Cargando...', async () => {
-        if (usernameErrorBanner) usernameErrorBanner.style.display = 'none';
+        this.hideBanner('username-error');
 
         try {
           const res = await postApi(API_ROUTES.settings.username, { username: newUsername });
@@ -329,16 +309,10 @@ export class SettingsAccountController implements ViewController {
             if (usernameViewActions) usernameViewActions.style.display = '';
             showToast(t('settings.your_account.username_updated_toast') || 'Nombre de usuario actualizado exitosamente.', 'success');
           } else {
-            if (usernameErrorBanner) {
-              usernameErrorBanner.textContent = data.error || t('common.error_occurred');
-              usernameErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-username', 'username-error', data.error || t('common.error_occurred'));
           }
         } catch (_) {
-          if (usernameErrorBanner) {
-            usernameErrorBanner.textContent = t('common.error_occurred');
-            usernameErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-username', 'username-error', t('common.error_occurred'));
         }
       });
     }, { signal });
@@ -351,10 +325,9 @@ export class SettingsAccountController implements ViewController {
     const emailEditRow = this.container.querySelector<HTMLElement>('[data-ref="email-edit-row"]');
     const inputEmail = this.container.querySelector<HTMLInputElement>('[data-ref="input-email"]');
     const displayEmail = this.container.querySelector<HTMLElement>('[data-ref="display-email"]');
-    const emailErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="email-error"]');
-
+    
     const activateEmailEditMode = () => {
-      if (emailErrorBanner) emailErrorBanner.style.display = 'none';
+      this.hideBanner('email-error');
       if (inputEmail) inputEmail.value = currentUser?.email || '';
       if (emailViewBox) emailViewBox.style.display = 'none';
       if (emailViewActions) emailViewActions.style.display = 'none';
@@ -363,7 +336,7 @@ export class SettingsAccountController implements ViewController {
     };
 
     const deactivateEmailEditMode = () => {
-      if (emailErrorBanner) emailErrorBanner.style.display = 'none';
+      this.hideBanner('email-error');
       if (emailEditRow) emailEditRow.style.display = 'none';
       if (emailViewBox) emailViewBox.style.display = '';
       if (emailViewActions) emailViewActions.style.display = '';
@@ -377,20 +350,14 @@ export class SettingsAccountController implements ViewController {
     btnSaveEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
       if (currentUser?.is_sso) {
-        if (emailErrorBanner) {
-          emailErrorBanner.textContent = t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.';
-          emailErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-email', 'email-error', t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.');
         return;
       }
       const newEmail = inputEmail?.value?.trim() || '';
 
       const validation = validateEmail(newEmail);
       if (!validation.valid) {
-        if (emailErrorBanner) {
-          emailErrorBanner.textContent = validation.error || t('common.error_occurred');
-          emailErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-email', 'email-error', validation.error || t('common.error_occurred'));
         return;
       }
 
@@ -400,7 +367,7 @@ export class SettingsAccountController implements ViewController {
       }
 
       await withButtonLoading(btnSaveEmail, t('common.loading') || 'Cargando...', async () => {
-        if (emailErrorBanner) emailErrorBanner.style.display = 'none';
+        this.hideBanner('email-error');
 
         try {
           const res = await postApi(API_ROUTES.settings.email, { email: newEmail });
@@ -413,16 +380,10 @@ export class SettingsAccountController implements ViewController {
             deactivateEmailEditMode();
             showToast(t('settings.your_account.email_updated_toast') || 'Correo electrónico actualizado exitosamente.', 'success');
           } else {
-            if (emailErrorBanner) {
-              emailErrorBanner.textContent = data.error || t('common.error_occurred');
-              emailErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-email', 'email-error', data.error || t('common.error_occurred'));
           }
         } catch (_) {
-          if (emailErrorBanner) {
-            emailErrorBanner.textContent = t('common.error_occurred');
-            emailErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-email', 'email-error', t('common.error_occurred'));
         }
       });
     }, { signal });
@@ -433,7 +394,7 @@ export class SettingsAccountController implements ViewController {
         showToast(t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.', 'warning');
         return;
       }
-      if (emailErrorBanner) emailErrorBanner.style.display = 'none';
+      this.hideBanner('email-error');
 
       await withButtonLoading(btnEditEmail, t('common.loading') || 'Cargando...', async () => {
         try {
@@ -505,9 +466,7 @@ export class SettingsAccountController implements ViewController {
 
     const btnConnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-google"]');
     const btnDisconnectGoogle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-google"]');
-    const googleErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="google-error"]');
-    const googleSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="google-success"]');
-
+        
     btnConnectGoogle?.addEventListener('click', (e) => {
       e.preventDefault();
       window.location.href = `${API_ROUTES.auth.google}?action=connect`;
@@ -515,18 +474,15 @@ export class SettingsAccountController implements ViewController {
 
     btnDisconnectGoogle?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (googleErrorBanner) googleErrorBanner.style.display = 'none';
-      if (googleSuccessBanner) googleSuccessBanner.style.display = 'none';
+      this.hideBanner('google-error');
+      this.hideBanner('google-success');
 
       await withButtonLoading(btnDisconnectGoogle, async () => {
         try {
           const res = await postApi(API_ROUTES.settings.googleDisconnect, {});
           const data = await res.json();
           if (!res.ok || !data.ok) {
-            if (googleErrorBanner) {
-              googleErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desconectar la cuenta.');
-              googleErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-google', 'google-error', data.error || t('common.error_occurred', 'Error al desconectar la cuenta.'), 'danger');
             return;
           }
 
@@ -538,23 +494,18 @@ export class SettingsAccountController implements ViewController {
           this.populateUserData();
           showToast(t('settings.your_account.google_disconnected_toast', 'Cuenta de Google desconectada exitosamente.'), 'success');
         } catch (_) {
-          if (googleErrorBanner) {
-            googleErrorBanner.textContent = t('common.error_occurred', 'Error al desconectar la cuenta.');
-            googleErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-google', 'google-error', t('common.error_occurred', 'Error al desconectar la cuenta.'), 'danger');
         }
       });
     }, { signal });
 
     const btnConnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-gdrive"]');
     const btnDisconnectGdrive = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-gdrive"]');
-    const gdriveErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="gdrive-error"]');
-    const gdriveSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="gdrive-success"]');
-
+        
     btnConnectGdrive?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (gdriveErrorBanner) gdriveErrorBanner.style.display = 'none';
-      if (gdriveSuccessBanner) gdriveSuccessBanner.style.display = 'none';
+      this.hideBanner('gdrive-error');
+      this.hideBanner('gdrive-success');
 
       await withButtonLoading(btnConnectGdrive, async () => {
         const result = await connectGoogleDrive();
@@ -562,51 +513,40 @@ export class SettingsAccountController implements ViewController {
           showToast(t('settings.your_account.gdrive_connected_toast', 'Google Drive vinculado exitosamente.'), 'success');
           await this.loadCloudIntegrations();
         } else {
-          if (gdriveErrorBanner) {
-            gdriveErrorBanner.textContent = result.error || t('common.error_occurred', 'Error al conectar Google Drive.');
-            gdriveErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-gdrive', 'gdrive-error', result.error || t('common.error_occurred', 'Error al conectar Google Drive.'), 'danger');
         }
       });
     }, { signal });
 
     btnDisconnectGdrive?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (gdriveErrorBanner) gdriveErrorBanner.style.display = 'none';
-      if (gdriveSuccessBanner) gdriveSuccessBanner.style.display = 'none';
+      this.hideBanner('gdrive-error');
+      this.hideBanner('gdrive-success');
 
       await withButtonLoading(btnDisconnectGdrive, async () => {
         try {
           const res = await postApi(API_ROUTES.settings.cloudIntegrationsDisconnect, { provider: 'google_drive' });
           const data = await res.json();
           if (!res.ok || !data.ok) {
-            if (gdriveErrorBanner) {
-              gdriveErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desvincular Google Drive.');
-              gdriveErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-gdrive', 'gdrive-error', data.error || t('common.error_occurred', 'Error al desvincular Google Drive.'), 'danger');
             return;
           }
           disconnectGoogleDrive();
           showToast(t('settings.your_account.gdrive_disconnected_toast', 'Google Drive desvinculado exitosamente.'), 'success');
           await this.loadCloudIntegrations();
         } catch (_) {
-          if (gdriveErrorBanner) {
-            gdriveErrorBanner.textContent = t('common.error_occurred', 'Error al desvincular Google Drive.');
-            gdriveErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-gdrive', 'gdrive-error', t('common.error_occurred', 'Error al desvincular Google Drive.'), 'danger');
         }
       });
     }, { signal });
 
     const btnConnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-connect-dropbox"]');
     const btnDisconnectDropbox = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-dropbox"]');
-    const dropboxErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="dropbox-error"]');
-    const dropboxSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="dropbox-success"]');
-
+        
     btnConnectDropbox?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (dropboxErrorBanner) dropboxErrorBanner.style.display = 'none';
-      if (dropboxSuccessBanner) dropboxSuccessBanner.style.display = 'none';
+      this.hideBanner('dropbox-error');
+      this.hideBanner('dropbox-success');
 
       await withButtonLoading(btnConnectDropbox, async () => {
         try {
@@ -619,43 +559,31 @@ export class SettingsAccountController implements ViewController {
             showToast(t('settings.your_account.dropbox_connected_toast', 'Cuenta de Dropbox vinculada exitosamente.'), 'success');
             await this.loadCloudIntegrations();
           } else {
-            if (dropboxErrorBanner) {
-              dropboxErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al vincular Dropbox.');
-              dropboxErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-dropbox', 'dropbox-error', data.error || t('common.error_occurred', 'Error al vincular Dropbox.'), 'danger');
           }
         } catch (_) {
-          if (dropboxErrorBanner) {
-            dropboxErrorBanner.textContent = t('common.error_occurred', 'Error al vincular Dropbox.');
-            dropboxErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-dropbox', 'dropbox-error', t('common.error_occurred', 'Error al vincular Dropbox.'), 'danger');
         }
       });
     }, { signal });
 
     btnDisconnectDropbox?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (dropboxErrorBanner) dropboxErrorBanner.style.display = 'none';
-      if (dropboxSuccessBanner) dropboxSuccessBanner.style.display = 'none';
+      this.hideBanner('dropbox-error');
+      this.hideBanner('dropbox-success');
 
       await withButtonLoading(btnDisconnectDropbox, async () => {
         try {
           const res = await postApi(API_ROUTES.settings.cloudIntegrationsDisconnect, { provider: 'dropbox' });
           const data = await res.json();
           if (!res.ok || !data.ok) {
-            if (dropboxErrorBanner) {
-              dropboxErrorBanner.textContent = data.error || t('common.error_occurred', 'Error al desvincular Dropbox.');
-              dropboxErrorBanner.style.display = 'block';
-            }
+            this.showBanner('item-dropbox', 'dropbox-error', data.error || t('common.error_occurred', 'Error al desvincular Dropbox.'), 'danger');
             return;
           }
           showToast(t('settings.your_account.dropbox_disconnected_toast', 'Cuenta de Dropbox desvinculada exitosamente.'), 'success');
           await this.loadCloudIntegrations();
         } catch (_) {
-          if (dropboxErrorBanner) {
-            dropboxErrorBanner.textContent = t('common.error_occurred', 'Error al desvincular Dropbox.');
-            dropboxErrorBanner.style.display = 'block';
-          }
+          this.showBanner('item-dropbox', 'dropbox-error', t('common.error_occurred', 'Error al desvincular Dropbox.'), 'danger');
         }
       });
     }, { signal });
@@ -766,32 +694,21 @@ export class SettingsAccountController implements ViewController {
       const urlParams = new URLSearchParams(window.location.search);
       const success = urlParams.get('success');
       const error = urlParams.get('error');
-      const googleSuccessBanner = this.container.querySelector<HTMLElement>('[data-ref="google-success"]');
-      const googleErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="google-error"]');
-
+            
       if (success === 'google_connected') {
         if (currentUser) {
           currentUser.google_connected = true;
           setCurrentUser(currentUser);
           this.populateUserData();
         }
-        if (googleSuccessBanner) {
-          googleSuccessBanner.textContent = t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.');
-          googleSuccessBanner.style.display = 'block';
-        }
+        this.showBanner('item-google', 'google-success', t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.'), 'success');
         showToast(t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.'), 'success');
         window.history.replaceState({}, '', '/settings/your-account');
       } else if (error === 'google_already_linked') {
-        if (googleErrorBanner) {
-          googleErrorBanner.textContent = t('settings.your_account.google_already_linked', 'Esta cuenta de Google ya está vinculada a otra cuenta de BoardPDF.');
-          googleErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-google', 'google-error', t('settings.your_account.google_already_linked', 'Esta cuenta de Google ya está vinculada a otra cuenta de BoardPDF.'), 'danger');
         window.history.replaceState({}, '', '/settings/your-account');
       } else if (error === 'google_token_failed' || error === 'google_profile_failed' || error === 'google_failed') {
-        if (googleErrorBanner) {
-          googleErrorBanner.textContent = t('settings.your_account.google_connect_failed', 'No se pudo vincular la cuenta de Google. Intenta nuevamente.');
-          googleErrorBanner.style.display = 'block';
-        }
+        this.showBanner('item-google', 'google-error', t('settings.your_account.google_connect_failed', 'No se pudo vincular la cuenta de Google. Intenta nuevamente.'), 'danger');
         window.history.replaceState({}, '', '/settings/your-account');
       }
     } catch (_) {}
@@ -885,6 +802,31 @@ export class SettingsAccountController implements ViewController {
         } catch {}
       },
     });
+  }
+
+  private showBanner(anchorRef: string, bannerRef: string, text: string, type: 'danger' | 'success' = 'danger'): void {
+    const anchorEl = this.container.querySelector<HTMLElement>(`[data-ref="${anchorRef}"]`);
+    if (!anchorEl || !anchorEl.parentElement) return;
+    let banner = anchorEl.parentElement.querySelector<HTMLElement>(`[data-ref="${bannerRef}"]`);
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.className = `banner banner--${type}`;
+      banner.setAttribute('data-ref', bannerRef);
+      banner.style.margin = '0 24px 16px 24px';
+      anchorEl.after(banner);
+    } else {
+      banner.className = `banner banner--${type}`;
+    }
+    banner.textContent = text;
+    showElement(banner);
+  }
+
+  private hideBanner(bannerRef: string): void {
+    const banner = this.container.querySelector<HTMLElement>(`[data-ref="${bannerRef}"]`);
+    if (banner) {
+      hideElement(banner);
+      banner.remove();
+    }
   }
 }
 

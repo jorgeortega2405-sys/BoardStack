@@ -1024,12 +1024,6 @@
   color: var(--text-primary, #111827);
   display: inline-flex;
   text-decoration: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.footer-brand:hover {
-  opacity: 0.88;
-  transform: translateY(-1px);
 }
 
 .footer-brand__logo {

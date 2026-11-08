@@ -339,7 +339,6 @@ export async function createBillingView(): Promise<HTMLElement> {
   };
 
   const renderAiTokensSection = async () => {
-    const tierBadge = container.querySelector<HTMLElement>('[data-ref="tokens-tier-badge"]');
     const textBalance = container.querySelector<HTMLElement>('[data-ref="tokens-text-balance"]');
     const badgePercent = container.querySelector<HTMLElement>('[data-ref="tokens-badge-percent"]');
     const barFill = container.querySelector<HTMLElement>('[data-ref="tokens-bar-fill"]');
@@ -347,13 +346,7 @@ export async function createBillingView(): Promise<HTMLElement> {
 
     if (!textBalance || !barFill) return;
 
-    const tierName = (currentUser?.subscription_tier || 'free').toUpperCase();
-    if (tierBadge) {
-      tierBadge.textContent = `Plan ${tierName}`;
-      if (tierName === 'PRO' || tierName === 'BUSINESS' || tierName === 'ENTERPRISE') {
-        tierBadge.className = 'component-badge component-badge--success';
-      }
-    }
+
 
     let balance = currentUser?.ai_tokens_balance ?? 100;
     let limit = 100;

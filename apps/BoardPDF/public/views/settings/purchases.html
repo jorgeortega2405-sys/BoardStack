@@ -1,49 +1,49 @@
 <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="purchases-wrapper">
-  <div class="component-top" data-ref="component-top" style="border-bottom: none;">
-    <div class="component-top-left" data-ref="component-top-left"></div>
+  <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+    <div class="home-floating-top home-floating-top--gradient" data-ref="purchases-header">
+      <div class="home-floating-top__left" data-ref="purchases-header-left">
+        <h1 class="section-floating-title" data-ref="purchases-title" data-i18n="settings.purchases.title">Historial de compras</h1>
+      </div>
 
-    <div class="component-top-right" data-ref="component-top-right">
-      <button type="button" class="component-button component-button--h34 is-hidden" data-ref="btn-action-download-invoice">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-        <span data-i18n="settings.purchases.btn_download_invoice">Descargar factura</span>
-      </button>
+      <div class="home-floating-top__right" data-ref="purchases-header-right">
+        <div class="home-floating-actions" data-ref="purchases-header-actions">
+          <div class="component-search" data-ref="search-box" style="max-width: 260px; height: 34px;">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="purchases-search-input" data-i18n-placeholder="settings.purchases.search_placeholder" type="text" placeholder="Buscar por plan, período o referencia..." maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="common.clear_search" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
 
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-i18n-tooltip="settings.purchases.search_tooltip" data-i18n-aria="settings.purchases.search_tooltip" data-tooltip="Buscar compras" aria-label="Buscar compras">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-      </button>
-    </div>
-
-    <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
-      <div class="component-search component-search--full" data-ref="search-box">
-        <div class="component-search__icon" data-ref="search-icon">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <button type="button" class="component-button component-button--h34 is-hidden" data-ref="btn-action-download-invoice">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            <span data-i18n="settings.purchases.btn_download_invoice">Descargar factura</span>
+          </button>
         </div>
-        <div class="component-search__input-box" data-ref="search-input-box">
-          <input class="component-search__input" data-ref="purchases-search-input" data-i18n-placeholder="settings.purchases.search_placeholder" placeholder="Buscar por plan, período o referencia..." type="text" maxlength="100" autocomplete="off" />
-        </div>
-        <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" data-i18n-aria="common.clear_search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
       </div>
     </div>
-  </div>
 
-  <div class="component-bottom" data-ref="component-bottom" style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding: 16px;">
-    <div class="component-table-wrapper" data-ref="purchases-table-wrapper" style="border: 1px solid var(--border-color); border-radius: var(--radius-xl); flex: 1 1 auto; min-height: 0; overflow: auto;">
-      <table class="component-table" data-ref="purchases-table">
-        <thead class="component-table__head" data-ref="purchases-thead">
-          <tr>
-            <th data-ref="th-date" data-i18n="settings.purchases.col_date">Fecha</th>
-            <th data-ref="th-plan" data-i18n="settings.purchases.col_plan">Plan</th>
-            <th data-ref="th-period" data-i18n="settings.purchases.col_period">Período</th>
-            <th data-ref="th-amount" data-i18n="settings.purchases.col_amount">Monto</th>
-            <th data-ref="th-status" data-i18n="settings.purchases.col_status">Estado</th>
-            <th data-ref="th-reference" data-i18n="settings.purchases.col_reference">Referencia</th>
-          </tr>
-        </thead>
-        <tbody class="component-table__body" data-ref="purchases-tbody">
-        </tbody>
-      </table>
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="purchases-scrollable" style="box-sizing: border-box; display: flex; flex-direction: column; padding: 0; width: 100%;">
+      <div class="component-table-wrapper" data-ref="purchases-table-wrapper" style="border-radius: 0; border-left: none; border-right: none; border-top: none; width: 100%;">
+        <table class="component-table" data-ref="purchases-table">
+          <thead class="component-table__head" data-ref="purchases-thead">
+            <tr>
+              <th data-ref="th-plan" data-i18n="settings.purchases.col_plan" style="padding-left: 20px;">Plan</th>
+              <th data-ref="th-period" data-i18n="settings.purchases.col_period">Período</th>
+              <th data-ref="th-amount" data-i18n="settings.purchases.col_amount">Monto</th>
+              <th data-ref="th-status" data-i18n="settings.purchases.col_status">Estado</th>
+              <th data-ref="th-date" data-i18n="settings.purchases.col_date">Fecha</th>
+              <th data-ref="th-reference" data-i18n="settings.purchases.col_reference" style="padding-right: 20px;">Referencia</th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="purchases-tbody">
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>

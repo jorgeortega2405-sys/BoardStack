@@ -342,23 +342,8 @@ export class ProjectsController implements ViewController {
       uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
 
-      if (this.filterType === 'folders') {
-        sectionFolders?.classList.remove('is-hidden');
-        sectionDocs?.classList.add('is-hidden');
-        sectionUploads?.classList.add('is-hidden');
-      } else if (this.filterType === 'docs') {
-        sectionFolders?.classList.add('is-hidden');
-        sectionDocs?.classList.remove('is-hidden');
-        sectionUploads?.classList.add('is-hidden');
-      } else if (this.filterType === 'uploads') {
-        sectionFolders?.classList.remove('is-hidden');
-        sectionDocs?.classList.add('is-hidden');
-        sectionUploads?.classList.add('is-hidden');
-      } else {
-        sectionFolders?.classList.remove('is-hidden');
-        sectionDocs?.classList.remove('is-hidden');
-        sectionUploads?.classList.add('is-hidden');
-      }
+      sectionDocs?.classList.remove('is-hidden');
+      sectionUploads?.classList.add('is-hidden');
 
       this.renderRootFoldersGrid();
       this.renderDocsGrid();
@@ -412,9 +397,11 @@ export class ProjectsController implements ViewController {
 
     let html = `
       <button type="button" class="menu-item ${this.filterCategory === 'all' ? 'is-active' : ''}" data-ref="item-cat-all" data-category="all">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
         <span class="menu-item__text">Todas las categorías</span>
       </button>
       <button type="button" class="menu-item ${this.filterCategory === 'root' ? 'is-active' : ''}" data-ref="item-cat-root" data-category="root">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
         <span class="menu-item__text">Sin carpeta (Raíz)</span>
       </button>
     `;
@@ -438,7 +425,21 @@ export class ProjectsController implements ViewController {
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-documents"]');
     if (!grid || !empty) return;
 
+    if (this.filterType === 'folders') {
+      grid.innerHTML = '';
+      const filteredFolders = this.getFilteredAndSortedFolders();
+      const hasFolders = (this.uploadsFolder ? 1 : 0) + filteredFolders.length > 0;
+      if (!hasFolders) {
+        empty.classList.remove('is-hidden');
+      } else {
+        empty.classList.add('is-hidden');
+      }
+      return;
+    }
+
     const filteredDocs = this.getFilteredAndSortedDocs();
+    const filteredFolders = this.getFilteredAndSortedFolders();
+    const hasFolders = (this.uploadsFolder ? 1 : 0) + filteredFolders.length > 0;
 
     if (counter) {
       counter.textContent = `(${filteredDocs.length})`;
@@ -446,7 +447,11 @@ export class ProjectsController implements ViewController {
 
     if (filteredDocs.length === 0) {
       grid.innerHTML = '';
-      empty.classList.remove('is-hidden');
+      if (!hasFolders || (this.currentFolder && this.currentFolder.folder_type === 'project')) {
+        empty.classList.remove('is-hidden');
+      } else {
+        empty.classList.add('is-hidden');
+      }
       return;
     }
 
@@ -536,6 +541,11 @@ export class ProjectsController implements ViewController {
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-folders"]');
     const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-folders"]');
     if (!grid) return;
+
+    if (this.filterType === 'docs') {
+      grid.innerHTML = '';
+      return;
+    }
 
     const filteredFolders = this.getFilteredAndSortedFolders();
     const totalCount = (this.uploadsFolder ? 1 : 0) + filteredFolders.length;
@@ -877,7 +887,7 @@ export class ProjectsController implements ViewController {
           this.filterType = type;
           const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
           if (label) {
-            label.textContent = type === 'all' ? 'Tipo' : btn.textContent?.trim() || 'Tipo';
+            label.textContent = type === 'all' ? 'Tipo' : btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || 'Tipo';
           }
           typeDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
           btn.classList.add('is-active');
@@ -897,7 +907,7 @@ export class ProjectsController implements ViewController {
         this.filterCategory = cat;
         const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-category"]');
         if (label) {
-          label.textContent = cat === 'all' ? 'Categoría' : item.textContent?.trim() || 'Categoría';
+          label.textContent = cat === 'all' ? 'Categoría' : item.querySelector('.menu-item__text')?.textContent?.trim() || item.textContent?.trim() || 'Categoría';
         }
         catDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
         item.classList.add('is-active');
@@ -916,7 +926,7 @@ export class ProjectsController implements ViewController {
           this.sortOption = sort;
           const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-date"]');
           if (label) {
-            label.textContent = btn.textContent?.trim() || 'Fecha de modificación';
+            label.textContent = btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || 'Fecha de modificación';
           }
           dateDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
           btn.classList.add('is-active');
@@ -931,14 +941,6 @@ export class ProjectsController implements ViewController {
       showToast(this.sortAscending ? 'Orden ascendente' : 'Orden descendente', 'info');
       this.renderView();
     }, { signal: this.abortController?.signal });
-
-    ['folders', 'documents', 'uploads'].forEach((sectionKey) => {
-      const header = this.container.querySelector<HTMLButtonElement>(`[data-ref="header-${sectionKey}"]`);
-      const section = this.container.querySelector<HTMLElement>(`[data-ref="section-${sectionKey}"]`);
-      header?.addEventListener('click', () => {
-        section?.classList.toggle('is-collapsed');
-      }, { signal: this.abortController?.signal });
-    });
 
     const backBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-projects"]');
     backBtn?.addEventListener('click', () => {
@@ -1108,7 +1110,7 @@ export class ProjectsController implements ViewController {
       bodyHtml: `
         <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
           <label class="field" data-ref="field-folder-name">
-            <input class="field__input" data-ref="input-folder-name" type="text" placeholder=" " autofocus />
+            <input class="field__input" data-ref="input-folder-name" type="text" placeholder=" " />
             <span class="field__label">Nombre de la carpeta</span>
           </label>
         </div>
@@ -1165,7 +1167,7 @@ export class ProjectsController implements ViewController {
       bodyHtml: `
         <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
           <label class="field" data-ref="field-rename-name">
-            <input class="field__input" data-ref="input-rename-name" type="text" value="${this.escapeHtml(currentName)}" placeholder=" " autofocus />
+            <input class="field__input" data-ref="input-rename-name" type="text" value="${this.escapeHtml(currentName)}" placeholder=" " />
             <span class="field__label">Nombre de la carpeta</span>
           </label>
         </div>

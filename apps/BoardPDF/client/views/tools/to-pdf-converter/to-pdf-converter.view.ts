@@ -72,7 +72,7 @@ export class ToPdfConverterController implements ViewController {
         const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
         if (convertBtn) void this.handleConvert(convertBtn);
       },
-      sidebarRef: 'to-pdf-converter-sidebar',
+      sidebarRef: (this.config.sourceType === 'jpg-to-pdf' || this.config.sourceType === 'html-to-pdf') ? 'to-pdf-converter-sidebar' : undefined,
       toolId: 'to-pdf-converter',
       toolName: this.config.title,
       topHeaderRef: 'component-top',
@@ -161,6 +161,20 @@ export class ToPdfConverterController implements ViewController {
 
     const iconBoxUse = this.container.querySelector<SVGElement>('[data-ref="selected-file-symbol"] use');
     if (iconBoxUse) iconBoxUse.setAttribute('href', `/icons.svg#${this.config.icon}`);
+
+    const hasOptions = this.config.sourceType === 'jpg-to-pdf' || this.config.sourceType === 'html-to-pdf';
+    if (!hasOptions) {
+      const optionsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+      optionsBtn?.remove();
+      const sidebarContainer = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-container"]');
+      sidebarContainer?.remove();
+      const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
+      sidebarBackdrop?.remove();
+      const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
+      sidebar?.remove();
+      const fabOptions = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-options"]');
+      fabOptions?.remove();
+    }
 
     const jpgSection = this.container.querySelector<HTMLElement>('[data-ref="section-jpg-options"]');
     const htmlSection = this.container.querySelector<HTMLElement>('[data-ref="section-html-options"]');
