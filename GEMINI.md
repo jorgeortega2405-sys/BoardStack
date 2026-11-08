@@ -73,4 +73,9 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
 17. **CERO DDL Inline en Código de Base de Datos**:
     - Todo esquema, tabla, columna e índice debe residir en los scripts de arranque en `database/` (`database/db_identity.sql`). Prohibido `CREATE TABLE` o `ALTER TABLE` en `database.config.ts` o servicios backend.
 
+18. **Almacenamiento Exclusivo en AWS S3 / MinIO (CERO Archivos Guardados en Servidor Local)**:
+    - Absolutamente todo archivo, foto, avatar o documento subido por el usuario, o generado/procesado por el servidor (PDFs resultantes, conversiones, exportaciones), debe almacenarse exclusivamente en S3/MinIO (`s3Client`, `temp-storage.service.ts`).
+    - PROHIBIDO guardar archivos de manera persistente en carpetas locales del servidor (`uploads/`, `public/uploads/`, `storage/`). El backend es 100% Stateless.
+    - Si se requieren archivos intermedios en `os.tmpdir()` para procesamiento técnico, deben eliminarse obligatoriamente de inmediato en el bloque `finally`.
+
 Consulta las especificaciones completas en [AGENTS.md](AGENTS.md).

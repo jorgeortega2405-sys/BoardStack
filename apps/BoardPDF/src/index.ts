@@ -86,7 +86,14 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
   if (config.nodeEnv !== 'production') {
     const { createServer } = await import('vite');
     const vite = await createServer({
+      configFile: false,
       appType: 'spa',
+      publicDir: path.resolve(process.cwd(), 'public'),
+      resolve: {
+        alias: {
+          '@client': path.resolve(process.cwd(), 'client'),
+        },
+      },
       server: {
         middlewareMode: true,
         watch: {

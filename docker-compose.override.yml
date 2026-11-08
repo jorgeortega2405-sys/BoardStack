@@ -1,5 +1,6 @@
 services:
   app:
+    user: "root"
     build:
       context: .
       dockerfile: apps/BoardPDF/Dockerfile
@@ -16,6 +17,7 @@ services:
       - ./apps/BoardPDF/scripts:/workspace/apps/BoardPDF/scripts
       - ./apps/BoardPDF/logs:/workspace/apps/BoardPDF/logs
       - ./apps/BoardPDF/index.html:/workspace/apps/BoardPDF/index.html
+      - ./apps/BoardPDF/package.json:/workspace/apps/BoardPDF/package.json
       - ./apps/BoardPDF/vite.config.ts:/workspace/apps/BoardPDF/vite.config.ts
       - ./apps/BoardPDF/tsconfig.json:/workspace/apps/BoardPDF/tsconfig.json
       - ./apps/BoardPDF/tsconfig.server.json:/workspace/apps/BoardPDF/tsconfig.server.json

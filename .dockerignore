@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/build
+**/target
+**/.git
+**/.github
+**/.vscode
+**/.idea
+**/logs
+**/temp_storage
+**/data
+**/.env*
+**/*.log
+apps/board-wasm/target
+apps/collab-server/target

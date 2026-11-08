@@ -292,3 +292,21 @@ import { debounce, setupDropdown, withButtonLoading } from '../utils/dom.util.js
 1. **Scripts SQL como Única Autoridad**:
    - Toda creación o modificación de tablas, columnas e índices debe residir exclusivamente en los scripts de arranque en `database/` (`database/db_identity.sql`).
    - Queda estrictamente prohibido colocar sentencias DDL (`CREATE TABLE`, `ALTER TABLE`) o migraciones automáticas inline dentro de `src/config/database.config.ts` o servicios backend.
+
+---
+
+## 18. Almacenamiento Obligatorio en AWS S3 / MinIO (CERO Archivos Guardados en Servidor Local)
+
+1. **Exclusividad Total de Object Storage (S3 / MinIO)**:
+   - **Absolutamente todo archivo**, imagen, fotografía, avatar de perfil, documento PDF o dato binario subido por un usuario, así como todo archivo generado, renderizado o procesado por el servidor (conversiones, exportaciones, reportes, miniaturas, recibos):
+     - **DEBE ser almacenado única y exclusivamente en AWS S3 / MinIO** mediante el cliente centralizado `s3Client` y los servicios de almacenamiento (`src/config/s3.config.ts`, `src/services/temp-storage.service.ts`, `src/services/storage-quota.service.ts`).
+   - Queda terminantemente prohibido almacenar archivos de forma persistente en el sistema de archivos del servidor (directorios como `uploads/`, `public/uploads/`, `storage/`, `data/`, etc.).
+
+2. **Arquitectura de Servidor 100% Stateless (Sin Estado)**:
+   - El servidor backend y todos los microservicios son totalmente sin estado. Ningún contenedor, pod o proceso Node.js debe depender del almacenamiento en disco local para conservar archivos entre peticiones.
+   - Todo acceso o descarga de archivos hacia el usuario debe gestionarse mediante tokens criptográficos de descarga y URLs firmadas de tiempo limitado (`download-token.service.ts` / `getSignedUrl`), jamás mediante archivos servidos directamente desde rutas estáticas en disco.
+
+3. **Ciclo de Vida de Archivos Temporales de Procesamiento Intermedio**:
+   - Si una operación de procesamiento intensivo de archivos (como conversiones CLI con `pdftoppm`, compresión, OCR o transformación por chunks) requiere indispensablemente crear un archivo temporal intermedio en el sistema operativo (`os.tmpdir()`):
+     1. El archivo resultante debe subirse de inmediato al bucket S3 correspondiente.
+     2. Es **estrictamente obligatorio** eliminar y limpiar cualquier archivo o directorio temporal local inmediatamente dentro de un bloque `finally` (`await fs.promises.unlink(...)` o `rmdir`), garantizando que jamás queden residuos en el disco local incluso ante errores o excepciones.

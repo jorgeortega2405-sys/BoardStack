@@ -36,7 +36,7 @@ COPY tsconfig.json /workspace/tsconfig.json
 COPY apps/BoardPDF /workspace/apps/BoardPDF
 
 RUN mkdir -p /workspace/apps/BoardPDF/logs /workspace/apps/BoardPDF/data /workspace/apps/BoardPDF/uploads /workspace/apps/BoardPDF/public/uploads/collaborative /workspace/apps/BoardPDF/public/uploads/avatars \
-    && chown -R node:node /workspace
+    && chown -R node:node /workspace/apps/BoardPDF/logs /workspace/apps/BoardPDF/data /workspace/apps/BoardPDF/uploads /workspace/apps/BoardPDF/public/uploads
 
 USER node
 HEALTHCHECK --interval=15s --timeout=3s --retries=3 --start-period=10s \
