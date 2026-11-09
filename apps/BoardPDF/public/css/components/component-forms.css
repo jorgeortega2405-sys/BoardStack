@@ -42,11 +42,6 @@
   margin-bottom: 4px;
 }
 
-.badge--danger {
-  background-color: var(--color-error-bg);
-  color: var(--color-error);
-}
-
 /* ==========================================================================
    18. COMPONENTE DROPDOWN TRIGGER Y WRAPPER (.settings-dropdown-wrapper)
    ========================================================================== */
@@ -149,7 +144,6 @@
 
 @media (max-width: 768px) {
   .settings-dropdown-wrapper,
-  .tool-dropdown-wrapper,
   .dropdown-wrapper {
     max-width: 100%;
   }
@@ -217,7 +211,6 @@
 
 @media (min-width: 769px) {
   .settings-dropdown-wrapper .menu-panel--dropdown,
-  .tool-dropdown-wrapper .menu-panel--dropdown,
   .dropdown-wrapper .menu-panel--dropdown {
     position: absolute;
     top: calc(100% + 6px);
@@ -369,10 +362,6 @@
   transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
   box-sizing: border-box;
   flex-shrink: 0;
-}
-
-.component-search--w-full {
-  width: 100%;
 }
 
 .component-search:hover {
@@ -527,17 +516,6 @@
 .component-checkbox:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.field-group--mb12 {
-  margin-bottom: 12px;
 }
 
 .component-inline-control {

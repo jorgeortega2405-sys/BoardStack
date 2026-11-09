@@ -7,9 +7,10 @@ const envCandidates = [
   path.resolve(process.cwd(), 'apps/BoardPDF/.env'),
   path.resolve(import.meta.dirname, '../../.env'),
 ];
+const isDocker = fs.existsSync('/.dockerenv');
 for (const p of envCandidates) {
   if (fs.existsSync(p)) {
-    dotenv.config({ override: true, path: p });
+    dotenv.config({ override: !isDocker, path: p });
   }
 }
 

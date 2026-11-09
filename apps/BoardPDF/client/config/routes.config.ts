@@ -21,7 +21,6 @@ export interface RouteDefinition {
 export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/collaborative-pdf.css');
       const { createHomeView } = await import('../views/home.view.js');
       return await createHomeView();
     },
@@ -30,7 +29,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfToMarkdownView } = await import('../views/tools/pdf-to-markdown/pdf-to-markdown.view.js');
       return await createPdfToMarkdownView();
     },
@@ -39,7 +38,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-viewer.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createSummarizePdfView } = await import('../views/tools/summarize-pdf/summarize-pdf.view.js');
       return await createSummarizePdfView();
     },
@@ -48,7 +47,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createTranslatePdfView } = await import('../views/tools/translate-pdf/translate-pdf.view.js');
       return await createTranslatePdfView();
     },
@@ -57,7 +56,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createMergePdfView } = await import('../views/tools/merge-pdf/merge-pdf.view.js');
       return await createMergePdfView();
     },
@@ -66,7 +65,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createSplitPdfView } = await import('../views/tools/split-pdf/split-pdf.view.js');
       return await createSplitPdfView();
     },
@@ -75,7 +74,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createSplitPdfView } = await import('../views/tools/split-pdf/split-pdf.view.js');
       return await createSplitPdfView('pages');
     },
@@ -84,7 +83,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createRemovePdfPagesView } = await import('../views/tools/remove-pdf-pages/remove-pdf-pages.view.js');
       return await createRemovePdfPagesView();
     },
@@ -93,7 +92,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createOrganizePdfView } = await import('../views/tools/organize-pdf/organize-pdf.view.js');
       return await createOrganizePdfView();
     },
@@ -102,7 +101,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createRotatePdfView } = await import('../views/tools/rotate-pdf/rotate-pdf.view.js');
       return await createRotatePdfView();
     },
@@ -111,7 +110,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPageNumbersView } = await import('../views/tools/page-numbers/page-numbers.view.js');
       return await createPageNumbersView();
     },
@@ -120,7 +119,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-viewer.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createCropPdfView } = await import('../views/tools/crop-pdf/crop-pdf.view.js');
       return await createCropPdfView();
     },
@@ -129,7 +128,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createWatermarkPdfView } = await import('../views/tools/watermark-pdf/watermark-pdf.view.js');
       return await createWatermarkPdfView();
     },
@@ -138,7 +137,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-viewer.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createEditPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
       return await createEditPdfView();
     },
@@ -147,7 +146,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createProtectPdfView } = await import('../views/tools/protect-pdf/protect-pdf.view.js');
       return await createProtectPdfView();
     },
@@ -156,7 +155,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-viewer.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createRedactPdfView } = await import('../views/tools/redact-pdf/redact-pdf.view.js');
       return await createRedactPdfView();
     },
@@ -165,7 +164,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createUnlockPdfView } = await import('../views/tools/unlock-pdf/unlock-pdf.view.js');
       return await createUnlockPdfView();
     },
@@ -174,7 +173,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
       return await createPdfConverterView('pdf-to-jpg');
     },
@@ -183,7 +182,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
       return await createPdfConverterView('pdf-to-word');
     },
@@ -192,7 +191,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
       return await createPdfConverterView('pdf-to-powerpoint');
     },
@@ -201,7 +200,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
       return await createPdfConverterView('pdf-to-excel');
     },
@@ -210,7 +209,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
       return await createPdfConverterView('pdf-to-pdfa');
     },
@@ -219,7 +218,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
       return await createToPdfConverterView('jpg-to-pdf');
     },
@@ -228,7 +227,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
       return await createToPdfConverterView('word-to-pdf');
     },
@@ -237,7 +236,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
       return await createToPdfConverterView('powerpoint-to-pdf');
     },
@@ -246,7 +245,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
       return await createToPdfConverterView('excel-to-pdf');
     },
@@ -255,7 +254,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
       return await createToPdfConverterView('html-to-pdf');
     },
@@ -264,7 +263,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-viewer.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createComparePdfView } = await import('../views/tools/compare-pdf/compare-pdf.view.js');
       return await createComparePdfView();
     },
@@ -273,7 +272,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createCompressPdfView } = await import('../views/tools/compress-pdf/compress-pdf.view.js');
       return await createCompressPdfView();
     },
@@ -282,7 +281,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createRepairPdfView } = await import('../views/tools/repair-pdf/repair-pdf.view.js');
       return await createRepairPdfView();
     },
@@ -291,7 +290,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createOcrPdfView } = await import('../views/tools/ocr-pdf/ocr-pdf.view.js');
       return await createOcrPdfView();
     },
@@ -302,7 +301,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     handler: async ({ params }) => {
       await Promise.all([
         loadStylesheet('/css/components/component-views.css'),
-        loadStylesheet('/css/tools/tool-base.css'),
+        loadStylesheet('/css/tools/tool-workspace.css'),
       ]);
       const { createDownloadReadyView } = await import('../views/download-ready/download-ready.view.js');
       return await createDownloadReadyView(params.token);
@@ -326,7 +325,7 @@ export const APP_ROUTES: RouteDefinition[] = [
         navigate(`/login?redirect=${encodeURIComponent('/projects')}`, true);
         return null;
       }
-      await loadStylesheet('/css/tools/collaborative-pdf.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
       return await createCollaborativePdfEditorView(docId, query);
     },
@@ -348,8 +347,8 @@ export const APP_ROUTES: RouteDefinition[] = [
         navigate(`/login?redirect=${encodeURIComponent(targetPath)}`, true);
         return null;
       }
-      await loadStylesheet('/css/tools/collaborative-pdf.css');
-      await loadStylesheet('/css/components/component-projects.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createProjectsView } = await import('../views/projects/projects.view.js');
       return await createProjectsView(params?.folderId || null);
     },
@@ -390,7 +389,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
-      await loadStylesheet('/css/tools/tool-grid.css');
+      await loadStylesheet('/css/tools/tool-workspace.css');
       const { createWorkflowRunnerView } = await import('../views/workflow/workflow-runner.view.js');
       return await createWorkflowRunnerView(params.id || '');
     },
@@ -465,7 +464,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-pricing.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createPricingView } = await import('../views/pricing.view.js');
       return await createPricingView();
     },
@@ -474,7 +473,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-checkout.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createCheckoutView } = await import('../views/checkout.view.js');
       return await createCheckoutView();
     },
@@ -539,7 +538,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-auth.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createLoginView } = await import('../views/auth.view.js');
       return await createLoginView();
     },
@@ -548,7 +547,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-auth.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createRegisterView } = await import('../views/auth.view.js');
       return await createRegisterView();
     },
@@ -557,7 +556,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-auth.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createForgotPasswordView } = await import('../views/auth.view.js');
       return await createForgotPasswordView();
     },
@@ -566,7 +565,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-auth.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createResetPasswordView } = await import('../views/auth.view.js');
       return await createResetPasswordView();
     },
@@ -575,7 +574,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ path }) => {
-      await loadStylesheet('/css/components/component-settings.css');
+      await loadStylesheet('/css/components/component-views.css');
       const { createBillingView, createPurchasesView, createSecurityView, createYourAccountView } = await import('../views/settings.view.js');
       if (path === '/settings' || path === '/settings/' || path === '/settings/your-account') {
         if (path === '/settings' || path === '/settings/') {

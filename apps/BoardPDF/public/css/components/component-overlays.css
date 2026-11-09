@@ -34,10 +34,6 @@
   width: 220px;
 }
 
-.menu-panel--w-240 {
-  width: 240px;
-}
-
 .menu-panel--w-325 {
   width: 325px;
 }
@@ -765,8 +761,7 @@ body.modal-open {
   white-space: nowrap;
 }
 
-.account-item__arrow,
-.account-item__check {
+.account-item__arrow {
   align-items: center;
   color: var(--text-muted, #9ca3af);
   display: inline-flex;
@@ -776,10 +771,6 @@ body.modal-open {
   justify-content: center;
   margin-left: auto;
   width: 18px;
-}
-
-.account-item__check {
-  color: var(--text-primary, #111827);
 }
 
 .account-switcher__list {

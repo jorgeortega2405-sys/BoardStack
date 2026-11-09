@@ -727,26 +727,6 @@
   user-select: none;
 }
 
-.component-toggle-pill--w-full {
-  display: grid;
-  width: 100%;
-}
-
-.component-toggle-pill--glass {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  background-color: rgba(255, 255, 255, 0.25) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  box-shadow: none !important;
-}
-
-html[data-theme="dark"] .component-toggle-pill--glass,
-html.dark-theme .component-toggle-pill--glass,
-body[data-theme="dark"] .component-toggle-pill--glass {
-  background-color: rgba(20, 20, 22, 0.4) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
 .component-toggle-pill-glider {
   background-color: var(--action-primary, #111827);
   border-radius: 9999px;
@@ -761,7 +741,6 @@ body[data-theme="dark"] .component-toggle-pill--glass {
   z-index: 1;
 }
 
-.component-toggle-pill--3 .component-toggle-pill-glider,
 .component-toggle-pill:has(> .component-button:nth-of-type(3)) .component-toggle-pill-glider {
   width: calc(33.333% - 4px);
 }
@@ -780,14 +759,6 @@ body[data-theme="dark"] .component-toggle-pill-glider {
   :root:not([data-theme="light"]) .component-toggle-pill-glider {
     background-color: #ffffff;
   }
-}
-
-.component-toggle-pill--glass .component-toggle-pill-glider {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  background-color: rgba(255, 255, 255, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.7) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
 .component-toggle-pill .component-button,
@@ -850,32 +821,6 @@ body[data-theme="dark"] .component-toggle-pill .component-button.is-active {
   }
 }
 
-.component-toggle-pill--glass .component-button,
-.component-toggle-pill--glass .component-button--rounded-pill,
-.component-toggle-pill--glass .component-button--pill {
-  color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.component-toggle-pill--glass .component-button:hover,
-.component-toggle-pill--glass .component-button--rounded-pill:hover,
-.component-toggle-pill--glass .component-button--pill:hover {
-  color: #ffffff !important;
-}
-
-.component-toggle-pill--glass .component-button.active,
-.component-toggle-pill--glass .component-button.is-active,
-.component-toggle-pill--glass .component-button--rounded-pill.active,
-.component-toggle-pill--glass .component-button--rounded-pill.is-active,
-.component-toggle-pill--glass .component-button--pill.active,
-.component-toggle-pill--glass .component-button--pill.is-active {
-  color: #ffffff !important;
-}
-
-.component-toggle-pill--glass .component-icon {
-  color: #ffffff !important;
-  fill: currentColor;
-}
-
 .component-toggle-pill[data-active="0"] .component-toggle-pill-glider,
 .component-toggle-pill[data-mode="range"] .component-toggle-pill-glider,
 .component-toggle-pill[data-submode="custom"] .component-toggle-pill-glider,
@@ -910,8 +855,7 @@ body[data-theme="dark"] .component-toggle-pill .component-button.is-active {
   transform: translateX(200%);
 }
 
-.component-tabs,
-.collaborative-upload-tabs {
+.component-tabs {
   background-color: var(--bg-hover);
   border-radius: 10px;
   box-sizing: border-box;
@@ -919,11 +863,6 @@ body[data-theme="dark"] .component-toggle-pill .component-button.is-active {
   gap: 4px;
   padding: 4px;
   width: 100%;
-}
-
-.component-tabs--inline {
-  display: inline-flex;
-  width: auto;
 }
 
 .component-tabs--glass {
@@ -941,8 +880,7 @@ body[data-theme="dark"] .component-tabs--glass {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-.component-tab,
-.collaborative-upload-tab {
+.component-tab {
   align-items: center;
   background: transparent;
   border: none;
@@ -965,23 +903,19 @@ body[data-theme="dark"] .component-tabs--glass {
   white-space: nowrap;
 }
 
-.component-tab .component-icon,
-.collaborative-upload-tab .component-icon {
+.component-tab .component-icon {
   fill: currentColor;
   flex-shrink: 0;
   height: 16px;
   width: 16px;
 }
 
-.component-tab:hover,
-.collaborative-upload-tab:hover {
+.component-tab:hover {
   color: var(--text-primary);
 }
 
 .component-tab.is-active,
-.component-tab.active,
-.collaborative-upload-tab.is-active,
-.collaborative-upload-tab.active {
+.component-tab.active {
   background-color: var(--bg-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   color: var(--text-primary);
@@ -992,13 +926,7 @@ html[data-theme="dark"] .component-tab.active,
 html.dark-theme .component-tab.is-active,
 html.dark-theme .component-tab.active,
 body[data-theme="dark"] .component-tab.is-active,
-body[data-theme="dark"] .component-tab.active,
-html[data-theme="dark"] .collaborative-upload-tab.is-active,
-html[data-theme="dark"] .collaborative-upload-tab.active,
-html.dark-theme .collaborative-upload-tab.is-active,
-html.dark-theme .collaborative-upload-tab.active,
-body[data-theme="dark"] .collaborative-upload-tab.is-active,
-body[data-theme="dark"] .collaborative-upload-tab.active {
+body[data-theme="dark"] .component-tab.active {
   background-color: var(--bg-surface-raised, #242429);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   color: var(--text-primary, #ffffff);
@@ -1023,47 +951,8 @@ body[data-theme="dark"] .component-tabs--glass .component-tab.active {
 }
 
 .component-tab:disabled,
-.component-tab[disabled],
-.collaborative-upload-tab:disabled,
-.collaborative-upload-tab[disabled] {
+.component-tab[disabled] {
   cursor: not-allowed;
   opacity: 0.5;
   pointer-events: none;
-}
-
-.home-fab-create-doc {
-  align-items: center;
-  background-color: #111827 !important;
-  border: none !important;
-  border-radius: 50% !important;
-  bottom: 28px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-  box-sizing: border-box;
-  color: #ffffff !important;
-  cursor: pointer;
-  display: flex;
-  height: 48px;
-  justify-content: center;
-  min-height: 48px;
-  min-width: 48px;
-  position: fixed;
-  right: 28px;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.15s ease;
-  width: 48px;
-  z-index: 50;
-}
-
-.home-fab-create-doc:hover {
-  background-color: #000000 !important;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
-  transform: scale(1.08) translateY(-2px);
-}
-
-.home-fab-create-doc:active {
-  transform: scale(0.95);
-}
-
-.home-fab-create-doc .component-icon {
-  height: 24px;
-  width: 24px;
 }

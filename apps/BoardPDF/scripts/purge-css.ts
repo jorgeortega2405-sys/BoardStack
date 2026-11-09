@@ -14,9 +14,7 @@ const cssFiles = [
   'public/css/components/component-layout.css',
   'public/css/components/component-overlays.css',
   'public/css/components/component-views.css',
-  'public/css/tools/tool-base.css',
-  'public/css/tools/tool-grid.css',
-  'public/css/tools/tool-viewer.css',
+  'public/css/tools/tool-workspace.css',
 ];
 
 const dynamicWhitelist = [
@@ -27,7 +25,12 @@ const dynamicWhitelist = [
   /^contact-ticket-msg--(customer|agent)$/,
   /^sortable-(ghost|chosen|drag)$/,
   /^(textLayer|annotationLayer|canvasWrapper|page)$/,
-  /^is-(active|open|disabled|hidden|loading|processing|selected|visible|dragging|dragover|marked-remove|mobile-open|ready|success|error)$/,
+  /^is-(active|open|disabled|hidden|loading|processing|selected|visible|dragging|dragover|marked-remove|mobile-open|ready|success|error|editable|scanned|page-selected|page-locked|full-redacted)$/,
+  /^table-user-avatar--/,
+  /^account-item--/,
+  /^component-empty-state--/,
+  /^banner--/,
+  /^component-button--/,
 ];
 
 function getFiles(dir: string, ext: string): string[] {
