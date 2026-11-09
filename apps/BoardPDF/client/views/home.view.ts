@@ -157,7 +157,7 @@ class HomeController {
         const createCard = target.closest<HTMLElement>('[data-ref="card-create-workflow"]');
         if (createCard) {
           e.preventDefault();
-          navigate('/workflows?new=1');
+          navigate('/workflows');
           return;
         }
 

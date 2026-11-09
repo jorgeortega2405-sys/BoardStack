@@ -597,6 +597,16 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
   },
   {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-views.css');
+      await loadStylesheet('/css/components/component-overlays.css');
+      const { createModalTestView } = await import('../views/modaltest.view.js');
+      return await createModalTestView();
+    },
+    id: 'modaltest',
+    match: (path) => path === '/modaltest' || path === '/modaltest/',
+  },
+  {
     handler: async (ctx) => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();

@@ -27,12 +27,6 @@ class WorkflowsController {
     this.renderWorkflows();
     this.bindEvents();
     this.renderFooter();
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('new') === '1') {
-      window.history.replaceState({}, '', '/workflows');
-      this.openWorkflowModal();
-    }
   }
 
   destroy(): void {

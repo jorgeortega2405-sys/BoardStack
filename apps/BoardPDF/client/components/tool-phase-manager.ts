@@ -121,8 +121,20 @@ class ToolPhaseManager {
     if (!this.abortController) return;
     const { signal } = this.abortController;
     let dragCounter = 0;
+    let isInternalDragging = false;
+
+    window.addEventListener('dragstart', () => {
+      isInternalDragging = true;
+    }, { signal });
+
+    window.addEventListener('dragend', () => {
+      isInternalDragging = false;
+      dragCounter = 0;
+      this.container.classList.remove('is-dragover', 'tool-dropzone--active');
+    }, { signal });
 
     const hasDragFiles = (e: DragEvent): boolean => {
+      if (isInternalDragging) return false;
       if (!e.dataTransfer || !e.dataTransfer.types) return false;
       return Array.from(e.dataTransfer.types).includes('Files');
     };

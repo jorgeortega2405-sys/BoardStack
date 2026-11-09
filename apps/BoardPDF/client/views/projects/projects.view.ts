@@ -60,7 +60,7 @@ class ProjectsController implements ViewController {
   private documents: DocItem[] = [];
   private files: UploadFileItem[] = [];
   private filterCategory: string = 'all';
-  private filterType: 'all' | 'docs' | 'folders' | 'uploads' = 'all';
+  private filterType: 'all' | 'docs' | 'folders' | 'images' | 'pdfs' | 'uploads' = 'all';
   private folders: ProjectFolder[] = [];
   private searchQuery: string = '';
   private sortAscending: boolean = false;
@@ -221,9 +221,9 @@ class ProjectsController implements ViewController {
   private getFilteredAndSortedUploads(): UploadFileItem[] {
     let list = [...this.files];
 
-    if (this.uploadsActiveTab === 'images') {
+    if (this.filterType === 'images' || this.uploadsActiveTab === 'images') {
       list = list.filter((f) => f.type === 'image' || f.mimeType?.startsWith('image/'));
-    } else if (this.uploadsActiveTab === 'pdfs') {
+    } else if (this.filterType === 'pdfs' || this.uploadsActiveTab === 'pdfs') {
       list = list.filter((f) => f.type === 'pdf' || f.mimeType?.includes('pdf'));
     }
 
@@ -252,7 +252,7 @@ class ProjectsController implements ViewController {
   private renderView(): void {
     const mainTitle = this.container.querySelector<HTMLElement>('[data-ref="projects-main-title"]');
     const folderHeaderActions = this.container.querySelector<HTMLElement>('[data-ref="folder-header-actions"]');
-    const uploadsFilterTabs = this.container.querySelector<HTMLElement>('[data-ref="uploads-filter-tabs"]');
+    const btnFolderBack = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-back"]');
     const btnUploadDirect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-upload-direct"]');
 
     const sectionFolders = this.container.querySelector<HTMLElement>('[data-ref="section-folders"]');
@@ -280,54 +280,119 @@ class ProjectsController implements ViewController {
 
     if (!this.currentFolderId || !this.currentFolder) {
       if (mainTitle) mainTitle.textContent = t('projects.title');
+      btnFolderBack?.classList.add('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
-      uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
 
       sectionDocs?.classList.remove('is-hidden');
       sectionUploads?.classList.add('is-hidden');
 
+      this.renderTypeFilterMenu('root');
       this.renderRootFoldersGrid();
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'project') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
+      btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
-      uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
 
       sectionFolders?.classList.add('is-hidden');
       sectionDocs?.classList.remove('is-hidden');
       sectionUploads?.classList.add('is-hidden');
 
+      this.renderTypeFilterMenu('project');
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
       if (mainTitle) mainTitle.textContent = t('projects.uploads_title');
+      btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
-      uploadsFilterTabs?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
 
       sectionFolders?.classList.remove('is-hidden');
       sectionDocs?.classList.add('is-hidden');
       sectionUploads?.classList.remove('is-hidden');
 
+      this.renderTypeFilterMenu('uploads');
       this.renderUploadSubfoldersGrid();
       this.renderUploadsGrid();
     } else if (this.currentFolder.folder_type === 'upload_folder') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
+      btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
-      uploadsFilterTabs?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
 
       sectionFolders?.classList.add('is-hidden');
       sectionDocs?.classList.add('is-hidden');
       sectionUploads?.classList.remove('is-hidden');
 
+      this.renderTypeFilterMenu('uploads');
       this.renderUploadsGrid();
     }
 
     this.renderCategoryFilterItems();
+  }
+
+  private renderTypeFilterMenu(context: 'root' | 'project' | 'uploads'): void {
+    const list = this.container.querySelector<HTMLElement>('[data-ref="list-filter-type"]');
+    const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
+    if (!list) return;
+
+    if (context === 'uploads') {
+      list.innerHTML = `
+        <button type="button" class="menu-item ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="item-type-all" data-type="all">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+          <span class="menu-item__text">${t('projects.type_all')}</span>
+        </button>
+        <button type="button" class="menu-item ${this.filterType === 'images' ? 'is-active' : ''}" data-ref="item-type-images" data-type="images">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
+          <span class="menu-item__text">${t('projects.tab_images')}</span>
+        </button>
+        <button type="button" class="menu-item ${this.filterType === 'pdfs' ? 'is-active' : ''}" data-ref="item-type-pdfs" data-type="pdfs">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+          <span class="menu-item__text">${t('projects.tab_pdfs')}</span>
+        </button>
+      `;
+      if (label) {
+        if (this.filterType === 'images') label.textContent = t('projects.tab_images');
+        else if (this.filterType === 'pdfs') label.textContent = t('projects.tab_pdfs');
+        else label.textContent = t('projects.filter_type');
+      }
+    } else {
+      list.innerHTML = `
+        <button type="button" class="menu-item ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="item-type-all" data-type="all">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+          <span class="menu-item__text">${t('projects.type_all')}</span>
+        </button>
+        <button type="button" class="menu-item ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="item-type-docs" data-type="docs">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+          <span class="menu-item__text">${t('projects.type_docs')}</span>
+        </button>
+        <button type="button" class="menu-item ${this.filterType === 'folders' ? 'is-active' : ''}" data-ref="item-type-folders" data-type="folders">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+          <span class="menu-item__text">${t('projects.type_folders')}</span>
+        </button>
+        ${
+          context === 'root'
+            ? `
+          <button type="button" class="menu-item ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="item-type-uploads" data-type="uploads">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+            <span class="menu-item__text">${t('projects.type_uploads')}</span>
+          </button>
+        `
+            : ''
+        }
+      `;
+      if (label) {
+        if (this.filterType === 'docs') label.textContent = t('projects.type_docs');
+        else if (this.filterType === 'folders') label.textContent = t('projects.type_folders');
+        else if (this.filterType === 'uploads') label.textContent = t('projects.type_uploads');
+        else label.textContent = t('projects.filter_type');
+      }
+    }
+
+    renderIcons(list);
   }
 
   private renderCategoryFilterItems(): void {
@@ -694,11 +759,11 @@ class ProjectsController implements ViewController {
     grid.innerHTML = filteredFiles.map((file) => {
       const isImg = file.type === 'image' || file.mimeType?.startsWith('image/');
       const badge = isImg ? 'IMG' : 'PDF';
+      const badgeIcon = isImg ? 'image' : 'picture_as_pdf';
 
       return `
-        <div class="project-upload-card" data-ref="card-upload-${file.id}" data-upload-id="${file.id}">
-          <div class="project-upload-card__thumb-box">
-            <span class="project-upload-card__badge">${badge}</span>
+        <div class="tool-card tool-card--collab-doc project-upload-card" data-ref="card-upload-${file.id}" data-upload-id="${file.id}">
+          <div class="tool-card__preview-box">
             <div class="pdf-card__actions" data-ref="actions-up-${file.id}">
               <div class="dropdown" data-ref="dropdown-up-${file.id}">
                 <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-upload" data-id="${file.id}" data-tooltip="Más opciones" aria-label="Más opciones">
@@ -724,15 +789,30 @@ class ProjectsController implements ViewController {
               </div>
             </div>
 
-            ${
-              isImg
-                ? `<img class="project-upload-card__img" src="${file.url}" alt="${this.escapeHtml(file.name)}" loading="lazy" />`
-                : `<canvas class="project-upload-card__canvas" data-ref="canvas-upload-${file.id}"></canvas>`
-            }
+            <div class="tool-card__paper">
+              ${
+                isImg
+                  ? `<img class="tool-card__upload-img" src="${file.url}" alt="${this.escapeHtml(file.name)}" loading="lazy" />`
+                  : `<canvas class="tool-card__canvas is-hidden" data-ref="canvas-upload-${file.id}"></canvas>
+                     <div class="tool-card__placeholder" data-ref="placeholder-upload-${file.id}">
+                       <svg class="component-icon tool-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+                     </div>`
+              }
+            </div>
           </div>
-          <div class="project-upload-card__info">
-            <h4 class="project-upload-card__name" title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</h4>
-            <span class="project-upload-card__meta">${this.formatBytes(file.size)}</span>
+
+          <div class="tool-card__bottom">
+            <div class="tool-card__title-row">
+              <h3 class="tool-card__title" title="${this.escapeHtml(file.name)}">${this.escapeHtml(file.name)}</h3>
+              <span class="tool-card__badge-pill">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
+                <span>${badge}</span>
+              </span>
+            </div>
+            <div class="tool-card__meta-row">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+              <span class="tool-card__meta-text">${this.formatBytes(file.size)}</span>
+            </div>
           </div>
         </div>
       `;
@@ -774,8 +854,16 @@ class ProjectsController implements ViewController {
     files.forEach((file) => {
       if (file.type === 'pdf' || file.mimeType?.includes('pdf')) {
         const canvas = this.container.querySelector<HTMLCanvasElement>(`[data-ref="canvas-upload-${file.id}"]`);
+        const placeholder = this.container.querySelector<HTMLElement>(`[data-ref="placeholder-upload-${file.id}"]`);
         if (canvas && file.url) {
-          void renderPdfThumbnail(file.url, canvas, { pageNum: 1, targetWidth: 160 });
+          renderPdfThumbnail(file.url, canvas, { pageNum: 1, targetWidth: 160 })
+            .then(() => {
+              canvas.classList.remove('is-hidden');
+              placeholder?.classList.add('is-hidden');
+            })
+            .catch(() => {
+              // Retain placeholder if thumbnail generation fails
+            });
         }
       }
     });
@@ -817,21 +905,25 @@ class ProjectsController implements ViewController {
     const typeDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-type"]');
     if (typeDropdown) {
       setupDropdown(typeDropdown);
-      const menu = typeDropdown.querySelector<HTMLElement>('.menu-panel');
 
-      menu?.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const type = (btn.getAttribute('data-type') || 'all') as any;
-          this.filterType = type;
-          const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
-          if (label) {
-            label.textContent = type === 'all' ? 'Tipo' : btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || 'Tipo';
-          }
-          typeDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
-          btn.classList.add('is-active');
-          this.renderView();
-        }, { signal: this.abortController?.signal });
-      });
+      typeDropdown.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-type]');
+        if (!btn) return;
+        const type = (btn.getAttribute('data-type') || 'all') as any;
+        this.filterType = type;
+        if (type === 'images' || type === 'pdfs') {
+          this.uploadsActiveTab = type;
+        } else {
+          this.uploadsActiveTab = 'all';
+        }
+        const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
+        if (label) {
+          label.textContent = type === 'all' ? t('projects.filter_type') : btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || t('projects.filter_type');
+        }
+        typeDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.renderView();
+      }, { signal: this.abortController?.signal });
     }
 
     const catDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-category"]');
@@ -937,15 +1029,10 @@ class ProjectsController implements ViewController {
       }
     }, { signal: this.abortController?.signal });
 
-    const uploadTabs = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="uploads-filter-tabs"] .component-tab');
-    uploadTabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        uploadTabs.forEach((t) => t.classList.remove('is-active'));
-        tab.classList.add('is-active');
-        this.uploadsActiveTab = (tab.getAttribute('data-tab') || 'all') as any;
-        this.renderUploadsGrid();
-      }, { signal: this.abortController?.signal });
-    });
+    const btnFolderBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-back"]');
+    btnFolderBack?.addEventListener('click', () => {
+      navigate('/projects');
+    }, { signal: this.abortController?.signal });
 
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -960,16 +1047,27 @@ class ProjectsController implements ViewController {
         return;
       }
 
+      const uploadCard = target.closest<HTMLElement>('.project-upload-card');
+      if (uploadCard && !target.closest('.dropdown') && !target.closest('.pdf-card__actions')) {
+        e.preventDefault();
+        const upId = uploadCard.getAttribute('data-upload-id');
+        const file = this.files.find((f) => f.id === upId);
+        if (file?.url) {
+          window.open(file.url, '_blank');
+        }
+        return;
+      }
+
       const docCard = target.closest<HTMLElement>('.tool-card--collab-doc');
       if (docCard && !target.closest('.dropdown') && !target.closest('.pdf-card__actions')) {
-        e.preventDefault();
         const docId = docCard.getAttribute('data-doc-id');
         if (docId) {
+          e.preventDefault();
           const doc = this.documents.find((d) => d.id === docId);
           const dim = doc ? this.getDocDimensions(doc) : { height: 1123, width: 794 };
           navigate(`/d/${encodeURIComponent(docId)}?w=${dim.width}&h=${dim.height}`);
+          return;
         }
-        return;
       }
 
       const actionBtn = target.closest<HTMLElement>('[data-action]');
@@ -1014,16 +1112,6 @@ class ProjectsController implements ViewController {
           }
         }
         return;
-      }
-
-      const uploadCard = target.closest<HTMLElement>('.project-upload-card');
-      if (uploadCard && !target.closest('.dropdown') && !target.closest('.project-upload-card__actions')) {
-        e.preventDefault();
-        const upId = uploadCard.getAttribute('data-upload-id');
-        const file = this.files.find((f) => f.id === upId);
-        if (file?.url) {
-          window.open(file.url, '_blank');
-        }
       }
     }, { signal: this.abortController?.signal });
   }

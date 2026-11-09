@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 680" width="100%" height="100%">
+  <defs>
+    <!-- Premium multi-stage drop shadows for 2D depth -->
+    <filter id="doc-shadow" x="-20%" y="-15%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#0f172a" flood-opacity="0.08" />
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.04" />
+    </filter>
+
+    <filter id="badge-shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.09" />
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background Decorative 2D Wireframe Guides (Minimalist Architectural) -->
+  <g opacity="0.6">
+    <rect x="50" y="30" width="440" height="610" rx="24" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="6 6" />
+    <circle cx="50" cy="30" r="4" fill="#cbd5e1" />
+    <circle cx="490" cy="30" r="4" fill="#cbd5e1" />
+    <circle cx="50" cy="640" r="4" fill="#cbd5e1" />
+    <circle cx="490" cy="640" r="4" fill="#cbd5e1" />
+  </g>
+
+  <!-- Main 2D Vertical Document Sheet (Pure White A4 Ratio) -->
+  <g filter="url(#doc-shadow)">
+    <rect x="85" y="45" width="370" height="525" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+  </g>
+
+  <!-- Document Header -->
+  <g transform="translate(115, 75)">
+    <!-- Brand / Document Type Mark -->
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="#0f172a" />
+    <path d="M7 7h10M7 12h7M7 17h10" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+
+    <text x="34" y="11" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.2" fill="#0f172a">BOARDPDF • ACUERDO DE SERVICIO</text>
+    <text x="34" y="23" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9" font-weight="500" fill="#94a3b8">DOC-ID: #8492-B • FECHA: OCTUBRE 2026</text>
+
+    <!-- Status badge on document -->
+    <rect x="250" y="2" width="60" height="20" rx="10" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1" />
+    <circle cx="260" cy="12" r="3" fill="#10b981" />
+    <text x="268" y="15.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="8.5" font-weight="600" fill="#334155">OFICIAL</text>
+  </g>
+
+  <!-- Divider Line -->
+  <line x1="115" y1="120" x2="425" y2="120" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <!-- Document Main Title -->
+  <g transform="translate(115, 142)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="17" font-weight="800" letter-spacing="-0.4" fill="#0f172a">Especificación de Diseño y Colaboración</text>
+    <text x="0" y="15" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9.5" font-weight="500" fill="#64748b">Términos generales de desarrollo, maquetación y entrega de documentos</text>
+  </g>
+
+  <!-- Section 1: Written Paragraph Lines -->
+  <g transform="translate(115, 185)">
+    <!-- Section Title -->
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="-0.2" fill="#1e293b">1. Alcance y Metodología Editorial</text>
+
+    <!-- Paragraph lines -->
+    <rect x="0" y="12" width="310" height="7" rx="3.5" fill="#334155" opacity="0.85" />
+    <rect x="0" y="25" width="295" height="7" rx="3.5" fill="#64748b" opacity="0.65" />
+    <rect x="0" y="38" width="270" height="7" rx="3.5" fill="#64748b" opacity="0.65" />
+    <rect x="0" y="51" width="180" height="7" rx="3.5" fill="#94a3b8" opacity="0.45" />
+  </g>
+
+  <!-- Section 2: Structured Clauses with Text and Selection Highlight -->
+  <g transform="translate(115, 268)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="-0.2" fill="#1e293b">2. Cláusulas y Términos de Colaboración</text>
+
+    <!-- Clause 1 with Text Selection Cursor in 2D -->
+    <g transform="translate(0, 14)">
+      <!-- Selection highlight -->
+      <rect x="-4" y="-3" width="230" height="18" rx="4" fill="#dbeafe" />
+      <circle cx="6" cy="6" r="3.5" fill="#2563eb" />
+      <text x="18" y="10" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9.5" font-weight="600" fill="#1e40af">Sincronización en tiempo real y coautoría</text>
+      <!-- Blue blinking text cursor line -->
+      <line x1="222" y1="-1" x2="222" y2="13" stroke="#2563eb" stroke-width="2" stroke-linecap="round" />
+    </g>
+
+    <!-- Clause 2 -->
+    <g transform="translate(0, 38)">
+      <circle cx="6" cy="6" r="3.5" fill="#0f172a" />
+      <rect x="18" y="2.5" width="260" height="7" rx="3.5" fill="#475569" opacity="0.75" />
+      <rect x="18" y="14" width="190" height="6.5" rx="3.25" fill="#94a3b8" opacity="0.45" />
+    </g>
+
+    <!-- Clause 3 -->
+    <g transform="translate(0, 68)">
+      <circle cx="6" cy="6" r="3.5" fill="#0f172a" />
+      <rect x="18" y="2.5" width="275" height="7" rx="3.5" fill="#475569" opacity="0.75" />
+      <rect x="18" y="14" width="140" height="6.5" rx="3.25" fill="#94a3b8" opacity="0.45" />
+    </g>
+  </g>
+
+  <!-- Section 3: Final Paragraph Lines -->
+  <g transform="translate(115, 375)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="-0.2" fill="#1e293b">3. Resolución y Compromiso de Entrega</text>
+    <rect x="0" y="12" width="310" height="7" rx="3.5" fill="#64748b" opacity="0.6" />
+    <rect x="0" y="25" width="240" height="7" rx="3.5" fill="#94a3b8" opacity="0.4" />
+  </g>
+
+  <!-- Signature Section at Bottom -->
+  <g transform="translate(115, 435)">
+    <line x1="0" y1="0" x2="310" y2="0" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="4 4" />
+
+    <text x="0" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9" font-weight="600" letter-spacing="0.5" fill="#94a3b8">FIRMA DIGITAL AUTORIZADA:</text>
+
+    <!-- Realistic 2D Smooth Signature Path (Handwritten in dark ink) -->
+    <path d="M 12 55 Q 28 20 44 48 T 76 38 T 108 50 T 142 32 T 176 46 Q 192 48 208 42" fill="none" stroke="#0f172a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Signature line under stroke -->
+    <line x1="0" y1="65" x2="210" y2="65" stroke="#cbd5e1" stroke-width="1.2" />
+
+    <text x="0" y="80" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9.5" font-weight="700" fill="#0f172a">Jorge Mendoza</text>
+    <text x="0" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="8.5" font-weight="500" fill="#64748b">Director Creativo &amp; Arquitectura Documental</text>
+
+    <!-- Verification Stamp Card -->
+    <g transform="translate(230, 42)">
+      <rect x="0" y="0" width="80" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      <circle cx="16" cy="16" r="7" fill="#10b981" />
+      <path d="M13 16l2 2 4-4" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="28" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="8" font-weight="700" fill="#0f172a">VALIDADO</text>
+      <text x="8" y="33" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="7.5" font-weight="500" fill="#64748b">SHA-256 SECURE</text>
+    </g>
+  </g>
+
+  <!-- =========================================================================
+       FLOATING 2D UI CONTROLS & BADGES (AROUND THE VERTICAL DOCUMENT)
+       ========================================================================= -->
+
+  <!-- Top-Right Floating Formatting Toolbar Badge (Flat 2D with shadow) -->
+  <g transform="translate(330, 20)" filter="url(#badge-shadow)">
+    <rect x="0" y="0" width="165" height="48" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2" />
+
+    <!-- Active Text Format Tab ("Aa") in sleek black pill -->
+    <rect x="8" y="8" width="38" height="32" rx="8" fill="#0f172a" />
+    <text x="27" y="29" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">Aa</text>
+
+    <!-- Bold Button (B) -->
+    <g transform="translate(54, 8)">
+      <rect x="0" y="0" width="30" height="32" rx="6" fill="#f8fafc" />
+      <text x="15" y="21" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="800" fill="#334155">B</text>
+    </g>
+
+    <!-- Italic Button (I) -->
+    <g transform="translate(90, 8)">
+      <rect x="0" y="0" width="30" height="32" rx="6" fill="#f8fafc" />
+      <text x="15" y="21" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="700" font-style="italic" fill="#334155">I</text>
+    </g>
+
+    <!-- Color / Font Indicator dot -->
+    <circle cx="140" cy="24" r="8" fill="#0f172a" stroke="#e2e8f0" stroke-width="1.5" />
+  </g>
+
+  <!-- Bottom-Left Floating Live Collaboration Pill (Flat 2D with shadow) -->
+  <g transform="translate(25, 485)" filter="url(#badge-shadow)">
+    <rect x="0" y="0" width="170" height="52" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2" />
+
+    <!-- Overlapping User Avatars in 2D -->
+    <g transform="translate(12, 10)">
+      <!-- Avatar 1 -->
+      <circle cx="16" cy="16" r="15" fill="#0f172a" stroke="#ffffff" stroke-width="2" />
+      <text x="16" y="20.5" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#ffffff">JM</text>
+
+      <!-- Avatar 2 -->
+      <circle cx="36" cy="16" r="15" fill="#3b82f6" stroke="#ffffff" stroke-width="2" />
+      <text x="36" y="20.5" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#ffffff">AL</text>
+    </g>
+
+    <!-- Status text -->
+    <g transform="translate(70, 15)">
+      <text x="0" y="11" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#0f172a">Edición activa</text>
+      <text x="0" y="25" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="9" font-weight="500" fill="#10b981">● 2 colaboradores</text>
+    </g>
+  </g>
+
+  <!-- Floating Pen / Tool Cursor on the Right Edge of the Document -->
+  <g transform="translate(425, 230)" filter="url(#badge-shadow)">
+    <circle cx="18" cy="18" r="18" fill="#0f172a" />
+    <path d="M12 24l2-6 8-8 4 4-8 8-6 2z" fill="#ffffff" />
+    <path d="M22 10l4 4" stroke="#0f172a" stroke-width="1.2" />
+  </g>
+</svg>

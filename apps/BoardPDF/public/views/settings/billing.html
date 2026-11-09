@@ -1,139 +1,132 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="settings-wrapper">
-<div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
-<div class="component-layout" data-ref="settings-layout">
-<div class="component-header" data-ref="settings-header">
-<h1 class="component-title" data-ref="settings-title" data-i18n="settings.billing.title"></h1>
-<p class="component-subtitle" data-ref="settings-subtitle" data-i18n="settings.billing.subtitle"></p>
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+    <div class="component-layout" data-ref="settings-layout">
+      <div class="component-header" data-ref="settings-header">
+        <h1 class="component-title" data-ref="settings-title" data-i18n="settings.billing.title"></h1>
+        <p class="component-subtitle" data-ref="settings-subtitle" data-i18n="settings.billing.subtitle"></p>
+      </div>
+
+      <div class="component-group component-group--accordion is-active" data-ref="group-subscription-plan">
+        <div class="component-accordion-header" data-ref="accordion-header-subscription">
+          <div class="component-item__content" data-ref="accordion-sub-content">
+            <div class="component-item__icon-box" data-ref="accordion-sub-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+            </div>
+            <div class="component-item__text" data-ref="accordion-sub-text">
+              <h2 class="component-item__title" data-ref="accordion-sub-title" data-i18n="settings.billing.subscription_accordion_title"></h2>
+              <p class="component-item__desc" data-ref="accordion-sub-desc" data-i18n="settings.billing.subscription_accordion_desc"></p>
+            </div>
+          </div>
+          <div class="component-item__actions" data-ref="accordion-sub-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-sub-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </div>
+        </div>
+        <div class="component-accordion-body" data-ref="accordion-body-subscription">
+          <div class="component-accordion-content" data-ref="accordion-content-subscription">
+            <div class="component-item" data-ref="item-current-plan">
+              <div class="component-item__content" data-ref="item-current-plan-content">
+                <div class="component-item__icon-box" data-ref="item-current-plan-icon-box">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
+                </div>
+                <div class="component-item__text" data-ref="item-current-plan-text">
+                  <div class="component-item__title-row" data-ref="plan-title-row">
+                    <h3 class="component-item__title" data-ref="current-plan-name"></h3>
+                    <span class="component-badge component-badge--sm is-hidden" data-ref="current-plan-status-badge"></span>
+                  </div>
+                  <p class="component-item__desc" data-ref="current-plan-desc"></p>
+                </div>
+              </div>
+              <div class="component-item__actions" data-ref="item-current-plan-actions">
+                <button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan"></button>
+              </div>
+            </div>
+
+            <hr class="component-divider is-hidden" data-ref="divider-cancel-sub" />
+
+            <div class="component-item is-hidden" data-ref="item-cancel-subscription">
+              <div class="component-item__content" data-ref="item-cancel-subscription-content">
+                <div class="component-item__icon-box" data-ref="item-cancel-subscription-icon-box">
+                  <svg class="component-icon" data-ref="icon-cancel-sub" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                </div>
+                <div class="component-item__text" data-ref="item-cancel-subscription-text">
+                  <h3 class="component-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title"></h3>
+                  <p class="component-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc"></p>
+                </div>
+              </div>
+              <div class="component-item__actions" data-ref="item-cancel-subscription-actions">
+                <button type="button" class="component-button component-button--h34" data-ref="btn-toggle-subscription" data-i18n="settings.billing.btn_cancel_subscription"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-group component-group--accordion" data-ref="group-resource-usage">
+        <div class="component-accordion-header" data-ref="accordion-header-usage">
+          <div class="component-item__content" data-ref="accordion-usage-content">
+            <div class="component-item__icon-box" data-ref="accordion-usage-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+            </div>
+            <div class="component-item__text" data-ref="accordion-usage-text">
+              <h2 class="component-item__title" data-ref="accordion-usage-title" data-i18n="settings.billing.usage_accordion_title"></h2>
+              <p class="component-item__desc" data-ref="accordion-usage-desc" data-i18n="settings.billing.usage_accordion_desc"></p>
+            </div>
+          </div>
+          <div class="component-item__actions" data-ref="accordion-usage-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-usage-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </div>
+        </div>
+        <div class="component-accordion-body" data-ref="accordion-body-usage">
+          <div class="component-accordion-content" data-ref="accordion-content-usage">
+            <div class="component-item component-item--stacked" data-ref="item-ai-tokens">
+              <div class="component-item__content component-block--w-full" data-ref="item-ai-tokens-content">
+                <div class="component-item__text component-block--w-full" data-ref="item-ai-tokens-text">
+                  <div class="component-item__title-row" data-ref="tokens-title-row">
+                    <h3 class="component-item__title" data-ref="item-tokens-title" data-i18n="settings.billing.tokens_title"></h3>
+                  </div>
+                  <p class="component-item__desc" data-ref="item-tokens-desc" data-i18n="settings.billing.tokens_desc"></p>
+                  <div class="storage-meter component-block--w-full" data-ref="tokens-meter-box">
+                    <div class="component-group--between">
+                      <span class="component-item__value component-text--bold" data-ref="tokens-text-balance"></span>
+                      <span class="component-badge component-badge--neutral component-text--sm" data-ref="tokens-badge-percent"></span>
+                    </div>
+                    <div class="component-progress">
+                      <div class="component-progress__bar component-progress__bar--full" data-ref="tokens-bar-fill"></div>
+                    </div>
+                    <div class="component-group--between component-text--muted">
+                      <span data-ref="tokens-reset-date-text" data-i18n="settings.billing.tokens_reset_monthly"></span>
+                      <a class="link component-link--subtle" data-ref="btn-tokens-upgrade" href="/pricing" data-i18n="settings.billing.btn_get_more_tokens"></a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="component-divider" data-ref="divider-usage-storage" />
+
+            <div class="component-item component-item--stacked" data-ref="item-storage">
+              <div class="component-item__content component-block--w-full" data-ref="item-storage-content">
+                <div class="component-item__text component-block--w-full" data-ref="item-storage-text">
+                  <div class="component-item__title-row" data-ref="storage-title-row">
+                    <h3 class="component-item__title" data-ref="item-storage-title" data-i18n="settings.billing.storage_title"></h3>
+                  </div>
+                  <p class="component-item__desc" data-ref="item-storage-desc" data-i18n="settings.billing.storage_desc"></p>
+                  <div class="storage-meter component-block--w-full" data-ref="storage-meter-box">
+                    <div class="component-group--between">
+                      <span class="component-item__value component-text--bold" data-ref="storage-text-used"></span>
+                      <span class="component-badge component-badge--neutral component-text--sm" data-ref="storage-badge-percent"></span>
+                    </div>
+                    <div class="component-progress">
+                      <div class="component-progress__bar component-progress__bar--empty" data-ref="storage-bar-fill"></div>
+                    </div>
+                    <div class="component-text--muted" data-ref="storage-available-text"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="component-group component-group--accordion is-active" data-ref="group-subscription-plan">
-<div class="component-accordion-header" data-ref="accordion-header-subscription">
-<div class="component-item__content" data-ref="accordion-sub-content">
-<div class="component-item__icon-box" data-ref="accordion-sub-icon-box">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
-</div>
-<div class="component-item__text" data-ref="accordion-sub-text">
-<h2 class="component-item__title" data-ref="accordion-sub-title" data-i18n="settings.billing.subscription_accordion_title"></h2>
-<p class="component-item__desc" data-ref="accordion-sub-desc" data-i18n="settings.billing.subscription_accordion_desc"></p>
-</div>
-</div>
-<div class="component-item__actions" data-ref="accordion-sub-actions">
-<svg class="component-icon component-accordion-icon" data-ref="accordion-sub-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</div>
-</div>
-<div class="component-accordion-body" data-ref="accordion-body-subscription">
-<div class="component-accordion-content" data-ref="accordion-content-subscription">
-<div class="component-item" data-ref="item-current-plan">
-<div class="component-item__content" data-ref="item-current-plan-content">
-<div class="component-item__icon-box" data-ref="item-current-plan-icon-box">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
-</div>
-<div class="component-item__text" data-ref="item-current-plan-text">
-<div class="component-item__title-row" data-ref="plan-title-row">
-<h3 class="component-item__title" data-ref="current-plan-name">-</h3>
-<span class="component-badge component-badge--sm is-hidden" data-ref="current-plan-status-badge"></span>
-</div>
-<p class="component-item__desc" data-ref="current-plan-desc">-</p>
-</div>
-</div>
-<div class="component-item__actions" data-ref="item-current-plan-actions">
-<button type="button" class="component-button component-button--h34" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan"></button>
-</div>
-</div>
-<hr class="component-divider is-hidden" data-ref="divider-cancel-sub" />
-<div class="component-item is-hidden" data-ref="item-cancel-subscription">
-<div class="component-item__content" data-ref="item-cancel-subscription-content">
-<div class="component-item__icon-box" data-ref="item-cancel-subscription-icon-box">
-<svg class="component-icon" data-ref="icon-cancel-sub" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</div>
-<div class="component-item__text" data-ref="item-cancel-subscription-text">
-<h3 class="component-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title"></h3>
-<p class="component-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc"></p>
-</div>
-</div>
-<div class="component-item__actions" data-ref="item-cancel-subscription-actions">
-<button type="button" class="component-button component-button--h34" data-ref="btn-toggle-subscription" data-i18n="settings.billing.btn_cancel_subscription"></button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="component-group component-group--accordion is-active" data-ref="group-ai-tokens">
-<div class="component-accordion-header" data-ref="accordion-header-tokens">
-<div class="component-item__content" data-ref="accordion-tokens-content">
-<div class="component-item__icon-box" data-ref="accordion-tokens-icon-box">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-</div>
-<div class="component-item__text" data-ref="accordion-tokens-text">
-<div class="component-item__title-row" data-ref="tokens-title-row" class="component-group--wrap">
-<h2 class="component-item__title" data-ref="item-tokens-title" data-i18n="settings.billing.tokens_title"></h2>
-</div>
-<p class="component-item__desc" data-ref="item-tokens-desc" data-i18n="settings.billing.tokens_desc"></p>
-</div>
-</div>
-<div class="component-item__actions" data-ref="accordion-tokens-actions">
-<svg class="component-icon component-accordion-icon" data-ref="accordion-tokens-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</div>
-</div>
-<div class="component-accordion-body" data-ref="accordion-body-tokens">
-<div class="component-accordion-content" data-ref="accordion-content-tokens">
-<div class="component-item component-item--stacked" data-ref="item-ai-tokens" class="component-block--padded">
-<div class="component-item__content" data-ref="item-ai-tokens-content" class="component-block--w-full">
-<div class="component-item__text" data-ref="item-ai-tokens-text" class="component-block--w-full">
-<div class="storage-meter" data-ref="tokens-meter-box" class="component-block--w-full">
-<div class="component-group--between" >
-<span class="component-item__value" data-ref="tokens-text-balance" class="component-text--bold">100 / 100 tokens disponibles</span>
-<span class="component-badge component-badge--neutral" data-ref="tokens-badge-percent" class="component-text--sm">100%</span>
-</div>
-<div class="component-progress" >
-<div class="component-progress__bar component-progress__bar--full" data-ref="tokens-bar-fill" ></div>
-</div>
-<div class="component-group--between component-text--muted" >
-<span data-ref="tokens-reset-date-text">Próximo reinicio: Mensual</span>
-<a class="link" data-ref="btn-tokens-upgrade" href="/pricing" class="component-link--subtle">Obtener más tokens</a>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="component-group component-group--accordion is-active" data-ref="group-storage">
-<div class="component-accordion-header" data-ref="accordion-header-storage">
-<div class="component-item__content" data-ref="accordion-storage-content">
-<div class="component-item__icon-box" data-ref="accordion-storage-icon-box">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-</div>
-<div class="component-item__text" data-ref="accordion-storage-text">
-<h2 class="component-item__title" data-ref="item-storage-title" data-i18n="settings.billing.storage_title"></h2>
-<p class="component-item__desc" data-ref="item-storage-desc" data-i18n="settings.billing.storage_desc"></p>
-</div>
-</div>
-<div class="component-item__actions" data-ref="accordion-storage-actions">
-<svg class="component-icon component-accordion-icon" data-ref="accordion-storage-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</div>
-</div>
-<div class="component-accordion-body" data-ref="accordion-body-storage">
-<div class="component-accordion-content" data-ref="accordion-content-storage">
-<div class="component-item component-item--stacked" data-ref="item-storage" class="component-block--padded">
-<div class="component-item__content" data-ref="item-storage-content" class="component-block--w-full">
-<div class="component-item__text" data-ref="item-storage-text" class="component-block--w-full">
-<div class="storage-meter" data-ref="storage-meter-box" class="component-block--w-full">
-<div class="component-group--between" >
-<span class="component-item__value" data-ref="storage-text-used" class="component-text--bold">0.0 MB de 5.0 GB utilizados</span>
-<span class="component-badge component-badge--neutral" data-ref="storage-badge-percent" class="component-text--sm">0%</span>
-</div>
-<div class="component-progress" >
-<div class="component-progress__bar component-progress__bar--empty" data-ref="storage-bar-fill" ></div>
-</div>
-<div class="component-text--muted" data-ref="storage-available-text"> 5.0 GB disponibles </div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div> 

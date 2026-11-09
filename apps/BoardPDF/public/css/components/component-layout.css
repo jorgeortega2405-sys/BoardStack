@@ -1280,7 +1280,7 @@ html, body {
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
   overflow: hidden;
   box-sizing: border-box;
-  padding: 8px;
+  padding: 0;
 }
 
 .component-block__header {
@@ -1288,8 +1288,8 @@ html, body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  height: 48px;
-  padding: 0 8px;
+  height: 56px;
+  padding: 8px 8px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -1342,14 +1342,20 @@ html, body {
 .component-floating-search__inner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background-color: var(--bg-surface, #ffffff);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 6px 10px;
+  padding: 6px;
   width: 100%;
   max-width: 440px;
+  box-sizing: border-box;
+}
+
+.component-search--floating {
+  width: 100%;
+  border-radius: 8px;
 }
 
 .component-block__scrollable {

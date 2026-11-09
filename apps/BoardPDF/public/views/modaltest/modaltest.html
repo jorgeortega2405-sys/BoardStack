@@ -1,0 +1,849 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="modaltest-wrapper">
+  <div class="view-backdrop view-backdrop--dots" data-ref="modaltest-backdrop"></div>
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="modaltest-scrollable">
+    <div class="view-body" data-ref="modaltest-body">
+      <header class="modaltest-header" data-ref="modaltest-header">
+        <span class="component-badge modaltest-header__badge" data-ref="modaltest-badge" data-i18n="modaltest.badge"></span>
+        <h1 class="modaltest-header__title" data-ref="modaltest-title" data-i18n="modaltest.title"></h1>
+        <p class="modaltest-header__desc" data-ref="modaltest-desc" data-i18n="modaltest.subtitle"></p>
+      </header>
+
+      <main class="modaltest-stage" data-ref="modaltest-stage">
+
+        <!-- 01. Modal de Confirmación Estándar -->
+        <section class="modaltest-item" data-ref="item-01">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_01_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_01_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-01">
+              <button type="button" class="modal-close-btn" data-ref="close-01" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-01">
+                <div class="modal-card__drag-zone" data-ref="drag-01" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_delete_flow_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_delete_flow_desc"></p>
+                </div>
+                <div class="modal-card__body"></div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-01" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-confirm-01" data-i18n="modaltest.sample_delete_flow_btn"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 02. Modal con Input de Texto (Nueva Carpeta) -->
+        <section class="modaltest-item" data-ref="item-02">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_02_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_02_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-02">
+              <button type="button" class="modal-close-btn" data-ref="close-02" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-02">
+                <div class="modal-card__drag-zone" data-ref="drag-02" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_folder_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_folder_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-folder-name">
+                    <input class="field__input" data-ref="input-folder-name" type="text" placeholder=" " value="Proyectos Q4" />
+                    <span class="field__label" data-i18n="modaltest.sample_folder_label"></span>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-02" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-02" data-i18n="modaltest.sample_folder_btn"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 03. Modal de Contraseña con Toggle -->
+        <section class="modaltest-item" data-ref="item-03">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_03_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_03_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-03">
+              <button type="button" class="modal-close-btn" data-ref="close-03" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-03">
+                <div class="modal-card__drag-zone" data-ref="drag-03" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="settings.security.modal_verify_password_title"></h2>
+                  <p class="modal-card__desc" data-i18n="settings.security.modal_verify_password_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-current-pwd">
+                    <input class="field__input field__input--has-action" data-ref="input-current-pwd" type="password" placeholder=" " value="SuperSecretPassword123" autocomplete="current-password" />
+                    <span class="field__label" data-i18n="settings.security.modal_current_password_label"></span>
+                    <button type="button" class="field__action" data-ref="btn-toggle-pwd-03" data-i18n-aria="auth.login.toggle_password">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                    </button>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-03" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-03" data-i18n="common.continue"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04. Modal Multi-Campo (Nueva Contraseña - Paso 2) -->
+        <section class="modaltest-item" data-ref="item-04">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_04_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_04_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-04">
+              <button type="button" class="modal-close-btn" data-ref="close-04" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-04">
+                <div class="modal-card__drag-zone" data-ref="drag-04" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="settings.security.modal_new_password_title"></h2>
+                  <p class="modal-card__desc" data-i18n="settings.security.modal_new_password_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-new-pwd">
+                    <input class="field__input field__input--has-action" data-ref="input-new-pwd" type="password" placeholder=" " value="Secret@2026!" autocomplete="new-password" />
+                    <span class="field__label" data-i18n="settings.security.modal_new_password_label"></span>
+                    <button type="button" class="field__action" data-ref="btn-toggle-pwd-new" data-i18n-aria="auth.login.toggle_password">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                    </button>
+                  </label>
+                  <label class="field" data-ref="field-confirm-pwd">
+                    <input class="field__input field__input--has-action" data-ref="input-confirm-pwd" type="password" placeholder=" " value="Secret@2026!" autocomplete="new-password" />
+                    <span class="field__label" data-i18n="settings.security.modal_confirm_new_password_label"></span>
+                    <button type="button" class="field__action" data-ref="btn-toggle-pwd-confirm" data-i18n-aria="auth.login.toggle_password">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                    </button>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-04" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-04" data-i18n="common.save"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 05. Modal de Código OTP de 6 Dígitos -->
+        <section class="modaltest-item" data-ref="item-05">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_05_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_05_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-05">
+              <button type="button" class="modal-close-btn" data-ref="close-05" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-05">
+                <div class="modal-card__drag-zone" data-ref="drag-05" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="settings.your_account.modal_email_verify_title"></h2>
+                  <p class="modal-card__desc" data-i18n="settings.your_account.modal_email_verify_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-otp-code">
+                    <input class="field__input field__input--code" data-ref="input-otp-code" type="text" maxlength="6" placeholder=" " value="842190" autocomplete="one-time-code" />
+                    <span class="field__label" data-i18n="settings.your_account.modal_email_code_placeholder"></span>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-05" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-05" data-i18n="common.continue"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 06. Modal con Banner de Error Activo -->
+        <section class="modaltest-item" data-ref="item-06">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_06_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_06_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-06">
+              <button type="button" class="modal-close-btn" data-ref="close-06" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-06">
+                <div class="modal-card__drag-zone" data-ref="drag-06" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_unlock_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_unlock_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-unlock-pwd">
+                    <input class="field__input field__input--has-action" data-ref="input-unlock-pwd" type="password" placeholder=" " value="contrasena_erronea" autocomplete="current-password" />
+                    <span class="field__label" data-i18n="modaltest.sample_unlock_label"></span>
+                    <button type="button" class="field__action" data-ref="btn-toggle-unlock-pwd" data-i18n-aria="auth.login.toggle_password">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                    </button>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-06" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-06" data-i18n="modaltest.sample_unlock_btn"></button>
+                  </div>
+                  <div class="banner banner--danger" data-ref="error-banner-06" data-i18n="modaltest.sample_unlock_error"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 07. Modal de Peligro / Acción Destructiva (Eliminar Cuenta) -->
+        <section class="modaltest-item" data-ref="item-07">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_07_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_07_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-07">
+              <button type="button" class="modal-close-btn" data-ref="close-07" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-07">
+                <div class="modal-card__drag-zone" data-ref="drag-07" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="settings.security.delete_account_modal_title"></h2>
+                  <p class="modal-card__desc" data-i18n="settings.security.delete_account_modal_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <label class="field" data-ref="field-delete-pwd">
+                    <input class="field__input" data-ref="input-delete-pwd" type="password" placeholder=" " autocomplete="current-password" />
+                    <span class="field__label" data-i18n="settings.security.modal_current_password_label"></span>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-07" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-confirm-07" data-i18n="settings.security.btn_delete_account"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 08. Modal de Selección de Tamaño de Página -->
+        <section class="modaltest-item" data-ref="item-08">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_08_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_08_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-08">
+              <button type="button" class="modal-close-btn" data-ref="close-08" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-08">
+                <div class="modal-card__drag-zone" data-ref="drag-08" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_collab_size_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_collab_size_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="wrapper-paper-size">
+                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-paper-size">
+                      <div class="dropdown-trigger__left">
+                        <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                        <span class="dropdown-trigger__text" data-i18n="modaltest.sample_collab_size_preset"></span>
+                      </div>
+                      <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                    </button>
+                  </div>
+                  <label class="collab-resize-checkbox-label" data-ref="label-apply-all">
+                    <input class="checkbox" data-ref="chk-apply-all" type="checkbox" checked />
+                    <span data-i18n="modaltest.sample_collab_size_apply_all"></span>
+                  </label>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-08" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-08" data-i18n="modaltest.sample_collab_size_btn"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 09. Modal de Compartir Archivo con QR -->
+        <section class="modaltest-item" data-ref="item-09">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_09_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_09_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-09">
+              <button type="button" class="modal-close-btn" data-ref="close-09" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-09">
+                <div class="modal-card__drag-zone" data-ref="drag-09" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_share_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_share_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <div class="share-modal" data-ref="share-box">
+                    <div class="share-modal__input-row">
+                      <div class="share-modal__input-wrap">
+                        <input class="field__input share-modal__input" data-ref="input-share-link" type="text" readonly value="https://boardpdf.com/download/f9104b2a8e" />
+                      </div>
+                      <button type="button" class="component-button component-button--black component-button--h44 share-modal__btn-copy" data-ref="btn-copy-share">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                        <span data-i18n="common.copy"></span>
+                      </button>
+                    </div>
+                    <div class="share-modal__qr-section">
+                      <div class="mock-qr-box" data-ref="box-qr-share">
+                        <svg class="mock-qr-svg" viewBox="0 0 100 100" fill="currentColor">
+                          <path d="M10 10h30v30h-30z M16 16v18h18v-18z M22 22h6v6h-6z M60 10h30v30h-30z M66 16v18h18v-18z M72 22h6v6h-6z M10 60h30v30h-30z M16 66v18h18v-18z M22 72h6v6h-6z M46 10h8v8h-8z M46 26h8v16h-8z M60 48h8v8h-8z M74 48h16v8h-16z M48 60h12v12h-12z M68 60h8v8h-8z M84 60h6v12h-6z M48 80h8v10h-8z M64 76h12v14h-12z M84 80h6v10h-6z"></path>
+                        </svg>
+                      </div>
+                      <p class="share-modal__qr-label" data-i18n="modaltest.sample_share_qr_hint"></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-close-share" data-i18n="common.close"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 10. Modal Social / Agradecimiento -->
+        <section class="modaltest-item" data-ref="item-10">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_10_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_10_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-10">
+              <button type="button" class="modal-close-btn" data-ref="close-10" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-10">
+                <div class="modal-card__drag-zone" data-ref="drag-10" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_gratitude_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_gratitude_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <div class="social-badges-grid">
+                    <button type="button" class="social-badge-btn" data-ref="btn-social-trustpilot">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+                      <span>Trustpilot</span>
+                    </button>
+                    <button type="button" class="social-badge-btn" data-ref="btn-social-twitter">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                      <span>Twitter / X</span>
+                    </button>
+                    <button type="button" class="social-badge-btn" data-ref="btn-social-facebook">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                      <span>Facebook</span>
+                    </button>
+                    <button type="button" class="social-badge-btn" data-ref="btn-social-linkedin">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                      <span>LinkedIn</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-confirm-10" data-i18n="common.close"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11. Modal de Guardar Diseño Local -->
+        <section class="modaltest-item" data-ref="item-11">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_11_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_11_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-11">
+              <button type="button" class="modal-close-btn" data-ref="close-11" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--sm" data-ref="card-11">
+                <div class="modal-card__drag-zone" data-ref="drag-11" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <div class="collab-local-auth-icon-wrap">
+                    <svg class="component-icon collab-local-auth-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                  </div>
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_local_auth_title"></h2>
+                </div>
+                <div class="modal-card__body">
+                  <div class="collab-local-auth-body">
+                    <p class="collab-local-auth-text" data-i18n="modaltest.sample_local_auth_desc"></p>
+                    <div class="collab-local-auth-actions">
+                      <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-local-register" data-i18n="modaltest.sample_local_auth_register"></button>
+                      <button type="button" class="component-button component-button--ghost component-button--h44" data-ref="btn-local-login" data-i18n="modaltest.sample_local_auth_login"></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 12. Modal Dividido (Split) - 2FA Fase 1 (Setup QR) -->
+        <section class="modaltest-item" data-ref="item-12">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_12_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_12_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-12">
+              <button type="button" class="modal-close-btn" data-ref="close-12" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--split" data-ref="card-12">
+                <div class="modal-card__drag-zone" data-ref="drag-12" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-split__left">
+                  <div class="modal-split__stage">
+                    <div class="modal-split__header">
+                      <h2 class="modal-split__title" data-i18n="settings.security.two_factor_modal_title"></h2>
+                      <p class="modal-split__desc" data-i18n="settings.security.two_factor_modal_desc"></p>
+                    </div>
+                    <div class="modal-split__form">
+                      <label class="field" data-ref="field-2fa-mock-code">
+                        <input class="field__input field__input--code" data-ref="input-2fa-mock-code" type="text" maxlength="6" placeholder=" " value="492018" autocomplete="one-time-code" />
+                        <span class="field__label" data-i18n="settings.security.two_factor_modal_code_label"></span>
+                      </label>
+                      <button type="button" class="modal-split__link-toggle" data-ref="btn-toggle-mock-secret">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
+                        <span data-i18n="settings.security.two_factor_view_secret"></span>
+                      </button>
+                      <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-continue-mock-2fa" data-i18n="common.continue"></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-split__right">
+                  <div class="modal-split__visual-stage">
+                    <div class="modal-split__qr-wrapper">
+                      <div class="mock-qr-box">
+                        <svg class="mock-qr-svg" viewBox="0 0 100 100" fill="currentColor">
+                          <path d="M10 10h30v30h-30z M16 16v18h18v-18z M22 22h6v6h-6z M60 10h30v30h-30z M66 16v18h18v-18z M72 22h6v6h-6z M10 60h30v30h-30z M16 66v18h18v-18z M22 72h6v6h-6z M46 10h8v8h-8z M46 26h8v16h-8z M60 48h8v8h-8z M74 48h16v8h-16z M48 60h12v12h-12z M68 60h8v8h-8z M84 60h6v12h-6z M48 80h8v10h-8z M64 76h12v14h-12z M84 80h6v10h-6z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="modal-split__right-hint">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
+                      <span data-i18n="settings.security.two_factor_qr_hint"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 13. Modal Dividido (Split) - 2FA Fase 2 (Códigos de Respaldo) -->
+        <section class="modaltest-item" data-ref="item-13">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_13_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_13_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-13">
+              <button type="button" class="modal-close-btn" data-ref="close-13" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--split" data-ref="card-13">
+                <div class="modal-card__drag-zone" data-ref="drag-13" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-split__left">
+                  <div class="modal-split__stage">
+                    <div class="modal-split__header">
+                      <h2 class="modal-split__title" data-i18n="settings.security.two_factor_backup_title"></h2>
+                      <p class="modal-split__desc" data-i18n="settings.security.two_factor_backup_desc"></p>
+                    </div>
+                    <div class="modal-split__backup-section">
+                      <div class="backup-codes-grid">
+                        <div class="code-badge">9481-2041</div>
+                        <div class="code-badge">5512-8902</div>
+                        <div class="code-badge">3391-7714</div>
+                        <div class="code-badge">1029-4482</div>
+                        <div class="code-badge">7810-6623</div>
+                        <div class="code-badge">4912-3001</div>
+                        <div class="code-badge">6621-9943</div>
+                        <div class="code-badge">8120-1490</div>
+                      </div>
+                      <div class="modal-split__backup-actions">
+                        <button type="button" class="component-button component-button--h38" data-ref="btn-copy-backup-codes">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                          <span data-i18n="settings.security.two_factor_copy_all"></span>
+                        </button>
+                        <button type="button" class="component-button component-button--h38 component-button--black" data-ref="btn-finish-2fa" data-i18n="settings.security.two_factor_finish"></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-split__right">
+                  <div class="modal-split__visual-stage">
+                    <div class="modal-split__svg-wrapper" data-ref="svg-wrapper-13"></div>
+                    <div class="modal-split__right-status">
+                      <span class="modal-split__badge-check">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+                      </span>
+                      <span class="modal-split__badge-text" data-i18n="settings.security.two_factor_active_badge"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14. Modal Dividido de Límite (Pro) -->
+        <section class="modaltest-item" data-ref="item-14">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_14_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_14_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-14">
+              <button type="button" class="modal-close-btn" data-ref="close-14" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--split modal-card--upgrade" data-ref="card-14">
+                <div class="modal-card__drag-zone" data-ref="drag-14" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-split__left">
+                  <div class="modal-split__header modal-split__header--upgrade">
+                    <div class="component-badge component-badge--primary modal-split__pill">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                      <span>BoardPDF Pro</span>
+                    </div>
+                    <h2 class="modal-split__title modal-split__title--upgrade" data-i18n="pricing.limit_modal_title_pro"></h2>
+                  </div>
+                  <div class="modal-split__limit-body">
+                    <p class="modal-split__limit-notice" data-i18n="pricing.limit_modal_files_current"></p>
+                    <ul class="modal-split__benefits-list">
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_speed"></span>
+                      </li>
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_tools"></span>
+                      </li>
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_limits"></span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="modal-split__actions modal-split__actions--upgrade">
+                    <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-upgrade-pro" data-i18n="pricing.upgrade_to_pro"></button>
+                    <p class="modal-split__footnote" data-i18n="pricing.limit_modal_cancel_hint"></p>
+                  </div>
+                </div>
+                <div class="modal-split__right modal-split__right--upgrade">
+                  <div class="modal-split__media-wrapper">
+                    <img class="modal-split__media-img" src="/images/pro-banner.webp" alt="BoardPDF Pro" />
+                  </div>
+                  <div class="modal-split__right-status">
+                    <span class="modal-split__badge-check">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                    </span>
+                    <span class="modal-split__badge-text" data-i18n="pricing.limit_modal_status_badge"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 15. Modal Dividido de Límite (Negocios) -->
+        <section class="modaltest-item" data-ref="item-15">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_15_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_15_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-15">
+              <button type="button" class="modal-close-btn" data-ref="close-15" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--split modal-card--upgrade" data-ref="card-15">
+                <div class="modal-card__drag-zone" data-ref="drag-15" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-split__left">
+                  <div class="modal-split__header modal-split__header--upgrade">
+                    <div class="component-badge component-badge--success modal-split__pill">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+                      <span>BoardPDF Negocios</span>
+                    </div>
+                    <h2 class="modal-split__title modal-split__title--upgrade" data-i18n="pricing.limit_modal_title_business"></h2>
+                  </div>
+                  <div class="modal-split__limit-body">
+                    <p class="modal-split__limit-notice" data-i18n="pricing.limit_modal_size_current"></p>
+                    <ul class="modal-split__benefits-list">
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_team"></span>
+                      </li>
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_tools"></span>
+                      </li>
+                      <li class="modal-split__benefit-item">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                        <span data-i18n="pricing.limit_modal_feat_speed"></span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="modal-split__actions modal-split__actions--upgrade">
+                    <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-upgrade-biz" data-i18n="pricing.upgrade_to_business"></button>
+                    <p class="modal-split__footnote" data-i18n="pricing.limit_modal_cancel_hint"></p>
+                  </div>
+                </div>
+                <div class="modal-split__right modal-split__right--upgrade">
+                  <div class="modal-split__media-wrapper">
+                    <img class="modal-split__media-img" src="/images/pro-banner.webp" alt="BoardPDF Negocios" />
+                  </div>
+                  <div class="modal-split__right-status">
+                    <span class="modal-split__badge-check">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                    </span>
+                    <span class="modal-split__badge-text" data-i18n="pricing.limit_modal_status_badge"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 16. Modal de Pasarela de Pago / Checkout -->
+        <section class="modaltest-item" data-ref="item-16">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_16_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_16_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-16">
+              <button type="button" class="modal-close-btn" data-ref="close-16" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--checkout" data-ref="card-16">
+                <div class="modal-card__drag-zone" data-ref="drag-16" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_checkout_title"></h2>
+                  <p class="modal-card__description" data-i18n="modaltest.sample_checkout_desc"></p>
+                </div>
+                <div class="checkout-plan-summary">
+                  <div class="checkout-plan-summary__left">
+                    <div class="checkout-plan-summary__icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
+                    </div>
+                    <div>
+                      <h3 class="checkout-plan-summary__title" data-i18n="modaltest.sample_checkout_plan_title"></h3>
+                      <p class="checkout-plan-summary__cycle" data-i18n="modaltest.sample_checkout_plan_cycle"></p>
+                    </div>
+                  </div>
+                  <div class="checkout-plan-summary__price" data-i18n="modaltest.sample_checkout_plan_price"></div>
+                </div>
+
+                <div class="checkout-mock-grid">
+                  <label class="field" data-ref="field-card-number">
+                    <input class="field__input" data-ref="input-card-number" type="text" placeholder=" " value="•••• •••• •••• 4242" />
+                    <span class="field__label" data-i18n="modaltest.sample_checkout_card_num"></span>
+                  </label>
+                  <div class="checkout-mock-row">
+                    <label class="field" data-ref="field-card-exp">
+                      <input class="field__input" data-ref="input-card-exp" type="text" placeholder=" " value="12 / 28" />
+                      <span class="field__label" data-i18n="modaltest.sample_checkout_card_exp"></span>
+                    </label>
+                    <label class="field" data-ref="field-card-cvc">
+                      <input class="field__input" data-ref="input-card-cvc" type="password" maxlength="4" placeholder=" " value="123" />
+                      <span class="field__label" data-i18n="modaltest.sample_checkout_card_cvc"></span>
+                    </label>
+                  </div>
+                  <label class="field" data-ref="field-card-name">
+                    <input class="field__input" data-ref="input-card-name" type="text" placeholder=" " value="Jane Doe" />
+                    <span class="field__label" data-i18n="modaltest.sample_checkout_card_name"></span>
+                  </label>
+                </div>
+
+                <div class="checkout-secure-badge">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                  <span data-i18n="checkout.secure_processing"></span>
+                </div>
+
+                <div class="modal-card__actions">
+                  <button type="button" class="component-button component-button--h44 component-button--ghost" data-ref="btn-checkout-cancel" data-i18n="common.cancel"></button>
+                  <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-checkout-pay" data-i18n="modaltest.sample_checkout_pay_btn"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 17. Modal Constructor de Flujos de Trabajo -->
+        <section class="modaltest-item" data-ref="item-17">
+          <div class="modaltest-item__info">
+            <span class="modaltest-item__tag" data-i18n="modaltest.item_17_tag"></span>
+            <span class="modaltest-item__name" data-i18n="modaltest.item_17_name"></span>
+          </div>
+          <div class="modaltest-item__card-wrapper">
+            <div class="modal-container" data-ref="container-17">
+              <button type="button" class="modal-close-btn" data-ref="close-17" data-i18n-aria="modal.close">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+              <div class="modal-card modal-card--workflow-builder" data-ref="card-17">
+                <div class="modal-card__drag-zone" data-ref="drag-17" aria-hidden="true">
+                  <div class="modal-card__drag-handle"></div>
+                </div>
+                <div class="modal-card__header">
+                  <h2 class="modal-card__title" data-i18n="modaltest.sample_workflow_title"></h2>
+                  <p class="modal-card__desc" data-i18n="modaltest.sample_workflow_desc"></p>
+                </div>
+                <div class="modal-card__body">
+                  <div class="workflow-modal-columns">
+                    <div class="modal-col-left">
+                      <div class="workflow-modal-section-title" data-i18n="modaltest.sample_workflow_tool_select_title"></div>
+                      <label class="field" data-ref="field-wf-name">
+                        <input class="field__input" data-ref="input-wf-name" type="text" placeholder=" " value="Procesamiento Batch Facturas" />
+                        <span class="field__label" data-i18n="modaltest.sample_workflow_name_label"></span>
+                      </label>
+                      <div class="dropdown-wrapper dropdown-wrapper--full">
+                        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-wf-tool">
+                          <div class="dropdown-trigger__left">
+                            <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#widgets"></use></svg>
+                            <span class="dropdown-trigger__text" data-i18n="modaltest.sample_workflow_tool_placeholder"></span>
+                          </div>
+                          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                        </button>
+                      </div>
+                      <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-wf-add">
+                        <span data-i18n="modaltest.sample_workflow_add_step"></span>
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+                      </button>
+                    </div>
+                    <div class="modal-col-right modal-col-right--workflow">
+                      <div class="workflow-modal-header-row">
+                        <div class="workflow-modal-section-title" data-i18n="modaltest.sample_workflow_sequence_title"></div>
+                        <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-wf-clear" data-i18n="modaltest.sample_workflow_clear"></button>
+                      </div>
+                      <div class="workflow-modal-steps-list">
+                        <div class="pipeline-step-item">
+                          <div class="pipeline-step-item__left">
+                            <span class="pipeline-step-item__number">1</span>
+                            <span class="pipeline-step-item__title" data-i18n="modaltest.sample_workflow_step_1"></span>
+                          </div>
+                          <button type="button" class="component-button component-button--ghost component-button--icon-only component-button--h28" data-ref="btn-remove-step-1" data-i18n-aria="common.delete">
+                            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                          </button>
+                        </div>
+                        <div class="pipeline-step-item">
+                          <div class="pipeline-step-item__left">
+                            <span class="pipeline-step-item__number">2</span>
+                            <span class="pipeline-step-item__title" data-i18n="modaltest.sample_workflow_step_2"></span>
+                          </div>
+                          <button type="button" class="component-button component-button--ghost component-button--icon-only component-button--h28" data-ref="btn-remove-step-2" data-i18n-aria="common.delete">
+                            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                          </button>
+                        </div>
+                        <div class="pipeline-step-item">
+                          <div class="pipeline-step-item__left">
+                            <span class="pipeline-step-item__number">3</span>
+                            <span class="pipeline-step-item__title" data-i18n="modaltest.sample_workflow_step_3"></span>
+                          </div>
+                          <button type="button" class="component-button component-button--ghost component-button--icon-only component-button--h28" data-ref="btn-remove-step-3" data-i18n-aria="common.delete">
+                            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-card__footer">
+                  <div class="modal-card__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-wf-cancel" data-i18n="common.cancel"></button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-wf-save" data-i18n="modaltest.sample_workflow_save"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+</div>

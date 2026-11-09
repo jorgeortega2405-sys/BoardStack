@@ -45,7 +45,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   let currentMembers = [...options.docMembers];
 
   const popover = document.createElement('div');
-  popover.className = 'menu-panel menu-panel--dropdown menu-panel--w-440 menu-panel--h-auto collab-share-dropdown';
+  popover.className = 'tool-sidebar-container tool-sidebar-container--share collab-share-dropdown is-open';
   popover.setAttribute('data-ref', 'collab-share-popover');
 
   const canManagePermissions = isDocOwner && !!currentUser;
@@ -55,88 +55,91 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   const ownerInitials = ownerName.substring(0, 2).toUpperCase();
 
   popover.innerHTML = `
-    <div class="collab-share-card" data-ref="collab-share-card">
-      <div class="collab-share-view" data-ref="collab-share-view-main">
-        <div class="collab-share-header">
-          <h2 class="collab-share-title">Compartir el diseño</h2>
+    <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-open collab-share-card" data-ref="collab-share-card">
+      <div class="tool-sidebar__panel" data-ref="collab-share-view-main">
+        <div class="tool-sidebar__header">
+          <h2 class="tool-sidebar__title">Compartir el diseño</h2>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-close" data-i18n-aria="common.close" aria-label="Cerrar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
         </div>
 
-        <div class="collab-share-section">
-          <div class="collab-share-section__title">Personas con acceso</div>
-          ${canManagePermissions ? `
-            <div class="collab-share-search-box">
-              <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
-            </div>
-            <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
-          ` : ''}
-
-          <div class="collab-share-members-row" data-ref="collab-share-members-row">
-            <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">Personas con acceso</div>
             ${canManagePermissions ? `
-              <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              </button>
+              <div class="collab-share-search-box">
+                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
+              </div>
+              <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
             ` : ''}
+
+            <div class="collab-share-members-row" data-ref="collab-share-members-row">
+              <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
+              ${canManagePermissions ? `
+                <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                </button>
+              ` : ''}
+            </div>
+
+            <div class="collab-share-members-list is-hidden" data-ref="collab-share-members-details"></div>
           </div>
 
-          <div class="collab-share-members-list is-hidden" data-ref="collab-share-members-details"></div>
-        </div>
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">Nivel de acceso</div>
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-access">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" aria-label="Nivel de acceso" ${!canManagePermissions ? 'disabled' : ''}>
+                <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-access">
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? t('ui.cualquier_persona_que_tenga_el_enlace') : 'Solo las personas que agregues'}</span>
+                </div>
+                ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
+              </button>
 
-        <div class="collab-share-section">
-          <div class="collab-share-section__title">Nivel de acceso</div>
-          <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-access">
-            <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" aria-label="Nivel de acceso" ${!canManagePermissions ? 'disabled' : ''}>
-              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-access">
-                <svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
-                <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? t('ui.cualquier_persona_que_tenga_el_enlace') : 'Solo las personas que agregues'}</span>
-              </div>
-              ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
-            </button>
+              ${canManagePermissions ? `
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="collab-access-menu">
+                    <div class="menu-panel__list" data-ref="list-access-options">
+                      <button type="button" class="menu-item ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
+                        <div class="menu-item__icon-wrapper">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                        </div>
+                        <div class="menu-item__text-group">
+                          <span class="menu-item__title">Solo las personas que agregues</span>
+                          <span class="menu-item__subtitle">Solo las personas con acceso al diseño pueden usar este enlace.</span>
+                        </div>
+                        <svg class="component-icon menu-item__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
 
-            ${canManagePermissions ? `
-              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access">
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="collab-access-menu">
-                  <div class="menu-panel__list" data-ref="list-access-options">
-                    <button type="button" class="menu-item ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
-                      <div class="menu-item__icon-wrapper">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                      </div>
-                      <div class="menu-item__text-group">
-                        <span class="menu-item__title">Solo las personas que agregues</span>
-                        <span class="menu-item__subtitle">Solo las personas con acceso al diseño pueden usar este enlace.</span>
-                      </div>
-                      <svg class="component-icon menu-item__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                    </button>
-
-                    <button type="button" class="menu-item ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
-                      <div class="menu-item__icon-wrapper">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
-                      </div>
-                      <div class="menu-item__text-group">
-                        <span class="menu-item__title">Cualquier persona que tenga el enlace</span>
-                        <span class="menu-item__subtitle">Cualquiera podrá acceder al diseño con el enlace.</span>
-                      </div>
-                      <svg class="component-icon menu-item__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                    </button>
+                      <button type="button" class="menu-item ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
+                        <div class="menu-item__icon-wrapper">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                        </div>
+                        <div class="menu-item__text-group">
+                          <span class="menu-item__title">Cualquier persona que tenga el enlace</span>
+                          <span class="menu-item__subtitle">Cualquiera podrá acceder al diseño con el enlace.</span>
+                        </div>
+                        <svg class="component-icon menu-item__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ` : ''}
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="collab-share-actions">
+            <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-collab-copy-link">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+              <span data-ref="txt-copy-link">Copiar el enlace</span>
+            </button>
+            <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
           </div>
         </div>
 
-        <div class="collab-share-actions">
-          <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-collab-copy-link">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
-            <span data-ref="txt-copy-link">Copiar el enlace</span>
-          </button>
-          <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
-        </div>
-
-        <div class="collab-share-divider"></div>
-
-        <div class="collab-share-footer">
+        <div class="tool-sidebar__footer">
           <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
             <div class="collab-share-download-icon">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
@@ -146,70 +149,74 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
         </div>
       </div>
 
-      <div class="collab-share-view is-hidden" data-ref="collab-share-view-download">
-        <div class="collab-share-header">
+      <div class="tool-sidebar__panel is-hidden" data-ref="collab-share-view-download">
+        <div class="tool-sidebar__header">
           <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-download-back" aria-label="Volver al menú compartir">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <h2 class="collab-share-title">Descargar</h2>
-          <div class="collab-share-header__spacer"></div>
+          <h2 class="tool-sidebar__title">Descargar</h2>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-download-close" data-i18n-aria="common.close" aria-label="Cerrar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
         </div>
 
-        <div class="collab-share-section">
-          <div class="collab-share-section__title">Tipo de archivo</div>
-          <div class="component-tabs" data-ref="toggle-download-type" data-active="0">
-            <button type="button" class="component-tab is-active active" data-ref="btn-download-type-digital" data-type="digital">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-              <span>Digital</span>
-            </button>
-            <button type="button" class="component-tab" data-ref="btn-download-type-print" data-type="print">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-              <span>Impresión</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="collab-share-section collab-download-digital-section" data-ref="section-digital-options">
-          <div class="collab-share-section__title">Opciones adicionales</div>
-          <div class="collab-download-options-list">
-            <label class="collab-download-checkbox-row" data-ref="lbl-compress-pdf">
-              <input class="component-checkbox" data-ref="chk-compress-pdf" type="checkbox" />
-              <div class="collab-download-checkbox-info">
-                <span class="collab-download-checkbox-title">Comprimir PDF</span>
-                <span class="collab-download-checkbox-desc">Menor tamaño de archivo para compartir fácil</span>
-              </div>
-            </label>
-            <label class="collab-download-checkbox-row" data-ref="lbl-separate-pages">
-              <input class="component-checkbox" data-ref="chk-separate-pages" type="checkbox" />
-              <div class="collab-download-checkbox-info">
-                <span class="collab-download-checkbox-title">Descargar páginas como archivos separados</span>
-                <span class="collab-download-checkbox-desc">Genera un archivo independiente para cada página</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="collab-share-section">
-          <div class="collab-share-section__title">Seleccionar páginas</div>
-          <div class="component-tabs" data-ref="toggle-download-pages" data-active="0">
-            <button type="button" class="component-tab is-active active" data-ref="btn-download-pages-all" data-mode="all">
-              <span>Todas las páginas</span>
-            </button>
-            <button type="button" class="component-tab" data-ref="btn-download-pages-custom" data-mode="custom">
-              <span>Personalizar</span>
-            </button>
-          </div>
-
-          <div class="collab-download-custom-container is-hidden" data-ref="container-custom-pages">
-            <div class="collab-download-custom-header">
-              <span class="collab-download-custom-count" data-ref="txt-selected-pages-count">${pageCount} de ${pageCount} páginas seleccionadas</span>
-              <button type="button" class="collab-download-toggle-all" data-ref="btn-toggle-all-pages">Deseleccionar todas</button>
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">Tipo de archivo</div>
+            <div class="component-tabs" data-ref="toggle-download-type" data-active="0">
+              <button type="button" class="component-tab is-active active" data-ref="btn-download-type-digital" data-type="digital">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+                <span>Digital</span>
+              </button>
+              <button type="button" class="component-tab" data-ref="btn-download-type-print" data-type="print">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                <span>Impresión</span>
+              </button>
             </div>
-            <div class="collab-download-pages-grid" data-ref="grid-download-pages"></div>
+          </div>
+
+          <div class="tool-sidebar__section collab-download-digital-section" data-ref="section-digital-options">
+            <div class="tool-sidebar__section-title">Opciones adicionales</div>
+            <div class="collab-download-options-list">
+              <label class="collab-download-checkbox-row" data-ref="lbl-compress-pdf">
+                <input class="component-checkbox" data-ref="chk-compress-pdf" type="checkbox" />
+                <div class="collab-download-checkbox-info">
+                  <span class="collab-download-checkbox-title">Comprimir PDF</span>
+                  <span class="collab-download-checkbox-desc">Menor tamaño de archivo para compartir fácil</span>
+                </div>
+              </label>
+              <label class="collab-download-checkbox-row" data-ref="lbl-separate-pages">
+                <input class="component-checkbox" data-ref="chk-separate-pages" type="checkbox" />
+                <div class="collab-download-checkbox-info">
+                  <span class="collab-download-checkbox-title">Descargar páginas como archivos separados</span>
+                  <span class="collab-download-checkbox-desc">Genera un archivo independiente para cada página</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">Seleccionar páginas</div>
+            <div class="component-tabs" data-ref="toggle-download-pages" data-active="0">
+              <button type="button" class="component-tab is-active active" data-ref="btn-download-pages-all" data-mode="all">
+                <span>Todas las páginas</span>
+              </button>
+              <button type="button" class="component-tab" data-ref="btn-download-pages-custom" data-mode="custom">
+                <span>Personalizar</span>
+              </button>
+            </div>
+
+            <div class="collab-download-custom-container is-hidden" data-ref="container-custom-pages">
+              <div class="collab-download-custom-header">
+                <span class="collab-download-custom-count" data-ref="txt-selected-pages-count">${pageCount} de ${pageCount} páginas seleccionadas</span>
+                <button type="button" class="collab-download-toggle-all" data-ref="btn-toggle-all-pages">Deseleccionar todas</button>
+              </div>
+              <div class="collab-download-pages-grid" data-ref="grid-download-pages"></div>
+            </div>
           </div>
         </div>
 
-        <div class="collab-share-actions">
+        <div class="tool-sidebar__footer">
           <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-confirm-download">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             <span>Descargar</span>
@@ -217,7 +224,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           <div class="banner banner--danger is-hidden" data-ref="collab-download-error"></div>
         </div>
       </div>
-    </div>
+    </aside>
   `;
 
   document.body.appendChild(popover);
@@ -231,6 +238,18 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
       menu: accessDropdown.querySelector<HTMLElement>('[data-ref="collab-access-menu"]'),
     });
   }
+
+  const btnShareClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-close"]');
+  const btnShareDownloadClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-close"]');
+
+  btnShareClose?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePopover();
+  });
+  btnShareDownloadClose?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePopover();
+  });
 
   const closePopover = () => {
     dropdownCtrl?.destroy();

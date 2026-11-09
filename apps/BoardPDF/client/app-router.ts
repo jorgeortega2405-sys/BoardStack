@@ -217,9 +217,7 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
         if (window.innerWidth > 768) {
           const drawerMode = internalPath.startsWith('/settings')
             ? 'settings'
-            : internalPath.includes('/workflows') || internalPath.includes('/workflow/')
-              ? 'workflows'
-              : 'help';
+            : 'help';
           toggleDrawer(true, drawerMode);
         }
       }

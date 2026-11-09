@@ -52,7 +52,7 @@ function getActiveHelpSection(raw: string): 'faq' | 'security' | 'privacy' | 'te
 
 function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
-  return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings');
+  return getActiveHelpSection(pathname) !== null || pathname.startsWith('/settings');
 }
 
 function updateSidebarAuthState(sidebar?: HTMLElement): void {
@@ -365,7 +365,7 @@ function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTM
     `;
     showElement(drawerFooter);
     translateElement(drawerFooter);
-    bindNavLink(drawerFooter.querySelector('[data-ref="btn-nav-create-workflow"]'), '/workflows?new=1');
+    bindNavLink(drawerFooter.querySelector('[data-ref="btn-nav-create-workflow"]'), '/workflows');
     renderIcons(drawerFooter);
   }
 

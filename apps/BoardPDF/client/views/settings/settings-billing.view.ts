@@ -21,18 +21,11 @@ async function createBillingView(): Promise<HTMLElement> {
     groupSub?.classList.toggle('is-active');
   });
 
-  const accordionHeaderTokens = container.querySelector<HTMLElement>('[data-ref="accordion-header-tokens"]');
-  const groupTokens = container.querySelector<HTMLElement>('[data-ref="group-ai-tokens"]');
-  accordionHeaderTokens?.addEventListener('click', (e) => {
+  const accordionHeaderUsage = container.querySelector<HTMLElement>('[data-ref="accordion-header-usage"]');
+  const groupUsage = container.querySelector<HTMLElement>('[data-ref="group-resource-usage"]');
+  accordionHeaderUsage?.addEventListener('click', (e) => {
     e.preventDefault();
-    groupTokens?.classList.toggle('is-active');
-  });
-
-  const accordionHeaderStorage = container.querySelector<HTMLElement>('[data-ref="accordion-header-storage"]');
-  const groupStorage = container.querySelector<HTMLElement>('[data-ref="group-storage"]');
-  accordionHeaderStorage?.addEventListener('click', (e) => {
-    e.preventDefault();
-    groupStorage?.classList.toggle('is-active');
+    groupUsage?.classList.toggle('is-active');
   });
 
   const renderSubscriptionPlan = (info: BillingDetailsResponse) => {

@@ -5,6 +5,7 @@ import { navigate } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
 
 let isInitialized = false;
+let isInternalDrag = false;
 let dragCounter = 0;
 let overlayEl: HTMLElement | null = null;
 
@@ -15,7 +16,8 @@ function isToolView(): boolean {
   );
   if (toolEl) return true;
 
-  const path = window.location.pathname.toLowerCase();
+  const rawPath = window.location.pathname.toLowerCase();
+  const path = rawPath.replace(/^\/[a-z]{2,3}(\/|$)/i, '/') || '/';
   if (path.startsWith('/d/') || path === '/d' || path.startsWith('/collaborative-pdf/editor')) return true;
 
   const toolPaths = [
@@ -31,30 +33,52 @@ function isToolView(): boolean {
 }
 
 function hasFiles(e: DragEvent): boolean {
+  if (isInternalDrag) return false;
   if (!e.dataTransfer || !e.dataTransfer.types) return false;
   return Array.from(e.dataTransfer.types).includes('Files');
 }
 
+function getOrCreateOverlay(): HTMLElement {
+  if (overlayEl) return overlayEl;
+
+  overlayEl = document.createElement('div');
+  overlayEl.className = 'global-dropzone-overlay';
+  overlayEl.setAttribute('data-ref', 'global-dropzone-overlay');
+  overlayEl.innerHTML = `
+    <div class="global-dropzone-box" data-ref="global-dropzone-box">
+      <span class="global-dropzone-text" data-ref="global-dropzone-text" data-i18n="common.drop_file_overlay"></span>
+      <span class="global-dropzone-hint" data-ref="global-dropzone-hint" data-i18n="common.drop_file_hint"></span>
+    </div>
+  `;
+  translateElement(overlayEl);
+  return overlayEl;
+}
+
 function showOverlay(): void {
-  if (!overlayEl || isToolView()) return;
+  if (isInternalDrag || isToolView()) return;
+  const overlay = getOrCreateOverlay();
   const targetWrapper = document.querySelector<HTMLElement>('.layout-content .component-wrapper, .component-wrapper');
   if (targetWrapper) {
-    if (overlayEl.parentElement !== targetWrapper) {
-      targetWrapper.appendChild(overlayEl);
+    if (overlay.parentElement !== targetWrapper) {
+      targetWrapper.appendChild(overlay);
     }
   } else {
     const layoutContent = document.querySelector<HTMLElement>('.layout-content');
-    if (layoutContent && overlayEl.parentElement !== layoutContent) {
-      layoutContent.appendChild(overlayEl);
+    if (layoutContent && overlay.parentElement !== layoutContent) {
+      layoutContent.appendChild(overlay);
+    } else if (!overlay.parentElement) {
+      document.body.appendChild(overlay);
     }
   }
-  overlayEl.classList.add('is-active');
+  overlay.classList.add('is-active');
 }
 
 function hideOverlay(): void {
   dragCounter = 0;
   if (overlayEl) {
     overlayEl.classList.remove('is-active');
+    overlayEl.remove();
+    overlayEl = null;
   }
 }
 
@@ -99,28 +123,24 @@ function initGlobalDropzone(): void {
   }
   isInitialized = true;
 
-  overlayEl = document.createElement('div');
-  overlayEl.className = 'global-dropzone-overlay';
-  overlayEl.setAttribute('data-ref', 'global-dropzone-overlay');
-  overlayEl.innerHTML = '<span class="global-dropzone-text" data-ref="global-dropzone-text" data-i18n="common.drop_file_overlay"></span>';
+  window.addEventListener('dragstart', () => {
+    isInternalDrag = true;
+  });
 
-  const initialWrapper = document.querySelector<HTMLElement>('.layout-content .component-wrapper, .component-wrapper');
-  if (initialWrapper) {
-    initialWrapper.appendChild(overlayEl);
-  } else {
-    document.body.appendChild(overlayEl);
-  }
-  translateElement(overlayEl);
+  window.addEventListener('dragend', () => {
+    isInternalDrag = false;
+    hideOverlay();
+  });
 
   window.addEventListener('dragenter', (e: DragEvent) => {
-    if (isToolView() || !hasFiles(e)) return;
+    if (isInternalDrag || isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     dragCounter++;
     showOverlay();
   });
 
   window.addEventListener('dragover', (e: DragEvent) => {
-    if (isToolView() || !hasFiles(e)) {
+    if (isInternalDrag || isToolView() || !hasFiles(e)) {
       if (overlayEl?.classList.contains('is-active')) {
         hideOverlay();
       }
@@ -134,7 +154,7 @@ function initGlobalDropzone(): void {
   });
 
   window.addEventListener('dragleave', (e: DragEvent) => {
-    if (isToolView() || !hasFiles(e)) return;
+    if (isInternalDrag || isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     dragCounter--;
     if (dragCounter <= 0) {
@@ -143,7 +163,7 @@ function initGlobalDropzone(): void {
   });
 
   window.addEventListener('drop', (e: DragEvent) => {
-    if (isToolView() || !hasFiles(e)) return;
+    if (isInternalDrag || isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     hideOverlay();
 

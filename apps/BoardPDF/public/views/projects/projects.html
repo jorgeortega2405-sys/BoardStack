@@ -50,6 +50,9 @@
 <section class="view-section" data-ref="projects-hero-section">
 <div class="component-block" data-ref="projects-hero">
 <div class="view-hero__content projects-hero__header" data-ref="projects-hero-header">
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 projects-hero__back-btn is-hidden" data-ref="btn-folder-back" data-i18n-aria="projects.back_to_projects" aria-label=" ">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+</button>
 <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
 </div>
 <div class="projects-search-wrap" data-ref="projects-search-wrap">
@@ -67,7 +70,7 @@
 <svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
 </button>
 <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
-<div class="menu-panel__list" >
+<div class="menu-panel__list" data-ref="list-filter-type">
 <button type="button" class="menu-item is-active" data-ref="item-type-all" data-type="all">
 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
 <span class="menu-item__text" data-i18n="projects.type_all"></span>
@@ -133,12 +136,6 @@
 </div>
 </div>
 </div>
-<div class="component-tabs is-hidden" data-ref="uploads-filter-tabs">
-<button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all" data-i18n="projects.tab_all"></button>
-<button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images" data-i18n="projects.tab_images"></button>
-<button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs" data-i18n="projects.tab_pdfs"></button>
-</div>
-</div>
 </section>
 <section class="view-section" data-ref="section-documents">
 <div class="projects-section__content" data-ref="content-documents">
@@ -161,7 +158,7 @@
 </section>
 <section class="view-section is-hidden" data-ref="section-uploads">
 <div class="projects-section__content" data-ref="content-uploads">
-<div class="projects-uploads-grid" data-ref="grid-uploads"></div>
+<div class="tools-grid projects-grid" data-ref="grid-uploads"></div>
 <div class="projects-empty is-hidden" data-ref="empty-uploads">
 <div class="projects-empty__icon-box" >
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>

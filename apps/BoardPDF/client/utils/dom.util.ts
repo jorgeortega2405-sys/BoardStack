@@ -791,6 +791,16 @@ function setupToolSidebarModal(options: {
   resolvedBackdrop?.addEventListener('click', handleBackdropClick, { signal });
   document.addEventListener('keydown', handleKeyDown, { signal });
 
+  const handleDocClick = (e: MouseEvent) => {
+    if (!isOpen()) return;
+    const target = e.target as Node;
+    if (resolvedSidebar.contains(target) || resolvedSettingsBtn?.contains(target)) {
+      return;
+    }
+    close();
+  };
+  document.addEventListener('click', handleDocClick, { signal });
+
   resolvedDragZone?.addEventListener('pointerdown', onPointerDown, { signal });
   resolvedDragZone?.addEventListener('pointermove', onPointerMove, { signal });
   resolvedDragZone?.addEventListener('pointerup', onPointerUp, { signal });
@@ -801,6 +811,7 @@ function setupToolSidebarModal(options: {
     destroy: () => {
       close();
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleDocClick);
     },
     isOpen,
     open,
@@ -1052,6 +1063,7 @@ function setupSortableGrid(
   const sortable = new Sortable(container, {
     animation: options.animation !== undefined ? options.animation : 200,
     chosenClass: options.chosenClass || 'pdf-card--chosen',
+    dragClass: 'sortable-drag',
     easing: options.easing || 'cubic-bezier(0.2, 0, 0, 1)',
     filter:
       options.filter ||
