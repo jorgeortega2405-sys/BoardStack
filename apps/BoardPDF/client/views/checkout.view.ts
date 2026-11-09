@@ -16,6 +16,7 @@ export class CheckoutController implements ViewController {
   private currentPlan: 'pro' | 'business' = 'pro';
   private currentStep: 1 | 2 = 1;
   private elements: any = null;
+  private initialQuery?: URLSearchParams;
   private isCardSelected = false;
   private isInitializingGateway = false;
   private isSubmitting = false;
@@ -24,8 +25,9 @@ export class CheckoutController implements ViewController {
   private recurringCycle: 'monthly' | 'yearly' = 'monthly';
   private stripe: any = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, initialQuery?: URLSearchParams) {
     this.container = container;
+    this.initialQuery = initialQuery;
   }
 
   async init(): Promise<void> {
@@ -37,7 +39,7 @@ export class CheckoutController implements ViewController {
 
     this.abortController = new AbortController();
 
-    const params = new URLSearchParams(window.location.search);
+    const params = this.initialQuery || new URLSearchParams(window.location.search);
     const planParam = params.get('plan');
     if (planParam === 'business') {
       this.currentPlan = 'business';
@@ -661,9 +663,9 @@ export class CheckoutController implements ViewController {
   }
 }
 
-export async function createCheckoutView(): Promise<HTMLElement> {
+export async function createCheckoutView(initialQuery?: URLSearchParams): Promise<HTMLElement> {
   const container = await loadTemplate('/views/checkout/checkout.html');
-  const controller = new CheckoutController(container);
+  const controller = new CheckoutController(container, initialQuery);
   await controller.init();
   (container as any).__controller = controller;
   return container;

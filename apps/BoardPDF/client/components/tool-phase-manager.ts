@@ -1,10 +1,11 @@
+import { ToolDropzoneComponent, ToolDropzoneOptions } from './tool-dropzone.component.js';
+import { ToolStatusManager } from './tool-status.component.js';
+import { isLimitErrorMessage, showUpgradeLimitModal } from './upgrade-limit-modal.component.js';
+import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { saveDownloadPayloadAndNavigate, ToolDownloadPayload } from '../services/tool-flow.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
-import { ToolDropzoneComponent, ToolDropzoneOptions } from './tool-dropzone.component.js';
-import { ToolStatusManager } from './tool-status.component.js';
-import { isLimitErrorMessage, showUpgradeLimitModal } from './upgrade-limit-modal.component.js';
 
 export type ToolPhase = 'download' | 'dropzone' | 'processing' | 'workspace';
 
@@ -56,11 +57,19 @@ export class ToolPhaseManager {
 
     this.workspaceElements = Array.from(this.container.children) as HTMLElement[];
     this.setupContainerQueryDelegation();
+    this.setupWorkspaceDragDrop();
 
     if (this.options.dropzone) {
+      const originalOnFilesSelected = this.options.dropzone.onFilesSelected;
       this.dropzoneComponent = new ToolDropzoneComponent({
         ...this.options.dropzone,
         container: this.container,
+        onFilesSelected: async (files: File[]) => {
+          if (!this.validateFilesLimits(files)) return;
+          if (originalOnFilesSelected) {
+            await originalOnFilesSelected(files);
+          }
+        },
       });
       this.dropzoneElement = await this.dropzoneComponent.init();
       this.dropzoneElement.remove();
@@ -108,12 +117,122 @@ export class ToolPhaseManager {
     };
   }
 
+  private setupWorkspaceDragDrop(): void {
+    if (!this.abortController) return;
+    const { signal } = this.abortController;
+    let dragCounter = 0;
+
+    const hasDragFiles = (e: DragEvent): boolean => {
+      if (!e.dataTransfer || !e.dataTransfer.types) return false;
+      return Array.from(e.dataTransfer.types).includes('Files');
+    };
+
+    this.container.addEventListener('dragenter', (e: DragEvent) => {
+      if (!hasDragFiles(e)) return;
+      e.preventDefault();
+      dragCounter++;
+      if (dragCounter === 1) {
+        this.container.classList.add('is-dragover', 'tool-dropzone--active');
+      }
+    }, { signal });
+
+    this.container.addEventListener('dragover', (e: DragEvent) => {
+      if (!hasDragFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+      if (!this.container.classList.contains('is-dragover')) {
+        this.container.classList.add('is-dragover', 'tool-dropzone--active');
+      }
+    }, { signal });
+
+    this.container.addEventListener('dragleave', (e: DragEvent) => {
+      if (!hasDragFiles(e)) return;
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        this.container.classList.remove('is-dragover', 'tool-dropzone--active');
+      }
+    }, { signal });
+
+    this.container.addEventListener('drop', (e: DragEvent) => {
+      if (!hasDragFiles(e)) return;
+      e.preventDefault();
+      dragCounter = 0;
+      this.container.classList.remove('is-dragover', 'tool-dropzone--active');
+
+      const files = Array.from(e.dataTransfer?.files || []);
+      if (files.length === 0) return;
+      if (!this.validateFilesLimits(files)) return;
+
+      const controller = (this.container as any)?.__controller;
+      if (controller && typeof controller.handleFilesAdded === 'function') {
+        void controller.handleFilesAdded(files);
+        return;
+      }
+      if (controller && typeof controller.handleFileSelected === 'function') {
+        void controller.handleFileSelected(files[0]);
+        return;
+      }
+      if (this.options.dropzone?.onFilesSelected) {
+        void this.options.dropzone.onFilesSelected(files);
+      }
+    }, { signal });
+  }
+
+  public validateFilesLimits(incomingFiles: File[]): boolean {
+    if (!this.options.toolId || incomingFiles.length === 0) return true;
+    const limits = getCurrentUserToolLimits(this.options.toolId);
+
+    if (limits.maxFiles && incomingFiles.length > limits.maxFiles) {
+      showUpgradeLimitModal({
+        currentCount: incomingFiles.length,
+        currentLimit: limits.maxFiles,
+        toolId: this.options.toolId,
+        toolName: this.options.toolName,
+        type: 'files_count',
+      });
+      return false;
+    }
+
+    for (const file of incomingFiles) {
+      const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
+      if (file.size > maxBytes) {
+        showUpgradeLimitModal({
+          currentLimit: limits.maxFileSizeMB,
+          fileName: file.name,
+          toolId: this.options.toolId,
+          toolName: this.options.toolName,
+          type: 'file_size',
+        });
+        return false;
+      }
+    }
+
+    const totalBytes = incomingFiles.reduce((acc, f) => acc + f.size, 0);
+    const maxTotalBytes = limits.maxTotalSizeMB * 1024 * 1024;
+    if (totalBytes > maxTotalBytes) {
+      showUpgradeLimitModal({
+        currentLimit: limits.maxTotalSizeMB,
+        toolId: this.options.toolId,
+        toolName: this.options.toolName,
+        type: 'total_size',
+      });
+      return false;
+    }
+
+    return true;
+  }
+
   public getPhase(): ToolPhase {
     return this.currentPhase;
   }
 
   public setPhase(phase: ToolPhase): void {
     this.currentPhase = phase;
+    this.container.classList.remove('is-dragover', 'tool-dropzone--active');
 
     if (phase === 'dropzone') {
       this.statusManager.hide();
@@ -217,7 +336,7 @@ export class ToolPhaseManager {
     const rawMessage = typeof options === 'string' ? options : (options?.description || options?.message || options?.desc || '');
     if (isLimitErrorMessage(rawMessage)) {
       showUpgradeLimitModal({
-        currentLimit: 25,
+        toolId: this.options.toolId,
         toolName: this.options.toolName,
         type: 'files_count',
       });
@@ -302,6 +421,7 @@ export class ToolPhaseManager {
   }
 
   public destroy(): void {
+    this.container.classList.remove('is-dragover', 'tool-dropzone--active');
     if (this.originalQuerySelector) {
       this.container.querySelector = this.originalQuerySelector as any;
       this.originalQuerySelector = null;

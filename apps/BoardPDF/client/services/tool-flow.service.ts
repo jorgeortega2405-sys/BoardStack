@@ -83,6 +83,7 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
         showUpgradeLimitModal({
           currentLimit: limits.maxFileSizeMB,
           fileName: file.name,
+          toolId,
           toolName: toolId,
           type: 'file_size',
         });
@@ -105,6 +106,7 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
       showUpgradeLimitModal({
         currentCount: rawFiles.length,
         currentLimit: limits.maxFiles,
+        toolId,
         toolName: toolId,
         type: 'files_count',
       });
@@ -117,6 +119,7 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
         showUpgradeLimitModal({
           currentLimit: limits.maxFileSizeMB,
           fileName: file.name,
+          toolId,
           toolName: toolId,
           type: 'file_size',
         });
@@ -129,6 +132,7 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
     if (totalBatchBytes > maxTotalBytes) {
       showUpgradeLimitModal({
         currentLimit: limits.maxTotalSizeMB,
+        toolId,
         toolName: toolId,
         type: 'total_size',
       });

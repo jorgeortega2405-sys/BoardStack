@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
@@ -216,7 +217,13 @@ export class RedactPdfController implements ViewController {
     const limits = getCurrentUserToolLimits('redact-pdf');
     const maxSizeBytes = limits.maxFileSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      this.showError(`El archivo supera el límite de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos de mayor tamaño.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'redact-pdf',
+        toolName: 'Redactar PDF',
+        type: 'file_size',
+      });
       return;
     }
 

@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
@@ -278,7 +279,13 @@ export class TranslatePdfViewController implements ViewController {
 
     const limits = getCurrentUserToolLimits('translate-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo PDF excede el límite máximo de ${limits.maxFileSizeMB} MB.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'translate-pdf',
+        toolName: 'Traducir PDF',
+        type: 'file_size',
+      });
       return;
     }
 

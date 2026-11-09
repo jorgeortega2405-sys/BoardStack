@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
@@ -109,7 +110,13 @@ export class PdfToMarkdownController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('pdf-to-markdown');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo excede el tamaño máximo permitido (${limits.maxFileSizeMB} MB).`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'pdf-to-markdown',
+        toolName: 'PDF a Markdown',
+        type: 'file_size',
+      });
       return;
     }
 

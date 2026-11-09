@@ -1246,8 +1246,7 @@ html, body {
    Component View Layout (Generic Full-Height View Layout)
    ========================================================================== */
 
-.component-view-layout,
-.purchases-wrapper {
+.component-view-layout {
   height: calc(100vh - 6px) !important;
   height: calc(100dvh - 6px) !important;
   max-height: calc(100vh - 6px) !important;
@@ -1255,8 +1254,7 @@ html, body {
   overflow: hidden !important;
 }
 
-.component-view-layout__body,
-.purchases-body {
+.component-view-layout__body {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1268,8 +1266,7 @@ html, body {
   overflow: hidden;
 }
 
-.component-view-layout .component-block,
-.purchases-card {
+.component-view-layout .component-block {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1286,8 +1283,7 @@ html, body {
   padding: 8px;
 }
 
-.component-block__header,
-.purchases-card__header {
+.component-block__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1298,8 +1294,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.component-title-badge,
-.purchases-title-badge {
+.component-title-badge {
   display: inline-flex;
   align-items: center;
   height: 40px;
@@ -1311,8 +1306,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.component-title-badge__text,
-.purchases-title-text {
+.component-title-badge__text {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary, #0f172a);
@@ -1322,16 +1316,14 @@ html, body {
   white-space: nowrap;
 }
 
-.component-block__actions,
-.purchases-header-actions {
+.component-block__actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
 }
 
-.component-floating-search,
-.purchases-search-toolbar {
+.component-floating-search {
   position: absolute;
   top: 56px;
   left: 0;
@@ -1343,13 +1335,11 @@ html, body {
   animation: slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.component-floating-search.is-hidden,
-.purchases-search-toolbar.is-hidden {
+.component-floating-search.is-hidden {
   display: none;
 }
 
-.component-floating-search__inner,
-.purchases-search-toolbar__inner {
+.component-floating-search__inner {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1362,17 +1352,7 @@ html, body {
   max-width: 440px;
 }
 
-.purchases-search-toolbar__close {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-}
-
-.purchases-search-toolbar__close:hover {
-  color: var(--text-primary);
-}
-
-.component-block__scrollable,
-.purchases-scrollable {
+.component-block__scrollable {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
@@ -1384,16 +1364,14 @@ html, body {
   box-sizing: border-box;
 }
 
-.component-block__scrollable::after,
-.purchases-scrollable::after {
+.component-block__scrollable::after {
   display: none !important;
   content: none !important;
   height: 0 !important;
   min-height: 0 !important;
 }
 
-.component-block__scrollable .component-table-wrapper,
-.purchases-table-wrapper.component-table-wrapper {
+.component-block__scrollable .component-table-wrapper {
   background-color: transparent;
   border: none !important;
   border-radius: 0 !important;
@@ -1408,15 +1386,13 @@ html, body {
   overflow: visible;
 }
 
-.component-block__scrollable .component-table,
-.purchases-table-wrapper .component-table {
+.component-block__scrollable .component-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.component-block__scrollable .component-table thead th,
-.purchases-table-wrapper .component-table thead th {
+.component-block__scrollable .component-table thead th {
   position: sticky;
   top: 0;
   background-color: var(--bg-surface, #ffffff);
@@ -1425,29 +1401,24 @@ html, body {
   border-bottom: 1px solid var(--border-subtle, #e2e8f0);
 }
 
-.component-block__scrollable .component-table tbody tr,
-.purchases-table-wrapper .component-table tbody tr {
+.component-block__scrollable .component-table tbody tr {
   transition: background-color 0.15s ease;
 }
 
-.component-block__scrollable .component-table tbody tr:hover,
-.purchases-table-wrapper .component-table tbody tr:hover {
+.component-block__scrollable .component-table tbody tr:hover {
   background-color: var(--bg-hover, #f8fafc);
 }
 
-.component-block__scrollable .component-table tbody tr.is-selected,
-.purchases-table-wrapper .component-table tbody tr.is-selected {
+.component-block__scrollable .component-table tbody tr.is-selected {
   background-color: var(--bg-selected, #f1f5f9);
 }
 
-.component-block__scrollable .component-table td,
-.purchases-table-wrapper .component-table td {
+.component-block__scrollable .component-table td {
   padding: 12px 16px;
   vertical-align: middle;
 }
 
-.component-block__scrollable .component-badge,
-.purchases-table-wrapper .component-badge {
+.component-block__scrollable .component-badge {
   font-size: 12px;
   font-weight: 500;
   border: 1px solid var(--border-subtle, #e2e8f0);

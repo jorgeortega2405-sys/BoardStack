@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
@@ -255,7 +256,13 @@ export class PdfConverterController implements ViewController {
   private handleFileSelected(file: File): void {
     const limits = getCurrentUserToolLimits('pdf-converter');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      showToast(`El archivo excede el tamaño máximo permitido (${limits.maxFileSizeMB} MB).`, 'danger');
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'pdf-converter',
+        toolName: 'Conversor de PDF',
+        type: 'file_size',
+      });
       return;
     }
 

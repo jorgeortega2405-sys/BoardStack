@@ -667,6 +667,10 @@
 }
 
 .tool-workspace__canvas.is-dragover,
+.tool-layout-wrapper.is-dragover,
+.tool-layout-wrapper.tool-dropzone--active,
+.tool-layout__workspace.is-dragover,
+.tool-layout__workspace.tool-dropzone--active,
 .tool-workspace__canvas.tool-dropzone--active,
 .tool-hero-dropzone.is-dragover,
 .tool-hero-dropzone.tool-dropzone--active,
@@ -675,6 +679,10 @@
   position: relative;
 }
 
+.tool-layout-wrapper.is-dragover::before,
+.tool-layout-wrapper.tool-dropzone--active::before,
+.tool-layout__workspace.is-dragover::before,
+.tool-layout__workspace.tool-dropzone--active::before,
 .tool-workspace__canvas.is-dragover::before,
 .tool-workspace__canvas.tool-dropzone--active::before,
 .tool-hero-dropzone.is-dragover::before,
@@ -684,7 +692,7 @@
   animation: dropzone-overlay-fade 0.15s ease forwards;
   background-color: rgba(0, 0, 0, 0.72);
   border: none;
-  border-radius: 0;
+  border-radius: inherit;
   box-sizing: border-box;
   content: '';
   height: 100%;
@@ -695,6 +703,10 @@
   z-index: 100;
 }
 
+.tool-layout-wrapper.is-dragover::after,
+.tool-layout-wrapper.tool-dropzone--active::after,
+.tool-layout__workspace.is-dragover::after,
+.tool-layout__workspace.tool-dropzone--active::after,
 .tool-workspace__canvas.is-dragover::after,
 .tool-workspace__canvas.tool-dropzone--active::after,
 .tool-hero-dropzone.is-dragover::after,
@@ -720,6 +732,14 @@
   z-index: 101;
 }
 
+.tool-layout-wrapper.is-dragover .tool-hero-dropzone::before,
+.tool-layout-wrapper.is-dragover .tool-hero-dropzone::after,
+.tool-layout-wrapper.tool-dropzone--active .tool-hero-dropzone::before,
+.tool-layout-wrapper.tool-dropzone--active .tool-hero-dropzone::after,
+.tool-layout-wrapper.is-dragover .tool-dropzone::before,
+.tool-layout-wrapper.is-dragover .tool-dropzone::after,
+.tool-layout-wrapper.tool-dropzone--active .tool-dropzone::before,
+.tool-layout-wrapper.tool-dropzone--active .tool-dropzone::after,
 .tool-workspace__canvas.is-dragover .tool-hero-dropzone::before,
 .tool-workspace__canvas.is-dragover .tool-hero-dropzone::after,
 .tool-workspace__canvas.tool-dropzone--active .tool-hero-dropzone::before,

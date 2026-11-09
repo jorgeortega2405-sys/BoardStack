@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
@@ -142,7 +143,13 @@ export class ProtectPdfController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('protect-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'protect-pdf',
+        toolName: 'Proteger PDF',
+        type: 'file_size',
+      });
       return;
     }
 

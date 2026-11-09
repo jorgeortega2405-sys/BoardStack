@@ -141,6 +141,14 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   const navId = ++currentNavigation;
   let nextViewElement: HTMLElement | null = null;
 
+  if (options?.updateHistory) {
+    if (options.updateHistory.replace) {
+      window.history.replaceState({}, '', options.updateHistory.fullUrl);
+    } else {
+      window.history.pushState({}, '', options.updateHistory.fullUrl);
+    }
+  }
+
   try {
     if (matched) {
       nextViewElement = await matched.route.handler({
@@ -193,14 +201,6 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   activeViewElement = nextViewElement;
   translateElement(nextViewElement);
   layoutContent.appendChild(nextViewElement);
-
-  if (options?.updateHistory) {
-    if (options.updateHistory.replace) {
-      window.history.replaceState({}, '', options.updateHistory.fullUrl);
-    } else {
-      window.history.pushState({}, '', options.updateHistory.fullUrl);
-    }
-  }
 
   const internalPath = matched ? matched.internalPath : path;
   const currentSidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');

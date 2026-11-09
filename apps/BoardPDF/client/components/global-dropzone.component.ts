@@ -8,15 +8,47 @@ let isInitialized = false;
 let dragCounter = 0;
 let overlayEl: HTMLElement | null = null;
 
+function isToolView(): boolean {
+  if (typeof document === 'undefined') return false;
+  const toolEl = document.querySelector(
+    '.tool-layout-wrapper, .tool-layout, .tool-workspace, [data-ref="tool-workspace"], .tool-hero-dropzone, .collaborative-editor-wrapper'
+  );
+  if (toolEl) return true;
+
+  const path = window.location.pathname.toLowerCase();
+  if (path.startsWith('/d/') || path === '/d' || path.startsWith('/collaborative-pdf/editor')) return true;
+
+  const toolPaths = [
+    '/merge-pdf', '/split-pdf', '/remove-pdf-pages', '/extract-pdf-pages', '/organize-pdf',
+    '/compress-pdf', '/repair-pdf', '/ocr-pdf', '/jpg-to-pdf', '/word-to-pdf',
+    '/powerpoint-to-pdf', '/excel-to-pdf', '/html-to-pdf', '/pdf-to-jpg', '/pdf-to-word',
+    '/pdf-to-powerpoint', '/pdf-to-excel', '/pdf-to-pdfa', '/rotate-pdf', '/page-numbers',
+    '/add-page-numbers', '/watermark-pdf', '/add-watermark', '/crop-pdf', '/edit-pdf',
+    '/unlock-pdf', '/protect-pdf', '/redact-pdf', '/compare-pdf', '/summarize-pdf',
+    '/translate-pdf', '/pdf-to-markdown', '/to-pdf'
+  ];
+  return toolPaths.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
 function hasFiles(e: DragEvent): boolean {
   if (!e.dataTransfer || !e.dataTransfer.types) return false;
   return Array.from(e.dataTransfer.types).includes('Files');
 }
 
 function showOverlay(): void {
-  if (overlayEl) {
-    overlayEl.classList.add('is-active');
+  if (!overlayEl || isToolView()) return;
+  const targetWrapper = document.querySelector<HTMLElement>('.layout-content .component-wrapper, .component-wrapper');
+  if (targetWrapper) {
+    if (overlayEl.parentElement !== targetWrapper) {
+      targetWrapper.appendChild(overlayEl);
+    }
+  } else {
+    const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+    if (layoutContent && overlayEl.parentElement !== layoutContent) {
+      layoutContent.appendChild(overlayEl);
+    }
   }
+  overlayEl.classList.add('is-active');
 }
 
 function hideOverlay(): void {
@@ -70,32 +102,30 @@ export function initGlobalDropzone(): void {
   overlayEl = document.createElement('div');
   overlayEl.className = 'global-dropzone-overlay';
   overlayEl.setAttribute('data-ref', 'global-dropzone-overlay');
-  overlayEl.innerHTML = `
-    <div class="global-dropzone-box" data-ref="global-dropzone-box">
-      <div class="global-dropzone-icon" data-ref="global-dropzone-icon">
-        <svg class="component-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-      </div>
-      <h3 class="global-dropzone-title" data-ref="global-dropzone-title" data-i18n="common.drop_file_overlay"></h3>
-      <p class="global-dropzone-desc" data-ref="global-dropzone-desc" data-i18n="common.drop_file_hint"></p>
-    </div>
-  `;
+  overlayEl.innerHTML = '<span class="global-dropzone-text" data-ref="global-dropzone-text" data-i18n="common.drop_file_overlay"></span>';
 
-  document.body.appendChild(overlayEl);
+  const initialWrapper = document.querySelector<HTMLElement>('.layout-content .component-wrapper, .component-wrapper');
+  if (initialWrapper) {
+    initialWrapper.appendChild(overlayEl);
+  } else {
+    document.body.appendChild(overlayEl);
+  }
   translateElement(overlayEl);
 
   window.addEventListener('dragenter', (e: DragEvent) => {
-    if (!hasFiles(e)) return;
+    if (isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     dragCounter++;
     showOverlay();
   });
 
   window.addEventListener('dragover', (e: DragEvent) => {
-    if (!hasFiles(e)) return;
+    if (isToolView() || !hasFiles(e)) {
+      if (overlayEl?.classList.contains('is-active')) {
+        hideOverlay();
+      }
+      return;
+    }
     e.preventDefault();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
@@ -104,7 +134,7 @@ export function initGlobalDropzone(): void {
   });
 
   window.addEventListener('dragleave', (e: DragEvent) => {
-    if (!hasFiles(e)) return;
+    if (isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     dragCounter--;
     if (dragCounter <= 0) {
@@ -113,7 +143,7 @@ export function initGlobalDropzone(): void {
   });
 
   window.addEventListener('drop', (e: DragEvent) => {
-    if (!hasFiles(e)) return;
+    if (isToolView() || !hasFiles(e)) return;
     e.preventDefault();
     hideOverlay();
 

@@ -1,4 +1,5 @@
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormApi } from '../../../services/api.service.js';
@@ -60,7 +61,13 @@ export class EditPdfController implements ViewController {
 
     const limits = getCurrentUserToolLimits('edit-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      showToast(`El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`, 'error');
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'edit-pdf',
+        toolName: 'Editar PDF',
+        type: 'file_size',
+      });
       return;
     }
 

@@ -832,6 +832,7 @@ export function bindFileDropzone(options: {
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounter++;
     if (dragCounter === 1) {
       addActive();
@@ -840,6 +841,7 @@ export function bindFileDropzone(options: {
 
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'copy';
     }
@@ -847,6 +849,7 @@ export function bindFileDropzone(options: {
 
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounter--;
 
     const rect = dropTarget.getBoundingClientRect();
@@ -868,6 +871,7 @@ export function bindFileDropzone(options: {
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     removeActive();
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {

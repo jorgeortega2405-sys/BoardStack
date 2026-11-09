@@ -1,5 +1,6 @@
 import { openModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
+import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
@@ -122,7 +123,13 @@ export class UnlockPdfController implements ViewController {
     this.hideError();
     const limits = getCurrentUserToolLimits('unlock-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      this.showError(`El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`);
+      showUpgradeLimitModal({
+        currentLimit: limits.maxFileSizeMB,
+        fileName: file.name,
+        toolId: 'unlock-pdf',
+        toolName: 'Desbloquear PDF',
+        type: 'file_size',
+      });
       return;
     }
 
