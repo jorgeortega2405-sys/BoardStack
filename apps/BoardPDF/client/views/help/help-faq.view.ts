@@ -203,7 +203,7 @@ export class HelpFaqController implements ViewController {
   }
 
   private bindEvents(): void {
-    const pills = this.container.querySelectorAll<HTMLButtonElement>('.category-pill');
+    const pills = this.container.querySelectorAll<HTMLButtonElement>('[data-category]');
     pills.forEach((pill) => {
       pill.addEventListener(
         'click',

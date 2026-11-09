@@ -8,6 +8,7 @@ import { requestLogger } from './middlewares/request-logger.middleware.js';
 import { originProtection, securityHeaders } from './middlewares/security-headers.middleware.js';
 import aiTokenRoutes from './routes/ai-token.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 import downloadRoutes from './routes/download.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
@@ -349,6 +350,7 @@ async function startServer(): Promise<void> {
 
   app.use('/api', aiTokenRoutes);
   app.use('/api', authRoutes);
+  app.use('/api', contactRoutes);
   app.use('/api', downloadRoutes);
   app.use('/api', settingsRoutes);
   app.use('/api', ssoRoutes);

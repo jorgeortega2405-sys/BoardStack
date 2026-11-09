@@ -4,7 +4,7 @@
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="projects-scrollable">
     <div class="view-body projects-body" data-ref="projects-container">
       <header class="view-section view-section--header" data-ref="header-section">
-        <div class="header-bar projects-header-bar" data-ref="header-bar">
+        <div class="component-block" data-ref="header-bar">
           <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
             <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
           </a>
@@ -54,7 +54,7 @@
       </header>
 
       <section class="view-section view-section--hero" data-ref="projects-hero-section">
-        <div class="view-hero projects-hero" data-ref="projects-hero">
+        <div class="component-block" data-ref="projects-hero">
           <div class="view-hero__content projects-hero__header" data-ref="projects-hero-header">
             <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
           </div>
@@ -70,9 +70,9 @@
 
             <div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
               <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
-                <button type="button" class="category-pill" data-ref="btn-filter-type">
+                <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-type">
                   <span data-ref="label-filter-type" data-i18n="projects.filter_type"></span>
-                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  <svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
                   <div class="menu-panel__list">
@@ -97,9 +97,9 @@
               </div>
 
               <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
-                <button type="button" class="category-pill" data-ref="btn-filter-category">
+                <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-category">
                   <span data-ref="label-filter-category" data-i18n="projects.filter_category"></span>
-                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  <svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-category">
                   <div class="menu-panel__list" data-ref="list-filter-category">
@@ -116,9 +116,9 @@
               </div>
 
               <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-date">
-                <button type="button" class="category-pill" data-ref="btn-filter-date">
+                <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-date">
                   <span data-ref="label-filter-date" data-i18n="projects.filter_date"></span>
-                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  <svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
                   <div class="menu-panel__list">

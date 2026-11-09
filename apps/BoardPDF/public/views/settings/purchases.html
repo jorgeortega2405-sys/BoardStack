@@ -1,59 +1,56 @@
-<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="purchases-wrapper">
-  <div class="component-bottom component-bottom--no-padding purchases-container" data-ref="component-bottom">
-    <div class="home-floating-top home-floating-top--gradient" data-ref="purchases-header">
-      <div class="home-floating-top__left" data-ref="purchases-header-left">
-        <h1 class="section-floating-title" data-ref="purchases-title" data-i18n="settings.purchases.title"></h1>
-      </div>
+<div class="component-wrapper component-wrapper--full view-wrapper component-view-layout" data-ref="purchases-wrapper">
+  <div class="component-view-layout__body" data-ref="purchases-body">
+    <div class="component-block" data-ref="purchases-card">
+      <div class="component-block__header" data-ref="purchases-header">
+        <div class="component-title-badge" data-ref="purchases-title-badge">
+          <h1 class="component-title-badge__text" data-ref="purchases-title" data-i18n="settings.purchases.title"></h1>
+        </div>
 
-      <div class="home-floating-top__right" data-ref="purchases-header-right">
-        <div class="home-floating-actions" data-ref="purchases-header-actions">
-          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-toggle-search" data-i18n-aria="common.search">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </button>
-
-          <button type="button" class="component-button component-button--h34 is-hidden" data-ref="btn-action-download-invoice">
+        <div class="component-block__actions" data-ref="purchases-header-actions">
+          <button type="button" class="component-button component-button--h40 is-hidden" data-ref="btn-action-download-invoice">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             <span data-ref="btn-download-text" data-i18n="settings.purchases.btn_download_invoice"></span>
           </button>
-        </div>
-      </div>
-    </div>
 
-    <div class="purchases-search-toolbar is-hidden" data-ref="purchases-search-toolbar">
-      <div class="purchases-search-toolbar__inner" data-ref="purchases-search-inner">
-        <div class="component-search component-search--floating" data-ref="search-box">
-          <div class="component-search__icon" data-ref="search-icon">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-i18n-aria="common.search">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </div>
-          <div class="component-search__input-box" data-ref="search-input-box">
-            <input class="component-search__input" data-ref="purchases-search-input" data-i18n-placeholder="settings.purchases.search_placeholder" type="text" placeholder=" " maxlength="100" autocomplete="off" />
-          </div>
-          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="common.clear_search">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
-        <button type="button" class="component-button component-button--h34 component-button--icon-only purchases-search-toolbar__close" data-ref="btn-close-search" data-i18n-aria="common.close">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
       </div>
-    </div>
 
-    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable purchases-scrollable" data-ref="purchases-scrollable">
-      <div class="component-table-wrapper purchases-table-wrapper" data-ref="purchases-table-wrapper">
-        <table class="component-table" data-ref="purchases-table">
-          <thead class="component-table__head" data-ref="purchases-thead">
-            <tr>
-              <th class="component-table__cell--pl20" data-ref="th-plan" data-i18n="settings.purchases.col_plan"></th>
-              <th data-ref="th-period" data-i18n="settings.purchases.col_period"></th>
-              <th data-ref="th-amount" data-i18n="settings.purchases.col_amount"></th>
-              <th data-ref="th-status" data-i18n="settings.purchases.col_status"></th>
-              <th data-ref="th-date" data-i18n="settings.purchases.col_date"></th>
-              <th class="component-table__cell--pr20" data-ref="th-reference" data-i18n="settings.purchases.col_reference"></th>
-            </tr>
-          </thead>
-          <tbody class="component-table__body" data-ref="purchases-tbody">
-          </tbody>
-        </table>
+      <div class="component-floating-search is-hidden" data-ref="purchases-search-toolbar">
+        <div class="component-floating-search__inner" data-ref="purchases-search-inner">
+          <div class="component-search component-search--floating" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="purchases-search-input" data-i18n-placeholder="settings.purchases.search_placeholder" type="text" placeholder=" " maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="common.clear_search">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-block__scrollable layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="purchases-scrollable">
+        <div class="component-table-wrapper" data-ref="purchases-table-wrapper">
+          <table class="component-table" data-ref="purchases-table">
+            <thead class="component-table__head" data-ref="purchases-thead">
+              <tr>
+                <th class="component-table__cell--pl20" data-ref="th-plan" data-i18n="settings.purchases.col_plan"></th>
+                <th data-ref="th-period" data-i18n="settings.purchases.col_period"></th>
+                <th data-ref="th-amount" data-i18n="settings.purchases.col_amount"></th>
+                <th data-ref="th-status" data-i18n="settings.purchases.col_status"></th>
+                <th data-ref="th-date" data-i18n="settings.purchases.col_date"></th>
+                <th class="component-table__cell--pr20" data-ref="th-reference" data-i18n="settings.purchases.col_reference"></th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="purchases-tbody">
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

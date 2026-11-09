@@ -812,7 +812,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: 8px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-surface);
   gap: 8px;
@@ -1242,73 +1242,124 @@ html, body {
   cursor: pointer;
 }
 
-.home-floating-top__left,
-.home-floating-top__right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* ==========================================================================
+   Component View Layout (Generic Full-Height View Layout)
+   ========================================================================== */
+
+.component-view-layout,
+.purchases-wrapper {
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+  overflow: hidden !important;
 }
 
-.section-floating-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.2px;
-  line-height: 1.2;
-}
-
-.home-floating-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Purchases View and Floating Toolbar */
-
-.purchases-container {
+.component-view-layout__body,
+.purchases-body {
   position: relative;
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
+  min-height: 0;
+  padding: 18px;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
+.component-view-layout .component-block,
+.purchases-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.component-block__header,
+.purchases-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 48px;
+  padding: 0 8px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.component-title-badge,
+.purchases-title-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+  box-sizing: border-box;
+}
+
+.component-title-badge__text,
+.purchases-title-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  margin: 0;
+  letter-spacing: -0.2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.component-block__actions,
+.purchases-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.component-floating-search,
 .purchases-search-toolbar {
   position: absolute;
-  top: 64px;
+  top: 56px;
   left: 0;
   right: 0;
+  z-index: 30;
   display: flex;
   justify-content: center;
-  z-index: 30;
-  padding: 0 16px;
   box-sizing: border-box;
   animation: slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.component-floating-search.is-hidden,
 .purchases-search-toolbar.is-hidden {
   display: none;
 }
 
+.component-floating-search__inner,
 .purchases-search-toolbar__inner {
   display: flex;
   align-items: center;
   gap: 8px;
   background-color: var(--bg-surface, #ffffff);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: var(--radius-xl, 12px);
+  border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   padding: 6px 10px;
   width: 100%;
   max-width: 440px;
-}
-
-.component-search--floating {
-  flex: 1 1 auto;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
 }
 
 .purchases-search-toolbar__close {
@@ -1320,15 +1371,89 @@ html, body {
   color: var(--text-primary);
 }
 
+.component-block__scrollable,
 .purchases-scrollable {
   flex: 1 1 auto;
-  padding: 24px;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  overflow: auto;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.purchases-table-wrapper {
+.component-block__scrollable::after,
+.purchases-scrollable::after {
+  display: none !important;
+  content: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+.component-block__scrollable .component-table-wrapper,
+.purchases-table-wrapper.component-table-wrapper {
+  background-color: transparent;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   flex: 1 1 auto;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.component-block__scrollable .component-table,
+.purchases-table-wrapper .component-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.component-block__scrollable .component-table thead th,
+.purchases-table-wrapper .component-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-surface, #ffffff);
+  z-index: 10;
+  border-top: 1px solid var(--border-subtle, #e2e8f0);
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+}
+
+.component-block__scrollable .component-table tbody tr,
+.purchases-table-wrapper .component-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.component-block__scrollable .component-table tbody tr:hover,
+.purchases-table-wrapper .component-table tbody tr:hover {
+  background-color: var(--bg-hover, #f8fafc);
+}
+
+.component-block__scrollable .component-table tbody tr.is-selected,
+.purchases-table-wrapper .component-table tbody tr.is-selected {
+  background-color: var(--bg-selected, #f1f5f9);
+}
+
+.component-block__scrollable .component-table td,
+.purchases-table-wrapper .component-table td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.component-block__scrollable .component-badge,
+.purchases-table-wrapper .component-badge {
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  background-color: transparent;
+  color: var(--text-primary);
+  user-select: none;
 }
 
 .component-table__cell--pl20 {
@@ -1337,41 +1462,6 @@ html, body {
 
 .component-table__cell--pr20 {
   padding-right: 20px !important;
-}
-
-.purchases-plan-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.purchases-star-icon {
-  color: #f59e0b;
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-}
-
-.purchases-plan-name {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.purchases-text-secondary {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.purchases-text-ref {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--text-tertiary, #9ca3af);
-}
-
-.purchases-currency {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
 }
 
 @keyframes slideDownFade {

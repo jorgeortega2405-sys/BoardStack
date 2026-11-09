@@ -17,7 +17,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   const searchInput = container.querySelector<HTMLInputElement>('[data-ref="purchases-search-input"]');
   const btnClearSearch = container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
   const btnToggleSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
-  const btnCloseSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-close-search"]');
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="purchases-search-toolbar"]');
   const btnActionDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-action-download-invoice"]');
 
@@ -52,11 +51,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
       renderRows(allPurchases);
     }
   };
-
-  btnCloseSearch?.addEventListener('click', (e) => {
-    e.preventDefault();
-    hideSearchToolbar();
-  });
 
   container.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Escape' && searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
@@ -204,15 +198,17 @@ export async function createPurchasesView(): Promise<HTMLElement> {
         } catch (_) {}
       }
 
-      const statusText = p.status === 'completed'
-        ? t('settings.purchases.status_completed') || 'Completado'
-        : t(`settings.purchases.status_${p.status}`) || p.status;
-
-      const statusBadgeClass = p.status === 'completed'
-        ? 'component-badge--success'
-        : p.status === 'pending'
-          ? 'component-badge--warning'
-          : 'component-badge--neutral';
+      const statusKey = `settings.purchases.status_${p.status}`;
+      const statusTrans = t(statusKey);
+      const statusMap: Record<string, string> = {
+        active: 'Activo',
+        cancelled: 'Cancelado',
+        completed: 'Completado',
+        failed: 'Fallido',
+        pending: 'Pendiente',
+        refunded: 'Reembolsado',
+      };
+      const statusText = statusTrans !== statusKey ? statusTrans : (statusMap[p.status || ''] || p.status || '');
 
       const refId = String(
         p.stripe_subscription_id ||
@@ -224,25 +220,22 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 
       row.innerHTML = `
         <td class="component-table__cell component-table__cell--pl20" data-ref="cell-plan-${p.id}">
-          <div class="purchases-plan-cell">
-            <svg class="component-icon purchases-star-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
-            <span class="purchases-plan-name" data-ref="text-plan-${p.id}">BoardPDF ${escapeHtml(planName)}</span>
-          </div>
+          <span class="component-badge component-badge--sm" data-ref="text-plan-${p.id}">BoardPDF ${escapeHtml(planName)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-period-${p.id}">
-          <span class="purchases-text-secondary">${escapeHtml(periodName)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-period-${p.id}">${escapeHtml(periodName)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-amount-${p.id}">
-          <span class="purchases-plan-name">$${escapeHtml(amount)} <small class="purchases-currency">${escapeHtml(currency)}</small></span>
+          <span class="component-badge component-badge--sm" data-ref="text-amount-${p.id}">$${escapeHtml(amount)} ${escapeHtml(currency)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-status-${p.id}">
-          <span class="component-badge component-badge--sm ${statusBadgeClass}">${escapeHtml(statusText || '')}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-status-${p.id}">${escapeHtml(statusText || '')}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-date-${p.id}">
-          <span class="purchases-text-secondary">${escapeHtml(dateFormatted)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-date-${p.id}">${escapeHtml(dateFormatted)}</span>
         </td>
         <td class="component-table__cell component-table__cell--pr20" data-ref="cell-ref-${p.id}">
-          <span class="purchases-text-ref" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-ref-${p.id}" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
         </td>
       `;
 

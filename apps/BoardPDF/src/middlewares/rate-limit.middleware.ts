@@ -418,3 +418,12 @@ export const paymentLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
+export const contactLimiter = createRateLimiter({
+  keyGenerator: getClientIp,
+  max: 6,
+  message: 'Has enviado demasiados mensajes de contacto. Por favor espera unos minutos antes de intentar de nuevo.',
+  prefix: 'contact_submit',
+  windowMs: 15 * 60 * 1000,
+});
+
+

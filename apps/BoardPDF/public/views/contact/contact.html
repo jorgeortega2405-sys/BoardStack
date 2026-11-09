@@ -3,7 +3,7 @@
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="contact-scrollable">
     <div class="view-body" data-ref="contact-view">
       <header class="view-section view-section--header" data-ref="header-section">
-        <div class="header-bar" data-ref="header-bar">
+        <div class="component-block" data-ref="header-bar">
           <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
             <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
           </a>
@@ -11,7 +11,7 @@
       </header>
 
       <section class="view-section view-section--hero" data-ref="contact-hero-section">
-        <div class="view-hero" data-ref="contact-hero">
+        <div class="component-block" data-ref="contact-hero">
           <div class="view-hero__content" data-ref="contact-hero-content">
             <div class="component-badge component-badge--sm" data-ref="contact-badge">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
@@ -25,7 +25,7 @@
 
       <section class="view-section view-section--content" data-ref="contact-content-section">
         <div class="contact-container" data-ref="contact-container">
-          <div class="contact-card" data-ref="contact-card-form">
+          <div class="component-block" data-ref="contact-card-form">
             <h2 class="contact-card__title" data-ref="contact-form-title" data-i18n="contact.form_title"></h2>
             <p class="contact-card__desc" data-ref="contact-form-desc" data-i18n="contact.form_desc"></p>
 
@@ -54,21 +54,29 @@
                       <div class="menu-panel__drag-handle"></div>
                     </div>
                     <div class="menu-panel__list" data-ref="list-contact-subject">
-                      <button type="button" class="menu-item" data-ref="option-subject-general" data-value="general">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
-                        <span class="menu-item__text" data-i18n="contact.subject_general"></span>
-                      </button>
                       <button type="button" class="menu-item" data-ref="option-subject-technical" data-value="technical">
                         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#build"></use></svg>
                         <span class="menu-item__text" data-i18n="contact.subject_technical"></span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-subject-billing" data-value="billing">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+                        <span class="menu-item__text" data-i18n="contact.subject_billing"></span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-subject-bug" data-value="bug">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+                        <span class="menu-item__text" data-i18n="contact.subject_bug"></span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-subject-suggestion" data-value="suggestion">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                        <span class="menu-item__text" data-i18n="contact.subject_suggestion"></span>
                       </button>
                       <button type="button" class="menu-item" data-ref="option-subject-security" data-value="security">
                         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
                         <span class="menu-item__text" data-i18n="contact.subject_security"></span>
                       </button>
-                      <button type="button" class="menu-item" data-ref="option-subject-suggestion" data-value="suggestion">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                        <span class="menu-item__text" data-i18n="contact.subject_suggestion"></span>
+                      <button type="button" class="menu-item" data-ref="option-subject-enterprise" data-value="enterprise">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                        <span class="menu-item__text" data-i18n="contact.subject_enterprise"></span>
                       </button>
                     </div>
                   </div>
@@ -93,7 +101,7 @@
             </form>
           </div>
 
-          <div class="contact-card contact-card--ticket is-hidden" data-ref="contact-card-ticket">
+          <div class="component-block is-hidden" data-ref="contact-card-ticket">
             <div class="contact-ticket-header" data-ref="ticket-header">
               <div class="contact-ticket-header__meta" data-ref="ticket-header-meta">
                 <span class="contact-ticket-tag" data-ref="ticket-number">#TK-0000-0000</span>
@@ -127,7 +135,7 @@
           </div>
 
           <div class="contact-sidebar" data-ref="contact-sidebar">
-            <div class="contact-info-card" data-ref="contact-info-card">
+            <div class="component-block" data-ref="contact-info-card">
               <div class="contact-info-item" data-ref="contact-item-support">
                 <div class="contact-info-icon-box" data-ref="contact-icon-support">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
@@ -151,9 +159,9 @@
               </div>
             </div>
 
-            <div class="contact-info-card" data-ref="contact-faq-card">
+            <div class="component-block" data-ref="contact-faq-card">
               <h3 class="contact-card__title" data-ref="contact-faq-title" data-i18n="contact.faq_title"></h3>
-              <p class="contact-card__desc contact-card__desc--spaced" data-ref="contact-faq-desc" data-i18n="contact.faq_desc"></p>
+              <p class="contact-card__desc" data-ref="contact-faq-desc" data-i18n="contact.faq_desc"></p>
               <a class="component-button component-button--secondary component-button--h44 component-button--w-full" data-ref="btn-contact-to-faq" data-i18n="contact.faq_btn" data-navigate="/help/faq" href="/help/faq"></a>
             </div>
           </div>

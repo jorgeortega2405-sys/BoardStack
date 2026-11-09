@@ -43,7 +43,6 @@ export class CollaborativePdfEditorController implements ViewController {
   private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color' | null = null;
-  private recentColors: string[] = [];
   private activeTool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text' = 'select';
   private activeUploadFilter: 'all' | 'images' | 'pdfs' = 'all';
   private canEditDoc = true;
@@ -447,6 +446,15 @@ export class CollaborativePdfEditorController implements ViewController {
     });
 
     this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
+
+    const btnSolidColorsMore = this.queryPanel<HTMLButtonElement>('[data-ref="btn-solid-colors-more"]');
+    btnSolidColorsMore?.addEventListener('click', () => {
+      const extraSwatches = this.queryPanelAll<HTMLElement>('.collaborative-color-swatch--extra');
+      const isCurrentlyExpanded = btnSolidColorsMore.getAttribute('data-expanded') === 'true';
+      extraSwatches.forEach((s) => s.classList.toggle('is-hidden', isCurrentlyExpanded));
+      btnSolidColorsMore.setAttribute('data-expanded', isCurrentlyExpanded ? 'false' : 'true');
+      btnSolidColorsMore.textContent = isCurrentlyExpanded ? 'Mostrar más' : 'Mostrar menos';
+    }, { signal });
 
     const shapeMoreBtns = this.queryPanelAll<HTMLButtonElement>('[data-shape-cat]');
     shapeMoreBtns.forEach((btn) => {
@@ -4615,15 +4623,6 @@ export class CollaborativePdfEditorController implements ViewController {
   private applyColorToCurrentTarget(color: string): void {
     if (!this.currentColorTarget) return;
 
-    if (!color.startsWith('linear-gradient')) {
-      if (!this.recentColors.includes(color)) {
-        this.recentColors.unshift(color);
-        if (this.recentColors.length > 7) {
-          this.recentColors = this.recentColors.slice(0, 7);
-        }
-        this.renderRecentColors();
-      }
-    }
 
     if (this.currentColorTarget === 'text-color') {
       if (!this.selectedElementId) return;
@@ -4840,31 +4839,6 @@ export class CollaborativePdfEditorController implements ViewController {
     swatches.forEach((sw) => {
       const color = sw.getAttribute('data-color');
       sw.classList.toggle('is-active', !!color && color.toLowerCase() === activeColor.toLowerCase());
-    });
-  }
-
-  private renderRecentColors(): void {
-    const recentGrid = this.queryPanel<HTMLElement>('[data-ref="grid-recent-colors"]');
-    if (!recentGrid) return;
-    if (this.recentColors.length === 0) {
-      hideElement(recentGrid);
-      return;
-    }
-    showElement(recentGrid);
-    recentGrid.innerHTML = '';
-    this.recentColors.forEach((color) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `collaborative-color-swatch${color.toLowerCase() === '#ffffff' ? ' collaborative-color-swatch--white' : ''}`;
-      btn.setAttribute('data-ref', 'swatch-color');
-      btn.setAttribute('data-color', color);
-      btn.style.backgroundColor = color;
-      btn.setAttribute('data-tooltip', color);
-      btn.setAttribute('aria-label', color);
-      btn.addEventListener('click', () => {
-        this.applyColorToCurrentTarget(color);
-      });
-      recentGrid.appendChild(btn);
     });
   }
 
@@ -7881,6 +7855,7 @@ export class CollaborativePdfEditorController implements ViewController {
     const zoomWrapper = this.container.querySelector<HTMLElement>('[data-ref="collaborative-zoom-wrapper"]');
     const btnFooterGrid = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-footer-grid"]');
     btnFooterGrid?.classList.toggle('is-active', this.isGridViewOpen);
+    this.container.classList.toggle('has-grid-view', this.isGridViewOpen);
 
     if (!this.isGridViewOpen) {
       gridView?.classList.add('is-hidden');
@@ -7898,6 +7873,9 @@ export class CollaborativePdfEditorController implements ViewController {
     const activeIdx = this.selectedPageIndex !== null ? this.selectedPageIndex : (this.activePageIndex ?? 0);
 
     for (let p = 0; p < this.pageCount; p++) {
+      const item = document.createElement('div');
+      item.className = 'collaborative-grid-item';
+
       const card = document.createElement('div');
       card.className = `collaborative-grid-card${p === activeIdx ? ' is-active' : ''}`;
       card.setAttribute('data-ref', `grid-card-${p}`);
@@ -7910,15 +7888,11 @@ export class CollaborativePdfEditorController implements ViewController {
       canvas.className = 'collaborative-grid-card__canvas';
       preview.appendChild(canvas);
 
-      const footer = document.createElement('div');
-      footer.className = 'collaborative-grid-card__footer';
+      card.appendChild(preview);
+
       const num = document.createElement('span');
       num.className = 'collaborative-grid-card__num';
-      num.textContent = `Página ${p + 1}`;
-      footer.appendChild(num);
-
-      card.appendChild(preview);
-      card.appendChild(footer);
+      num.textContent = (p + 1).toString();
 
       card.addEventListener('click', () => {
         this.activePageIndex = p;
@@ -7943,9 +7917,14 @@ export class CollaborativePdfEditorController implements ViewController {
         this.updateFooterPageInfo();
       });
 
-      grid.appendChild(card);
+      item.appendChild(card);
+      item.appendChild(num);
+      grid.appendChild(item);
       void this.renderPagePreviewToCanvas(p, canvas, 180);
     }
+
+    const addItem = document.createElement('div');
+    addItem.className = 'collaborative-grid-item';
 
     const addCard = document.createElement('button');
     addCard.type = 'button';
@@ -7959,7 +7938,8 @@ export class CollaborativePdfEditorController implements ViewController {
       this.addPage();
       this.renderGridView();
     });
-    grid.appendChild(addCard);
+    addItem.appendChild(addCard);
+    grid.appendChild(addItem);
     renderIcons(grid);
   }
 

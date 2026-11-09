@@ -169,19 +169,45 @@ export class ContactController implements ViewController {
           return;
         }
 
+        let turnstileToken = '';
         if (this.turnstileContainer && isTurnstileEnabled()) {
-          const turnstileToken = getTurnstileResponse(this.turnstileContainer);
-          if (!turnstileToken) {
+          const token = getTurnstileResponse(this.turnstileContainer);
+          if (!token) {
             showError(t('contact.error_turnstile'));
             return;
           }
+          turnstileToken = token;
         }
 
         hideElement(errorBanner);
 
         await withButtonLoading(submitBtn, t('contact.sending'), async () => {
+          const res = await postApi('/api/contact/submit', {
+            email,
+            message,
+            name,
+            subject,
+            turnstileToken,
+          });
+
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+            message?: string;
+            success?: boolean;
+            ticketNumber?: string;
+            trackingToken?: string;
+          };
+
+          if (!res.ok || !data.success) {
+            if (this.turnstileContainer && isTurnstileEnabled()) {
+              resetTurnstile(this.turnstileContainer);
+            }
+            showError(data.error || t('contact.error_send'));
+            return;
+          }
+
           form.reset();
-          if (this.turnstileContainer) {
+          if (this.turnstileContainer && isTurnstileEnabled()) {
             resetTurnstile(this.turnstileContainer);
           }
           if (subjectInput) subjectInput.value = '';

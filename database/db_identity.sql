@@ -247,3 +247,39 @@ CREATE TABLE IF NOT EXISTS user_cloud_integrations (
   INDEX idx_user_provider (user_id, provider),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==============================================================================
+-- Formulario de Contacto y Soporte Público (Contact Submissions)
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS contact_submissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ticket_number VARCHAR(32) NOT NULL UNIQUE,
+  tracking_token VARCHAR(64) NOT NULL UNIQUE,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  subject VARCHAR(100) NOT NULL,
+  message TEXT NOT NULL,
+  status ENUM('open', 'in_progress', 'waiting_customer', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+  ip_address VARCHAR(45) NULL,
+  user_agent TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_contact_email (email),
+  INDEX idx_contact_status (status),
+  INDEX idx_contact_created_at (created_at),
+  INDEX idx_contact_ticket_number (ticket_number),
+  INDEX idx_contact_tracking_token (tracking_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  submission_id INT NOT NULL,
+  sender_type ENUM('customer', 'agent', 'system') NOT NULL DEFAULT 'customer',
+  sender_name VARCHAR(150) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_contact_msg_submission (submission_id),
+  FOREIGN KEY (submission_id) REFERENCES contact_submissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
