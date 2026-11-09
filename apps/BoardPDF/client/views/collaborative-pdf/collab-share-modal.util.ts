@@ -4,8 +4,9 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
 import { DocMember } from './collaborative-pdf.types.js';
+import { t } from '../../services/i18n.service.js';
 
-export interface CollabShareModalOptions {
+interface CollabShareModalOptions {
   activePageIndex: number;
   docAccessLevel: 'anyone_with_link' | 'restricted';
   docId: string;
@@ -20,13 +21,13 @@ export interface CollabShareModalOptions {
   selectedPageIndex: number | null;
 }
 
-export interface CollabSharePopoverHandle {
+interface CollabSharePopoverHandle {
   cleanup: () => void;
   element: HTMLElement;
   openDownloadView: () => void;
 }
 
-export function createCollabSharePopover(options: CollabShareModalOptions): CollabSharePopoverHandle {
+function createCollabSharePopover(options: CollabShareModalOptions): CollabSharePopoverHandle {
   const {
     activePageIndex,
     docAccessLevel,
@@ -88,7 +89,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
             <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" aria-label="Nivel de acceso" ${!canManagePermissions ? 'disabled' : ''}>
               <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-access">
                 <svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
-                <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues'}</span>
+                <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? t('ui.cualquier_persona_que_tenga_el_enlace') : 'Solo las personas que agregues'}</span>
               </div>
               ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
             </button>
@@ -323,7 +324,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
             currentMembers = currentMembers.filter((item) => item.user_id !== m.user_id);
             onMembersChange(currentMembers);
             renderAvatars();
-            showToast('Colaborador eliminado', 'info');
+            showToast(t('toasts.colaborador_eliminado'), 'info');
           }
         });
         detailsList.appendChild(row);
@@ -373,7 +374,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
                 renderAvatars();
                 searchDropdown.classList.add('is-hidden');
                 if (searchInput) searchInput.value = '';
-                showToast(`${u.username} agregado como editor`, 'info');
+                showToast(t('toasts.agregado_como_editor'), 'info');
               }
             });
             searchDropdown.appendChild(item);
@@ -401,7 +402,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
       dropdownCtrl?.close();
 
       const isL = level === 'anyone_with_link';
-      if (triggerLabel) triggerLabel.textContent = isL ? 'Cualquier persona que tenga el enlace' : 'Solo las personas que agregues';
+      if (triggerLabel) triggerLabel.textContent = isL ? t('ui.cualquier_persona_que_tenga_el_enlace') : 'Solo las personas que agregues';
       if (triggerIcon) triggerIcon.innerHTML = `<svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isL ? 'language' : 'groups'}"></use></svg>`;
 
       optRestricted?.classList.toggle('is-selected', !isL);
@@ -412,7 +413,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
 
       try {
         await patchApi(API_ROUTES.collaborativeDocs.accessLevel(docId), { accessLevel: level });
-        showToast('Nivel de acceso actualizado', 'info');
+        showToast(t('toasts.nivel_de_acceso_actualizado'), 'info');
       } catch {}
     };
 
@@ -426,7 +427,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
     const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
     void navigator.clipboard.writeText(url).then(() => {
       if (copyTxt) copyTxt.textContent = '¡Enlace copiado!';
-      showToast('Enlace de colaboración copiado al portapapeles', 'info');
+      showToast(t('toasts.enlace_de_colaboracion_copiado_al_portap'), 'info');
       setTimeout(() => {
         if (copyTxt) copyTxt.textContent = 'Copiar el enlace';
       }, 2000);
@@ -567,7 +568,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
   btnConfirmDownload?.addEventListener('click', () => {
     if (currentPagesMode === 'custom' && selectedPages.size === 0) {
       if (downloadError) {
-        downloadError.textContent = 'Por favor selecciona al menos una página para descargar.';
+        downloadError.textContent = t('ui.por_favor_selecciona_al_menos_una_pagina');
         downloadError.classList.remove('is-hidden');
       }
       return;
@@ -597,7 +598,7 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
     a.click();
     a.remove();
     closePopover();
-    showToast('Descarga iniciada', 'info');
+    showToast(t('toasts.descarga_iniciada'), 'info');
   });
 
   return {
@@ -606,3 +607,6 @@ export function createCollabSharePopover(options: CollabShareModalOptions): Coll
     openDownloadView: openDownloadViewAction,
   };
 }
+
+export { createCollabSharePopover };
+export type { CollabShareModalOptions, CollabSharePopoverHandle };

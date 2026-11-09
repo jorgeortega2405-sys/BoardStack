@@ -1,18 +1,18 @@
-export interface CropBoxPercent {
+interface CropBoxPercent {
   height: number;
   width: number;
   x: number;
   y: number;
 }
 
-export interface CropPdfOptions {
+interface CropPdfOptions {
   applyToAll?: boolean;
   cropBox: CropBoxPercent;
   filename?: string;
   targetPageIndex?: number;
 }
 
-export interface CropPdfResponse {
+interface CropPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -20,7 +20,7 @@ export interface CropPdfResponse {
   totalPages: number;
 }
 
-export interface StoredCropPdfResult {
+interface StoredCropPdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -29,3 +29,5 @@ export interface StoredCropPdfResult {
   pagesCount: number;
   size: number;
 }
+
+export type { CropBoxPercent, CropPdfOptions, CropPdfResponse, StoredCropPdfResult };

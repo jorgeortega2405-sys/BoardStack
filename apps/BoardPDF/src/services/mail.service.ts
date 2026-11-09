@@ -4,7 +4,7 @@ import fs from 'fs';
 import nodemailer from 'nodemailer';
 import path from 'path';
 
-export interface EmailTemplate {
+interface EmailTemplate {
   html: string;
   subject: string;
   text: string;
@@ -40,7 +40,7 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000,
 });
 
-export function escapeHtml(str: unknown): string {
+function escapeHtml(str: unknown): string {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -49,7 +49,7 @@ export function escapeHtml(str: unknown): string {
     .replace(/'/g, '&#039;');
 }
 
-export function renderTemplateString(
+function renderTemplateString(
   template: string,
   variables: Record<string, string | number>,
   isHtml = false
@@ -63,7 +63,7 @@ export function renderTemplateString(
   });
 }
 
-export async function sendTemplateEmail(
+async function sendTemplateEmail(
   templateKey: string,
   toEmail: string,
   variables: Record<string, string | number> = {}
@@ -101,7 +101,7 @@ export async function sendTemplateEmail(
   }
 }
 
-export async function sendVerificationCodeEmail(
+async function sendVerificationCodeEmail(
   toEmail: string,
   username: string,
   code: string,
@@ -114,7 +114,7 @@ export async function sendVerificationCodeEmail(
   });
 }
 
-export async function sendWelcomeEmail(
+async function sendWelcomeEmail(
   toEmail: string,
   username: string
 ): Promise<void> {
@@ -123,7 +123,7 @@ export async function sendWelcomeEmail(
   });
 }
 
-export async function sendPasswordResetEmail(
+async function sendPasswordResetEmail(
   toEmail: string,
   username: string,
   resetUrl: string,
@@ -136,7 +136,7 @@ export async function sendPasswordResetEmail(
   });
 }
 
-export async function sendEmailChangeCodeEmail(
+async function sendEmailChangeCodeEmail(
   toEmail: string,
   username: string,
   code: string,
@@ -148,3 +148,6 @@ export async function sendEmailChangeCodeEmail(
     username,
   });
 }
+
+export { escapeHtml, renderTemplateString, sendEmailChangeCodeEmail, sendPasswordResetEmail, sendTemplateEmail, sendVerificationCodeEmail, sendWelcomeEmail };
+export type { EmailTemplate };

@@ -1,4 +1,4 @@
-export const MODAL_2FA_SHIELD_SVG = `
+const MODAL_2FA_SHIELD_SVG = `
   <svg class="modal-split__shield-svg" data-ref="shield-svg" width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="110" cy="110" r="80" fill="#ffffff" fill-opacity="0.06"/>
     <circle cx="110" cy="110" r="75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 5" stroke-opacity="0.2"/>
@@ -15,3 +15,5 @@ export const MODAL_2FA_SHIELD_SVG = `
     <path d="M145 72L148.5 75.5L155.5 68.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 `;
+
+export { MODAL_2FA_SHIELD_SVG };

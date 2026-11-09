@@ -1,6 +1,8 @@
+import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, putApi } from '../../services/api.service.js';
+import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
@@ -22,7 +24,7 @@ interface DocItem {
   updated_at: string;
 }
 
-export class CollaborativePdfDashboardController implements ViewController {
+class CollaborativePdfDashboardController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private documents: DocItem[] = [];
@@ -216,7 +218,7 @@ export class CollaborativePdfDashboardController implements ViewController {
           } else if (action === 'copy-link') {
             const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
             void navigator.clipboard.writeText(url).then(() => {
-              showToast('Enlace de documento copiado al portapapeles', 'info');
+              showToast(t('toasts.enlace_de_documento_copiado_al_portapape'), 'info');
             });
           } else if (action === 'delete') {
             void this.handleDelete(docId, isLocal);
@@ -426,7 +428,7 @@ export class CollaborativePdfDashboardController implements ViewController {
   private createNewDocument(): void {
     if (currentUser?.storage_limit_bytes && currentUser.storage_used_bytes) {
       if (currentUser.storage_used_bytes >= currentUser.storage_limit_bytes) {
-        showToast('Has alcanzado el límite de almacenamiento de 5 GB. Elimina documentos para continuar.', 'error');
+        showToast(t('toasts.has_alcanzado_el_limite_de_almacenamient'), 'error');
         return;
       }
     }
@@ -467,28 +469,34 @@ export class CollaborativePdfDashboardController implements ViewController {
   }
 
   private async handleDelete(id: string, isLocal = false): Promise<void> {
-    if (!window.confirm('¿Deseas eliminar este documento PDF permanentemente?')) {
-      return;
-    }
-    if (isLocal) {
-      removeLocalDraft(id);
-      showToast('Borrador local eliminado con éxito', 'success');
-      this.documents = this.documents.filter((d) => d.id !== id);
-      this.renderGrid();
-      return;
-    }
-    try {
-      const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(id));
-      if (res.ok) {
-        showToast('Documento eliminado con éxito', 'success');
-        this.documents = this.documents.filter((d) => d.id !== id);
-        this.renderGrid();
-      } else {
-        showToast('No se pudo eliminar el documento.', 'error');
-      }
-    } catch {
-      showToast('Error de conexión al eliminar documento.', 'error');
-    }
+    openModal({
+      cancelText: t('common.cancel'),
+      confirmClass: 'component-button--danger',
+      confirmText: t('common.delete'),
+      description: t('ui.deseas_eliminar_este_documento_pdf'),
+      onConfirm: async () => {
+        if (isLocal) {
+          removeLocalDraft(id);
+          showToast(t('toasts.borrador_local_eliminado_con_exito'), 'success');
+          this.documents = this.documents.filter((d) => d.id !== id);
+          this.renderGrid();
+          return;
+        }
+        try {
+          const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(id));
+          if (res.ok) {
+            showToast(t('toasts.documento_eliminado_con_exito'), 'success');
+            this.documents = this.documents.filter((d) => d.id !== id);
+            this.renderGrid();
+          } else {
+            showToast(t('toasts.no_se_pudo_eliminar_el_documento'), 'error');
+          }
+        } catch {
+          showToast(t('toasts.error_de_conexion_al_eliminar_documento'), 'error');
+        }
+      },
+      title: t('common.delete'),
+    });
   }
 
   private escapeHtml(str: string): string {
@@ -501,9 +509,11 @@ export class CollaborativePdfDashboardController implements ViewController {
   }
 }
 
-export async function createCollaborativePdfDashboardView(): Promise<HTMLElement> {
+async function createCollaborativePdfDashboardView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/collaborative-pdf/collaborative-pdf-dashboard.html');
   const controller = new CollaborativePdfDashboardController(container);
   await controller.init();
   return container;
 }
+
+export { CollaborativePdfDashboardController, createCollaborativePdfDashboardView };

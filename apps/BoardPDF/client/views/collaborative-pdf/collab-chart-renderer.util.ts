@@ -1,7 +1,7 @@
 import { escapeHtml } from '../../services/api.service.js';
 import { CHART_PALETTES, ElementChart } from './collaborative-pdf.types.js';
 
-export function applyChartPalette(el: ElementChart): void {
+function applyChartPalette(el: ElementChart): void {
   const scheme = el.options.colorScheme || 'blue';
   const palette = CHART_PALETTES[scheme] || CHART_PALETTES.blue;
   el.series.forEach((s, i) => {
@@ -9,7 +9,7 @@ export function applyChartPalette(el: ElementChart): void {
   });
 }
 
-export function renderChartSvg(el: ElementChart): string {
+function renderChartSvg(el: ElementChart): string {
   const W = el.width || 480;
   const H = el.height || 320;
   const scheme = el.options.colorScheme || 'blue';
@@ -302,3 +302,5 @@ export function renderChartSvg(el: ElementChart): string {
     </svg>
   `;
 }
+
+export { applyChartPalette, renderChartSvg };

@@ -1,6 +1,6 @@
 import { ElementShape } from './collaborative-pdf.types.js';
 
-export function renderShapeGeometry(el: ElementShape, fill: string, stroke: string, strokeWidth: number, w: number, h: number, strokeDash = ''): string {
+function renderShapeGeometry(el: ElementShape, fill: string, stroke: string, strokeWidth: number, w: number, h: number, strokeDash = ''): string {
   const generateStarPolygon = (nPoints: number, innerRatio: number): string => {
     const cx = w / 2;
     const cy = h / 2;
@@ -516,7 +516,7 @@ export function renderShapeGeometry(el: ElementShape, fill: string, stroke: stri
   return '';
 }
 
-export function renderShapeInner(el: ElementShape): string {
+function renderShapeInner(el: ElementShape): string {
   let fill = el.fillColor && el.fillColor !== 'transparent' ? el.fillColor : '#000000';
   let stroke = el.strokeColor && el.strokeColor !== 'transparent' ? el.strokeColor : 'none';
   const strokeWidth = el.strokeWidth || 0;
@@ -544,3 +544,5 @@ export function renderShapeInner(el: ElementShape): string {
   const geom = renderShapeGeometry(el, fill, stroke, strokeWidth, w, h, strokeDash);
   return geom ? `${gradDef}${geom}` : '';
 }
+
+export { renderShapeGeometry, renderShapeInner };

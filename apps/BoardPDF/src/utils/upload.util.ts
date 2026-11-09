@@ -2,13 +2,13 @@ import { logger } from '../services/logger.service.js';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
 import multer from 'multer';
 
-export interface UploadOptions {
+interface UploadOptions {
   fieldName?: string;
   maxFileSizeMB?: number;
   maxFiles?: number;
 }
 
-export function createPdfUploadMiddleware(options?: UploadOptions): RequestHandler {
+function createPdfUploadMiddleware(options?: UploadOptions): RequestHandler {
   const requestedMaxFiles = options?.maxFiles ?? 1;
   const maxFiles = Math.min(Math.max(1, requestedMaxFiles), 500);
   const requestedMaxFileSizeMB = options?.maxFileSizeMB ?? 50;
@@ -81,3 +81,6 @@ export function createPdfUploadMiddleware(options?: UploadOptions): RequestHandl
     });
   };
 }
+
+export { createPdfUploadMiddleware };
+export type { UploadOptions };

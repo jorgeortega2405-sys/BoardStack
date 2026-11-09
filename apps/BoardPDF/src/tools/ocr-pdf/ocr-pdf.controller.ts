@@ -1,39 +1,12 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { processOcrPdf } from './ocr-pdf.service.js';
 import { OcrLanguage } from './ocr-pdf.types.js';
 import { Request, Response } from 'express';
 
-export async function handleProcessOcrPdf(req: Request, res: Response): Promise<void> {
-  const file = req.file;
-
-  if (!file) {
-    res.status(400).json({
-      error: 'Debes seleccionar un archivo PDF para poder aplicarle OCR.',
-      success: false,
-    });
-    return;
-  }
-
-  const userPermissions = (req as any).user?.permissions || [];
-  const limits = getToolLimits('ocr-pdf', userPermissions);
-
-  if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-    res.status(403).json({
-      error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos más grandes.`,
-      success: false,
-    });
-    return;
-  }
-
-  if (!isPdfBuffer(file.buffer)) {
-    res.status(400).json({
-      error: `El archivo "${file.originalname}" no tiene un formato PDF válido.`,
-      success: false,
-    });
-    return;
-  }
+async function handleProcessOcrPdf(req: Request, res: Response): Promise<void> {
+  const file = validatePdfUpload(req, res, 'ocr-pdf');
+  if (!file) return;
 
   const rawLanguage = typeof req.body?.language === 'string' && req.body.language.trim() ? req.body.language.trim() : 'spa';
   const language: OcrLanguage = rawLanguage;
@@ -62,3 +35,4 @@ export async function handleProcessOcrPdf(req: Request, res: Response): Promise<
   }
 }
 
+export { handleProcessOcrPdf };

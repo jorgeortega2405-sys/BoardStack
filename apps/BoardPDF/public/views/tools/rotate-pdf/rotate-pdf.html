@@ -1,27 +1,23 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="rotate-pdf-wrapper">
-  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-
-    <div class="tool-top-bar__right" data-ref="tool-top-right">
-      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-rotate" disabled>
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-        <span class="component-button__text">Rotar PDF</span>
-      </button>
-    </div>
-  </header>
-
-  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="rotate-pdf-layout">
-    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="rotate-pdf-workspace">
-      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="rotate-workspace-card">
-
-        <div class="pdf-reorder-hint">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-          <span>Pasa el cursor por encima de una página para rotarla individualmente.</span>
-        </div>
-
-        <div class="pdf-items-grid rotate-pages-grid" data-ref="rotate-pages-grid"></div>
-      </div>
-    </main>
-  </div>
+<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+<div class="tool-top-bar__right" data-ref="tool-top-right">
+<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
+<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-rotate" disabled>
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
+<span class="component-button__text" >Rotar PDF</span>
+</button>
 </div>
+</header>
+<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="rotate-pdf-layout">
+<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="rotate-pdf-workspace">
+<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="rotate-workspace-card">
+<div class="pdf-reorder-hint" >
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
+<span>Pasa el cursor por encima de una página para rotarla individualmente.</span>
+</div>
+<div class="pdf-items-grid rotate-pages-grid" data-ref="rotate-pages-grid"></div>
+</div>
+</main>
+</div>
+</div> 

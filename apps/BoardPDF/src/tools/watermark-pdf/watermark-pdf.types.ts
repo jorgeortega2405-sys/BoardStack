@@ -1,6 +1,6 @@
-export type WatermarkType = 'image' | 'text';
+type WatermarkType = 'image' | 'text';
 
-export type WatermarkPosition =
+type WatermarkPosition =
   | 'bottom-center'
   | 'bottom-left'
   | 'bottom-right'
@@ -11,7 +11,7 @@ export type WatermarkPosition =
   | 'top-left'
   | 'top-right';
 
-export interface WatermarkOptions {
+interface WatermarkOptions {
   color?: string;
   filename?: string;
   fontFamily?: 'Courier' | 'Helvetica' | 'Helvetica-Bold' | 'Times-Roman';
@@ -30,7 +30,7 @@ export interface WatermarkOptions {
   type?: WatermarkType;
 }
 
-export interface WatermarkPdfResponse {
+interface WatermarkPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -38,7 +38,7 @@ export interface WatermarkPdfResponse {
   totalPages: number;
 }
 
-export interface StoredWatermarkPdfResult {
+interface StoredWatermarkPdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -47,3 +47,5 @@ export interface StoredWatermarkPdfResult {
   pagesCount: number;
   size: number;
 }
+
+export type { StoredWatermarkPdfResult, WatermarkOptions, WatermarkPdfResponse, WatermarkPosition, WatermarkType };

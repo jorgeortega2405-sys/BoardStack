@@ -1,17 +1,18 @@
-export type ConversionType =
+import { t } from '../../../services/i18n.service.js';
+type ConversionType =
   | 'pdf-to-jpg'
   | 'pdf-to-word'
   | 'pdf-to-powerpoint'
   | 'pdf-to-excel'
   | 'pdf-to-pdfa';
 
-export type JpgConversionMode = 'pages' | 'extract';
-export type JpgQuality = 'normal' | 'high';
-export type OcrOption = 'no' | 'yes';
-export type ExcelSheetsOption = 'single' | 'multiple';
-export type PdfALevel = '1b' | '1a' | '2b' | '2u' | '2a' | '3b' | '3u' | '3a';
+type JpgConversionMode = 'pages' | 'extract';
+type JpgQuality = 'normal' | 'high';
+type OcrOption = 'no' | 'yes';
+type ExcelSheetsOption = 'single' | 'multiple';
+type PdfALevel = '1b' | '1a' | '2b' | '2u' | '2a' | '3b' | '3u' | '3a';
 
-export interface ConversionRouteConfig {
+interface ConversionRouteConfig {
   actionText: string;
   convertingText: string;
   icon: string;
@@ -23,13 +24,13 @@ export interface ConversionRouteConfig {
   title: string;
 }
 
-export const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
+const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
   '/pdf-to-excel': {
     actionText: 'Convertir a Excel',
     convertingText: 'Extrayendo tablas a Excel...',
     icon: 'table_chart',
     path: '/pdf-to-excel',
-    subtitle: 'Extrae tablas y datos estructurados de tu PDF directamente a un archivo Excel XLSX editable.',
+    subtitle: t('ui.extrae_tablas_y_datos_estructurados_de_t'),
     targetBadge: 'XLSX',
     targetExtension: '.xlsx',
     targetType: 'pdf-to-excel',
@@ -40,7 +41,7 @@ export const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
     convertingText: 'Convirtiendo páginas a JPG...',
     icon: 'photo_library',
     path: '/pdf-to-jpg',
-    subtitle: 'Convierte cada página de tu archivo PDF en imágenes JPG de alta calidad o extrae tus imágenes.',
+    subtitle: t('ui.convierte_cada_pagina_de_tu_archivo_pdf_'),
     targetBadge: 'JPG',
     targetExtension: '.jpg',
     targetType: 'pdf-to-jpg',
@@ -62,7 +63,7 @@ export const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
     convertingText: 'Generando presentación PPTX...',
     icon: 'slideshow',
     path: '/pdf-to-powerpoint',
-    subtitle: 'Transforma tus presentaciones PDF en diapositivas PowerPoint PPTX listas para editar y proyectar.',
+    subtitle: t('ui.transforma_tus_presentaciones_pdf_en_dia'),
     targetBadge: 'PPTX',
     targetExtension: '.pptx',
     targetType: 'pdf-to-powerpoint',
@@ -80,3 +81,6 @@ export const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
     title: 'PDF a Word',
   },
 };
+
+export { CONVERSION_CONFIGS };
+export type { ConversionRouteConfig, ConversionType, ExcelSheetsOption, JpgConversionMode, JpgQuality, OcrOption, PdfALevel };

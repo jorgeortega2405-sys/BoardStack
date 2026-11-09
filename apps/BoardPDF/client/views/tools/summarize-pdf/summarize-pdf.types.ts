@@ -1,4 +1,4 @@
-export interface SummarizePdfResultData {
+interface SummarizePdfResultData {
   characterCount: number;
   extractedChars: number;
   filename: string;
@@ -7,3 +7,5 @@ export interface SummarizePdfResultData {
   summary: string;
   wordCount: number;
 }
+
+export type { SummarizePdfResultData };

@@ -6,16 +6,16 @@ import { getDbPool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 import zlib from 'zlib';
 
-export const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
+const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
 
-export interface StorageStats {
+interface StorageStats {
   limitBytes: number;
   percentage: number;
   remainingBytes: number;
   usedBytes: number;
 }
 
-export interface UserAssetRecord {
+interface UserAssetRecord {
   asset_type: 'document_json' | 'document_pdf' | 'upload_image' | 'upload_pdf';
   byte_size: number;
   created_at: string;
@@ -30,7 +30,7 @@ export interface UserAssetRecord {
   user_id: number;
 }
 
-export async function getUserStorageStats(userId: number): Promise<StorageStats> {
+async function getUserStorageStats(userId: number): Promise<StorageStats> {
   const pool = getDbPool();
   const [rows] = await pool.query<any[]>(
     'SELECT storage_used_bytes, storage_limit_bytes FROM users WHERE id = ?',
@@ -46,7 +46,7 @@ export async function getUserStorageStats(userId: number): Promise<StorageStats>
   return { limitBytes, percentage, remainingBytes, usedBytes };
 }
 
-export async function canUserAllocateStorage(
+async function canUserAllocateStorage(
   userId: number,
   additionalBytes: number
 ): Promise<{ allowed: boolean; limitBytes: number; remainingBytes: number; usedBytes: number }> {
@@ -55,7 +55,7 @@ export async function canUserAllocateStorage(
   return { allowed, ...stats };
 }
 
-export async function recordUserAsset(params: {
+async function recordUserAsset(params: {
   assetType: 'document_json' | 'document_pdf' | 'upload_image' | 'upload_pdf';
   byteSize: number;
   documentId?: string | null;
@@ -107,7 +107,7 @@ export async function recordUserAsset(params: {
   }
 }
 
-export async function reclaimDocumentStorage(
+async function reclaimDocumentStorage(
   documentId: string,
   userId?: number | null
 ): Promise<{ reclaimedBytes: number }> {
@@ -178,7 +178,7 @@ export async function reclaimDocumentStorage(
   return { reclaimedBytes: totalReclaimed };
 }
 
-export async function reclaimUserAsset(assetId: string, userId: number): Promise<boolean> {
+async function reclaimUserAsset(assetId: string, userId: number): Promise<boolean> {
   const pool = getDbPool();
   const [rows] = await pool.query<any[]>(
     'SELECT id, file_path, s3_key, byte_size FROM user_storage_assets WHERE id = ? AND user_id = ?',
@@ -232,7 +232,7 @@ export async function reclaimUserAsset(assetId: string, userId: number): Promise
   }
 }
 
-export async function reconcileUserStorage(userId: number): Promise<number> {
+async function reconcileUserStorage(userId: number): Promise<number> {
   const pool = getDbPool();
   const [rows] = await pool.query<any[]>(
     'SELECT COALESCE(SUM(byte_size), 0) AS total_bytes FROM user_storage_assets WHERE user_id = ?',
@@ -244,7 +244,7 @@ export async function reconcileUserStorage(userId: number): Promise<number> {
   return accurateTotal;
 }
 
-export async function syncDocumentStorage(
+async function syncDocumentStorage(
   documentId: string,
   userId: number,
   jsonBytes: number,
@@ -304,7 +304,7 @@ export async function syncDocumentStorage(
   }
 }
 
-export async function compressColdDocuments(daysThreshold = 45): Promise<{ archivedDocs: number; freedBytes: number }> {
+async function compressColdDocuments(daysThreshold = 45): Promise<{ archivedDocs: number; freedBytes: number }> {
   const pool = getDbPool();
   const [docs] = await pool.query<any[]>(
     `SELECT d.id, d.user_id, d.content_json, d.pdf_filename 
@@ -361,7 +361,7 @@ export async function compressColdDocuments(daysThreshold = 45): Promise<{ archi
   return { archivedDocs, freedBytes };
 }
 
-export function startColdStorageCron(): void {
+function startColdStorageCron(): void {
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   setInterval(async () => {
     try {
@@ -374,3 +374,6 @@ export function startColdStorageCron(): void {
     }
   }, ONE_DAY_MS);
 }
+
+export { DEFAULT_STORAGE_LIMIT_BYTES, canUserAllocateStorage, compressColdDocuments, getUserStorageStats, reclaimDocumentStorage, reclaimUserAsset, reconcileUserStorage, recordUserAsset, startColdStorageCron, syncDocumentStorage };
+export type { StorageStats, UserAssetRecord };

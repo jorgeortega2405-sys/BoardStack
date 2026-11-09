@@ -1,4 +1,4 @@
-export interface ToolZoomOptions {
+interface ToolZoomOptions {
   container: HTMLElement;
   initialZoom?: number;
   maxZoom?: number;
@@ -8,7 +8,7 @@ export interface ToolZoomOptions {
   signal?: AbortSignal;
 }
 
-export class ToolZoomController {
+class ToolZoomController {
   private btnReset: HTMLButtonElement | null = null;
   private container: HTMLElement;
   private footer: HTMLElement | null = null;
@@ -147,7 +147,7 @@ export class ToolZoomController {
   }
 }
 
-export function applyPageScaler(
+function applyPageScaler(
   scalerEl: HTMLElement,
   sheetEl: HTMLElement,
   baseWidth: number,
@@ -162,3 +162,6 @@ export function applyPageScaler(
   sheetEl.style.transform = `scale(${zoomLevel})`;
   sheetEl.style.transformOrigin = origin;
 }
+
+export { ToolZoomController, applyPageScaler };
+export type { ToolZoomOptions };

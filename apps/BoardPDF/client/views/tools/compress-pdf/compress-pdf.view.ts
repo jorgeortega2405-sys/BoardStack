@@ -12,8 +12,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ClientPdfCompressLevel, CompressResultData } from './compress-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class CompressPdfController implements ViewController {
+class CompressPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -33,7 +34,7 @@ export class CompressPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar archivo PDF',
-        desc: 'Reduce el tamaño de tus archivos PDF optimizando imágenes y tipografías con la mejor calidad visual.',
+        desc: t('ui.reduce_el_tamano_de_tus_archivos_pdf_opt'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -121,15 +122,15 @@ export class CompressPdfController implements ViewController {
 
   private readonly qualityDetails: Record<ClientPdfCompressLevel, { desc: string; title: string }> = {
     extreme: {
-      desc: 'Menor calidad de imagen, máxima reducción de tamaño.',
+      desc: t('ui.menor_calidad_de_imagen_maxima_reduccion'),
       title: 'Compresión extrema',
     },
     low: {
-      desc: 'Alta calidad visual, menor reducción de tamaño.',
+      desc: t('ui.alta_calidad_visual_menor_reduccion_de_t'),
       title: 'Baja compresión',
     },
     recommended: {
-      desc: 'Buena calidad visual, reducción sustancial de tamaño.',
+      desc: t('ui.buena_calidad_visual_reduccion_sustancia'),
       title: 'Compresión recomendada',
     },
   };
@@ -267,11 +268,11 @@ export class CompressPdfController implements ViewController {
         const result = (await response.json()) as { data?: CompressResultData; error?: string; success: boolean };
 
         if (!response.ok || !result.success || !result.data) {
-          throw new Error(result.error || 'Error al comprimir el archivo PDF.');
+          throw new Error(result.error || t('ui.error_al_comprimir_el_archivo_pdf'));
         }
 
         const token = result.data.fileId;
-        showToast('PDF comprimido con éxito.', 'success');
+        showToast(t('toasts.pdf_comprimido_con_exito'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.compressedSize,
@@ -283,9 +284,9 @@ export class CompressPdfController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al comprimir el PDF.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_comprimir_el_pdf');
         this.phaseManager?.showError({
-          boxText: 'Comprueba que el documento no esté protegido con contraseña o dañado.',
+          boxText: t('ui.comprueba_que_el_documento_no_este_prote'),
           boxTitle: 'Error de compresión',
           desc: errorMessage,
           retryText: 'Reintentar Comprimir PDF',
@@ -315,10 +316,12 @@ export class CompressPdfController implements ViewController {
   }
 }
 
-export async function createCompressPdfView(): Promise<HTMLElement> {
+async function createCompressPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/compress-pdf/compress-pdf.html');
   const controller = new CompressPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { CompressPdfController, createCompressPdfView };

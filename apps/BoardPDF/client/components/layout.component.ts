@@ -10,8 +10,8 @@ import { hideElement, showElement } from '../utils/dom.util.js';
 import { isSupportedLanguage } from '../utils/languages.util.js';
 import { setupUserMenu } from './layout-user-menu.component.js';
 
-export let isDrawerOpen = false;
-export let currentDrawerMode: 'apps' | 'help' | 'settings' | 'workflows' = 'workflows';
+let isDrawerOpen = false;
+let currentDrawerMode: 'apps' | 'help' | 'settings' | 'workflows' = 'workflows';
 let activeResizeObserver: ResizeObserver | null = null;
 let activeMutationObserver: MutationObserver | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -50,12 +50,12 @@ function getActiveHelpSection(raw: string): 'faq' | 'security' | 'privacy' | 'te
   return null;
 }
 
-export function hasDesignatedMenuItems(pathname: string): boolean {
+function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
   return getActiveHelpSection(pathname) !== null || pathname.includes('/workflows') || pathname.includes('/workflow/') || pathname.startsWith('/settings');
 }
 
-export function updateSidebarAuthState(sidebar?: HTMLElement): void {
+function updateSidebarAuthState(sidebar?: HTMLElement): void {
   const target = sidebar || sidebarInstance;
   if (!target) return;
   const itemProjects = target.querySelector<HTMLElement>('[data-ref="rail-item-projects"]');
@@ -68,7 +68,7 @@ export function updateSidebarAuthState(sidebar?: HTMLElement): void {
   }
 }
 
-export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
+function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
   const cleanPath = (path || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
   const isHome = cleanPath === '/' || cleanPath === '' || (/^\/([a-z]{2,3})\/?$/i.test(cleanPath) && isSupportedLanguage(cleanPath.slice(1)));
   const isHelp = getActiveHelpSection(cleanPath) !== null;
@@ -85,20 +85,17 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const railDivider = sidebar.querySelector<HTMLElement>('[data-ref="rail-divider"]');
 
   if (isCollaborative) {
-    if (railTop) railTop.style.display = 'none';
-    if (defaultTop) defaultTop.style.display = 'none';
-    if (defaultCenter) defaultCenter.style.display = 'none';
-    if (railDivider) railDivider.style.display = 'none';
-    if (collabCenter) {
-      collabCenter.style.display = 'flex';
-      collabCenter.style.flexDirection = 'column';
-    }
+    if (railTop) railTop.classList.add('is-hidden');
+    if (defaultTop) defaultTop.classList.add('is-hidden');
+    if (defaultCenter) defaultCenter.classList.add('is-hidden');
+    if (railDivider) railDivider.classList.add('is-hidden');
+    if (collabCenter) collabCenter.classList.remove('is-hidden');
   } else {
-    if (railTop) railTop.style.display = '';
-    if (defaultTop) defaultTop.style.display = '';
-    if (defaultCenter) defaultCenter.style.display = '';
-    if (railDivider) railDivider.style.display = '';
-    if (collabCenter) collabCenter.style.display = 'none';
+    if (railTop) railTop.classList.remove('is-hidden');
+    if (defaultTop) defaultTop.classList.remove('is-hidden');
+    if (defaultCenter) defaultCenter.classList.remove('is-hidden');
+    if (railDivider) railDivider.classList.remove('is-hidden');
+    if (collabCenter) collabCenter.classList.add('is-hidden');
   }
 
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
@@ -285,7 +282,7 @@ function createDrawerElement(): HTMLElement {
   return drawer;
 }
 
-export async function populateDrawerContent(drawer: HTMLElement, activePath?: string): Promise<void> {
+async function populateDrawerContent(drawer: HTMLElement, activePath?: string): Promise<void> {
   const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
   const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
   if (!drawerBody) return;
@@ -331,8 +328,8 @@ function renderWorkflowsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTM
       </div>
       <div class="drawer-empty-state" data-ref="drawer-empty-workflows" style="padding: 32px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
         <svg class="component-icon" style="width: 36px; height: 36px; color: var(--text-tertiary); opacity: 0.6;" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
-        <span style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">${t('workflows.empty_title', 'No tienes flujos de trabajo')}</span>
-        <span style="font-size: 12px; color: var(--text-tertiary);">${t('workflows.empty_subtitle', 'Crea combinaciones de herramientas automáticas')}</span>
+        <span style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">${t('workflows.empty_title', t('ui.no_tienes_flujos_de_trabajo'))}</span>
+        <span style="font-size: 12px; color: var(--text-tertiary);">${t('workflows.empty_subtitle', t('ui.crea_combinaciones_de_herramientas_autom'))}</span>
       </div>
     `;
   } else {
@@ -610,7 +607,7 @@ function closeDynamicDrawer(): void {
   }
 }
 
-export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'settings' | 'workflows'): void {
+function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'settings' | 'workflows'): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const currentPath = window.location.pathname;
   const cleanPath = (currentPath || '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
@@ -652,7 +649,7 @@ export function toggleDrawer(forceState?: boolean, mode?: 'apps' | 'help' | 'set
   }
 }
 
-export async function updateDynamicDrawer(sidebar?: HTMLElement, activePath?: string): Promise<void> {
+async function updateDynamicDrawer(sidebar?: HTMLElement, activePath?: string): Promise<void> {
   const sb = sidebar || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   if (!sb) return;
   const drawer = sb.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
@@ -685,7 +682,7 @@ function setupDrawerContent(sidebar: HTMLElement): void {
   existingDrawer?.remove();
 }
 
-export async function createSidebar(): Promise<HTMLElement> {
+async function createSidebar(): Promise<HTMLElement> {
   if (sidebarInstance) {
     updateSidebarAuthState(sidebarInstance);
     updateSidebarActiveState(sidebarInstance, window.location.pathname);
@@ -724,7 +721,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   return sidebarInitPromise;
 }
 
-export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<HTMLElement> {
+async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<HTMLElement> {
   const sidebar = await createSidebar();
   if (sidebar.parentElement !== layoutContent) {
     layoutContent.prepend(sidebar);
@@ -732,7 +729,7 @@ export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<
   return sidebar;
 }
 
-export function setupLayoutScrollSync(): void {
+function setupLayoutScrollSync(): void {
   const layoutContent = document.querySelector<HTMLElement>('.layout-content:has(.layout-nav)');
   if (activeResizeObserver) {
     activeResizeObserver.disconnect();
@@ -784,3 +781,5 @@ export function setupLayoutScrollSync(): void {
     subtree: true,
   });
 }
+
+export { createSidebar, currentDrawerMode, ensureSidebarMounted, hasDesignatedMenuItems, isDrawerOpen, populateDrawerContent, setupLayoutScrollSync, toggleDrawer, updateDynamicDrawer, updateSidebarActiveState, updateSidebarAuthState };

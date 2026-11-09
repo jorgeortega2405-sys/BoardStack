@@ -116,7 +116,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
 ];
 
-export class HelpFaqController implements ViewController {
+class HelpFaqController implements ViewController {
   private abortController: AbortController | null = null;
   private activeCategory = 'all';
   private container: HTMLElement;
@@ -236,10 +236,12 @@ export class HelpFaqController implements ViewController {
   }
 }
 
-export async function createHelpFaqView(): Promise<HTMLElement> {
+async function createHelpFaqView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/help/faq.html');
   const controller = new HelpFaqController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { HelpFaqController, createHelpFaqView };

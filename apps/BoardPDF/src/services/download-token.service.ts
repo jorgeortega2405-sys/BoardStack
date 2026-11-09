@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { config } from '../config/env.config.js';
 
-export interface GeneratedTokenResult {
+interface GeneratedTokenResult {
   downloadUrl: string;
   fileId: string;
   fullToken: string;
@@ -9,7 +9,7 @@ export interface GeneratedTokenResult {
   token: string;
 }
 
-export interface VerifiedTokenResult {
+interface VerifiedTokenResult {
   exp?: number;
   expired?: boolean;
   fileId: string;
@@ -21,7 +21,7 @@ export interface VerifiedTokenResult {
 
 const TOKEN_KEY = crypto.createHash('sha256').update(config.downloadSecret).digest();
 
-export function generateDownloadToken(
+function generateDownloadToken(
   fileId: string,
   filename: string = '',
   ttlSeconds: number = 3600
@@ -57,7 +57,7 @@ export function generateDownloadToken(
   };
 }
 
-export function verifyDownloadToken(rawToken: string): VerifiedTokenResult {
+function verifyDownloadToken(rawToken: string): VerifiedTokenResult {
   if (!rawToken || typeof rawToken !== 'string') {
     return { fileId: '', valid: false };
   }
@@ -129,3 +129,6 @@ export function verifyDownloadToken(rawToken: string): VerifiedTokenResult {
     };
   }
 }
+
+export { generateDownloadToken, verifyDownloadToken };
+export type { GeneratedTokenResult, VerifiedTokenResult };

@@ -2,7 +2,7 @@ import { Redis } from 'ioredis';
 import { logger } from '../services/logger.service.js';
 import { config } from './env.config.js';
 
-export const redis = new Redis({
+const redis = new Redis({
   host: config.redis.host,
   lazyConnect: true,
   maxRetriesPerRequest: 1,
@@ -18,7 +18,7 @@ redis.on('error', (err) => {
   logger.db.warn('Advertencia en cliente Redis:', err);
 });
 
-export async function checkRedisConnection(retries = 2, delayMs = 500): Promise<boolean> {
+async function checkRedisConnection(retries = 2, delayMs = 500): Promise<boolean> {
   for (let i = 1; i <= retries; i++) {
     try {
       if (redis.status !== 'ready' && redis.status !== 'connecting') {
@@ -43,3 +43,4 @@ export async function checkRedisConnection(retries = 2, delayMs = 500): Promise<
   return false;
 }
 
+export { checkRedisConnection, redis };

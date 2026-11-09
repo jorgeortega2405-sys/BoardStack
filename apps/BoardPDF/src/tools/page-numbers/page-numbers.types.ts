@@ -1,4 +1,4 @@
-export type PageNumberPosition =
+type PageNumberPosition =
   | 'bottom-center'
   | 'bottom-left'
   | 'bottom-right'
@@ -6,11 +6,11 @@ export type PageNumberPosition =
   | 'top-left'
   | 'top-right';
 
-export type PageNumberMargin = 'large' | 'recommended' | 'small';
+type PageNumberMargin = 'large' | 'recommended' | 'small';
 
-export type PageNumberMode = 'double' | 'single';
+type PageNumberMode = 'double' | 'single';
 
-export interface PageNumberOptions {
+interface PageNumberOptions {
   filename?: string;
   firstPageIsCover?: boolean;
   fontFamily?: 'Courier' | 'Helvetica' | 'Helvetica-Bold' | 'Times-Roman';
@@ -24,7 +24,7 @@ export interface PageNumberOptions {
   toPage?: number;
 }
 
-export interface PageNumberResponse {
+interface PageNumberResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -32,7 +32,7 @@ export interface PageNumberResponse {
   totalPages: number;
 }
 
-export interface StoredPageNumberResult {
+interface StoredPageNumberResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -41,3 +41,5 @@ export interface StoredPageNumberResult {
   pagesCount: number;
   size: number;
 }
+
+export type { PageNumberMargin, PageNumberMode, PageNumberOptions, PageNumberPosition, PageNumberResponse, StoredPageNumberResult };

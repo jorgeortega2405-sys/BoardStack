@@ -1,4 +1,5 @@
 import { SHAPES_CATALOG } from './collab-shapes.config.js';
+import { t } from '../../services/i18n.service.js';
 const SOLID_COLORS: string[] = [
   '#000b3d', '#00167a', '#0025cc', '#1f48ff', '#5271ff', '#99acff', '#c2cdff',
   '#020c45', '#2c0a71', '#4910bc', '#5e17eb', '#8c52ff', '#bea1f7', '#d8c7fa',
@@ -27,7 +28,7 @@ const TABLE_THEMES = [
   { accent: '#8b5cf6', colorName: 'purple', tint: '#ede9fe' },
 ];
 
-export function createCollaborativeDrawerElement(): HTMLElement {
+function createCollaborativeDrawerElement(): HTMLElement {
   const tablePresetButtons = TABLE_THEMES.map((t) => `
     <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="grid" data-table-color="${t.colorName}" data-tooltip="Cuadrícula" aria-label="Cuadrícula">
       <svg class="collaborative-table-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
@@ -578,7 +579,7 @@ export function createCollaborativeDrawerElement(): HTMLElement {
         </div>
 
         <div class="collaborative-pdf-apply-actions">
-          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full" data-ref="btn-embed-design" data-tooltip="Insertar como diseño editable en la página actual">
+          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full" data-ref="btn-embed-design" data-tooltip=t('ui.insertar_como_diseno_editable_en_la_pagi')>
             <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
             <span class="component-button__text">Incrustar en página actual</span>
           </button>
@@ -837,3 +838,5 @@ export function createCollaborativeDrawerElement(): HTMLElement {
   `;
   return drawer;
 }
+
+export { createCollaborativeDrawerElement };

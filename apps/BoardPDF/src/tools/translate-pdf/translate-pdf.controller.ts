@@ -1,11 +1,11 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
-import { getPdfPageCount, isPdfBuffer } from '../../utils/pdf.util.js';
+import { getPdfPageCount } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { translatePdf } from './translate-pdf.service.js';
 import { Request, Response } from 'express';
 
-export async function translatePdfHandler(req: Request, res: Response): Promise<void> {
+async function translatePdfHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = (req as any).user;
     if (!user) {
@@ -17,35 +17,14 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     }
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-    const file = req.file || files?.file?.[0] || files?.pdf?.[0];
-    if (!file) {
-      res.status(400).json({
-        error: 'Por favor selecciona un archivo PDF válido.',
-        success: false,
-      });
-      return;
+    if (!req.file && (files?.file?.[0] || files?.pdf?.[0])) {
+      req.file = files?.file?.[0] || files?.pdf?.[0];
     }
 
-    if (!isPdfBuffer(file.buffer)) {
-      res.status(400).json({
-        error: 'El archivo seleccionado no es un PDF válido.',
-        success: false,
-      });
-      return;
-    }
+    const file = validatePdfUpload(req, res, 'translate-pdf');
+    if (!file) return;
 
     const userPerms = (user.permissions as string[]) || [];
-    const limits = getToolLimits('translate-pdf', userPerms);
-    const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
-
-    if (file.buffer.length > maxBytes) {
-      res.status(400).json({
-        error: `El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`,
-        success: false,
-      });
-      return;
-    }
-
     const pageCount = await getPdfPageCount(file.buffer);
     const requiredTokens = calculatePdfCost('translate-pdf', pageCount, file.buffer.length);
     const tokenInfo = await getUserTokenBalance(user.id, userPerms);
@@ -125,3 +104,5 @@ export async function translatePdfHandler(req: Request, res: Response): Promise<
     });
   }
 }
+
+export { translatePdfHandler };

@@ -5,8 +5,9 @@ import { pickDropboxFiles } from './dropbox.service.js';
 import { pickGoogleDriveFiles } from './google-drive.service.js';
 import { navigate } from './navigation.service.js';
 import { showToast } from './toast.service.js';
+import { t } from './i18n.service.js';
 
-export interface ToolDownloadPayload {
+interface ToolDownloadPayload {
   downloadUrl?: string;
   fileSize?: number;
   filename: string;
@@ -17,7 +18,7 @@ export interface ToolDownloadPayload {
   token?: string;
 }
 
-export interface ToolFileFlowOptions {
+interface ToolFileFlowOptions {
   container: HTMLElement;
   dropzoneRef?: string;
   multiselect?: boolean;
@@ -27,7 +28,7 @@ export interface ToolFileFlowOptions {
   toolId: string;
 }
 
-export function saveDownloadPayloadAndNavigate(payload: ToolDownloadPayload): void {
+function saveDownloadPayloadAndNavigate(payload: ToolDownloadPayload): void {
   const token = payload.token || '';
   const downloadUrl = payload.downloadUrl || (token ? `/api/download/${token}` : '');
   const data = {
@@ -36,7 +37,7 @@ export function saveDownloadPayloadAndNavigate(payload: ToolDownloadPayload): vo
     filename: payload.filename,
     returnText: payload.returnText || 'Volver a la herramienta',
     returnUrl: payload.returnUrl,
-    subtitle: payload.subtitle || 'El proceso se ha completado con éxito y tu documento está listo para descargar.',
+    subtitle: payload.subtitle || t('ui.el_proceso_se_ha_completado_con_exito_y_'),
     title: payload.title || '¡Tu archivo está listo para descargar!',
     token,
   };
@@ -45,27 +46,27 @@ export function saveDownloadPayloadAndNavigate(payload: ToolDownloadPayload): vo
   navigate(targetPath);
 }
 
-export function validatePdfFile(file: File, toolId: string): { error?: string; valid: boolean } {
+function validatePdfFile(file: File, toolId: string): { error?: string; valid: boolean } {
   const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf' || file.type === 'application/x-pdf';
   if (!isPdf) {
-    return { error: 'Selecciona únicamente un documento en formato PDF.', valid: false };
+    return { error: t('ui.selecciona_unicamente_un_documento_en_fo'), valid: false };
   }
   const limits = getCurrentUserToolLimits(toolId);
   const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
   if (file.size > maxBytes) {
-    return { error: `El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`, valid: false };
+    return { error: t('ui.el_archivo_seleccionado_supera_el_limite'), valid: false };
   }
   return { valid: true };
 }
 
-export function setupToolFileFlow(options: ToolFileFlowOptions): void {
+function setupToolFileFlow(options: ToolFileFlowOptions): void {
   const { container, multiselect = false, onFile, onFiles, signal, toolId } = options;
 
   const validateIncoming = (file: File): { error?: string; valid: boolean } => {
     if (toolId === 'to-pdf-converter') {
       const limits = getCurrentUserToolLimits(toolId);
       if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-        return { error: `El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`, valid: false };
+        return { error: t('ui.el_archivo_seleccionado_supera_el_limite'), valid: false };
       }
       return { valid: true };
     }
@@ -91,7 +92,7 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
       }
       const validation = validateIncoming(file);
       if (!validation.valid) {
-        showToast(validation.error || 'Selecciona únicamente un documento en formato PDF.', 'danger');
+        showToast(validation.error || t('ui.selecciona_unicamente_un_documento_en_fo'), 'danger');
         return;
       }
       if (onFile) {
@@ -229,3 +230,6 @@ export function setupToolFileFlow(options: ToolFileFlowOptions): void {
     });
   }
 }
+
+export { saveDownloadPayloadAndNavigate, setupToolFileFlow, validatePdfFile };
+export type { ToolDownloadPayload, ToolFileFlowOptions };

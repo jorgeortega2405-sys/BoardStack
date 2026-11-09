@@ -1,46 +1,19 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
 import { createPdfUploadMiddleware } from '../../utils/upload.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { removePdfPages } from './remove-pdf-pages.service.js';
 import { RemovePagesOptions } from './remove-pdf-pages.types.js';
 import { Request, Response } from 'express';
 
-export const handleRemovePagesUploadMiddleware = createPdfUploadMiddleware({
+const handleRemovePagesUploadMiddleware = createPdfUploadMiddleware({
   fieldName: 'pdf',
   maxFileSizeMB: 1000,
   maxFiles: 1,
 });
 
-export async function handleRemovePages(req: Request, res: Response): Promise<void> {
-  const file = req.file;
-
-  if (!file) {
-    res.status(400).json({
-      error: 'Debes seleccionar un archivo PDF para procesar.',
-      success: false,
-    });
-    return;
-  }
-
-  const userPerms = ((req as any).user?.permissions as string[]) || [];
-  const limits = getToolLimits('remove-pdf-pages', userPerms);
-
-  if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
-    res.status(400).json({
-      error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar documentos de mayor tamaño.`,
-      success: false,
-    });
-    return;
-  }
-
-  if (!isPdfBuffer(file.buffer)) {
-    res.status(400).json({
-      error: 'El archivo enviado no corresponde a un documento PDF válido.',
-      success: false,
-    });
-    return;
-  }
+async function handleRemovePages(req: Request, res: Response): Promise<void> {
+  const file = validatePdfUpload(req, res, 'remove-pdf-pages');
+  if (!file) return;
 
   let pagesToRemove: number[] = [];
   try {
@@ -73,17 +46,11 @@ export async function handleRemovePages(req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     logger.app.error('Error al eliminar páginas del documento PDF', error);
-    const isValidationError = error instanceof Error && (
-      error.message.includes('página') ||
-      error.message.includes('protegido') ||
-      error.message.includes('válido')
-    );
-    const friendlyMessage = isValidationError
-      ? (error as Error).message
-      : 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.';
-    res.status(isValidationError ? 400 : 500).json({
-      error: friendlyMessage,
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al eliminar las páginas del documento PDF. Por favor intenta más tarde.',
       success: false,
     });
   }
 }
+
+export { handleRemovePages, handleRemovePagesUploadMiddleware };

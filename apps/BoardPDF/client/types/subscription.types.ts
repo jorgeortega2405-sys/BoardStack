@@ -1,6 +1,6 @@
-export type SubscriptionTierId = 'business' | 'free' | 'pro';
+type SubscriptionTierId = 'business' | 'free' | 'pro';
 
-export interface PurchaseRecord {
+interface PurchaseRecord {
   amount_total: number;
   billing_period: 'monthly' | 'yearly' | 'one_time_monthly' | 'one_time_yearly';
   created_at?: Date | string;
@@ -16,7 +16,7 @@ export interface PurchaseRecord {
   user_id: number;
 }
 
-export interface PaymentMethod {
+interface PaymentMethod {
   brand: string;
   expMonth: number;
   expYear: number;
@@ -25,7 +25,7 @@ export interface PaymentMethod {
   last4: string;
 }
 
-export interface BillingDetailsResponse {
+interface BillingDetailsResponse {
   amount?: number;
   billing_period?: string;
   cancel_at_period_end?: boolean;
@@ -42,7 +42,7 @@ export interface BillingDetailsResponse {
   tier: SubscriptionTierId | string;
 }
 
-export interface SubscriptionTier {
+interface SubscriptionTier {
   badge?: string;
   borderColor: string;
   buttonText: string;
@@ -58,7 +58,7 @@ export interface SubscriptionTier {
   tagline: string;
 }
 
-export interface SubscriptionIntentResponse {
+interface SubscriptionIntentResponse {
   amount: number;
   billingPeriod: 'monthly' | 'yearly';
   clientSecret: string;
@@ -71,7 +71,7 @@ export interface SubscriptionIntentResponse {
   success: boolean;
 }
 
-export interface OneTimePaymentIntentResponse {
+interface OneTimePaymentIntentResponse {
   amount: number;
   billingType: 'one_time';
   clientSecret: string;
@@ -83,3 +83,5 @@ export interface OneTimePaymentIntentResponse {
   publishableKey: string;
   success: boolean;
 }
+
+export type { BillingDetailsResponse, OneTimePaymentIntentResponse, PaymentMethod, PurchaseRecord, SubscriptionIntentResponse, SubscriptionTier, SubscriptionTierId };

@@ -3,7 +3,7 @@ import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import zlib from 'zlib';
 
-export interface SamlOrganizationConfig {
+interface SamlOrganizationConfig {
   acs_url: string;
   domain: string;
   enabled: boolean;
@@ -13,7 +13,7 @@ export interface SamlOrganizationConfig {
   organization_id: number;
 }
 
-export function getSpMetadataXml(baseUrl: string): string {
+function getSpMetadataXml(baseUrl: string): string {
   const cleanBase = baseUrl.replace(/\/+$/, '');
   const entityId = `${cleanBase}/api/sso/saml/metadata`;
   const acsUrl = `${cleanBase}/api/sso/saml/acs`;
@@ -27,7 +27,7 @@ export function getSpMetadataXml(baseUrl: string): string {
 </md:EntityDescriptor>`;
 }
 
-export function buildAuthnRequest(params: {
+function buildAuthnRequest(params: {
   acsUrl: string;
   entityId: string;
   idpSsoUrl: string;
@@ -41,7 +41,7 @@ export function buildAuthnRequest(params: {
   return deflated.toString('base64');
 }
 
-export function extractSamlEmail(xml: string): string | null {
+function extractSamlEmail(xml: string): string | null {
   const nameIdMatch = xml.match(/<(?:\w+:)?NameID[^>]*>([\s\S]*?)<\/(?:\w+:)?NameID>/i);
   if (nameIdMatch && nameIdMatch[1]) {
     const raw = nameIdMatch[1].trim();
@@ -62,7 +62,7 @@ export function extractSamlEmail(xml: string): string | null {
   return null;
 }
 
-export function verifySamlResponseSignature(xml: string, expectedCertPem: string): boolean {
+function verifySamlResponseSignature(xml: string, expectedCertPem: string): boolean {
   try {
     const cleanExpected = expectedCertPem
       .replace(/-----.*?-----/g, '')
@@ -100,7 +100,7 @@ export function verifySamlResponseSignature(xml: string, expectedCertPem: string
   }
 }
 
-export async function findSsoConfigByDomain(domain: string): Promise<SamlOrganizationConfig | null> {
+async function findSsoConfigByDomain(domain: string): Promise<SamlOrganizationConfig | null> {
   const pool = getDbPool();
   const trimmed = domain.trim().toLowerCase();
 
@@ -136,7 +136,7 @@ export async function findSsoConfigByDomain(domain: string): Promise<SamlOrganiz
   };
 }
 
-export async function isUserSsoManaged(userId: number, email: string): Promise<boolean> {
+async function isUserSsoManaged(userId: number, email: string): Promise<boolean> {
   if (!email || !userId) {
     return false;
   }
@@ -175,7 +175,7 @@ export async function isUserSsoManaged(userId: number, email: string): Promise<b
   return Array.isArray(domainRows) && domainRows.length > 0;
 }
 
-export const ssoService = {
+const ssoService = {
   buildAuthnRequest,
   extractSamlEmail,
   findSsoConfigByDomain,
@@ -183,3 +183,6 @@ export const ssoService = {
   isUserSsoManaged,
   verifySamlResponseSignature,
 };
+
+export { buildAuthnRequest, extractSamlEmail, findSsoConfigByDomain, getSpMetadataXml, isUserSsoManaged, ssoService, verifySamlResponseSignature };
+export type { SamlOrganizationConfig };

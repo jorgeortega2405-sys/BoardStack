@@ -1,15 +1,17 @@
 let transferredFile: File | null = null;
 
-export function consumeTransferFile(): File | null {
+function consumeTransferFile(): File | null {
   const file = transferredFile;
   transferredFile = null;
   return file;
 }
 
-export function getTransferFile(): File | null {
+function getTransferFile(): File | null {
   return transferredFile;
 }
 
-export function setTransferFile(file: File | null): void {
+function setTransferFile(file: File | null): void {
   transferredFile = file;
 }
+
+export { consumeTransferFile, getTransferFile, setTransferFile };

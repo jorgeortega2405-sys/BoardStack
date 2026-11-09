@@ -8,6 +8,7 @@ import { ViewController } from '../types/common.types.js';
 import { getPendingCloudSyncDraft, removeLocalDraft, setPendingCloudSyncDraft } from '../utils/collab-local-draft.util.js';
 import { createBannerManager, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
+import { t } from '../services/i18n.service.js';
 
 interface RegistrationFlowState {
   email?: string;
@@ -30,7 +31,7 @@ async function syncPendingDraftIfAny(): Promise<string | null> {
       if (res.ok) {
         removeLocalDraft(pending.id);
         setPendingCloudSyncDraft(null);
-        showToast('¡Tu diseño local se ha sincronizado con tu cuenta!', 'success');
+        showToast(t('toasts.tu_diseno_local_se_ha_sincronizado_con_t'), 'success');
         return `/d/${encodeURIComponent(pending.id)}`;
       }
     } catch {}
@@ -141,7 +142,7 @@ class LoginViewController implements ViewController {
           }
 
           setAuthState(data.user, data.accounts || []);
-          showToast(`¡Bienvenido de nuevo, ${data.user.username}!`, 'success');
+          showToast(t('toasts.bienvenido_de_nuevo'), 'success');
           const syncedUrl = await syncPendingDraftIfAny();
           if (syncedUrl) {
             navigate(syncedUrl);
@@ -199,8 +200,8 @@ class LoginViewController implements ViewController {
       banners.hideAll();
       banners2fa.hideAll();
       currentTempToken = '';
-      if (step2fa) step2fa.style.display = 'none';
-      if (stepMain) stepMain.style.display = '';
+      if (step2fa) step2fa.classList.add('is-hidden');
+      if (stepMain) stepMain.classList.remove('is-hidden');
       emailInput?.focus();
     };
 
@@ -208,8 +209,8 @@ class LoginViewController implements ViewController {
       banners.hideAll();
       banners2fa.hideAll();
       currentTempToken = token;
-      if (stepMain) stepMain.style.display = 'none';
-      if (step2fa) step2fa.style.display = '';
+      if (stepMain) stepMain.classList.add('is-hidden');
+      if (step2fa) step2fa.classList.remove('is-hidden');
       if (input2faCode) {
         input2faCode.value = '';
         input2faCode.focus();
@@ -220,7 +221,7 @@ class LoginViewController implements ViewController {
       banners2fa.hideAll();
       const code = input2faCode?.value.trim() || '';
       if (!code) {
-        banners2fa.showError('Ingresa el código de verificación.');
+        banners2fa.showError(t('ui.ingresa_el_codigo_de_verificacion'));
         input2faCode?.focus();
         return;
       }
@@ -236,7 +237,7 @@ class LoginViewController implements ViewController {
           }
 
           setAuthState(data.user, data.accounts || []);
-          showToast(`¡Bienvenido de nuevo, ${data.user.username}!`, 'success');
+          showToast(t('toasts.bienvenido_de_nuevo'), 'success');
           const syncedUrl = await syncPendingDraftIfAny();
           if (syncedUrl) {
             navigate(syncedUrl);
@@ -244,7 +245,7 @@ class LoginViewController implements ViewController {
             navigate(getRedirectTarget());
           }
         } catch {
-          banners2fa.showError('Error de conexión al verificar el código.');
+          banners2fa.showError(t('ui.error_de_conexion_al_verificar_el_codigo'));
         }
       });
     };
@@ -286,9 +287,9 @@ class LoginViewController implements ViewController {
       const err = urlParams.get('error');
       if (err) {
         if (err === 'google_denied' || err === 'google_cancelled') {
-          banners.showError('Se canceló el inicio de sesión con Google.');
+          banners.showError(t('ui.se_cancelo_el_inicio_de_sesion_con_googl'));
         } else if (err === 'google_token_failed' || err === 'google_profile_failed' || err === 'google_failed') {
-          banners.showError('No se pudo completar el inicio de sesión con Google. Intenta nuevamente.');
+          banners.showError(t('ui.no_se_pudo_completar_el_inicio_de_sesion'));
         } else if (err === 'session_expired') {
           banners.showError('Tu sesión ha expirado. Inicia sesión nuevamente.');
         }
@@ -351,9 +352,9 @@ class RegisterViewController implements ViewController {
       bannersStage2.hideAll();
       bannersStage3.hideAll();
 
-      if (step1) step1.style.display = stageNum === 1 ? 'block' : 'none';
-      if (step2) step2.style.display = stageNum === 2 ? 'block' : 'none';
-      if (step3) step3.style.display = stageNum === 3 ? 'block' : 'none';
+      if (step1) step1.classList.toggle('is-hidden', stageNum !== 1);
+      if (step2) step2.classList.toggle('is-hidden', stageNum !== 2);
+      if (step3) step3.classList.toggle('is-hidden', stageNum !== 3);
 
       if (stageNum === 1) {
         requestAnimationFrame(() => emailInput?.focus());
@@ -362,7 +363,7 @@ class RegisterViewController implements ViewController {
       } else if (stageNum === 3) {
         const state = getRegistrationState();
         if (subtitleTextEl) {
-          subtitleTextEl.textContent = `Enviamos un código de verificación de 6 dígitos a ${state.email || ''}.`;
+          subtitleTextEl.textContent = t('auth.register_verify_sent', { email: state.email || '' });
         }
         requestAnimationFrame(() => codeInput?.focus());
       }
@@ -445,7 +446,7 @@ class RegisterViewController implements ViewController {
 
       const usernameValidation = validateUsername(username);
       if (!usernameValidation.valid) {
-        bannersStage2.showError(usernameValidation.error || 'Ingresa un nombre de usuario válido.');
+        bannersStage2.showError(usernameValidation.error || t('ui.ingresa_un_nombre_de_usuario_valido'));
         return;
       }
 
@@ -493,7 +494,7 @@ class RegisterViewController implements ViewController {
 
       const codeValidation = validateVerificationCode(code);
       if (!codeValidation.valid) {
-        bannersStage3.showError(codeValidation.error || 'Ingresa un código de 6 dígitos.');
+        bannersStage3.showError(codeValidation.error || t('ui.ingresa_un_codigo_de_6_digitos'));
         return;
       }
 
@@ -513,7 +514,7 @@ class RegisterViewController implements ViewController {
 
           setAuthState(data.user, data.accounts || []);
           clearRegistrationState();
-          showToast(`¡Bienvenido a BoardPDF, ${data.user.username}!`, 'success');
+          showToast(t('toasts.bienvenido_a_boardpdf'), 'success');
           const syncedUrl = await syncPendingDraftIfAny();
           if (syncedUrl) {
             navigate(syncedUrl);
@@ -548,7 +549,7 @@ class RegisterViewController implements ViewController {
           const data = await res.json();
 
           if (!res.ok) {
-            bannersStage3.showError(data.error || 'No se pudo reenviar el código.');
+            bannersStage3.showError(data.error || t('ui.no_se_pudo_reenviar_el_codigo'));
             return;
           }
 
@@ -669,7 +670,7 @@ class ResetPasswordViewController implements ViewController {
   }
 }
 
-export async function createLoginView(): Promise<HTMLElement> {
+async function createLoginView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/auth/login.html');
   const controller = new LoginViewController(container);
   controller.init();
@@ -677,7 +678,7 @@ export async function createLoginView(): Promise<HTMLElement> {
   return container;
 }
 
-export async function createRegisterView(): Promise<HTMLElement> {
+async function createRegisterView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/auth/register.html');
   const controller = new RegisterViewController(container);
   controller.init();
@@ -685,7 +686,7 @@ export async function createRegisterView(): Promise<HTMLElement> {
   return container;
 }
 
-export async function createForgotPasswordView(): Promise<HTMLElement> {
+async function createForgotPasswordView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/auth/forgot-password.html');
   const controller = new ForgotPasswordViewController(container);
   controller.init();
@@ -693,10 +694,12 @@ export async function createForgotPasswordView(): Promise<HTMLElement> {
   return container;
 }
 
-export async function createResetPasswordView(): Promise<HTMLElement> {
+async function createResetPasswordView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/auth/reset-password.html');
   const controller = new ResetPasswordViewController(container);
   controller.init();
   (container as unknown as { __controller: ViewController }).__controller = controller;
   return container;
 }
+
+export { createForgotPasswordView, createLoginView, createRegisterView, createResetPasswordView };

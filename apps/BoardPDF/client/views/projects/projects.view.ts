@@ -51,7 +51,7 @@ interface UploadFileItem {
   userId?: number | null;
 }
 
-export class ProjectsController implements ViewController {
+class ProjectsController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
@@ -988,9 +988,9 @@ export class ProjectsController implements ViewController {
         } else if (action === 'copy-link' && id) {
           const link = `${window.location.origin}/d/${encodeURIComponent(id)}`;
           navigator.clipboard?.writeText(link);
-          showToast('Enlace copiado al portapapeles', 'info');
+          showToast(t('toasts.enlace_copiado_al_portapapeles'), 'info');
         } else if (action === 'download' && id) {
-          showToast('Generando descarga del documento...', 'info');
+          showToast(t('toasts.generando_descarga_del_documento'), 'info');
           window.open(`/api/collaborative-docs/${encodeURIComponent(id)}/export`, '_blank');
         } else if (action === 'delete' && id) {
           void this.handleDeleteDoc(id);
@@ -1049,7 +1049,7 @@ export class ProjectsController implements ViewController {
         const input = document.querySelector<HTMLInputElement>('[data-ref="input-folder-name"]');
         const name = (input?.value || '').trim();
         if (!name) {
-          showToast('Debes ingresar un nombre para la carpeta', 'warning');
+          showToast(t('toasts.debes_ingresar_un_nombre_para_la_carpeta'), 'warning');
           return false;
         }
 
@@ -1061,10 +1061,10 @@ export class ProjectsController implements ViewController {
           });
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo crear la carpeta', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_crear_la_carpeta'), 'danger');
             return false;
           }
-          showToast('Carpeta creada exitosamente', 'info');
+          showToast(t('toasts.carpeta_creada_exitosamente'), 'info');
           await this.loadData();
           this.renderView();
           return true;
@@ -1102,7 +1102,7 @@ export class ProjectsController implements ViewController {
         const input = document.querySelector<HTMLInputElement>('[data-ref="input-rename-name"]');
         const newName = (input?.value || '').trim();
         if (!newName) {
-          showToast('El nombre no puede estar vacío', 'warning');
+          showToast(t('toasts.name_cannot_be_empty'), 'warning');
           return false;
         }
 
@@ -1110,10 +1110,10 @@ export class ProjectsController implements ViewController {
           const res = await patchApi(API_ROUTES.projectFolders.byId(folderId), { name: newName });
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo renombrar la carpeta', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_renombrar_la_carpeta'), 'danger');
             return false;
           }
-          showToast('Carpeta renombrada exitosamente', 'info');
+          showToast(t('toasts.carpeta_renombrada_exitosamente'), 'info');
           await this.loadData();
           this.renderView();
           return true;
@@ -1145,10 +1145,10 @@ export class ProjectsController implements ViewController {
           const res = await deleteApi(API_ROUTES.projectFolders.byId(folderId));
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo eliminar la carpeta', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_eliminar_la_carpeta'), 'danger');
             return false;
           }
-          showToast('Carpeta eliminada', 'info');
+          showToast(t('toasts.folder_deleted'), 'info');
           if (this.currentFolderId === folderId) {
             navigate('/projects');
           } else {
@@ -1157,7 +1157,7 @@ export class ProjectsController implements ViewController {
           }
           return true;
         } catch {
-          showToast('Error al eliminar la carpeta', 'danger');
+          showToast(t('ui.error_al_eliminar_la_carpeta'), 'danger');
           return false;
         }
       },
@@ -1217,10 +1217,10 @@ export class ProjectsController implements ViewController {
           const res = await patchApi(API_ROUTES.projectFolders.docFolder(docId), { folderId: targetId });
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo mover el documento', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_mover_el_documento'), 'danger');
             return false;
           }
-          showToast('Documento movido exitosamente', 'info');
+          showToast(t('toasts.doc_moved_success'), 'info');
           await this.loadData();
           this.renderView();
           return true;
@@ -1288,10 +1288,10 @@ export class ProjectsController implements ViewController {
           const res = await patchApi(API_ROUTES.projectFolders.uploadFolder(uploadId), { folderId: targetId });
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo mover el archivo', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_mover_el_archivo'), 'danger');
             return false;
           }
-          showToast('Archivo movido exitosamente', 'info');
+          showToast(t('toasts.file_moved_success'), 'info');
           await this.loadData();
           this.renderView();
           return true;
@@ -1318,10 +1318,10 @@ export class ProjectsController implements ViewController {
           const res = await deleteApi(API_ROUTES.projectFolders.uploadDelete(uploadId));
           if (!res.ok) {
             const data = await res.json();
-            showToast(data.error || 'No se pudo eliminar el archivo', 'danger');
+            showToast(data.error || t('ui.no_se_pudo_eliminar_el_archivo'), 'danger');
             return false;
           }
-          showToast('Archivo eliminado', 'info');
+          showToast(t('toasts.file_deleted'), 'info');
           await this.loadData();
           this.renderView();
           return true;
@@ -1356,7 +1356,7 @@ export class ProjectsController implements ViewController {
         method: 'POST',
       });
       if (res.ok) {
-        showToast('Archivos subidos exitosamente', 'info');
+        showToast(t('toasts.files_uploaded_success'), 'info');
         await this.loadData();
         this.renderView();
       } else {
@@ -1371,7 +1371,7 @@ export class ProjectsController implements ViewController {
   private createNewCollabDocument(): void {
     if (currentUser?.storage_limit_bytes && currentUser.storage_used_bytes) {
       if (currentUser.storage_used_bytes >= currentUser.storage_limit_bytes) {
-        showToast('Has alcanzado el límite de almacenamiento de 5 GB. Elimina documentos para continuar.', 'danger');
+        showToast(t('projects.storage_limit_reached'), 'danger');
         return;
       }
     }
@@ -1426,7 +1426,7 @@ export class ProjectsController implements ViewController {
       });
     } catch {}
 
-    showToast('Copia creada exitosamente', 'info');
+    showToast(t('toasts.copy_created_success'), 'info');
     await this.loadData();
     this.renderView();
   }
@@ -1444,7 +1444,7 @@ export class ProjectsController implements ViewController {
         try {
           await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
         } catch {}
-        showToast('Documento eliminado correctamente', 'info');
+        showToast(t('toasts.documento_eliminado_correctamente'), 'info');
         await this.loadData();
         this.renderView();
         return true;
@@ -1564,7 +1564,7 @@ export class ProjectsController implements ViewController {
   }
 }
 
-export async function createProjectsView(folderId?: string | null): Promise<HTMLElement | null> {
+async function createProjectsView(folderId?: string | null): Promise<HTMLElement | null> {
   if (!currentUser) {
     navigate('/login?redirect=%2Fprojects', true);
     return null;
@@ -1575,3 +1575,5 @@ export async function createProjectsView(folderId?: string | null): Promise<HTML
   (container as any).__controller = controller;
   return container;
 }
+
+export { ProjectsController, createProjectsView };

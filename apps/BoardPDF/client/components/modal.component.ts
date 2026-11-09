@@ -10,7 +10,7 @@ import { hideElement, showElement, toggleElement } from '../utils/dom.util.js';
 let activeModals: ModalInstance[] = [];
 let active2FAModal: any = null;
 
-export function closeAllModals(): void {
+function closeAllModals(): void {
   const modalsToClose = [...activeModals];
   for (const modal of modalsToClose) {
     modal.close();
@@ -18,7 +18,7 @@ export function closeAllModals(): void {
   activeModals = [];
 }
 
-export function setupSheetDragToDismiss(
+function setupSheetDragToDismiss(
   dragZone: HTMLElement,
   sheet: HTMLElement,
   backdrop: HTMLElement,
@@ -133,7 +133,7 @@ export function setupSheetDragToDismiss(
   return cleanup;
 }
 
-export function openModal(options: ModalOptions = {}): ModalInstance {
+function openModal(options: ModalOptions = {}): ModalInstance {
   let {
     bodyHtml = '',
     cancelText = t('common.cancel'),
@@ -355,7 +355,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   return modalInstance;
 }
 
-export async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => void } = {}): Promise<any> {
+async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => void } = {}): Promise<any> {
   const { onClose = null, onSuccess = null } = options;
 
   if (active2FAModal) {
@@ -593,7 +593,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   copyBackupBtn?.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
     if (currentBackupCodes.length > 0) {
-      const textToCopy = `BoardPDF - Códigos de Respaldo 2FA:\n\n${currentBackupCodes.join('\n')}\n\nConserva estos códigos en un lugar seguro. Cada código solo se puede usar una vez.`;
+      const textToCopy = `BoardPDF - 2FA Backup Codes:\n\n${currentBackupCodes.join('\n')}\n\nKeep these backup codes in a safe place. Each code can only be used once.`;
       try {
         await navigator.clipboard.writeText(textToCopy);
         showToast(
@@ -684,7 +684,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
 
     if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
       showError(
-        t('settings.security.two_factor_invalid_code') || 'Ingresa un código válido de 6 dígitos.'
+        t('settings.security.two_factor_invalid_code') || t('ui.ingresa_un_codigo_valido_de_6_digitos')
       );
       return;
     }
@@ -751,3 +751,5 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
 
   return modalInstance;
 }
+
+export { closeAllModals, open2FAModal, openModal, setupSheetDragToDismiss };

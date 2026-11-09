@@ -3,12 +3,13 @@ import { User } from '../types/auth.types.js';
 import { OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
 import { clearAllLocalDrafts } from '../utils/collab-local-draft.util.js';
 import { wsService } from './websocket.service.js';
+import { t } from './i18n.service.js';
 
-export let currentUser: User | null = null;
-export let linkedAccounts: User[] = [];
+let currentUser: User | null = null;
+let linkedAccounts: User[] = [];
 const authListeners = new Set<(user: User | null, accounts?: User[]) => void>();
 
-export function setAuthState(user: User | null, accounts: User[] = []): void {
+function setAuthState(user: User | null, accounts: User[] = []): void {
   currentUser = user;
   linkedAccounts = accounts.length > 0 ? accounts : (user ? [user] : []);
   authListeners.forEach((fn) => {
@@ -18,41 +19,41 @@ export function setAuthState(user: User | null, accounts: User[] = []): void {
   });
 }
 
-export function setCurrentUser(user: User | null): void {
+function setCurrentUser(user: User | null): void {
   setAuthState(user, linkedAccounts);
 }
 
-export function setLinkedAccounts(accounts: User[]): void {
+function setLinkedAccounts(accounts: User[]): void {
   setAuthState(currentUser, accounts);
 }
 
-export function clearUserState(): void {
+function clearUserState(): void {
   setAuthState(null, []);
 }
 
-export function onAuthChange(callback: (user: User | null, accounts?: User[]) => void): () => void {
+function onAuthChange(callback: (user: User | null, accounts?: User[]) => void): () => void {
   authListeners.add(callback);
   return () => {
     authListeners.delete(callback);
   };
 }
 
-export function hasPermission(permission: string): boolean {
+function hasPermission(permission: string): boolean {
   if (!currentUser || !Array.isArray(currentUser.permissions)) return false;
   return currentUser.permissions.includes(permission);
 }
 
-export function hasSubscriptionFeature(feature: string): boolean {
+function hasSubscriptionFeature(feature: string): boolean {
   return hasPermission(`subscription:feature:${feature}`);
 }
 
-export function getCsrfToken(): string {
+function getCsrfToken(): string {
   if (typeof document === 'undefined' || !document.cookie) return '';
   const match = document.cookie.match(/(?:^|;\s*)boardpdf_csrf_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : '';
 }
 
-export async function ensureCsrfToken(forceRefresh = false): Promise<string> {
+async function ensureCsrfToken(forceRefresh = false): Promise<string> {
   let token = getCsrfToken();
   if ((!token || forceRefresh) && typeof window !== 'undefined') {
     try {
@@ -67,7 +68,7 @@ async function timedFetch(url: string, init: RequestInit): Promise<Response> {
   return await fetch(url, init);
 }
 
-export async function getApi(url: string): Promise<Response> {
+async function getApi(url: string): Promise<Response> {
   return timedFetch(url, {
     credentials: 'same-origin',
     headers: {
@@ -77,7 +78,7 @@ export async function getApi(url: string): Promise<Response> {
   });
 }
 
-export async function postApi(url: string, body?: unknown, customHeaders?: Record<string, string>): Promise<Response> {
+async function postApi(url: string, body?: unknown, customHeaders?: Record<string, string>): Promise<Response> {
   const token = await ensureCsrfToken();
   return timedFetch(url, {
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -92,7 +93,7 @@ export async function postApi(url: string, body?: unknown, customHeaders?: Recor
   });
 }
 
-export async function patchApi(url: string, body?: unknown): Promise<Response> {
+async function patchApi(url: string, body?: unknown): Promise<Response> {
   const token = await ensureCsrfToken();
   return timedFetch(url, {
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -106,7 +107,7 @@ export async function patchApi(url: string, body?: unknown): Promise<Response> {
   });
 }
 
-export async function putApi(url: string, body?: unknown): Promise<Response> {
+async function putApi(url: string, body?: unknown): Promise<Response> {
   const token = await ensureCsrfToken();
   return timedFetch(url, {
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -120,7 +121,7 @@ export async function putApi(url: string, body?: unknown): Promise<Response> {
   });
 }
 
-export async function deleteApi(url: string, body?: unknown): Promise<Response> {
+async function deleteApi(url: string, body?: unknown): Promise<Response> {
   const token = await ensureCsrfToken();
   return timedFetch(url, {
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -134,7 +135,7 @@ export async function deleteApi(url: string, body?: unknown): Promise<Response> 
   });
 }
 
-export async function postFormApi(url: string, formData: FormData): Promise<Response> {
+async function postFormApi(url: string, formData: FormData): Promise<Response> {
   const token = await ensureCsrfToken();
   return timedFetch(url, {
     body: formData,
@@ -147,7 +148,7 @@ export async function postFormApi(url: string, formData: FormData): Promise<Resp
   });
 }
 
-export interface UploadProgressInfo {
+interface UploadProgressInfo {
   etaSeconds: number;
   loaded: number;
   percent: number;
@@ -155,7 +156,7 @@ export interface UploadProgressInfo {
   total: number;
 }
 
-export async function postFormWithProgress(
+async function postFormWithProgress(
   url: string,
   formData: FormData,
   onProgress?: (info: UploadProgressInfo) => void,
@@ -230,7 +231,7 @@ export async function postFormWithProgress(
   });
 }
 
-export function escapeHtml(str: string): string {
+function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -239,7 +240,7 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
-export async function checkAuthSession(): Promise<User | null> {
+async function checkAuthSession(): Promise<User | null> {
   try {
     const res = await getApi('/api/auth/me');
     if (res.ok) {
@@ -254,7 +255,7 @@ export async function checkAuthSession(): Promise<User | null> {
   return null;
 }
 
-export async function switchAccountApi(userId: number | string): Promise<{ accounts?: User[]; error?: string; success: boolean; user?: User }> {
+async function switchAccountApi(userId: number | string): Promise<{ accounts?: User[]; error?: string; success: boolean; user?: User }> {
   try {
     const res = await postApi('/api/auth/switch-account', { userId });
     const data = await res.json();
@@ -262,9 +263,9 @@ export async function switchAccountApi(userId: number | string): Promise<{ accou
       setAuthState(data.user, data.accounts || []);
       return { accounts: data.accounts, success: true, user: data.user };
     }
-    return { error: data.error || 'No se pudo cambiar de cuenta', success: false };
+    return { error: data.error || t('ui.no_se_pudo_cambiar_de_cuenta'), success: false };
   } catch {
-    return { error: 'Error de red al cambiar de cuenta', success: false };
+    return { error: t('ui.error_de_red_al_cambiar_de_cuenta'), success: false };
   }
 }
 
@@ -279,7 +280,7 @@ function clearWalStorage(): void {
   } catch {}
 }
 
-export async function logoutApi(userId?: number | string): Promise<{ accounts?: User[]; success: boolean; switched?: boolean; user?: User | null }> {
+async function logoutApi(userId?: number | string): Promise<{ accounts?: User[]; success: boolean; switched?: boolean; user?: User | null }> {
   try {
     const res = await postApi('/api/auth/logout', userId ? { userId } : {});
     if (res.ok) {
@@ -302,7 +303,7 @@ export async function logoutApi(userId?: number | string): Promise<{ accounts?: 
   return { accounts: [], success: true, switched: false, user: null };
 }
 
-export async function logoutAllApi(): Promise<boolean> {
+async function logoutAllApi(): Promise<boolean> {
   try {
     await postApi('/api/auth/logout-all');
   } catch {}
@@ -313,7 +314,7 @@ export async function logoutAllApi(): Promise<boolean> {
   return true;
 }
 
-export function updateUserSubscriptionTier(tier: string): void {
+function updateUserSubscriptionTier(tier: string): void {
   if (currentUser) {
     currentUser.subscription_tier = tier;
     setAuthState(
@@ -323,16 +324,16 @@ export function updateUserSubscriptionTier(tier: string): void {
   }
 }
 
-export async function createCheckoutApi(planId: string, billingPeriod: string): Promise<{ error?: string; sessionId?: string; success: boolean; url?: string }> {
+async function createCheckoutApi(planId: string, billingPeriod: string): Promise<{ error?: string; sessionId?: string; success: boolean; url?: string }> {
   try {
     const res = await postApi('/api/subscription/checkout', { billingPeriod, planId });
     return await res.json();
   } catch {
-    return { error: 'Error al conectar con la pasarela de pagos', success: false };
+    return { error: t('ui.error_al_conectar_con_la_pasarela_de_pag'), success: false };
   }
 }
 
-export async function createSubscriptionIntentApi(
+async function createSubscriptionIntentApi(
   planId: string,
   billingPeriod: string = 'monthly'
 ): Promise<SubscriptionIntentResponse & { error?: string }> {
@@ -345,7 +346,7 @@ export async function createSubscriptionIntentApi(
       billingPeriod: billingPeriod as any,
       clientSecret: '',
       currency: 'USD',
-      error: 'Error al conectar con la pasarela de pagos.',
+      error: t('ui.error_al_conectar_con_la_pasarela_de_pag'),
       paymentIntentId: '',
       planId: planId as any,
       planName: '',
@@ -356,7 +357,7 @@ export async function createSubscriptionIntentApi(
   }
 }
 
-export async function confirmSubscriptionPaymentApi(
+async function confirmSubscriptionPaymentApi(
   subscriptionId: string,
   paymentIntentId?: string
 ): Promise<{ error?: string; message?: string; success: boolean; tier?: string }> {
@@ -364,11 +365,11 @@ export async function confirmSubscriptionPaymentApi(
     const res = await postApi('/api/subscription/confirm-intent', { paymentIntentId, subscriptionId });
     return await res.json();
   } catch {
-    return { error: 'Error al confirmar la suscripción.', success: false };
+    return { error: t('ui.error_al_confirmar_la_suscripcion'), success: false };
   }
 }
 
-export async function createOneTimePaymentIntentApi(
+async function createOneTimePaymentIntentApi(
   planId: string,
   duration: '1_month' | '12_months' = '1_month'
 ): Promise<OneTimePaymentIntentResponse & { error?: string }> {
@@ -382,7 +383,7 @@ export async function createOneTimePaymentIntentApi(
       clientSecret: '',
       currency: 'USD',
       duration,
-      error: 'Error al conectar con la pasarela de pagos.',
+      error: t('ui.error_al_conectar_con_la_pasarela_de_pag'),
       paymentIntentId: '',
       planId: planId as any,
       planName: '',
@@ -392,27 +393,27 @@ export async function createOneTimePaymentIntentApi(
   }
 }
 
-export async function confirmOneTimePaymentApi(
+async function confirmOneTimePaymentApi(
   paymentIntentId: string
 ): Promise<{ error?: string; periodEnd?: string; planId?: string; success: boolean }> {
   try {
     const res = await postApi('/api/subscription/confirm-one-time-intent', { paymentIntentId });
     return await res.json();
   } catch {
-    return { error: 'Error al confirmar el pago único.', success: false };
+    return { error: t('ui.error_al_confirmar_el_pago_unico'), success: false };
   }
 }
 
-export async function verifySubscriptionSessionApi(sessionId: string): Promise<{ error?: string; message?: string; purchase?: any; success: boolean; tier?: string }> {
+async function verifySubscriptionSessionApi(sessionId: string): Promise<{ error?: string; message?: string; purchase?: any; success: boolean; tier?: string }> {
   try {
     const res = await getApi(`/api/subscription/verify-session?session_id=${encodeURIComponent(sessionId)}`);
     return await res.json();
   } catch {
-    return { error: 'Error al verificar sesión de pago', success: false };
+    return { error: t('ui.error_al_verificar_sesion_de_pago'), success: false };
   }
 }
 
-export async function getBillingDetailsApi(): Promise<any> {
+async function getBillingDetailsApi(): Promise<any> {
   try {
     const res = await getApi('/api/subscription/billing');
     return await res.json();
@@ -421,7 +422,7 @@ export async function getBillingDetailsApi(): Promise<any> {
   }
 }
 
-export async function getPurchaseHistoryApi(): Promise<{ purchases: any[]; success: boolean }> {
+async function getPurchaseHistoryApi(): Promise<{ purchases: any[]; success: boolean }> {
   try {
     const res = await getApi('/api/subscription/purchases');
     return await res.json();
@@ -430,12 +431,12 @@ export async function getPurchaseHistoryApi(): Promise<{ purchases: any[]; succe
   }
 }
 
-export async function downloadInvoiceApi(purchaseId: number | string): Promise<{ blob?: Blob; error?: string; filename?: string; success: boolean }> {
+async function downloadInvoiceApi(purchaseId: number | string): Promise<{ blob?: Blob; error?: string; filename?: string; success: boolean }> {
   try {
     const res = await getApi(`/api/subscription/purchases/${encodeURIComponent(purchaseId)}/invoice`);
     if (!res.ok) {
       const data = await res.json().catch(() => null);
-      return { error: data?.error || 'No se pudo descargar la factura.', success: false };
+      return { error: data?.error || t('ui.no_se_pudo_descargar_la_factura'), success: false };
     }
     const blob = await res.blob();
     const disposition = res.headers.get('content-disposition');
@@ -446,11 +447,11 @@ export async function downloadInvoiceApi(purchaseId: number | string): Promise<{
     }
     return { blob, filename, success: true };
   } catch {
-    return { error: 'Error de red al intentar descargar la factura.', success: false };
+    return { error: t('ui.error_de_red_al_intentar_descargar_la_fa'), success: false };
   }
 }
 
-export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<any> {
+async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<any> {
   try {
     const res = await postApi('/api/subscription/renewal', { cancelAtPeriodEnd });
     return await res.json();
@@ -459,16 +460,16 @@ export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<
   }
 }
 
-export async function cancelSubscriptionImmediateApi(): Promise<any> {
+async function cancelSubscriptionImmediateApi(): Promise<any> {
   try {
     const res = await postApi('/api/subscription/cancel-immediate', {});
     return await res.json();
   } catch {
-    return { error: 'Error de red al cancelar suscripción', success: false };
+    return { error: t('ui.error_de_red_al_cancelar_suscripcion'), success: false };
   }
 }
 
-export function updateUserAiTokens(balance: number): void {
+function updateUserAiTokens(balance: number): void {
   if (currentUser) {
     currentUser.ai_tokens_balance = balance;
     setAuthState(
@@ -478,7 +479,7 @@ export function updateUserAiTokens(balance: number): void {
   }
 }
 
-export async function fetchAiTokenBalance(): Promise<{ balance: number; limit: number; resetAt: string } | null> {
+async function fetchAiTokenBalance(): Promise<{ balance: number; limit: number; resetAt: string } | null> {
   try {
     const res = await getApi(API_ROUTES.tokens.balance);
     if (!res.ok) return null;
@@ -495,7 +496,7 @@ export async function fetchAiTokenBalance(): Promise<{ balance: number; limit: n
   }
 }
 
-export async function estimateAiTokens(
+async function estimateAiTokens(
   toolId: string,
   pageCount: number,
   fileSizeBytes: number
@@ -509,3 +510,6 @@ export async function estimateAiTokens(
     return null;
   }
 }
+
+export { cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, createCheckoutApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, currentUser, deleteApi, downloadInvoiceApi, ensureCsrfToken, escapeHtml, estimateAiTokens, fetchAiTokenBalance, getApi, getBillingDetailsApi, getCsrfToken, getPurchaseHistoryApi, hasPermission, hasSubscriptionFeature, linkedAccounts, logoutAllApi, logoutApi, onAuthChange, patchApi, postApi, postFormApi, postFormWithProgress, putApi, setAuthState, setCurrentUser, setLinkedAccounts, switchAccountApi, updateAutoRenewalApi, updateUserAiTokens, updateUserSubscriptionTier, verifySubscriptionSessionApi };
+export type { UploadProgressInfo };

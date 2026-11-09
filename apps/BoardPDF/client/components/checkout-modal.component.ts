@@ -5,7 +5,7 @@ import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.j
 import { showToast } from '../services/toast.service.js';
 import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
-export interface CheckoutModalOptions {
+interface CheckoutModalOptions {
   billingPeriod?: 'monthly' | 'yearly';
   onCancel?: () => void;
   onSuccess?: (tier: string) => void;
@@ -14,7 +14,7 @@ export interface CheckoutModalOptions {
 
 let activeCheckoutModal: { close: () => void } | null = null;
 
-export async function openCheckoutModal(options: CheckoutModalOptions): Promise<{ close: () => void } | null> {
+async function openCheckoutModal(options: CheckoutModalOptions): Promise<{ close: () => void } | null> {
   if (activeCheckoutModal) {
     activeCheckoutModal.close();
   }
@@ -29,7 +29,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
       return null;
     }
     if (userWeight > targetWeight) {
-      showToast(`Tu plan actual ${getTierDisplayName(userTier)} ya incluye todas las ventajas de este plan.`, 'info');
+      showToast(t('toasts.tu_plan_actual_ya_incluye_todas_las_vent'), 'info');
       return null;
     }
   }
@@ -189,7 +189,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
 
       if (error) {
         if (errorBanner) {
-          errorBanner.textContent = error.message || 'Error al procesar el pago.';
+          errorBanner.textContent = error.message || t('ui.error_al_procesar_el_pago');
           errorBanner.classList.remove('is-hidden');
         }
         isSubmitting = false;
@@ -207,7 +207,7 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
         applyAvatarTier(avatarEl, resolvedTier);
 
         closeModal();
-        showToast(`¡Felicidades! Tu suscripción a ${intentRes.planName} está activa.`, 'success');
+        showToast(t('toasts.felicidades_tu_suscripcion_a_esta_activa'), 'success');
 
         window.dispatchEvent(new CustomEvent('subscription-updated', {
           detail: { tier: resolvedTier, user: currentUser },
@@ -216,11 +216,11 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
         options.onSuccess?.(resolvedTier);
       } else {
         closeModal();
-        showToast('El pago está en proceso de verificación.', 'info');
+        showToast(t('toasts.el_pago_esta_en_proceso_de_verificacion'), 'info');
       }
     } catch {
       if (errorBanner) {
-        errorBanner.textContent = 'Error inesperado al confirmar la transacción.';
+        errorBanner.textContent = t('ui.error_inesperado_al_confirmar_la_transac');
         errorBanner.classList.remove('is-hidden');
       }
       isSubmitting = false;
@@ -266,3 +266,6 @@ export async function openCheckoutModal(options: CheckoutModalOptions): Promise<
   activeCheckoutModal = { close: closeModal };
   return activeCheckoutModal;
 }
+
+export { openCheckoutModal };
+export type { CheckoutModalOptions };

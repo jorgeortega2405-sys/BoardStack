@@ -5,7 +5,7 @@ import { MergePdfResponse, StoredMergedPdf } from './merge-pdf.types.js';
 import crypto from 'crypto';
 import { PDFDocument } from 'pdf-lib';
 
-export async function mergePdfFiles(
+async function mergePdfFiles(
   files: Array<{ buffer: Buffer; originalname: string }>,
   customFilename?: string
 ): Promise<MergePdfResponse> {
@@ -52,3 +52,5 @@ export async function mergePdfFiles(
     pageCount: totalPages,
   };
 }
+
+export { mergePdfFiles };

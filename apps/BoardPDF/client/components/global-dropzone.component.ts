@@ -86,14 +86,14 @@ async function handleGeneralFilesUpload(files: File[]): Promise<void> {
       navigate('/projects');
     } else {
       const data = await response.json().catch(() => null);
-      showToast(data?.error || t('errors.unexpected', 'Error al procesar la solicitud'), 'danger');
+      showToast(data?.error || t('errors.unexpected', t('ui.error_al_procesar_la_solicitud')), 'danger');
     }
   } catch {
-    showToast(t('errors.unexpected', 'Error al procesar la solicitud'), 'danger');
+    showToast(t('errors.unexpected', t('ui.error_al_procesar_la_solicitud')), 'danger');
   }
 }
 
-export function initGlobalDropzone(): void {
+function initGlobalDropzone(): void {
   if (isInitialized || typeof window === 'undefined' || typeof document === 'undefined') {
     return;
   }
@@ -169,3 +169,5 @@ export function initGlobalDropzone(): void {
     void handleGeneralFilesUpload(files);
   });
 }
+
+export { initGlobalDropzone };

@@ -8,7 +8,7 @@ import { navigate } from '../services/navigation.service.js';
 import { ModalInstance } from '../types/common.types.js';
 import { getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
-export interface UpgradeLimitModalOptions {
+interface UpgradeLimitModalOptions {
   currentCount?: number;
   currentLimit?: number;
   fileName?: string;
@@ -21,7 +21,7 @@ export interface UpgradeLimitModalOptions {
 
 let activeUpgradeModal: ModalInstance | null = null;
 
-export function isLimitErrorMessage(message: string): boolean {
+function isLimitErrorMessage(message: string): boolean {
   if (!message) return false;
   return /plan|l[ií]mite|pro|suscripci[oó]n|archivos por tarea|supera el l[ií]mite|m[aá]ximo de \d+ archivos/i.test(message);
 }
@@ -81,7 +81,7 @@ function detectToolId(optionsToolId?: string, optionsToolName?: string): string 
   return 'merge-pdf';
 }
 
-export function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance {
+function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance {
   if (activeUpgradeModal) {
     activeUpgradeModal.close();
   }
@@ -198,7 +198,7 @@ export function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalI
     }
   }
 
-  const feat1 = t('pricing.limit_modal_feat_speed', 'Procesamiento prioritario ultrarrápido en la nube');
+  const feat1 = t('pricing.limit_modal_feat_speed', t('ui.procesamiento_prioritario_ultrarrapido_e'));
   const feat2 = targetTier === 'business'
     ? t('pricing.limit_modal_feat_team', 'Espacios colaborativos y gestión centralizada')
     : t('pricing.limit_modal_feat_tools', 'Acceso ilimitado a herramientas avanzadas y de IA');
@@ -222,7 +222,7 @@ export function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalI
     ? `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_login_hint_text', '¿No tienes cuenta?')} <a class="link" data-ref="btn-upgrade-register" href="/register">${t('pricing.limit_modal_login_register_link', 'Regístrate gratis')}</a></p>`
     : isMaxTier
       ? ''
-      : `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_cancel_hint', 'Cancela o cambia de plan en cualquier momento.')}</p>`;
+      : `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_cancel_hint', t('ui.cancela_o_cambia_de_plan_en_cualquier_mo'))}</p>`;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -275,7 +275,7 @@ export function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalI
             <span class="modal-split__badge-check">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
             </span>
-            <span class="modal-split__badge-text" data-ref="badge-text">${t('pricing.limit_modal_status_badge', 'Potencia tu flujo de trabajo')}</span>
+            <span class="modal-split__badge-text" data-ref="badge-text">${t('pricing.limit_modal_status_badge', t('ui.potencia_tu_flujo_de_trabajo'))}</span>
           </div>
         </div>
       </div>
@@ -377,3 +377,6 @@ export function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalI
   document.body.appendChild(backdrop);
   return modalInstance;
 }
+
+export { isLimitErrorMessage, showUpgradeLimitModal };
+export type { UpgradeLimitModalOptions };

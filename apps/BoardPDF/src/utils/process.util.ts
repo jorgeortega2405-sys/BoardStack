@@ -4,11 +4,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../services/logger.service.js';
 
-export interface ProcessExecutionOptions extends SpawnOptions {
+interface ProcessExecutionOptions extends SpawnOptions {
   timeoutMs?: number;
 }
 
-export interface ProcessExecutionResult {
+interface ProcessExecutionResult {
   code: number | null;
   stderr: string;
   stdout: string;
@@ -20,7 +20,7 @@ let resolvedPythonCmd: string | null = null;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function getPythonCommand(): Promise<string> {
+async function getPythonCommand(): Promise<string> {
   if (resolvedPythonCmd) {
     return resolvedPythonCmd;
   }
@@ -29,10 +29,13 @@ export async function getPythonCommand(): Promise<string> {
     return resolvedPythonCmd;
   }
   if (process.platform === 'win32') {
-    const localPython = path.join(process.env.LOCALAPPDATA || '', 'Python', 'bin', 'python.exe');
-    if (fs.existsSync(localPython)) {
-      resolvedPythonCmd = localPython;
-      return resolvedPythonCmd;
+    const localAppData = process.env.LOCALAPPDATA;
+    if (localAppData) {
+      const localPython = path.join(localAppData, 'Python', 'bin', 'python.exe');
+      if (fs.existsSync(localPython)) {
+        resolvedPythonCmd = localPython;
+        return resolvedPythonCmd;
+      }
     }
     const pyCheck = await executeProcessWithTimeout('py', ['-c', 'import sys; print(1)'], { timeoutMs: 3000 });
     if (pyCheck.code === 0) {
@@ -46,7 +49,7 @@ export async function getPythonCommand(): Promise<string> {
   return 'python3';
 }
 
-export function findPythonWorkerScript(scriptName: string, subfolder?: string): string {
+function findPythonWorkerScript(scriptName: string, subfolder?: string): string {
   const candidatePaths = [
     path.resolve(process.cwd(), 'scripts', scriptName),
     path.resolve(process.cwd(), 'apps/BoardPDF/scripts', scriptName),
@@ -89,7 +92,7 @@ function releaseProcessSlot(): void {
   }
 }
 
-export async function executeProcessWithTimeout(
+async function executeProcessWithTimeout(
   command: string,
   args: string[],
   options: ProcessExecutionOptions = {}
@@ -146,3 +149,6 @@ export async function executeProcessWithTimeout(
     releaseProcessSlot();
   }
 }
+
+export { executeProcessWithTimeout, findPythonWorkerScript, getPythonCommand };
+export type { ProcessExecutionOptions, ProcessExecutionResult };

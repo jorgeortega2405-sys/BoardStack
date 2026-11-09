@@ -274,3 +274,31 @@
     transform: rotate(360deg);
   }
 }
+
+.banner--account {
+  margin: 0 24px 16px 24px;
+}
+
+.component-progress__bar {
+  height: 8px;
+  border-radius: var(--radius-full, 9999px);
+  width: var(--progress-pct, 0%);
+  background-color: var(--primary, #0f172a);
+  transition: width var(--sl-transition-fast, 150ms) ease;
+}
+
+.component-progress__bar--danger {
+  background-color: var(--danger, #ef4444) !important;
+}
+
+.component-progress__bar--warning {
+  background-color: var(--warning, #f59e0b) !important;
+}
+
+.component-progress__bar--primary {
+  background-color: var(--primary, #0f172a) !important;
+}
+
+.is-rotated {
+  transform: rotate(var(--item-rotation, 0deg));
+}

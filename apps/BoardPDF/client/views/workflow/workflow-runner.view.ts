@@ -11,8 +11,9 @@ import { getWorkflow } from '../../services/workflow-storage.service.js';
 import { OrganizePageItem, ToolDefinition, UserWorkflow, WorkflowStep } from '../../types/workflow.types.js';
 import { SortableGridController, hideElement, setupSortableGrid, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { formatBytes } from '../../utils/format.util.js';
+import { t } from '../../services/i18n.service.js';
 
-export class WorkflowRunnerController {
+class WorkflowRunnerController {
   private abortController: AbortController | null = null;
   private completedResult: { downloadUrl: string; fileSize: number; filename: string } | null = null;
   private compressLevel: 'extreme' | 'low' | 'recommended' = 'recommended';
@@ -178,7 +179,7 @@ export class WorkflowRunnerController {
 
   private async handleFileSelected(file: File): Promise<void> {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      showToast('Por favor selecciona un archivo PDF válido.', 'warning');
+      showToast(t('ui.por_favor_selecciona_un_archivo_pdf_vali'), 'warning');
       return;
     }
 
@@ -256,7 +257,7 @@ export class WorkflowRunnerController {
         void this.generateOrganizeThumbnail(page);
       }
     } catch {
-      this.showError('No se pudo cargar la vista previa del documento para organizar.');
+      this.showError(t('ui.no_se_pudo_cargar_la_vista_previa_del_do'));
     }
   }
 
@@ -388,7 +389,8 @@ export class WorkflowRunnerController {
 
     const img = this.container.querySelector<HTMLElement>(`[data-ref="img-${item.id}"]`);
     if (img) {
-      img.style.transform = item.rotation !== 0 ? `rotate(${item.rotation}deg)` : '';
+      img.style.setProperty('--item-rotation', `${item.rotation}deg`);
+      img.classList.toggle('is-rotated', item.rotation !== 0);
     }
 
     const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${item.id}"]`);
@@ -414,12 +416,12 @@ export class WorkflowRunnerController {
     this.organizePages.forEach((p) => {
       this.rotateOrganizePage(p.id);
     });
-    showToast('Todas las páginas han sido giradas 90°.', 'info');
+    showToast(t('toasts.todas_las_paginas_han_sido_giradas_90'), 'info');
   }
 
   private removeOrganizePage(pageId: string): void {
     if (this.organizePages.length <= 1) {
-      this.showError('El documento debe contener al menos una página.');
+      this.showError(t('ui.el_documento_debe_contener_al_menos_una_'));
       return;
     }
 
@@ -440,7 +442,7 @@ export class WorkflowRunnerController {
     this.renderOrganizeGrid();
     this.initSortable();
     this.renderOrganizeSidebarOptions();
-    showToast('Orden original restablecido.', 'info');
+    showToast(t('toasts.orden_original_restablecido'), 'info');
   }
 
   private renderOrganizeSidebarOptions(): void {
@@ -502,7 +504,7 @@ export class WorkflowRunnerController {
         void this.generateSplitThumbnail(page);
       }
     } catch {
-      this.showError('No se pudo cargar la vista previa del documento para dividir.');
+      this.showError(t('ui.no_se_pudo_cargar_la_vista_previa_del_do'));
     }
   }
 
@@ -559,7 +561,7 @@ export class WorkflowRunnerController {
   private toggleSplitPage(pageNum: number): void {
     if (this.splitSelectedPages.has(pageNum)) {
       if (this.splitSelectedPages.size <= 1) {
-        this.showError('Debes mantener seleccionada al menos una página.');
+        this.showError(t('ui.debes_mantener_seleccionada_al_menos_una'));
         return;
       }
       this.splitSelectedPages.delete(pageNum);
@@ -709,7 +711,7 @@ export class WorkflowRunnerController {
           );
           const json = await res.json();
           if (!res.ok || !json.success || !json.data?.downloadUrl) {
-            throw new Error(json.error || 'Error al ordenar las páginas del documento.');
+            throw new Error(json.error || t('ui.error_al_ordenar_las_paginas_del_documen'));
           }
 
           this.lastFileToken = json.data.fileId || null;
@@ -719,7 +721,7 @@ export class WorkflowRunnerController {
         } else if (currentStep.tool === 'split-pdf') {
           const selected = Array.from(this.splitSelectedPages).sort((a, b) => a - b);
           if (selected.length === 0) {
-            throw new Error('Debes seleccionar al menos una página para continuar.');
+            throw new Error(t('ui.debes_seleccionar_al_menos_una_pagina_pa'));
           }
           const optionsPayload = {
             filename: this.currentFile?.name || 'documento_dividido.pdf',
@@ -740,7 +742,7 @@ export class WorkflowRunnerController {
           );
           const json = await res.json();
           if (!res.ok || !json.success || !json.data) {
-            throw new Error(json.error || 'Error al dividir las páginas del documento.');
+            throw new Error(json.error || t('ui.error_al_dividir_las_paginas_del_documen'));
           }
 
           this.lastFileToken = json.data.fileId || null;
@@ -761,7 +763,7 @@ export class WorkflowRunnerController {
           );
           const json = await res.json();
           if (!res.ok || !json.success || !json.data?.downloadUrl) {
-            throw new Error(json.error || 'Error al comprimir el archivo PDF.');
+            throw new Error(json.error || t('ui.error_al_comprimir_el_archivo_pdf'));
           }
 
           this.lastFileToken = json.data.fileId || null;
@@ -782,7 +784,7 @@ export class WorkflowRunnerController {
           );
           const json = await res.json();
           if (!res.ok || !json.success || !json.data?.downloadToken) {
-            throw new Error(json.error || 'Error al convertir el documento.');
+            throw new Error(json.error || t('ui.error_al_convertir_el_documento'));
           }
 
           this.lastFileToken = json.data.downloadToken || null;
@@ -812,13 +814,13 @@ export class WorkflowRunnerController {
             filename: this.completedResult!.filename,
             returnText: 'Ejecutar otro flujo',
             returnUrl: `/workflow/${this.workflow!.id}`,
-            subtitle: `Se han procesado todas las acciones (${this.workflow!.steps.length} pasos) del flujo "${this.workflow!.name}".`,
-            title: '¡Flujo de trabajo completado con éxito!',
+            subtitle: t('workflow.completed_steps', { count: this.workflow!.steps.length }) + `"${this.workflow!.name}".`,
+            title: t('workflow.completed_title'),
             token: this.lastFileToken || undefined,
           };
 
           sessionStorage.setItem('download_ready_data', JSON.stringify(downloadPayload));
-          showToast('¡Flujo completado con éxito!', 'success');
+          showToast(t('toasts.flujo_completado_con_exito'), 'success');
           this.statusManager?.hide();
           const targetUrl = this.lastFileToken ? `/download/${this.lastFileToken}` : '/download-ready';
           navigate(targetUrl);
@@ -827,13 +829,13 @@ export class WorkflowRunnerController {
 
         this.currentStepIndex++;
         this.statusManager?.hide();
-        showToast(`Paso completado. Continuando con ${WORKFLOW_TOOLS.find((t) => t.id === this.workflow!.steps[this.currentStepIndex].tool)?.name || 'el siguiente paso'}...`, 'info');
+        showToast(t('workflow.step_completed_continuing') + (WORKFLOW_TOOLS.find((t) => t.id === this.workflow!.steps[this.currentStepIndex].tool)?.name || '') + '...', 'info');
         await this.renderActiveStep();
       } catch (err: any) {
         this.statusManager?.showError({
-          boxText: 'Ocurrió un inconveniente al procesar el paso actual del flujo. Comprueba que el archivo no esté protegido o dañado.',
+          boxText: t('ui.ocurrio_un_inconveniente_al_procesar_el_'),
           boxTitle: `Error en paso ${this.currentStepIndex + 1}: ${toolName}`,
-          desc: err.message || 'Ocurrió un error inesperado al procesar el paso.',
+          desc: err.message || t('ui.ocurrio_un_error_inesperado_al_procesar_'),
           retryText: `Reintentar ${toolName}`,
           title: '¡Oh no! No hemos podido completar este paso.',
         });
@@ -1025,10 +1027,12 @@ export class WorkflowRunnerController {
   }
 }
 
-export async function createWorkflowRunnerView(workflowId: string): Promise<HTMLElement> {
+async function createWorkflowRunnerView(workflowId: string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/workflow/workflow-runner.html');
   const controller = new WorkflowRunnerController(container, workflowId);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { WorkflowRunnerController, createWorkflowRunnerView };

@@ -16,4 +16,3 @@ router.post('/tools/pdf-to-markdown/convert', requireAuth, pdfToMarkdownLimiter,
 router.get('/tools/pdf-to-markdown/download/:fileId', handleToolDownload);
 
 export default router;
-

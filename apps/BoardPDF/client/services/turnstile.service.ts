@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-export interface TurnstileRenderOptions {
+interface TurnstileRenderOptions {
   action?: string;
   appearance?: 'always' | 'execute' | 'interaction-only';
   cData?: string;
@@ -37,7 +37,7 @@ export interface TurnstileRenderOptions {
 let turnstileScriptPromise: Promise<void> | null = null;
 const activeWidgets = new Map<HTMLElement, string>();
 
-export function getTurnstileSiteKey(): string {
+function getTurnstileSiteKey(): string {
   const envKey = (import.meta as any).env?.VITE_TURNSTILE_SITE_KEY;
   if (typeof envKey === 'string' && envKey.trim()) {
     return envKey.trim();
@@ -45,11 +45,11 @@ export function getTurnstileSiteKey(): string {
   return '';
 }
 
-export function isTurnstileEnabled(): boolean {
+function isTurnstileEnabled(): boolean {
   return Boolean(getTurnstileSiteKey());
 }
 
-export function loadTurnstileScript(): Promise<void> {
+function loadTurnstileScript(): Promise<void> {
   if (typeof window.turnstile !== 'undefined') {
     return Promise.resolve();
   }
@@ -78,7 +78,7 @@ export function loadTurnstileScript(): Promise<void> {
   return turnstileScriptPromise;
 }
 
-export async function renderTurnstile(
+async function renderTurnstile(
   container: HTMLElement,
   options: TurnstileRenderOptions = {}
 ): Promise<string | null> {
@@ -119,7 +119,7 @@ export async function renderTurnstile(
   return widgetId;
 }
 
-export function resetTurnstile(widgetIdOrContainer?: HTMLElement | string): void {
+function resetTurnstile(widgetIdOrContainer?: HTMLElement | string): void {
   if (!window.turnstile) return;
   if (!widgetIdOrContainer) {
     window.turnstile.reset();
@@ -135,7 +135,7 @@ export function resetTurnstile(widgetIdOrContainer?: HTMLElement | string): void
   }
 }
 
-export function removeTurnstile(widgetIdOrContainer?: HTMLElement | string): void {
+function removeTurnstile(widgetIdOrContainer?: HTMLElement | string): void {
   if (!window.turnstile) return;
   if (!widgetIdOrContainer) {
     window.turnstile.remove();
@@ -159,7 +159,7 @@ export function removeTurnstile(widgetIdOrContainer?: HTMLElement | string): voi
   }
 }
 
-export function getTurnstileResponse(widgetIdOrContainer?: HTMLElement | string): string | null {
+function getTurnstileResponse(widgetIdOrContainer?: HTMLElement | string): string | null {
   if (!window.turnstile) return null;
   if (!widgetIdOrContainer) {
     return window.turnstile.getResponse() || null;
@@ -170,3 +170,6 @@ export function getTurnstileResponse(widgetIdOrContainer?: HTMLElement | string)
   const widgetId = activeWidgets.get(widgetIdOrContainer);
   return widgetId ? window.turnstile.getResponse(widgetId) || null : null;
 }
+
+export { getTurnstileResponse, getTurnstileSiteKey, isTurnstileEnabled, loadTurnstileScript, removeTurnstile, renderTurnstile, resetTurnstile };
+export type { TurnstileRenderOptions };

@@ -139,7 +139,7 @@ def compare_documents(pdf1_path, pdf2_path, diff_pdf_path=None):
 
 def main():
     if len(sys.argv) < 4:
-        print(json.dumps({'error': 'Uso: python compare_worker.py <pdf1> <pdf2> <output_json> [diff_pdf]', 'success': False}))
+        print(json.dumps({'error': 'Usage: python compare_worker.py <pdf1> <pdf2> <output_json> [diff_pdf]', 'success': False}))
         sys.exit(1)
 
     pdf1 = sys.argv[1]
@@ -148,7 +148,7 @@ def main():
     diff_pdf = sys.argv[4] if len(sys.argv) > 4 else None
 
     if not os.path.exists(pdf1) or not os.path.exists(pdf2):
-        print(json.dumps({'error': 'Uno o ambos archivos de entrada no existen', 'success': False}))
+        print(json.dumps({'error': 'One or both input files do not exist', 'success': False}))
         sys.exit(1)
 
     try:

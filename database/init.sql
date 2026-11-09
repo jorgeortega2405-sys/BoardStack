@@ -1,6 +1,4 @@
--- ==============================================================================
--- BoardStack / BoardPDF - Registro y Control de Archivos Temporales (AWS S3)
--- ==============================================================================
+-- BoardStack / BoardPDF - Temporary Files Registry and Control (AWS S3)
 
 CREATE DATABASE IF NOT EXISTS boardpdf_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE boardpdf_db;
@@ -125,7 +123,7 @@ CREATE TABLE IF NOT EXISTS collaborative_documents (
   id VARCHAR(64) PRIMARY KEY,
   user_id INT NULL,
   folder_id VARCHAR(64) NULL,
-  title VARCHAR(255) NOT NULL DEFAULT 'Documento sin título',
+  title VARCHAR(255) NOT NULL DEFAULT 'Untitled Document',
   content_json LONGTEXT NOT NULL,
   pdf_filename VARCHAR(255) NULL,
   page_count INT UNSIGNED NOT NULL DEFAULT 1,
@@ -207,14 +205,12 @@ CREATE TABLE IF NOT EXISTS subscription_tier_permissions (
   FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ==============================================================================
 -- 3. Initial Seeds: Permissions & Tier Grants
--- ==============================================================================
 
 INSERT IGNORE INTO permissions (name, description, category) VALUES
-  ('tools:access', 'Acceso general a herramientas de procesamiento PDF', 'tools'),
-  ('subscription:feature:pro', 'Acceso a características Pro', 'subscription'),
-  ('subscription:feature:business', 'Acceso a características Business y trabajo colaborativo', 'subscription');
+  ('tools:access', 'General access to PDF processing tools', 'tools'),
+  ('subscription:feature:pro', 'Access to Pro features', 'subscription'),
+  ('subscription:feature:business', 'Access to Business features and collaborative work', 'subscription');
 
 INSERT IGNORE INTO subscription_tier_permissions (tier, permission_id)
 SELECT 'business', id FROM permissions WHERE name IN (
@@ -227,9 +223,7 @@ SELECT 'pro', id FROM permissions WHERE name IN (
   'subscription:feature:pro'
 );
 
--- ==============================================================================
--- Servicios en la Nube Vinculados (Google Drive, Dropbox)
--- ==============================================================================
+-- Linked Cloud Services (Google Drive, Dropbox)
 
 CREATE TABLE IF NOT EXISTS user_cloud_integrations (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -5,7 +5,7 @@ import { OrganizePdfOptions, OrganizePdfResponse, StoredOrganizePdfResult } from
 import crypto from 'crypto';
 import { degrees, PDFDocument } from 'pdf-lib';
 
-export async function organizePdf(
+async function organizePdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: OrganizePdfOptions
@@ -78,3 +78,5 @@ export async function organizePdf(
     totalPages,
   };
 }
+
+export { organizePdf };

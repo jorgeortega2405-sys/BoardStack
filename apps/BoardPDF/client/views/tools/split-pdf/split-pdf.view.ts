@@ -16,7 +16,7 @@ import { ToolSidebarModalController, bindFileDropzone, bindInlineControls, hideE
 import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { PageItem, RangeItem, SplitMode, SplitPdfResponseData } from './split-pdf.types.js';
 
-export class SplitPdfController implements ViewController {
+class SplitPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private activeMode: SplitMode = 'range';
   private container: HTMLElement;
@@ -46,7 +46,7 @@ export class SplitPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Extrae una o varias páginas, define rangos o divide por tamaño.',
+        desc: t('ui.extrae_una_o_varias_paginas_define_rango'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -68,7 +68,7 @@ export class SplitPdfController implements ViewController {
         const heroTitle = this.container.querySelector<HTMLElement>('[data-ref="pdf-hero-title"]');
         const heroSubtitle = this.container.querySelector<HTMLElement>('[data-ref="pdf-hero-subtitle"]');
         if (heroTitle) heroTitle.textContent = t('home.tool_extract_pdf_pages_title') || 'Extraer páginas';
-        if (heroSubtitle) heroSubtitle.textContent = t('home.tool_extract_pdf_pages_desc') || 'Extrae páginas seleccionadas de tu documento PDF.';
+        if (heroSubtitle) heroSubtitle.textContent = t('home.tool_extract_pdf_pages_desc') || t('ui.extrae_paginas_seleccionadas_de_tu_docum');
       }
     }
     this.bindEvents();
@@ -301,7 +301,7 @@ export class SplitPdfController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      this.showError('Selecciona únicamente un documento en formato PDF.');
+      this.showError(t('ui.selecciona_unicamente_un_documento_en_fo'));
       return;
     }
 
@@ -358,7 +358,7 @@ export class SplitPdfController implements ViewController {
         void this.generatePageThumbnail(page);
       }
     } catch {
-      this.showError('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado o protegido.');
+      this.showError(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'));
       this.resetToInitial();
     }
   }
@@ -418,11 +418,11 @@ export class SplitPdfController implements ViewController {
     const hint = this.container.querySelector<HTMLElement>('[data-ref="split-instruction-text"]');
     if (hint) {
       if (mode === 'range') {
-        hint.textContent = 'Configura los rangos de páginas que deseas extraer a la derecha.';
+        hint.textContent = t('ui.configura_los_rangos_de_paginas_que_dese');
       } else if (mode === 'pages') {
-        hint.textContent = 'Haz clic en las tarjetas de página o especifica los números a extraer en el panel.';
+        hint.textContent = t('ui.haz_clic_en_las_tarjetas_de_pagina_o_esp');
       } else {
-        hint.textContent = 'Define el peso máximo de cada segmento para dividir el documento equitativamente.';
+        hint.textContent = t('ui.define_el_peso_maximo_de_cada_segmento_p');
       }
     }
 
@@ -476,7 +476,7 @@ export class SplitPdfController implements ViewController {
   private updateSizeNotice(): void {
     const notice = this.container.querySelector<HTMLElement>('[data-ref="txt-size-info-notice"]');
     if (notice) {
-      notice.textContent = `Este PDF se dividirá en archivos de no más de ${this.sizeLimitValue} ${this.sizeUnit} cada uno.`;
+      notice.textContent = t('ui.este_pdf_se_dividira_en_archivos_de_no_m');
     }
   }
 
@@ -843,15 +843,15 @@ export class SplitPdfController implements ViewController {
       );
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Dividiendo documento PDF...', 'Generando segmentos de acuerdo a la configuración');
+      this.phaseManager?.showProcessing('Dividiendo documento PDF...', t('ui.generando_segmentos_de_acuerdo_a_la_conf'));
 
       if (!response.ok || !json.success) {
-        throw new Error(json.error || 'No se pudo dividir el documento PDF. Intenta nuevamente.');
+        throw new Error(json.error || t('ui.no_se_pudo_dividir_el_documento_pdf_inte'));
       }
 
       this.currentResult = json.data as SplitPdfResponseData;
       const token = this.currentResult.fileId;
-      showToast('¡Documento PDF dividido exitosamente!', 'success');
+      showToast(t('toasts.documento_pdf_dividido_exitosamente'), 'success');
       this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
@@ -863,7 +863,7 @@ export class SplitPdfController implements ViewController {
         token,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al procesar la división del documento.';
+      const msg = err instanceof Error ? err.message : t('ui.error_al_procesar_la_division_del_docume');
       this.phaseManager?.showError(msg, () => {
         this.phaseManager?.setPhase('workspace');
       });
@@ -926,10 +926,12 @@ export class SplitPdfController implements ViewController {
   }
 }
 
-export async function createSplitPdfView(initialMode: SplitMode = 'range'): Promise<HTMLElement> {
+async function createSplitPdfView(initialMode: SplitMode = 'range'): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/split-pdf/split-pdf.html');
   const controller = new SplitPdfController(container, initialMode);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { SplitPdfController, createSplitPdfView };

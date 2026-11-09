@@ -13,7 +13,7 @@ import { SortableGridController, ToolSidebarModalController, hideElement, setupS
 import { formatBytes } from '../../../utils/format.util.js';
 import { OrganizePageItem, OrganizePdfResponseData } from './organize-pdf.types.js';
 
-export class OrganizePdfController implements ViewController {
+class OrganizePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -36,7 +36,7 @@ export class OrganizePdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Ordena, reorganiza y gira las páginas de tu documento PDF a tu gusto.',
+        desc: t('ui.ordena_reorganiza_y_gira_las_paginas_de_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -146,7 +146,7 @@ export class OrganizePdfController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast('Selecciona únicamente un documento en formato PDF.', 'danger');
+      showToast(t('ui.selecciona_unicamente_un_documento_en_fo'), 'danger');
       return;
     }
 
@@ -198,7 +198,7 @@ export class OrganizePdfController implements ViewController {
         void this.generatePageThumbnail(item);
       }
     } catch {
-      showToast('No se pudo cargar el documento PDF. Comprueba que no esté protegido o dañado.', 'danger');
+      showToast(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'), 'danger');
       this.resetToInitial();
     }
   }
@@ -413,7 +413,7 @@ export class OrganizePdfController implements ViewController {
 
   private removePage(pageId: string): void {
     if (this.pages.length <= 1) {
-      showToast('Debes mantener al menos una página en el documento.', 'warning');
+      showToast(t('toasts.keep_at_least_one_page'), 'warning');
       return;
     }
 
@@ -462,7 +462,7 @@ export class OrganizePdfController implements ViewController {
     if (!this.currentFile || this.isProcessing) return;
 
     if (this.pages.length === 0) {
-      showToast('Debes incluir al menos una página en el orden final.', 'warning');
+      showToast(t('toasts.debes_incluir_al_menos_una_pagina_en_el_'), 'warning');
       return;
     }
 
@@ -495,24 +495,24 @@ export class OrganizePdfController implements ViewController {
       this.phaseManager?.showProcessing('Organizando páginas del PDF...', 'Aplicando el nuevo orden y rotaciones');
 
       if (!response.ok || !json.success || !json.data) {
-        throw new Error(json.error || 'Error al procesar la solicitud.');
+        throw new Error(json.error || t('ui.error_al_procesar_la_solicitud'));
       }
 
       this.currentResult = json.data as OrganizePdfResponseData;
       const token = this.currentResult.fileId;
-      showToast('Documento PDF organizado con éxito.', 'success');
+      showToast(t('toasts.documento_pdf_organizado_con_exito'), 'success');
       this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
         returnText: 'Organizar otro documento PDF',
         returnUrl: '/organize-pdf',
-        subtitle: `Se ha reorganizado exitosamente el archivo "${this.currentFile?.name}".`,
+        subtitle: t('tools.organize_success_prefix') + `"${this.currentFile?.name}".`,
         title: '¡PDF organizado con éxito!',
         token,
       });
     } catch {
-      this.phaseManager?.showError('No se pudo aplicar el nuevo orden a las páginas. Por favor intenta de nuevo.', () => {
+      this.phaseManager?.showError(t('ui.no_se_pudo_aplicar_el_nuevo_orden_a_las_'), () => {
         this.phaseManager?.setPhase('workspace');
       });
     } finally {
@@ -550,10 +550,12 @@ export class OrganizePdfController implements ViewController {
   }
 }
 
-export async function createOrganizePdfView(): Promise<HTMLElement> {
+async function createOrganizePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/organize-pdf/organize-pdf.html');
   const controller = new OrganizePdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { OrganizePdfController, createOrganizePdfView };

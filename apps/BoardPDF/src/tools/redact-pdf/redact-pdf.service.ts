@@ -111,11 +111,11 @@ function purgeTextFromPageStreams(pdfDoc: PDFDocument, page: any, targetTexts: s
   }
 }
 
-export async function getStoredRedactedPdf(fileId: string): Promise<StoredRedactedPdf | null> {
+async function getStoredRedactedPdf(fileId: string): Promise<StoredRedactedPdf | null> {
   return getTempFile<StoredRedactedPdf>(fileId);
 }
 
-export async function redactPdfDocument(params: RedactPdfParams): Promise<RedactPdfResponse> {
+async function redactPdfDocument(params: RedactPdfParams): Promise<RedactPdfResponse> {
   const { buffer, originalFilename, redactions, sanitizeMetadata = true } = params;
 
   if (!buffer || buffer.length === 0) {
@@ -321,3 +321,5 @@ export async function redactPdfDocument(params: RedactPdfParams): Promise<Redact
     totalPages,
   };
 }
+
+export { getStoredRedactedPdf, redactPdfDocument };

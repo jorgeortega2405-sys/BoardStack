@@ -1,8 +1,9 @@
 import { setupSheetDragToDismiss } from '../components/modal.component.js';
 import { Instance as PopperInstance, Placement, createPopper } from '@popperjs/core';
 import Sortable from 'sortablejs';
+import { t } from '../services/i18n.service.js';
 
-export interface BannerManager {
+interface BannerManager {
   hideAll: () => void;
   hideError: () => void;
   hideSuccess: () => void;
@@ -10,7 +11,7 @@ export interface BannerManager {
   showSuccess: (msg: string) => void;
 }
 
-export function setupPasswordToggle(
+function setupPasswordToggle(
   toggleBtn: HTMLElement | null,
   passwordInput: HTMLInputElement | null,
   options: { hideTooltip?: string; showTooltip?: string } = {}
@@ -39,7 +40,7 @@ export function setupPasswordToggle(
   });
 }
 
-export function showElement(el: HTMLElement | null): void {
+function showElement(el: HTMLElement | null): void {
   if (el) {
     el.classList.remove('is-hidden');
     if (el.style.display === 'none') {
@@ -48,14 +49,14 @@ export function showElement(el: HTMLElement | null): void {
   }
 }
 
-export function hideElement(el: HTMLElement | null): void {
+function hideElement(el: HTMLElement | null): void {
   if (el) {
     el.classList.add('is-hidden');
     el.style.display = 'none';
   }
 }
 
-export function toggleElement(el: HTMLElement | null, show: boolean): void {
+function toggleElement(el: HTMLElement | null, show: boolean): void {
   if (show) {
     showElement(el);
   } else {
@@ -63,7 +64,7 @@ export function toggleElement(el: HTMLElement | null, show: boolean): void {
   }
 }
 
-export function createBannerManager(
+function createBannerManager(
   container: HTMLElement,
   options: { errorRef?: string; successRef?: string } = {}
 ): BannerManager {
@@ -119,7 +120,7 @@ export function createBannerManager(
   };
 }
 
-export async function withButtonLoading(
+async function withButtonLoading(
   button: HTMLElement | HTMLButtonElement | null,
   loadingTextOrCallback: string | (() => Promise<void>),
   asyncCallback?: () => Promise<void>
@@ -163,7 +164,7 @@ export async function withButtonLoading(
   }
 }
 
-export function bindSubmitOnEnter(
+function bindSubmitOnEnter(
   inputs: (HTMLElement | null) | (HTMLElement | null)[] | NodeListOf<HTMLElement> | null,
   submitCallback: () => void
 ): void {
@@ -187,7 +188,7 @@ export function bindSubmitOnEnter(
   });
 }
 
-export function bindNavigationLinks(
+function bindNavigationLinks(
   container: HTMLElement,
   linksMap: Record<string, string>,
   onNavigate?: (path: string) => void
@@ -208,7 +209,7 @@ export function bindNavigationLinks(
 
 const loadedStylesheets = new Set<string>();
 
-export function loadStylesheet(href: string): Promise<void> {
+function loadStylesheet(href: string): Promise<void> {
   const cleanHref = href.split('?')[0];
   if (
     loadedStylesheets.has(href) ||
@@ -229,13 +230,13 @@ export function loadStylesheet(href: string): Promise<void> {
       resolve();
     };
     link.onerror = () => {
-      reject(new Error(`Error al cargar hoja de estilo: ${href}`));
+      reject(new Error(t('ui.error_al_cargar_hoja_de_estilo')));
     };
     document.head.appendChild(link);
   });
 }
 
-export function debounce<T extends (...args: any[]) => void>(fn: T, delayMs = 350): (...args: Parameters<T>) => void {
+function debounce<T extends (...args: any[]) => void>(fn: T, delayMs = 350): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   return function (this: any, ...args: Parameters<T>) {
     if (timer) clearTimeout(timer);
@@ -258,7 +259,7 @@ function unregisterActiveDropdown(wrapper: HTMLElement | null): void {
   activeDropdowns = activeDropdowns.filter((d) => d.wrapper !== wrapper);
 }
 
-export function setupDropdown(
+function setupDropdown(
   wrapper: HTMLElement | null,
   options: {
     backdrop?: HTMLElement | null;
@@ -648,7 +649,7 @@ export function setupDropdown(
   };
 }
 
-export interface ToolSidebarModalController {
+interface ToolSidebarModalController {
   close: () => void;
   destroy: () => void;
   isOpen: () => boolean;
@@ -656,7 +657,7 @@ export interface ToolSidebarModalController {
   toggle: () => void;
 }
 
-export function setupToolSidebarModal(options: {
+function setupToolSidebarModal(options: {
   backdrop: HTMLElement | null;
   closeBtn?: HTMLElement | null;
   dragZone?: HTMLElement | null;
@@ -807,7 +808,7 @@ export function setupToolSidebarModal(options: {
   };
 }
 
-export function bindFileDropzone(options: {
+function bindFileDropzone(options: {
   dropTarget: HTMLElement | null;
   visualTarget?: HTMLElement | null;
   onFiles: (files: FileList) => void;
@@ -893,7 +894,7 @@ export function bindFileDropzone(options: {
   }, { signal });
 }
 
-export interface TypewriterOptions {
+interface TypewriterOptions {
   onChunk?: () => void;
   renderHtml?: (partialText: string) => string;
   signal?: AbortSignal;
@@ -909,7 +910,7 @@ function attachCursorToHtml(html: string): string {
   return html + cursorTag;
 }
 
-export function animateTypewriter(
+function animateTypewriter(
   targetElement: HTMLElement,
   fullText: string,
   options: TypewriterOptions = {}
@@ -977,7 +978,7 @@ export function animateTypewriter(
   });
 }
 
-export function bindInlineControls(container: HTMLElement | Document, signal?: AbortSignal): void {
+function bindInlineControls(container: HTMLElement | Document, signal?: AbortSignal): void {
   const inlineBtns = container.querySelectorAll<HTMLButtonElement>('.component-inline-control__btn[data-step-change]');
   inlineBtns.forEach((btn) => {
     if ((btn as any)._hasInlineBound) return;
@@ -1028,7 +1029,7 @@ export function bindInlineControls(container: HTMLElement | Document, signal?: A
   });
 }
 
-export interface SortableGridOptions {
+interface SortableGridOptions {
   animation?: number;
   chosenClass?: string;
   easing?: string;
@@ -1039,12 +1040,12 @@ export interface SortableGridOptions {
   preventOnFilter?: boolean;
 }
 
-export interface SortableGridController {
+interface SortableGridController {
   destroy: () => void;
   sortable: Sortable;
 }
 
-export function setupSortableGrid(
+function setupSortableGrid(
   container: HTMLElement,
   options: SortableGridOptions = {}
 ): SortableGridController {
@@ -1081,7 +1082,7 @@ export function setupSortableGrid(
   };
 }
 
-export interface RenderEmptyStateOptions {
+interface RenderEmptyStateOptions {
   container: HTMLElement;
   dataRef?: string;
   desc: string;
@@ -1090,7 +1091,7 @@ export interface RenderEmptyStateOptions {
   title: string;
 }
 
-export function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement {
+function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement {
   removeEmptyState(options.container, options.dataRef);
 
   const emptyEl = document.createElement('div');
@@ -1123,10 +1124,13 @@ export function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement 
   return emptyEl;
 }
 
-export function removeEmptyState(container: HTMLElement, dataRef?: string): void {
+function removeEmptyState(container: HTMLElement, dataRef?: string): void {
   const selector = dataRef ? `[data-ref="${dataRef}"]` : '.component-empty-state';
   const existing = container.querySelector(selector);
   if (existing) {
     existing.remove();
   }
 }
+
+export { animateTypewriter, bindFileDropzone, bindInlineControls, bindNavigationLinks, bindSubmitOnEnter, createBannerManager, debounce, hideElement, loadStylesheet, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, setupSortableGrid, setupToolSidebarModal, showElement, toggleElement, withButtonLoading };
+export type { BannerManager, RenderEmptyStateOptions, SortableGridController, SortableGridOptions, ToolSidebarModalController, TypewriterOptions };

@@ -1,4 +1,4 @@
-export interface TranslatePdfResultData {
+interface TranslatePdfResultData {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -8,3 +8,5 @@ export interface TranslatePdfResultData {
   sourceLang?: string;
   targetLang: string;
 }
+
+export type { TranslatePdfResultData };

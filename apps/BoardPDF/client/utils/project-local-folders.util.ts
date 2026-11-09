@@ -1,6 +1,7 @@
 import { getLocalDraft, saveLocalDraft } from './collab-local-draft.util.js';
+import { t } from '../services/i18n.service.js';
 
-export interface LocalProjectFolder {
+interface LocalProjectFolder {
   color?: string | null;
   created_at: string;
   document_count?: number;
@@ -16,7 +17,7 @@ export interface LocalProjectFolder {
 const LOCAL_FOLDERS_KEY = 'boardpdf_local_project_folders';
 const DEFAULT_LOCAL_UPLOADS_ID = 'local-uploads-folder-uuid';
 
-export function getLocalUploadsFolder(): LocalProjectFolder {
+function getLocalUploadsFolder(): LocalProjectFolder {
   const folders = getStoredLocalFolders();
   let uploads = folders.find((f) => f.folder_type === 'uploads');
   if (!uploads) {
@@ -54,7 +55,7 @@ function saveStoredLocalFolders(folders: LocalProjectFolder[]): void {
   } catch {}
 }
 
-export function listLocalFolders(parentId?: string | null, folderType?: 'project' | 'upload_folder'): { folders: LocalProjectFolder[]; uploadsFolder: LocalProjectFolder } {
+function listLocalFolders(parentId?: string | null, folderType?: 'project' | 'upload_folder'): { folders: LocalProjectFolder[]; uploadsFolder: LocalProjectFolder } {
   const uploadsFolder = getLocalUploadsFolder();
   const allFolders = getStoredLocalFolders();
 
@@ -71,7 +72,7 @@ export function listLocalFolders(parentId?: string | null, folderType?: 'project
   };
 }
 
-export function getLocalFolderById(id: string): LocalProjectFolder | null {
+function getLocalFolderById(id: string): LocalProjectFolder | null {
   if (id === DEFAULT_LOCAL_UPLOADS_ID) {
     return getLocalUploadsFolder();
   }
@@ -79,7 +80,7 @@ export function getLocalFolderById(id: string): LocalProjectFolder | null {
   return folders.find((f) => f.id === id) || null;
 }
 
-export function createLocalFolder(payload: {
+function createLocalFolder(payload: {
   color?: string | null;
   folderType?: 'project' | 'upload_folder';
   name: string;
@@ -94,7 +95,7 @@ export function createLocalFolder(payload: {
   const folderType = payload.folderType || (payload.parentId ? 'upload_folder' : 'project');
 
   if (folderType === 'project' && payload.parentId) {
-    throw new Error('No se pueden crear subcarpetas dentro de una carpeta de proyectos.');
+    throw new Error(t('ui.no_se_pueden_crear_subcarpetas_dentro_de'));
   }
 
   const parentId = folderType === 'upload_folder' ? (payload.parentId || uploadsFolder.id) : null;
@@ -122,7 +123,7 @@ export function createLocalFolder(payload: {
   return folder;
 }
 
-export function renameLocalFolder(id: string, newName: string): LocalProjectFolder {
+function renameLocalFolder(id: string, newName: string): LocalProjectFolder {
   const cleanName = (newName || '').trim();
   if (!cleanName) {
     throw new Error('El nombre de la carpeta no puede estar vacío.');
@@ -134,7 +135,7 @@ export function renameLocalFolder(id: string, newName: string): LocalProjectFold
     throw new Error('Carpeta no encontrada.');
   }
   if (folder.folder_type === 'uploads') {
-    throw new Error('No se puede renombrar la carpeta de subidos del sistema.');
+    throw new Error(t('ui.no_se_puede_renombrar_la_carpeta_de_subi'));
   }
 
   folder.name = cleanName;
@@ -143,7 +144,7 @@ export function renameLocalFolder(id: string, newName: string): LocalProjectFold
   return folder;
 }
 
-export function deleteLocalFolder(id: string): boolean {
+function deleteLocalFolder(id: string): boolean {
   let folders = getStoredLocalFolders();
   const target = folders.find((f) => f.id === id);
   if (!target || target.folder_type === 'uploads') {
@@ -155,9 +156,12 @@ export function deleteLocalFolder(id: string): boolean {
   return true;
 }
 
-export function moveDocToLocalFolder(docId: string, folderId: string | null): boolean {
+function moveDocToLocalFolder(docId: string, folderId: string | null): boolean {
   const draft = getLocalDraft(docId);
   if (!draft) return false;
   saveLocalDraft(docId, { folderId: folderId || null });
   return true;
 }
+
+export { createLocalFolder, deleteLocalFolder, getLocalFolderById, getLocalUploadsFolder, listLocalFolders, moveDocToLocalFolder, renameLocalFolder };
+export type { LocalProjectFolder };

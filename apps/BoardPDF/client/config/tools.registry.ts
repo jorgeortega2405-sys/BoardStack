@@ -1,6 +1,6 @@
 import { SVG_TOOL_COLLABORATIVE_PDF, SVG_TOOL_COMPARE_PDF, SVG_TOOL_COMPRESS_PDF, SVG_TOOL_CROP_PDF, SVG_TOOL_EDIT_PDF, SVG_TOOL_EXCEL_TO_PDF, SVG_TOOL_EXTRACT_PDF_PAGES, SVG_TOOL_HTML_TO_PDF, SVG_TOOL_JPG_TO_PDF, SVG_TOOL_MERGE_PDF, SVG_TOOL_OCR_PDF, SVG_TOOL_ORGANIZE_PDF, SVG_TOOL_PAGE_NUMBERS, SVG_TOOL_PDF_TO_EXCEL, SVG_TOOL_PDF_TO_JPG, SVG_TOOL_PDF_TO_MARKDOWN, SVG_TOOL_PDF_TO_PDFA, SVG_TOOL_PDF_TO_POWERPOINT, SVG_TOOL_PDF_TO_WORD, SVG_TOOL_POWERPOINT_TO_PDF, SVG_TOOL_PROTECT_PDF, SVG_TOOL_REDACT_PDF, SVG_TOOL_REMOVE_PDF_PAGES, SVG_TOOL_REPAIR_PDF, SVG_TOOL_ROTATE_PDF, SVG_TOOL_SPLIT_PDF, SVG_TOOL_SUMMARIZE_PDF, SVG_TOOL_TRANSLATE_PDF, SVG_TOOL_UNLOCK_PDF, SVG_TOOL_WATERMARK_PDF, SVG_TOOL_WORD_TO_PDF } from '../graphics/tool-icons.graphics.js';
 
-export interface ToolItem {
+interface ToolItem {
   activatedAt?: string;
   category: string;
   cssPath: string;
@@ -14,7 +14,7 @@ export interface ToolItem {
   path: string;
 }
 
-export function isToolNew(toolOrDate?: ToolItem | string): boolean {
+function isToolNew(toolOrDate?: ToolItem | string): boolean {
   if (!toolOrDate) return false;
   const dateStr = typeof toolOrDate === 'string' ? toolOrDate : toolOrDate.activatedAt;
   if (!dateStr) return false;
@@ -30,7 +30,7 @@ export function isToolNew(toolOrDate?: ToolItem | string): boolean {
   return activated.getTime() >= oneMonthAgo.getTime() || (now.getTime() - activated.getTime()) <= 30 * 24 * 60 * 60 * 1000;
 }
 
-export const TOOLS_REGISTRY: ToolItem[] = [
+const TOOLS_REGISTRY: ToolItem[] = [
   {
     activatedAt: '2026-10-31',
     category: 'collaborative',
@@ -435,3 +435,6 @@ export const TOOLS_REGISTRY: ToolItem[] = [
     path: '/pdf-to-markdown',
   },
 ];
+
+export { TOOLS_REGISTRY, isToolNew };
+export type { ToolItem };

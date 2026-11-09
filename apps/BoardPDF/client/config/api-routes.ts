@@ -1,4 +1,4 @@
-export const API_ROUTES = {
+const API_ROUTES = {
   auth: {
     forgotPassword: '/api/forgot-password',
     google: '/api/auth/google',
@@ -169,4 +169,5 @@ export const API_ROUTES = {
   },
 } as const;
 
+export { API_ROUTES };
 export default API_ROUTES;

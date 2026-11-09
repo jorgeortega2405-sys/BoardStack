@@ -16,7 +16,7 @@ function getClientIp(req: Request): string {
   return req.socket.remoteAddress || '127.0.0.1';
 }
 
-export async function initiateGoogleAuth(req: Request, res: Response): Promise<void> {
+async function initiateGoogleAuth(req: Request, res: Response): Promise<void> {
   try {
     const action = req.query.action === 'connect' ? 'connect' : 'login';
     const redirect = typeof req.query.redirect === 'string' && req.query.redirect.startsWith('/') ? req.query.redirect : '/';
@@ -53,7 +53,7 @@ export async function initiateGoogleAuth(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleGoogleCallback(req: Request, res: Response): Promise<void> {
+async function handleGoogleCallback(req: Request, res: Response): Promise<void> {
   try {
     if (req.query.error) {
       logger.security.warn('Google OAuth denegado por el usuario', { error: req.query.error });
@@ -220,7 +220,7 @@ export async function handleGoogleCallback(req: Request, res: Response): Promise
   }
 }
 
-export async function disconnectGoogleHandler(req: Request, res: Response): Promise<void> {
+async function disconnectGoogleHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -254,3 +254,5 @@ export async function disconnectGoogleHandler(req: Request, res: Response): Prom
     res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.', ok: false });
   }
 }
+
+export { disconnectGoogleHandler, handleGoogleCallback, initiateGoogleAuth };

@@ -1,4 +1,4 @@
-export interface User {
+interface User {
   ai_tokens_balance?: number;
   ai_tokens_reset_at?: string;
   avatar_url?: string | null;
@@ -19,9 +19,11 @@ export interface User {
   username: string;
 }
 
-export interface AuthSessionResponse {
+interface AuthSessionResponse {
   accounts?: User[];
   message?: string;
   success: boolean;
   user: User | null;
 }
+
+export type { AuthSessionResponse, User };

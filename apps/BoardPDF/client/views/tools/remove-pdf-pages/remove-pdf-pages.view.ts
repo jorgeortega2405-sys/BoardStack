@@ -13,7 +13,7 @@ import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showEle
 import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
 
-export class RemovePdfPagesController implements ViewController {
+class RemovePdfPagesController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -36,7 +36,7 @@ export class RemovePdfPagesController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Selecciona y elimina las páginas que no necesitas de tu documento PDF.',
+        desc: t('ui.selecciona_y_elimina_las_paginas_que_no_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -154,7 +154,7 @@ export class RemovePdfPagesController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast('Selecciona únicamente un documento en formato PDF.', 'danger');
+      showToast(t('ui.selecciona_unicamente_un_documento_en_fo'), 'danger');
       return;
     }
 
@@ -200,7 +200,7 @@ export class RemovePdfPagesController implements ViewController {
         void this.generatePageThumbnail(item);
       }
     } catch {
-      showToast('No se pudo cargar el documento PDF. Comprueba que no esté protegido o dañado.', 'danger');
+      showToast(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'), 'danger');
       this.resetToInitial();
     }
   }
@@ -311,7 +311,7 @@ export class RemovePdfPagesController implements ViewController {
 
     if (this.currentFile) {
       if (removed >= total) {
-        showToast('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.', 'warning');
+        showToast(t('toasts.cannot_delete_all_pages'), 'warning');
       }
     }
   }
@@ -338,12 +338,12 @@ export class RemovePdfPagesController implements ViewController {
     const removedCount = this.removedPages.size;
 
     if (removedCount === 0) {
-      showToast('Debes seleccionar al menos una página para eliminar.', 'warning');
+      showToast(t('toasts.debes_seleccionar_al_menos_una_pagina_pa'), 'warning');
       return;
     }
 
     if (removedCount >= total) {
-      showToast('No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.', 'danger');
+      showToast(t('tools.remove_pages_at_least_one'), 'danger');
       return;
     }
 
@@ -368,15 +368,15 @@ export class RemovePdfPagesController implements ViewController {
       );
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Eliminando páginas del PDF...', 'Generando nuevo documento sin las páginas seleccionadas');
+      this.phaseManager?.showProcessing('Eliminando páginas del PDF...', t('ui.generando_nuevo_documento_sin_las_pagina'));
 
       if (!response.ok || !json.success || !json.data) {
-        throw new Error(json.error || 'Error al procesar la solicitud.');
+        throw new Error(json.error || t('ui.error_al_procesar_la_solicitud'));
       }
 
       this.currentResult = json.data as RemovePdfResponseData;
       const token = this.currentResult.fileId;
-      showToast('Páginas eliminadas con éxito.', 'success');
+      showToast(t('toasts.pages_deleted_success'), 'success');
       this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
@@ -388,7 +388,7 @@ export class RemovePdfPagesController implements ViewController {
         token,
       });
     } catch {
-      this.phaseManager?.showError('No se pudieron eliminar las páginas seleccionadas. Por favor intenta de nuevo.', () => {
+      this.phaseManager?.showError(t('ui.no_se_pudieron_eliminar_las_paginas_sele'), () => {
         this.phaseManager?.setPhase('workspace');
       });
     } finally {
@@ -425,10 +425,12 @@ export class RemovePdfPagesController implements ViewController {
   }
 }
 
-export async function createRemovePdfPagesView(): Promise<HTMLElement> {
+async function createRemovePdfPagesView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/remove-pdf-pages/remove-pdf-pages.html');
   const controller = new RemovePdfPagesController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { RemovePdfPagesController, createRemovePdfPagesView };

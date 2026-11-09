@@ -1,7 +1,7 @@
 import { logger } from '../services/logger.service.js';
 import { NextFunction, Request, Response } from 'express';
 
-export function requestLogger(req: Request, res: Response, next: NextFunction): void {
+function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();
   const path = req.originalUrl || req.url;
 
@@ -30,3 +30,5 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 
   next();
 }
+
+export { requestLogger };

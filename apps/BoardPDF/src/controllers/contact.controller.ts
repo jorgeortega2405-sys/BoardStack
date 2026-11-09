@@ -13,7 +13,7 @@ const ALLOWED_SUBJECTS = new Set([
   'technical',
 ]);
 
-export async function submitContactHandler(req: Request, res: Response): Promise<void> {
+async function submitContactHandler(req: Request, res: Response): Promise<void> {
   try {
     const { email, message, name, subject } = req.body || {};
 
@@ -65,7 +65,7 @@ export async function submitContactHandler(req: Request, res: Response): Promise
   }
 }
 
-export async function getTicketHandler(req: Request, res: Response): Promise<void> {
+async function getTicketHandler(req: Request, res: Response): Promise<void> {
   try {
     const token = typeof req.params.token === 'string' ? req.params.token.trim() : '';
     if (!token || token.length < 10) {
@@ -89,7 +89,7 @@ export async function getTicketHandler(req: Request, res: Response): Promise<voi
   }
 }
 
-export async function replyTicketHandler(req: Request, res: Response): Promise<void> {
+async function replyTicketHandler(req: Request, res: Response): Promise<void> {
   try {
     const token = typeof req.params.token === 'string' ? req.params.token.trim() : '';
     const { message } = req.body || {};
@@ -122,3 +122,5 @@ export async function replyTicketHandler(req: Request, res: Response): Promise<v
     });
   }
 }
+
+export { getTicketHandler, replyTicketHandler, submitContactHandler };

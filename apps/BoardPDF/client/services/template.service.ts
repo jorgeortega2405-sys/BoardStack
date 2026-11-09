@@ -1,10 +1,10 @@
-import { translateElement } from './i18n.service.js';
+import { t, translateElement } from './i18n.service.js';
 import { renderIcons } from './icon.service.js';
 
 const templateCache = new Map<string, string>();
 const templatePending = new Map<string, Promise<string>>();
 
-export function preloadTemplates(urls: string[]): void {
+function preloadTemplates(urls: string[]): void {
   for (const url of urls) {
     if (!templateCache.has(url) && !templatePending.has(url)) {
       const pending = fetch(url)
@@ -25,7 +25,7 @@ export function preloadTemplates(urls: string[]): void {
   }
 }
 
-export async function loadTemplate(url: string): Promise<HTMLElement> {
+async function loadTemplate(url: string): Promise<HTMLElement> {
   const isDev = Boolean((import.meta as any).env?.DEV);
   let html = isDev ? undefined : templateCache.get(url);
   if (!html) {
@@ -34,7 +34,7 @@ export async function loadTemplate(url: string): Promise<HTMLElement> {
       pending = fetch(url)
         .then((res) => {
           if (!res.ok) {
-            throw new Error(`Error al cargar la plantilla: ${url} (${res.status})`);
+            throw new Error(t('ui.error_al_cargar_la_plantilla'));
           }
           return res.text();
         })
@@ -69,3 +69,5 @@ export async function loadTemplate(url: string): Promise<HTMLElement> {
   renderIcons(clone);
   return translateElement(clone);
 }
+
+export { loadTemplate, preloadTemplates };

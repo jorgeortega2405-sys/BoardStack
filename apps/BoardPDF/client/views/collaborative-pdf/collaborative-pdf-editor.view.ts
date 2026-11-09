@@ -32,7 +32,7 @@ import { applySmartGuides, clearSmartGuides, renderActiveSmartGuides } from './c
 import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
 import { applyListFormatting, CHART_PALETTES, ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, PAGE_HEIGHT, PAGE_WIDTH, PagePdfSource, RemotePeer, UploadedAsset } from './collaborative-pdf.types.js';
 
-export class CollaborativePdfEditorController implements ViewController {
+class CollaborativePdfEditorController implements ViewController {
   private abortController: AbortController | null = null;
   private activePageIndex = 0;
   private activePanelTab: 'colors' | 'elements' | 'fonts' | 'text' | 'tools' | 'uploads' | null = null;
@@ -588,10 +588,10 @@ export class CollaborativePdfEditorController implements ViewController {
           this.renderUploadsGrid();
           showToast(newFiles.length === 1 ? 'Archivo subido con éxito' : `${newFiles.length} archivos subidos con éxito`, 'success');
         } else {
-          showToast('No se pudo subir el archivo.', 'error');
+          showToast(t('toasts.no_se_pudo_subir_el_archivo'), 'error');
         }
       } catch {
-        showToast('Error de red al subir archivo.', 'error');
+        showToast(t('toasts.error_de_red_al_subir_archivo'), 'error');
       } finally {
         if (progress) hideElement(progress);
         fileInput.value = '';
@@ -1326,7 +1326,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.activePageIndex = targetIndex;
       this.selectPage(targetIndex);
       this.scrollToPage(targetIndex);
-      showToast(`Página ${targetIndex + 1} añadida`, 'success');
+      showToast(t('toasts.pagina_anadida'), 'success');
     }
   }
 
@@ -1340,10 +1340,10 @@ export class CollaborativePdfEditorController implements ViewController {
   private togglePageLock(pageIndex: number): void {
     if (this.lockedPages.has(pageIndex)) {
       this.lockedPages.delete(pageIndex);
-      showToast(`Página ${pageIndex + 1} desbloqueada`, 'info');
+      showToast(t('toasts.pagina_desbloqueada'), 'info');
     } else {
       this.lockedPages.add(pageIndex);
-      showToast(`Página ${pageIndex + 1} bloqueada`, 'info');
+      showToast(t('toasts.pagina_bloqueada'), 'info');
     }
     this.renderPages();
   }
@@ -1358,13 +1358,13 @@ export class CollaborativePdfEditorController implements ViewController {
       this.activePageIndex = targetIndex;
       this.selectPage(targetIndex);
       this.scrollToPage(targetIndex);
-      showToast(`Página ${targetIndex + 1} duplicada`, 'success');
+      showToast(t('toasts.pagina_duplicada'), 'success');
     }
   }
 
   private deletePage(pageIndex: number): void {
     if (this.pageCount <= 1) {
-      showToast('El documento debe tener al menos una página', 'info');
+      showToast(t('toasts.el_documento_debe_tener_al_menos_una_pag'), 'info');
       return;
     }
     const success = this.dispatcher.dispatch({
@@ -1374,7 +1374,7 @@ export class CollaborativePdfEditorController implements ViewController {
     if (success) {
       this.activePageIndex = Math.max(0, Math.min(this.pageCount - 1, pageIndex));
       this.selectPage(this.activePageIndex);
-      showToast('Página eliminada', 'info');
+      showToast(t('toasts.pagina_eliminada'), 'info');
     }
   }
 
@@ -1432,7 +1432,7 @@ export class CollaborativePdfEditorController implements ViewController {
         this.selectPage(pageIndex);
         this.setModified(true);
         this.broadcastDocSync();
-        showToast(applyToAll ? 'Tamaño aplicado a todas las páginas' : `Tamaño de página ${pageIndex + 1} actualizado`, 'success');
+        showToast(applyToAll ? t('ui.tamano_aplicado_a_todas_las_paginas') : `Tamaño de página ${pageIndex + 1} actualizado`, 'success');
       },
       pageIndex,
     });
@@ -1604,7 +1604,7 @@ export class CollaborativePdfEditorController implements ViewController {
       if (status === 'error') {
         cloudBtn.classList.add('is-error');
         iconUse?.setAttribute('href', '/icons.svg#cloud_off');
-        cloudBtn.setAttribute('data-tooltip', 'Error al sincronizar. Clic para reintentar.');
+        cloudBtn.setAttribute('data-tooltip', t('ui.error_al_sincronizar_clic_para_reintenta'));
         cloudBtn.setAttribute('aria-label', 'Error al sincronizar');
       } else {
         cloudBtn.classList.remove('is-error');
@@ -3937,13 +3937,13 @@ export class CollaborativePdfEditorController implements ViewController {
         if (previewBg) previewBg.style.backgroundColor = el.cells[1]?.[0]?.backgroundColor || el.themeColor || '#f3f4f6';
 
         const btnBorderWidth = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-border-width"]');
-        if (btnBorderWidth) btnBorderWidth.setAttribute('data-tooltip', `Grosor de borde: ${el.borderWidth || 0}px`);
+        if (btnBorderWidth) btnBorderWidth.setAttribute('data-tooltip', t('ui.grosor_de_borde_px'));
 
         const btnSpacing = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-spacing"]');
-        if (btnSpacing) btnSpacing.setAttribute('data-tooltip', `Espaciado de celdas: ${el.cellSpacing || 0}px`);
+        if (btnSpacing) btnSpacing.setAttribute('data-tooltip', t('ui.espaciado_de_celdas_px'));
 
         const btnPadding = toolbar.querySelector<HTMLElement>('[data-ref="btn-table-padding"]');
-        if (btnPadding) btnPadding.setAttribute('data-tooltip', `Relleno de celdas: ${el.cellPadding || 8}px`);
+        if (btnPadding) btnPadding.setAttribute('data-tooltip', t('ui.relleno_de_celdas_px'));
       } else {
         if (chartGroup) hideElement(chartGroup);
         hideElement(textGroup);
@@ -4155,7 +4155,7 @@ export class CollaborativePdfEditorController implements ViewController {
       try {
         text = await navigator.clipboard.readText();
       } catch {
-        showToast('Para pegar contenido externo, usa el atajo Ctrl+V', 'info');
+        showToast(t('toasts.para_pegar_contenido_externo_usa_el_ataj'), 'info');
         return;
       }
     }
@@ -4285,7 +4285,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.selectElement(id);
       this.activateSelectTool();
       void this.flushAutoSave();
-      showToast('Texto pegado', 'info');
+      showToast(t('toasts.texto_pegado'), 'info');
     }
   }
 
@@ -5118,7 +5118,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.committedGuidesPreset = this.currentGuidesPreset;
       this.container.querySelector('[data-ref="collab-guides-modal"]')?.classList.add('is-hidden');
       this.renderPages();
-      showToast('Guías agregadas al documento', 'success');
+      showToast(t('toasts.guias_agregadas_al_documento'), 'success');
     }, { signal });
 
     const btnFindClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-close"]');
@@ -5705,7 +5705,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
     const btnTextMoreOptions = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-text-more-options"]');
     btnTextMoreOptions?.addEventListener('click', () => {
-      showToast('Opciones de configuración avanzada de texto', 'info');
+      showToast(t('toasts.opciones_de_configuracion_avanzada_de_te'), 'info');
     }, { signal });
 
     const rangeTextOp = this.container.querySelector<HTMLInputElement>('[data-ref="range-text-opacity"]');
@@ -5916,14 +5916,14 @@ export class CollaborativePdfEditorController implements ViewController {
         return;
       }
       if (!hasSubscriptionFeature('pro')) {
-        showToast('La eliminación de fondos con IA es exclusiva para planes Pro o superiores', 'warning');
+        showToast(t('toasts.la_eliminacion_de_fondos_con_ia_es_exclu'), 'warning');
         navigate('/precios');
         return;
       }
       if (!this.selectedElementId) return;
       const el = this.elements.find((e) => e.id === this.selectedElementId);
       if (!el || el.type !== 'image' || !el.url) {
-        showToast('Selecciona una imagen válida', 'warning');
+        showToast(t('toasts.selecciona_una_imagen_valida'), 'warning');
         return;
       }
 
@@ -5932,7 +5932,7 @@ export class CollaborativePdfEditorController implements ViewController {
           const res = await postApi(API_ROUTES.collaborativeDocs.removeBackground, { imageUrl: el.url });
           const data = await res.json().catch(() => null);
           if (!res.ok || !data?.success) {
-            showToast(data?.error || 'No se pudo eliminar el fondo de la imagen', 'error');
+            showToast(data?.error || t('ui.no_se_pudo_eliminar_el_fondo_de_la_image'), 'error');
             return;
           }
           el.url = data.url;
@@ -5946,16 +5946,16 @@ export class CollaborativePdfEditorController implements ViewController {
           this.recordHistory();
           this.loadUploadedAssets();
           const balanceMsg = data.newBalance !== undefined ? ` (Saldo: ${data.newBalance} tokens)` : '';
-          showToast(`Fondo eliminado exitosamente con IA${balanceMsg}`, 'success');
+          showToast(t('toasts.fondo_eliminado_exitosamente_con_ia'), 'success');
         } catch {
-          showToast('Error de conexión al eliminar el fondo', 'error');
+          showToast(t('toasts.error_de_conexion_al_eliminar_el_fondo'), 'error');
         }
       });
     }, { signal });
 
     const btnImageCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-crop"]');
     btnImageCrop?.addEventListener('click', () => {
-      showToast('Herramienta de recorte próximamente disponible', 'info');
+      showToast(t('toasts.herramienta_de_recorte_proximamente_disp'), 'info');
     }, { signal });
 
     const imgStrokeStyles = this.container.querySelectorAll<HTMLElement>('[data-ref="image-stroke-styles-row"] [data-style]');
@@ -6607,9 +6607,9 @@ export class CollaborativePdfEditorController implements ViewController {
           if (navigator.clipboard?.writeText) {
             void navigator.clipboard.writeText(payloadJson).catch(() => {});
           }
-          showToast(`Página ${this.contextMenuTargetPage + 1} (${pageElements.length} elementos) copiada`, 'info');
+          showToast(t('toasts.pagina_elementos_copiada'), 'info');
         } else {
-          showToast(`Página ${this.contextMenuTargetPage + 1} copiada`, 'info');
+          showToast(t('toasts.pagina_copiada'), 'info');
         }
       }
       this.closeContextMenu();
@@ -6978,14 +6978,14 @@ export class CollaborativePdfEditorController implements ViewController {
         void this.flushAutoSave();
 
         if (editableCount === count) {
-          showToast(`Se han importado las ${count} páginas como contenido editable`, 'success');
+          showToast(t('toasts.se_han_importado_las_paginas_como_conten'), 'success');
         } else if (editableCount > 0) {
-          showToast(`Se importaron ${editableCount} páginas editables y ${count - editableCount} como imagen de fondo`, 'success');
+          showToast(t('toasts.se_importaron_paginas_editables_y_como_i'), 'success');
         } else {
-          showToast(`Se han aplicado las ${count} páginas como imagen de fondo (documento escaneado)`, 'info');
+          showToast(t('toasts.se_han_aplicado_las_paginas_como_imagen_'), 'info');
         }
       } catch {
-        showToast('Error al importar las páginas del PDF.', 'error');
+        showToast(t('toasts.error_al_importar_las_paginas_del_pdf'), 'error');
       }
     });
   }
@@ -7032,7 +7032,7 @@ export class CollaborativePdfEditorController implements ViewController {
         this.recordHistory();
         this.broadcastDocSync();
         void this.flushAutoSave();
-        showToast(`Página ${pageNum} importada como contenido editable en página ${targetIdx + 1}`, 'success');
+        showToast(t('toasts.pagina_importada_como_contenido_editable'), 'success');
       } else {
         this.pagePdfSources[targetIdx] = {
           pageNumber: pageNum,
@@ -7043,10 +7043,10 @@ export class CollaborativePdfEditorController implements ViewController {
         this.recordHistory();
         this.broadcastDocSync();
         void this.flushAutoSave();
-        showToast(`Página ${pageNum} aplicada como imagen de fondo (documento escaneado)`, 'info');
+        showToast(t('toasts.pagina_aplicada_como_imagen_de_fondo_doc'), 'info');
       }
     } catch {
-      showToast('Error al procesar la página del PDF.', 'error');
+      showToast(t('toasts.error_al_procesar_la_pagina_del_pdf'), 'error');
     }
   }
 
@@ -7132,7 +7132,7 @@ export class CollaborativePdfEditorController implements ViewController {
       if (msg.peer && msg.peer.clientId !== this.myClientId) {
         this.remotePeers.set(msg.peer.clientId, msg.peer);
         this.addPeerPresenceBubble(msg.peer);
-        showToast(`${msg.peer.username} se unió al diseño`, 'info');
+        showToast(t('toasts.se_unio_al_diseno'), 'info');
       }
     } else if (msg.type === 'userLeft') {
       this.removePeerPresenceBubble(msg.clientId);
@@ -7179,10 +7179,10 @@ export class CollaborativePdfEditorController implements ViewController {
       }
     } else if (msg.type === 'roomFull') {
       this.isCollabRoomFull = true;
-      showToast(msg.message || 'La sala colaborativa ha alcanzado el límite máximo de 12 colaboradores simultáneos.', 'warning');
+      showToast(msg.message || t('ui.la_sala_colaborativa_ha_alcanzado_el_lim'), 'warning');
       this.renderPresenceList();
     } else if (msg.type === 'rateLimited') {
-      showToast(msg.message || 'Demasiadas acciones por segundo. Por favor reduce la velocidad.', 'warning');
+      showToast(msg.message || t('ui.demasiadas_acciones_por_segundo_por_favo'), 'warning');
     }
   }
 
@@ -7312,9 +7312,9 @@ export class CollaborativePdfEditorController implements ViewController {
       });
       if (res.ok) {
         window.open(`/d/${newId}`, '_blank');
-        showToast('Copia creada en una nueva pestaña', 'success');
+        showToast(t('toasts.copia_creada_en_una_nueva_pestana'), 'success');
       } else {
-        showToast('No se pudo duplicar el documento en la nube', 'danger');
+        showToast(t('ui.no_se_pudo_duplicar_el_documento_en_la_n'), 'danger');
       }
     } catch {
       showToast('Error de red al duplicar documento', 'danger');
@@ -7471,7 +7471,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private replaceCurrent(): void {
     if (this.editorMode === 'view') {
-      showToast('No se puede reemplazar en modo solo lectura', 'warning');
+      showToast(t('toasts.read_only_no_replace'), 'warning');
       return;
     }
     if (this.findCurrentIndex < 0 || this.findCurrentIndex >= this.findMatches.length) return;
@@ -7488,7 +7488,7 @@ export class CollaborativePdfEditorController implements ViewController {
 
   private replaceAll(): void {
     if (this.editorMode === 'view') {
-      showToast('No se puede reemplazar en modo solo lectura', 'warning');
+      showToast(t('toasts.no_se_puede_reemplazar_en_modo_solo_lect'), 'warning');
       return;
     }
     if (this.findMatches.length === 0) return;
@@ -7499,7 +7499,7 @@ export class CollaborativePdfEditorController implements ViewController {
     this.renderPages();
     this.scheduleAutoSave();
     this.executeSearch();
-    showToast(`Se reemplazaron ${count} coincidencias`, 'success');
+    showToast(t('toasts.se_reemplazaron_coincidencias'), 'success');
   }
 
   private confirmDeleteDocument(): void {
@@ -7516,10 +7516,10 @@ export class CollaborativePdfEditorController implements ViewController {
         try {
           const res = await deleteApi(API_ROUTES.collaborativeDocs.byId(this.docId));
           if (res.ok) {
-            showToast('Documento eliminado correctamente', 'info');
+            showToast(t('toasts.doc_deleted_correctly'), 'info');
             navigate('/projects');
           } else {
-            showToast('No se pudo eliminar el documento', 'danger');
+            showToast(t('ui.no_se_pudo_eliminar_el_documento'), 'danger');
           }
         } catch {
           showToast('Error de red al eliminar documento', 'danger');
@@ -7555,7 +7555,7 @@ export class CollaborativePdfEditorController implements ViewController {
       this.closeSubtoolbars();
       this.updateSelection();
       this.renderTransformBox();
-      showToast('Modo solo lectura activado', 'info');
+      showToast(t('toasts.read_only_mode_enabled'), 'info');
     } else {
       this.container.classList.remove('collaborative-mode-view');
       if (txtTopEdit) txtTopEdit.textContent = 'Editar';
@@ -7566,7 +7566,7 @@ export class CollaborativePdfEditorController implements ViewController {
       btnModeView?.classList.remove('is-active');
       if (titleInput) titleInput.readOnly = false;
       this.updateUndoRedoButtons();
-      showToast('Modo de edición activado', 'info');
+      showToast(t('toasts.modo_de_edicion_activado'), 'info');
     }
   }
 
@@ -7670,7 +7670,7 @@ export class CollaborativePdfEditorController implements ViewController {
       type: 'ELEMENT_LAYER_MOVE',
     });
     if (success) {
-      showToast('Capa actualizada', 'info');
+      showToast(t('toasts.capa_actualizada'), 'info');
     }
   }
 
@@ -7680,7 +7680,7 @@ export class CollaborativePdfEditorController implements ViewController {
       type: 'ELEMENT_LAYER_REORDER',
     });
     if (success) {
-      showToast('Orden de capas actualizado', 'info');
+      showToast(t('toasts.orden_de_capas_actualizado'), 'info');
     }
   }
 
@@ -7690,7 +7690,7 @@ export class CollaborativePdfEditorController implements ViewController {
       type: 'ELEMENT_ALIGN',
     });
     if (success) {
-      showToast('Elemento alineado', 'info');
+      showToast(t('toasts.elemento_alineado'), 'info');
     }
   }
 
@@ -8016,10 +8016,12 @@ export class CollaborativePdfEditorController implements ViewController {
 
 }
 
-export async function createCollaborativePdfEditorView(docId?: string, query?: URLSearchParams): Promise<HTMLElement> {
+async function createCollaborativePdfEditorView(docId?: string, query?: URLSearchParams): Promise<HTMLElement> {
   const container = await loadTemplate('/views/collaborative-pdf/collaborative-pdf-editor.html');
   const controller = new CollaborativePdfEditorController(container, docId, query);
   (container as any).__controller = controller;
   await controller.init();
   return container;
 }
+
+export { CollaborativePdfEditorController, createCollaborativePdfEditorView };

@@ -12,8 +12,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { OCR_LANGUAGES, OcrResultData } from './ocr-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class OcrPdfController implements ViewController {
+class OcrPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -33,7 +34,7 @@ export class OcrPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Convierte PDFs escaneados o basados en imágenes en documentos con texto seleccionable, indexable y editable.',
+        desc: t('ui.convierte_pdfs_escaneados_o_basados_en_i'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -134,7 +135,7 @@ export class OcrPdfController implements ViewController {
           const idx = this.selectedLanguages.indexOf(langCode);
           if (idx !== -1) {
             if (this.selectedLanguages.length <= 1) {
-              showToast('Debes seleccionar al menos un idioma.', 'warning');
+              showToast(t('toasts.debes_seleccionar_al_menos_un_idioma'), 'warning');
               return false;
             }
             this.selectedLanguages.splice(idx, 1);
@@ -145,7 +146,7 @@ export class OcrPdfController implements ViewController {
             }
           } else {
             if (this.selectedLanguages.length >= 3) {
-              showToast('Puedes seleccionar un máximo de 3 idiomas.', 'warning');
+              showToast(t('toasts.puedes_seleccionar_un_maximo_de_3_idioma'), 'warning');
               return false;
             }
             this.selectedLanguages.push(langCode);
@@ -203,7 +204,7 @@ export class OcrPdfController implements ViewController {
 
   private handleFileSelected(file: File): void {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      showToast('Solo se permiten archivos en formato PDF.', 'danger');
+      showToast(t('ui.solo_se_permiten_archivos_en_formato_pdf'), 'danger');
       return;
     }
 
@@ -336,21 +337,21 @@ export class OcrPdfController implements ViewController {
         );
         const result = (await response.json()) as { data?: OcrResultData; error?: string; success: boolean };
 
-        this.phaseManager?.showProcessing('Reconociendo texto óptico (OCR)...', 'Escaneando páginas y generando capa de texto indexable y seleccionable');
+        this.phaseManager?.showProcessing('Reconociendo texto óptico (OCR)...', t('ui.escaneando_paginas_y_generando_capa_de_t'));
 
         if (!response.ok || !result.success || !result.data) {
-          throw new Error(result.error || 'Error al procesar el reconocimiento óptico de texto.');
+          throw new Error(result.error || t('ui.error_al_procesar_el_reconocimiento_opti'));
         }
 
         const token = result.data.fileId;
-        showToast('Texto reconocido y documento generado con éxito.', 'success');
+        showToast(t('toasts.ocr_success'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.processedSize,
           filename: customFilename || result.data.filename,
-          returnText: 'Reconocer texto en otro PDF',
+          returnText: t('ui.reconocer_texto_en_otro_pdf'),
           returnUrl: '/ocr-pdf',
-          subtitle: `Se ha aplicado reconocimiento óptico de texto exitosamente a "${this.currentFile?.name}".`,
+          subtitle: t('tools.ocr_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡Texto reconocido con éxito!',
           token,
         });
@@ -367,10 +368,12 @@ export class OcrPdfController implements ViewController {
   }
 }
 
-export async function createOcrPdfView(): Promise<HTMLElement> {
+async function createOcrPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/ocr-pdf/ocr-pdf.html');
   const controller = new OcrPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { OcrPdfController, createOcrPdfView };

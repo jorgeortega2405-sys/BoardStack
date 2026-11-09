@@ -6,7 +6,7 @@ import { showToast } from '../../services/toast.service.js';
 import { PurchaseRecord } from '../../types/subscription.types.js';
 import { removeEmptyState, renderEmptyState, withButtonLoading } from '../../utils/dom.util.js';
 
-export async function createPurchasesView(): Promise<HTMLElement> {
+async function createPurchasesView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/purchases.html');
   translateElement(container);
   renderIcons(container);
@@ -78,7 +78,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
         }, 100);
         showToast(t('settings.purchases.invoice_download_success') || 'Factura descargada correctamente.', 'success');
       } else {
-        showToast(res.error || t('common.error_occurred') || 'Error al descargar la factura.', 'danger');
+        showToast(res.error || t('common.error_occurred') || t('ui.error_al_descargar_la_factura'), 'danger');
       }
     });
   });
@@ -140,8 +140,8 @@ export async function createPurchasesView(): Promise<HTMLElement> {
           container: tableWrapper,
           dataRef: 'purchases-empty-state',
           desc: isSearchResult
-            ? t('settings.purchases.search_no_results') || 'No se encontraron compras que coincidan con la búsqueda.'
-            : t('settings.purchases.empty_desc') || 'Aún no has realizado ninguna compra o suscripción en BoardPDF.',
+            ? t('settings.purchases.search_no_results') || t('ui.no_se_encontraron_compras_que_coincidan_')
+            : t('settings.purchases.empty_desc') || t('ui.aun_no_has_realizado_ninguna_compra_o_su'),
           graphicType: isSearchResult ? 'search' : 'subscriptions',
           isTable: true,
           title: isSearchResult
@@ -270,3 +270,5 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 
   return container;
 }
+
+export { createPurchasesView };

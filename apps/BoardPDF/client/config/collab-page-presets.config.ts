@@ -1,9 +1,9 @@
-export interface PageDimension {
+interface PageDimension {
   height: number;
   width: number;
 }
 
-export interface PagePreset {
+interface PagePreset {
   category: 'document';
   defaultOrientation?: 'landscape' | 'portrait';
   description: string;
@@ -15,12 +15,12 @@ export interface PagePreset {
   width: number;
 }
 
-export const COLLAB_DOCUMENT_DEFAULT_SIZE: PageDimension = {
+const COLLAB_DOCUMENT_DEFAULT_SIZE: PageDimension = {
   height: 1123,
   width: 794,
 };
 
-export const COLLAB_PAGE_PRESETS: PagePreset[] = [
+const COLLAB_PAGE_PRESETS: PagePreset[] = [
   {
     category: 'document',
     defaultOrientation: 'portrait',
@@ -56,18 +56,21 @@ export const COLLAB_PAGE_PRESETS: PagePreset[] = [
   },
 ];
 
-export function mmToPx(mm: number): number {
+function mmToPx(mm: number): number {
   return Math.round(mm * (96 / 25.4));
 }
 
-export function inToPx(inches: number): number {
+function inToPx(inches: number): number {
   return Math.round(inches * 96);
 }
 
-export function pxToMm(px: number): number {
+function pxToMm(px: number): number {
   return Math.round((px * 25.4) / 96);
 }
 
-export function pxToIn(px: number): number {
+function pxToIn(px: number): number {
   return parseFloat(((px) / 96).toFixed(2));
 }
+
+export { COLLAB_DOCUMENT_DEFAULT_SIZE, COLLAB_PAGE_PRESETS, inToPx, mmToPx, pxToIn, pxToMm };
+export type { PageDimension, PagePreset };

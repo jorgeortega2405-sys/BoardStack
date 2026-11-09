@@ -1,4 +1,4 @@
-export interface ClientRedactionBox {
+interface ClientRedactionBox {
   height: number;
   id: string;
   pageIndex: number;
@@ -8,9 +8,9 @@ export interface ClientRedactionBox {
   y: number;
 }
 
-export type ClientRedactTool = 'draw-box' | 'select-text';
+type ClientRedactTool = 'draw-box' | 'select-text';
 
-export interface RedactPdfResultData {
+interface RedactPdfResultData {
   downloadUrl: string;
   fileId: string;
   fileSize: number;
@@ -19,3 +19,5 @@ export interface RedactPdfResultData {
   redactedPagesCount: number;
   totalPages: number;
 }
+
+export type { ClientRedactTool, ClientRedactionBox, RedactPdfResultData };

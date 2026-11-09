@@ -1,6 +1,6 @@
 import { loadPdfDocument, loadPdfJs } from './pdf-loader.service.js';
 
-export interface ExtractedPageResult {
+interface ExtractedPageResult {
   elements: any[];
   hasEditableContent: boolean;
   pageNumber: number;
@@ -53,7 +53,7 @@ async function resolvePdfDoc(source: any): Promise<{ doc: any; shouldDestroy: bo
   throw new Error('Formato de origen PDF no compatible');
 }
 
-export async function checkPdfPagesEditableStatus(source: any): Promise<boolean[]> {
+async function checkPdfPagesEditableStatus(source: any): Promise<boolean[]> {
   const { doc, shouldDestroy } = await resolvePdfDoc(source);
   const results: boolean[] = [];
   try {
@@ -78,7 +78,7 @@ export async function checkPdfPagesEditableStatus(source: any): Promise<boolean[
   return results;
 }
 
-export async function extractEditablePdfPage(
+async function extractEditablePdfPage(
   source: any,
   pageNum: number,
   targetPageIndex: number,
@@ -360,3 +360,6 @@ async function extractImagesFromPage(
 
   return images;
 }
+
+export { checkPdfPagesEditableStatus, extractEditablePdfPage };
+export type { ExtractedPageResult };

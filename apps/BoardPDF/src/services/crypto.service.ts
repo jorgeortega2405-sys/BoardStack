@@ -3,12 +3,12 @@ import crypto from 'crypto';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 
-export async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 
@@ -17,19 +17,22 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 
 function getEncryptionKey(): Buffer {
-  const rawKey = config.sessionSecret || 'boardpdf_encryption_key_default';
+  const rawKey = config.sessionSecret;
+  if (!rawKey) {
+    throw new Error('SESSION_SECRET is required for crypto operations');
+  }
   if (/^[0-9a-fA-F]{64}$/.test(rawKey)) {
     return Buffer.from(rawKey, 'hex');
   }
   return crypto.createHash('sha256').update(rawKey).digest();
 }
 
-export function isEncrypted(value?: string | null): boolean {
+function isEncrypted(value?: string | null): boolean {
   if (!value || typeof value !== 'string') return false;
   return value.startsWith(PREFIX);
 }
 
-export function encryptAtRest(plainText: string): string {
+function encryptAtRest(plainText: string): string {
   if (!plainText || typeof plainText !== 'string') return plainText;
   if (isEncrypted(plainText)) return plainText;
 
@@ -49,7 +52,7 @@ export function encryptAtRest(plainText: string): string {
   }
 }
 
-export function decryptAtRest(cipherText?: string | null): string {
+function decryptAtRest(cipherText?: string | null): string {
   if (!cipherText || typeof cipherText !== 'string') return '';
   if (!isEncrypted(cipherText)) return cipherText;
 
@@ -73,3 +76,5 @@ export function decryptAtRest(cipherText?: string | null): string {
     return '';
   }
 }
+
+export { decryptAtRest, encryptAtRest, hashPassword, isEncrypted, verifyPassword };

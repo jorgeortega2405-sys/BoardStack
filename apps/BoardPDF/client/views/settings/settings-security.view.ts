@@ -10,7 +10,7 @@ import { ModalInstance, ViewController } from '../../types/common.types.js';
 import { setupPasswordToggle, withButtonLoading } from '../../utils/dom.util.js';
 import { validatePassword } from '../../utils/validators.util.js';
 
-export class SettingsSecurityController implements ViewController {
+class SettingsSecurityController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private is2faEnabled = false;
@@ -102,7 +102,7 @@ export class SettingsSecurityController implements ViewController {
     const modal = openModal({
       cancelText: t('common.cancel'),
       confirmText: t('common.continue'),
-      description: t('settings.security.modal_verify_password_desc') || 'Por motivos de seguridad, ingresa tu contraseña actual para continuar.',
+      description: t('settings.security.modal_verify_password_desc') || t('ui.por_motivos_de_seguridad_ingresa_tu_cont'),
       title: t('settings.security.modal_verify_password_title') || 'Verifica tu contraseña actual',
       bodyHtml: `
         <label class="field" data-ref="field-current-password">
@@ -227,19 +227,19 @@ export class SettingsSecurityController implements ViewController {
       cancelText: t('common.cancel'),
       confirmClass: 'component-button--danger',
       confirmText: t('settings.security.btn_disable_2fa') || 'Desactivar',
-      description: t('settings.security.two_factor_disable_confirm') || 'Ingresa tu contraseña actual o un código de verificación para desactivar la protección.',
-      title: t('settings.security.two_factor_disable_title') || 'Desactivar autenticación en dos pasos',
+      description: t('settings.security.two_factor_disable_confirm') || t('ui.ingresa_tu_contrasena_actual_o_un_codigo'),
+      title: t('settings.security.two_factor_disable_title') || t('ui.desactivar_autenticacion_en_dos_pasos'),
       bodyHtml: `
         <label class="field" data-ref="field-disable-2fa-password" style="margin-top: 14px;">
           <input class="field__input" data-ref="input-disable-2fa-password" type="password" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="label-disable-2fa-password">${t('settings.security.current_password_label') || 'Contraseña o código de 6 dígitos'}</span>
+          <span class="field__label" data-ref="label-disable-2fa-password">${t('settings.security.current_password_label') || t('ui.contrasena_o_codigo_de_6_digitos')}</span>
         </label>
       `,
       onConfirm: async (inst) => {
         const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-disable-2fa-password"]');
         const val = input ? input.value.trim() : '';
         if (!val) {
-          inst.showError(t('settings.security.modal_current_password_error') || 'Ingresa tu contraseña o código de verificación.');
+          inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_o_codigo_de_verifi'));
           return;
         }
 
@@ -288,7 +288,7 @@ export class SettingsSecurityController implements ViewController {
         const password = inputPwd?.value?.trim() || '';
 
         if (!password) {
-          inst.showError(t('settings.security.modal_current_password_error') || 'Ingresa tu contraseña actual para confirmar la eliminación.');
+          inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_actual_para_confir'));
           return;
         }
 
@@ -317,10 +317,12 @@ export class SettingsSecurityController implements ViewController {
   }
 }
 
-export async function createSecurityView(): Promise<HTMLElement> {
+async function createSecurityView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/security.html');
   const controller = new SettingsSecurityController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { SettingsSecurityController, createSecurityView };

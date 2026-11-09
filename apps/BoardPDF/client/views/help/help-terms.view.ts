@@ -3,7 +3,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { ViewController } from '../../types/common.types.js';
 
-export class HelpTermsController implements ViewController {
+class HelpTermsController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
@@ -38,10 +38,12 @@ export class HelpTermsController implements ViewController {
   }
 }
 
-export async function createHelpTermsView(): Promise<HTMLElement> {
+async function createHelpTermsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/help/terms.html');
   const controller = new HelpTermsController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { HelpTermsController, createHelpTermsView };

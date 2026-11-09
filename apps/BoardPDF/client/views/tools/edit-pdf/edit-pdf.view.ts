@@ -8,8 +8,9 @@ import { navigate } from '../../../services/navigation.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class EditPdfController implements ViewController {
+class EditPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private phaseManager: ToolPhaseManager | null = null;
@@ -24,7 +25,7 @@ export class EditPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Archivo PDF',
-        desc: 'Añade texto, imágenes, formas y dibujos, o edita texto existente en tu documento PDF con total libertad.',
+        desc: t('ui.anade_texto_imagenes_formas_y_dibujos_o_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -55,7 +56,7 @@ export class EditPdfController implements ViewController {
 
   private async handleFileSelected(file: File): Promise<void> {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      showToast('Solo se permiten documentos en formato PDF.', 'error');
+      showToast(t('toasts.solo_se_permiten_documentos_en_formato_p'), 'error');
       return;
     }
 
@@ -82,7 +83,7 @@ export class EditPdfController implements ViewController {
         const newFiles = data.files || (data.file ? [data.file] : []);
         const asset = newFiles[0];
         if (!asset || !asset.url) {
-          this.showError('No se pudo procesar el archivo PDF.');
+          this.showError(t('ui.no_se_pudo_procesar_el_archivo_pdf'));
           this.phaseManager?.setPhase('dropzone');
           return;
         }
@@ -91,11 +92,11 @@ export class EditPdfController implements ViewController {
         sessionStorage.setItem('collab_auto_import', JSON.stringify({ asset, docTitle }));
         navigate(`/d/${newDocId}`);
       } else {
-        this.showError('Ocurrió un error al subir el documento PDF.');
+        this.showError(t('ui.ocurrio_un_error_al_subir_el_documento_p'));
         this.phaseManager?.setPhase('dropzone');
       }
     } catch {
-      this.showError('Error de red al procesar el archivo. Por favor intenta de nuevo.');
+      this.showError(t('ui.error_de_red_al_procesar_el_archivo_por_'));
       this.phaseManager?.setPhase('dropzone');
     }
   }
@@ -106,7 +107,7 @@ export class EditPdfController implements ViewController {
         boxText: message,
         boxTitle: 'Error de procesamiento',
         desc: message,
-        title: 'No se pudo abrir el documento',
+        title: t('ui.no_se_pudo_abrir_el_documento'),
       });
     } else {
       showToast(message, 'error');
@@ -114,10 +115,12 @@ export class EditPdfController implements ViewController {
   }
 }
 
-export async function createEditPdfView(): Promise<HTMLElement> {
+async function createEditPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/edit-pdf/edit-pdf.html');
   const controller = new EditPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { EditPdfController, createEditPdfView };

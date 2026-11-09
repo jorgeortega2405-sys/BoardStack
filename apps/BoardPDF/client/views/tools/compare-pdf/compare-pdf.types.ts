@@ -1,6 +1,6 @@
-export type CompareViewMode = 'semantic' | 'overlay';
+type CompareViewMode = 'semantic' | 'overlay';
 
-export interface ClientDiffItem {
+interface ClientDiffItem {
   diffCount: number;
   id: string;
   newText?: string;
@@ -9,14 +9,14 @@ export interface ClientDiffItem {
   type: 'addition' | 'deletion' | 'modification' | 'unchanged';
 }
 
-export interface ClientPageComparison {
+interface ClientPageComparison {
   changes: ClientDiffItem[];
   differencesCount: number;
   hasDifferences: boolean;
   pageIndex: number;
 }
 
-export interface ComparePdfResultData {
+interface ComparePdfResultData {
   additionsCount: number;
   deletionsCount: number;
   downloadUrl: string;
@@ -28,3 +28,5 @@ export interface ComparePdfResultData {
   similarityPercentage: number;
   totalChanges: number;
 }
+
+export type { ClientDiffItem, ClientPageComparison, ComparePdfResultData, CompareViewMode };

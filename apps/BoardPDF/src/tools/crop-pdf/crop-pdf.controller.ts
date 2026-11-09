@@ -1,32 +1,13 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { cropPdf } from './crop-pdf.service.js';
 import { CropPdfOptions } from './crop-pdf.types.js';
 import { Request, Response } from 'express';
 
-export async function cropPdfHandler(req: Request, res: Response): Promise<void> {
+async function cropPdfHandler(req: Request, res: Response): Promise<void> {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Debes seleccionar un archivo PDF.', success: false });
-      return;
-    }
-
-    if (!isPdfBuffer(req.file.buffer)) {
-      res.status(400).json({ error: 'El archivo seleccionado no es un PDF válido.', success: false });
-      return;
-    }
-
-    const userPermissions = (req as any).user?.permissions || [];
-    const limits = getToolLimits('crop-pdf', userPermissions);
-
-    if (req.file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      res.status(403).json({
-        error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos más grandes.`,
-        success: false,
-      });
-      return;
-    }
+    const file = validatePdfUpload(req, res, 'crop-pdf');
+    if (!file) return;
 
     let options: CropPdfOptions = { cropBox: { height: 100, width: 100, x: 0, y: 0 } };
     if (req.body?.options) {
@@ -37,7 +18,7 @@ export async function cropPdfHandler(req: Request, res: Response): Promise<void>
       }
     }
 
-    const result = await cropPdf(req.file.buffer, req.file.originalname, options);
+    const result = await cropPdf(file.buffer, file.originalname, options);
     res.json({ data: result, success: true });
   } catch (err: unknown) {
     logger.app.error('Fallo en endpoint cropPdfHandler', err);
@@ -47,3 +28,5 @@ export async function cropPdfHandler(req: Request, res: Response): Promise<void>
     });
   }
 }
+
+export { cropPdfHandler };

@@ -14,29 +14,37 @@ for (const p of envCandidates) {
   }
 }
 
-export const config = {
-  appName: process.env.APP_NAME || 'BoardPDF',
-  baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+const rawDbPort = process.env.DB_PORT;
+const rawPort = process.env.PORT;
+const rawRedisPort = process.env.REDIS_PORT;
+const rawSmtpPort = process.env.SMTP_PORT;
+const redisPassword = process.env.REDIS_PASSWORD;
+const s3Endpoint = process.env.AWS_S3_ENDPOINT ?? process.env.S3_ENDPOINT;
+const s3ForcePathStyle = process.env.AWS_S3_FORCE_PATH_STYLE ?? process.env.S3_FORCE_PATH_STYLE;
+
+const config = {
+  appName: process.env.APP_NAME ?? 'BoardPDF',
+  baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
   cors: {
-    allowedOrigins: (process.env.ALLOWED_ORIGINS || '')
+    allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
   },
   db: {
-    database: process.env.DB_NAME || 'boardpdf_db',
-    host: process.env.DB_HOST || '127.0.0.1',
-    password: process.env.DB_PASSWORD || '',
-    port: parseInt(process.env.DB_PORT || '3306', 10),
-    user: process.env.DB_USER || 'boardpdf_user',
+    database: process.env.DB_NAME ?? 'boardpdf_db',
+    host: process.env.DB_HOST ?? '127.0.0.1',
+    password: process.env.DB_PASSWORD ?? '',
+    port: rawDbPort ? parseInt(rawDbPort, 10) : 3306,
+    user: process.env.DB_USER ?? 'boardpdf_user',
   },
   deepl: {
-    apiKey: process.env.DEEPL_API_KEY || '',
+    apiKey: process.env.DEEPL_API_KEY ?? '',
   },
-  downloadSecret: process.env.DOWNLOAD_TOKEN_SECRET || process.env.SESSION_SECRET || '',
+  downloadSecret: process.env.DOWNLOAD_TOKEN_SECRET ?? process.env.SESSION_SECRET ?? '',
   dropbox: {
-    appKey: process.env.DROPBOX_APP_KEY || '',
-    appSecret: process.env.DROPBOX_APP_SECRET || '',
+    appKey: process.env.DROPBOX_APP_KEY ?? '',
+    appSecret: process.env.DROPBOX_APP_SECRET ?? '',
   },
   gemini: {
     get apiKey(): string {
@@ -48,61 +56,64 @@ export const config = {
           }
         }
       }
-      return process.env.GEMINI_API_KEY || '';
+      return process.env.GEMINI_API_KEY ?? '';
     },
     get model(): string {
-      return process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
+      return process.env.GEMINI_MODEL ?? 'gemini-flash-lite-latest';
     },
   },
   googlePicker: {
-    apiKey: process.env.VITE_GOOGLE_API_KEY || '',
-    clientId: process.env.VITE_GOOGLE_CLIENT_ID || '',
+    apiKey: process.env.VITE_GOOGLE_API_KEY ?? '',
+    clientId: process.env.VITE_GOOGLE_CLIENT_ID ?? '',
   },
   googleOAuth: {
-    adminCallbackUrl: process.env.ADMIN_GOOGLE_CALLBACK_URL || 'http://localhost:3002/api/auth/google/callback',
-    callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    adminCallbackUrl: process.env.ADMIN_GOOGLE_CALLBACK_URL ?? 'http://localhost:3002/api/auth/google/callback',
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/api/auth/google/callback',
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   },
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv: process.env.NODE_ENV ?? 'development',
   originProtection: {
     enforceCloudflare: process.env.ENFORCE_CLOUDFLARE_ORIGIN === 'true',
-    secret: process.env.CLOUDFLARE_ORIGIN_SECRET || '',
+    secret: process.env.CLOUDFLARE_ORIGIN_SECRET ?? '',
   },
   photoroom: {
-    apiKey: process.env.PHOTOROOM_API_KEY || '',
+    apiKey: process.env.PHOTOROOM_API_KEY ?? '',
   },
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: rawPort ? parseInt(rawPort, 10) : 3000,
   redis: {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    password: process.env.REDIS_PASSWORD || undefined,
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    host: process.env.REDIS_HOST ?? '127.0.0.1',
+    password: redisPassword ? redisPassword : undefined,
+    port: rawRedisPort ? parseInt(rawRedisPort, 10) : 6379,
   },
   s3: {
-    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || process.env.S3_ACCESS_KEY || '',
-    bucket: process.env.AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME || '',
-    endpoint: process.env.AWS_S3_ENDPOINT || process.env.S3_ENDPOINT || undefined,
-    forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true' || process.env.S3_FORCE_PATH_STYLE === 'true',
-    region: process.env.AWS_S3_REGION || process.env.AWS_REGION || process.env.S3_REGION || 'us-east-1',
-    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || process.env.S3_SECRET_KEY || '',
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? process.env.AWS_ACCESS_KEY_ID ?? process.env.S3_ACCESS_KEY ?? '',
+    bucket: process.env.AWS_S3_BUCKET_NAME ?? process.env.AWS_S3_BUCKET ?? process.env.S3_BUCKET_NAME ?? '',
+    endpoint: s3Endpoint ? s3Endpoint : undefined,
+    forcePathStyle: s3ForcePathStyle === 'true',
+    region: process.env.AWS_S3_REGION ?? process.env.AWS_REGION ?? process.env.S3_REGION ?? 'us-east-1',
+    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY ?? process.env.S3_SECRET_KEY ?? '',
   },
-  sessionSecret: process.env.SESSION_SECRET || '',
+  sessionSecret: process.env.SESSION_SECRET ?? '',
   smtp: {
-    fromEmail: process.env.SMTP_FROM_EMAIL || 'no-reply@boardpdf.com',
-    fromName: process.env.SMTP_FROM_NAME || 'BoardPDF',
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    pass: process.env.SMTP_PASS || '',
-    port: parseInt(process.env.SMTP_PORT || '465', 10),
-    user: process.env.SMTP_USER || '',
+    fromEmail: process.env.SMTP_FROM_EMAIL ?? 'no-reply@boardpdf.com',
+    fromName: process.env.SMTP_FROM_NAME ?? 'BoardPDF',
+    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+    pass: process.env.SMTP_PASS ?? '',
+    port: rawSmtpPort ? parseInt(rawSmtpPort, 10) : 465,
+    user: process.env.SMTP_USER ?? '',
   },
   stripe: {
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
-    secretKey: process.env.STRIPE_SECRET_KEY || '',
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
+    secretKey: process.env.STRIPE_SECRET_KEY ?? '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
   },
   turnstile: {
     enabled: process.env.TURNSTILE_ENABLED === 'true' || Boolean(process.env.TURNSTILE_SECRET_KEY),
-    secretKey: process.env.TURNSTILE_SECRET_KEY || '',
-    siteKey: process.env.TURNSTILE_SITE_KEY || process.env.VITE_TURNSTILE_SITE_KEY || '',
+    secretKey: process.env.TURNSTILE_SECRET_KEY ?? '',
+    siteKey: process.env.TURNSTILE_SITE_KEY ?? process.env.VITE_TURNSTILE_SITE_KEY ?? '',
   },
 };
+
+export { config };
+export default config;

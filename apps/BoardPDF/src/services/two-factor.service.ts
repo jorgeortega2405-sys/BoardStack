@@ -3,7 +3,7 @@ import crypto from 'crypto';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-export function base32Encode(buffer: Buffer): string {
+function base32Encode(buffer: Buffer): string {
   let bits = 0;
   let value = 0;
   let output = '';
@@ -24,7 +24,7 @@ export function base32Encode(buffer: Buffer): string {
   return output;
 }
 
-export function base32Decode(input: string): Buffer {
+function base32Decode(input: string): Buffer {
   const cleanInput = input.toUpperCase().replace(/=+$/, '').replace(/\s+/g, '');
   let bits = 0;
   let value = 0;
@@ -47,12 +47,12 @@ export function base32Decode(input: string): Buffer {
   return Buffer.from(bytes);
 }
 
-export function generateTotpSecret(numBytes = 20): string {
+function generateTotpSecret(numBytes = 20): string {
   const bytes = crypto.randomBytes(numBytes);
   return base32Encode(bytes);
 }
 
-export function calculateTotpCode(secret: string, counter: number): string {
+function calculateTotpCode(secret: string, counter: number): string {
   const key = base32Decode(secret);
   const counterBuffer = Buffer.alloc(8);
   counterBuffer.writeBigUInt64BE(BigInt(counter));
@@ -69,7 +69,7 @@ export function calculateTotpCode(secret: string, counter: number): string {
   return code;
 }
 
-export function verifyTotpCode(code: string, secret: string, windowSteps = 2): boolean {
+function verifyTotpCode(code: string, secret: string, windowSteps = 2): boolean {
   if (!code || typeof code !== 'string' || !secret) {
     return false;
   }
@@ -92,7 +92,7 @@ export function verifyTotpCode(code: string, secret: string, windowSteps = 2): b
   return false;
 }
 
-export function getOtpAuthUrl(
+function getOtpAuthUrl(
   secret: string,
   username: string,
   issuer = 'BoardPDF'
@@ -102,7 +102,7 @@ export function getOtpAuthUrl(
   return `otpauth://totp/${safeIssuer}:${safeAccount}?secret=${secret}&issuer=${safeIssuer}`;
 }
 
-export function generateBackupCodes(count = 10): string[] {
+function generateBackupCodes(count = 10): string[] {
   const codes = new Set<string>();
   while (codes.size < count) {
     const raw = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -112,7 +112,7 @@ export function generateBackupCodes(count = 10): string[] {
   return Array.from(codes);
 }
 
-export function hashBackupCode(code: string): string {
+function hashBackupCode(code: string): string {
   const clean = code.toUpperCase().replace(/\s+/g, '').replace(/-/g, '');
   return crypto.createHash('sha256').update(clean).digest('hex');
 }
@@ -120,12 +120,12 @@ export function hashBackupCode(code: string): string {
 const REDIS_PREFIX_SETUP = '2fa:setup:';
 const REDIS_PREFIX_LOGIN = '2fa:login:';
 
-export interface Pending2FASetup {
+interface Pending2FASetup {
   backupCodes: string[];
   secret: string;
 }
 
-export async function savePending2FASetup(
+async function savePending2FASetup(
   userId: number,
   data: Pending2FASetup,
   ttlSeconds = 900
@@ -134,7 +134,7 @@ export async function savePending2FASetup(
   await redis.setex(key, ttlSeconds, JSON.stringify(data));
 }
 
-export async function getPending2FASetup(userId: number): Promise<Pending2FASetup | null> {
+async function getPending2FASetup(userId: number): Promise<Pending2FASetup | null> {
   const key = `${REDIS_PREFIX_SETUP}${userId}`;
   const raw = await redis.get(key);
   if (!raw) return null;
@@ -145,17 +145,17 @@ export async function getPending2FASetup(userId: number): Promise<Pending2FASetu
   }
 }
 
-export async function clearPending2FASetup(userId: number): Promise<void> {
+async function clearPending2FASetup(userId: number): Promise<void> {
   const key = `${REDIS_PREFIX_SETUP}${userId}`;
   await redis.del(key);
 }
 
-export interface Pending2FALogin {
+interface Pending2FALogin {
   email: string;
   userId: number;
 }
 
-export async function savePending2FALogin(
+async function savePending2FALogin(
   tempToken: string,
   payload: Pending2FALogin,
   ttlSeconds = 300
@@ -164,7 +164,7 @@ export async function savePending2FALogin(
   await redis.setex(key, ttlSeconds, JSON.stringify(payload));
 }
 
-export async function getPending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
+async function getPending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
   const key = `${REDIS_PREFIX_LOGIN}${tempToken}`;
   const raw = await redis.get(key);
   if (!raw) return null;
@@ -175,7 +175,7 @@ export async function getPending2FALogin(tempToken: string): Promise<Pending2FAL
   }
 }
 
-export async function consumePending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
+async function consumePending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
   const key = `${REDIS_PREFIX_LOGIN}${tempToken}`;
   const raw = await redis.get(key);
   if (!raw) return null;
@@ -186,3 +186,6 @@ export async function consumePending2FALogin(tempToken: string): Promise<Pending
     return null;
   }
 }
+
+export { base32Decode, base32Encode, calculateTotpCode, clearPending2FASetup, consumePending2FALogin, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FALogin, getPending2FASetup, hashBackupCode, savePending2FALogin, savePending2FASetup, verifyTotpCode };
+export type { Pending2FALogin, Pending2FASetup };

@@ -2,7 +2,7 @@ import { showToast } from '../services/toast.service.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement } from '../utils/dom.util.js';
 import { ToolStatusManager } from './tool-status.component.js';
 
-export interface ToolLayoutOptions {
+interface ToolLayoutOptions {
   container: HTMLElement;
   dropzoneCardRef?: string;
   errorBannerRef?: string;
@@ -13,7 +13,7 @@ export interface ToolLayoutOptions {
   workspaceRef?: string;
 }
 
-export class ToolLayoutController {
+class ToolLayoutController {
   private abortController: AbortController | null = null;
   public readonly statusManager: ToolStatusManager;
   public sidebarModal: ToolSidebarModalController | null = null;
@@ -195,3 +195,6 @@ export class ToolLayoutController {
     this.statusManager.destroy();
   }
 }
+
+export { ToolLayoutController };
+export type { ToolLayoutOptions };

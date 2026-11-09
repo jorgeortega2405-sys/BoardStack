@@ -60,7 +60,7 @@ def get_redis_client():
         r.ping()
         return r
     except Exception as e:
-        logger.warning('Redis no disponible para lectura de cola de expiración: %s', e)
+        logger.warning('Redis unavailable for expiration queue reading: %s', e)
         return None
 
 def get_db_connection():
@@ -76,7 +76,7 @@ def get_db_connection():
             autocommit=True
         )
     except Exception as e:
-        logger.warning('MySQL no disponible para consulta de expiración: %s', e)
+        logger.warning('MySQL unavailable for expiration query: %s', e)
         return None
 
 def run_cleanup_cycle() -> int:
@@ -93,7 +93,7 @@ def run_cleanup_cycle() -> int:
             if tokens_from_redis:
                 expired_tokens.update(tokens_from_redis)
         except Exception as e:
-            logger.warning('Error al leer de Redis zset: %s', e)
+            logger.warning('Error reading from Redis zset: %s', e)
 
     db_records = {}
     if db_conn:
@@ -113,7 +113,7 @@ def run_cleanup_cycle() -> int:
                     expired_tokens.add(tok)
                     db_records[tok] = row
         except Exception as e:
-            logger.warning('Error al consultar archivos expirados en MySQL: %s', e)
+            logger.warning('Error querying expired files in MySQL: %s', e)
 
     if not expired_tokens:
         if db_conn:
@@ -121,7 +121,7 @@ def run_cleanup_cycle() -> int:
         return 0
 
     tokens_list: List[str] = list(expired_tokens)
-    logger.info('Procesando eliminación de %d archivos expirados (retención 1h)...', len(tokens_list))
+    logger.info('Processing deletion of %d expired files (retention 1h)...', len(tokens_list))
 
     keys_to_delete = []
     for tok in tokens_list:
@@ -140,9 +140,9 @@ def run_cleanup_cycle() -> int:
                     'Quiet': True
                 }
             )
-            logger.info('Eliminados %d objetos de AWS S3 / MinIO en lote.', len(batch))
+            logger.info('Deleted %d objects from AWS S3 / MinIO in batch.', len(batch))
         except Exception as e:
-            logger.error('Error al eliminar lote de S3: %s', e)
+            logger.error('Error deleting batch from S3: %s', e)
 
     if db_conn:
         try:
@@ -155,7 +155,7 @@ def run_cleanup_cycle() -> int:
                 """
                 cursor.execute(sql, tuple(tokens_list))
         except Exception as e:
-            logger.error('Error al actualizar estado en MySQL: %s', e)
+            logger.error('Error updating status in MySQL: %s', e)
         finally:
             db_conn.close()
 
@@ -167,14 +167,14 @@ def run_cleanup_cycle() -> int:
                 pipeline.delete(f'tempfile:meta:{tok}')
             pipeline.execute()
         except Exception as e:
-            logger.warning('Error al purgar llaves en Redis: %s', e)
+            logger.warning('Error purging keys in Redis: %s', e)
 
-    logger.info('Ciclo de limpieza finalizado. Total eliminados: %d', len(tokens_list))
+    logger.info('Cleanup cycle finished. Total deleted: %d', len(tokens_list))
     return len(tokens_list)
 
 def main():
-    logger.info('Iniciando servicio de limpieza de almacenamiento AWS S3 / MinIO...')
-    logger.info('Bucket objetivo: %s | Retención: %ds | Intervalo: %ds', AWS_S3_BUCKET_NAME, RETENTION_SECONDS, CLEANER_INTERVAL_SECONDS)
+    logger.info('Starting AWS S3 / MinIO storage cleaner service...')
+    logger.info('Target bucket: %s | Retention: %ds | Interval: %ds', AWS_S3_BUCKET_NAME, RETENTION_SECONDS, CLEANER_INTERVAL_SECONDS)
 
     if '--once' in sys.argv:
         run_cleanup_cycle()
@@ -184,7 +184,7 @@ def main():
         try:
             run_cleanup_cycle()
         except Exception as e:
-            logger.error('Error no controlado en ciclo de limpieza: %s', e)
+            logger.error('Unhandled error in cleanup cycle: %s', e)
         time.sleep(CLEANER_INTERVAL_SECONDS)
 
 if __name__ == '__main__':

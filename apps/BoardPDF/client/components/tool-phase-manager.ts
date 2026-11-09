@@ -7,9 +7,9 @@ import { loadTemplate } from '../services/template.service.js';
 import { saveDownloadPayloadAndNavigate, ToolDownloadPayload } from '../services/tool-flow.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
 
-export type ToolPhase = 'download' | 'dropzone' | 'processing' | 'workspace';
+type ToolPhase = 'download' | 'dropzone' | 'processing' | 'workspace';
 
-export interface ToolPhaseManagerOptions {
+interface ToolPhaseManagerOptions {
   container: HTMLElement;
   dropzone?: Omit<ToolDropzoneOptions, 'container'>;
   footerRef?: string;
@@ -21,7 +21,7 @@ export interface ToolPhaseManagerOptions {
   workspaceCardRef?: string;
 }
 
-export class ToolPhaseManager {
+class ToolPhaseManager {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentPhase: ToolPhase = 'dropzone';
@@ -447,3 +447,6 @@ export class ToolPhaseManager {
     this.workspaceElements = [];
   }
 }
+
+export { ToolPhaseManager };
+export type { ToolPhase, ToolPhaseManagerOptions };

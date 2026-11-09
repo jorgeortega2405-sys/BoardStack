@@ -14,7 +14,7 @@ import path from 'path';
 
 
 
-export function detectMagicBytes(buffer: Buffer): { extension: string; mimeType: string } | null {
+function detectMagicBytes(buffer: Buffer): { extension: string; mimeType: string } | null {
   if (!buffer || buffer.length < 12) {
     return null;
   }
@@ -52,7 +52,7 @@ export function detectMagicBytes(buffer: Buffer): { extension: string; mimeType:
   return null;
 }
 
-export async function logUserAudit(
+async function logUserAudit(
   userId: number,
   action: string,
   oldValue: string | null,
@@ -80,7 +80,7 @@ async function safeUnlink(filePath: string): Promise<void> {
   } catch {}
 }
 
-export async function updateAvatar(
+async function updateAvatar(
   userId: number,
   file: Express.Multer.File,
   ip?: string | null,
@@ -164,7 +164,7 @@ export async function updateAvatar(
   }
 }
 
-export async function deleteAvatar(
+async function deleteAvatar(
   userId: number,
   ip?: string | null,
   ua?: string | null
@@ -196,7 +196,7 @@ export async function deleteAvatar(
   return { avatar_url: null, success: true };
 }
 
-export async function updateUsername(
+async function updateUsername(
   userId: number,
   newUsername: string,
   ip?: string | null,
@@ -234,7 +234,7 @@ export async function updateUsername(
   return { success: true, username: cleanUsername };
 }
 
-export async function requestEmailChangeCode(
+async function requestEmailChangeCode(
   userId: number,
   _ip?: string | null,
   _ua?: string | null
@@ -274,7 +274,7 @@ export async function requestEmailChangeCode(
   return { alreadyAuthorized: false, success: true };
 }
 
-export async function verifyEmailChange(
+async function verifyEmailChange(
   userId: number,
   code: string
 ): Promise<{ error?: string; status?: number; success: boolean; token?: string }> {
@@ -290,7 +290,7 @@ export async function verifyEmailChange(
   return { success: true, token: result.token };
 }
 
-export async function updateEmail(
+async function updateEmail(
   userId: number,
   newEmail: string,
   ip?: string | null,
@@ -347,7 +347,7 @@ export async function updateEmail(
   return { email: cleanEmail, success: true };
 }
 
-export async function getPasswordStatus(
+async function getPasswordStatus(
   userId: number
 ): Promise<{ hasGoogle: boolean; hasPassword: boolean }> {
   const pool = getDbPool();
@@ -364,7 +364,7 @@ export async function getPasswordStatus(
   };
 }
 
-export async function verifyCurrentPassword(
+async function verifyCurrentPassword(
   userId: number,
   currentPassword: string
 ): Promise<{ error?: string; status?: number; success: boolean }> {
@@ -404,7 +404,7 @@ export async function verifyCurrentPassword(
   return { success: true };
 }
 
-export async function updateUserPasswordFromSettings(
+async function updateUserPasswordFromSettings(
   userId: number,
   newPassword: string,
   ip?: string | null,
@@ -449,14 +449,16 @@ export async function updateUserPasswordFromSettings(
   return { success: true };
 }
 
-export async function getUserPreferences(userId: number) {
+async function getUserPreferences(userId: number) {
   return await getUserPrefsFromDb(userId);
 }
 
-export async function updateUserPreferences(userId: number, updates: Record<string, any>) {
+async function updateUserPreferences(userId: number, updates: Record<string, any>) {
   return await updateUserPrefsInDb(userId, updates);
 }
 
-export async function deleteUserAccount(userId: number): Promise<boolean> {
+async function deleteUserAccount(userId: number): Promise<boolean> {
   return await deleteUserPermanentlyInDb(userId);
 }
+
+export { deleteAvatar, deleteUserAccount, detectMagicBytes, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange };

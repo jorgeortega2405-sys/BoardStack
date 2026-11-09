@@ -4,11 +4,11 @@ import { verifyTurnstileToken } from '../services/turnstile.service.js';
 import { getClientIp } from './rate-limit.middleware.js';
 import type { NextFunction, Request, Response } from 'express';
 
-export interface TurnstileMiddlewareOptions {
+interface TurnstileMiddlewareOptions {
   bypassWhenDisabled?: boolean;
 }
 
-export function requireTurnstile(options: TurnstileMiddlewareOptions = {}) {
+function requireTurnstile(options: TurnstileMiddlewareOptions = {}) {
   return async function turnstileMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
     if (options.bypassWhenDisabled && !config.turnstile.enabled) {
       return next();
@@ -54,3 +54,6 @@ export function requireTurnstile(options: TurnstileMiddlewareOptions = {}) {
     next();
   };
 }
+
+export { requireTurnstile };
+export type { TurnstileMiddlewareOptions };

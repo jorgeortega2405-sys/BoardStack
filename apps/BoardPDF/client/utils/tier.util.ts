@@ -7,12 +7,12 @@ const FALLBACK_TIER_COLORS: Record<string, string> = {
   pro: '#3b82f6',
 };
 
-export function getFallbackTierColor(tier?: string): string {
+function getFallbackTierColor(tier?: string): string {
   const normalized = (tier || 'free').toLowerCase();
   return FALLBACK_TIER_COLORS[normalized] || FALLBACK_TIER_COLORS.free;
 }
 
-export function applyAvatarTier(el: HTMLElement | null, tier?: string, color?: string): void {
+function applyAvatarTier(el: HTMLElement | null, tier?: string, color?: string): void {
   if (!el) return;
   const normalizedTier = (tier || 'free').toLowerCase();
   el.setAttribute('data-tier', normalizedTier);
@@ -20,14 +20,14 @@ export function applyAvatarTier(el: HTMLElement | null, tier?: string, color?: s
   el.style.setProperty('--avatar-tier-bg', tierColor);
 }
 
-export function normalizeTier(tier?: string | null): SubscriptionTierId {
+function normalizeTier(tier?: string | null): SubscriptionTierId {
   const clean = (tier || 'free').toLowerCase().trim();
   if (clean === 'negocios' || clean === 'business') return 'business';
   if (clean === 'pro') return 'pro';
   return 'free';
 }
 
-export function getTierWeight(tier?: string | null): number {
+function getTierWeight(tier?: string | null): number {
   const norm = normalizeTier(tier);
   switch (norm) {
     case 'business':
@@ -39,7 +39,7 @@ export function getTierWeight(tier?: string | null): number {
   }
 }
 
-export function getTierDisplayName(tier?: string | null): string {
+function getTierDisplayName(tier?: string | null): string {
   const norm = normalizeTier(tier);
   switch (norm) {
     case 'business':
@@ -50,3 +50,5 @@ export function getTierDisplayName(tier?: string | null): string {
       return 'Gratuito';
   }
 }
+
+export { applyAvatarTier, getFallbackTierColor, getTierDisplayName, getTierWeight, normalizeTier };

@@ -15,7 +15,7 @@ def format_table_to_markdown(table_data):
 
     headers = [clean_cell_text(c) for c in table_data[0]]
     if all(not h for h in headers):
-        headers = [f"Columna {i+1}" for i in range(len(headers))]
+        headers = [f"Column {i+1}" for i in range(len(headers))]
 
     separator = ["---"] * len(headers)
     lines = [
@@ -130,7 +130,7 @@ def convert_pdf_to_markdown(input_pdf, mode="structured"):
 
 def main():
     if len(sys.argv) < 3:
-        print(json.dumps({'error': 'Uso: python markdown_worker.py <input> <output> [mode]', 'success': False}))
+        print(json.dumps({'error': 'Usage: python markdown_worker.py <input> <output> [mode]', 'success': False}))
         sys.exit(1)
 
     input_pdf = sys.argv[1]
@@ -138,7 +138,7 @@ def main():
     mode = sys.argv[3] if len(sys.argv) > 3 else "structured"
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({'error': 'Archivo de entrada no existe', 'success': False}))
+        print(json.dumps({'error': 'Input file does not exist', 'success': False}))
         sys.exit(1)
 
     try:

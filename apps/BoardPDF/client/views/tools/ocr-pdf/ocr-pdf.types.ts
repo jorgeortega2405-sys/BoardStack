@@ -1,11 +1,12 @@
-export type ClientOcrLanguage = string;
+import { t } from '../../../services/i18n.service.js';
+type ClientOcrLanguage = string;
 
-export interface OcrLanguageItem {
+interface OcrLanguageItem {
   code: string;
   name: string;
 }
 
-export interface OcrResultData {
+interface OcrResultData {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -15,7 +16,7 @@ export interface OcrResultData {
   processedSize: number;
 }
 
-export const OCR_LANGUAGES: readonly OcrLanguageItem[] = [
+const OCR_LANGUAGES: readonly OcrLanguageItem[] = [
   { code: 'afr', name: 'Afrikaans' },
   { code: 'sqi', name: 'Albanés' },
   { code: 'deu', name: 'Alemán' },
@@ -100,7 +101,7 @@ export const OCR_LANGUAGES: readonly OcrLanguageItem[] = [
   { code: 'nld', name: 'Neerlandés; flamenco' },
   { code: 'nep', name: 'Nepalí' },
   { code: 'nor', name: 'Noruego' },
-  { code: 'oci', name: 'Occitano (después de 1500)' },
+  { code: 'oci', name: t('ui.occitano_despues_de_1500') },
   { code: 'ori', name: 'Oriya' },
   { code: 'pan', name: 'Panyabí; Punyabí' },
   { code: 'fas', name: 'Persa' },
@@ -138,3 +139,6 @@ export const OCR_LANGUAGES: readonly OcrLanguageItem[] = [
   { code: 'yid', name: 'Yiddish' },
   { code: 'yor', name: 'Yoruba' },
 ];
+
+export { OCR_LANGUAGES };
+export type { ClientOcrLanguage, OcrLanguageItem, OcrResultData };

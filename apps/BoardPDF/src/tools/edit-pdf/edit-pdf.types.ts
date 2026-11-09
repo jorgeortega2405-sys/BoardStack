@@ -1,12 +1,12 @@
-export type EditShapeType = 'circle' | 'line' | 'rect';
+type EditShapeType = 'circle' | 'line' | 'rect';
 
-export interface EditColorRgb {
+interface EditColorRgb {
   b: number;
   g: number;
   r: number;
 }
 
-export interface EditTextAddition {
+interface EditTextAddition {
   color?: string;
   fontFamily?: string;
   fontSize: number;
@@ -17,7 +17,7 @@ export interface EditTextAddition {
   y: number;
 }
 
-export interface EditTextReplacement {
+interface EditTextReplacement {
   color?: string;
   fontFamily?: string;
   fontSize: number;
@@ -31,7 +31,7 @@ export interface EditTextReplacement {
   y: number;
 }
 
-export interface EditShapeItem {
+interface EditShapeItem {
   fillColor?: string;
   height?: number;
   id: string;
@@ -46,7 +46,7 @@ export interface EditShapeItem {
   y2?: number;
 }
 
-export interface EditDrawingStroke {
+interface EditDrawingStroke {
   color: string;
   id: string;
   pageIndex: number;
@@ -54,7 +54,7 @@ export interface EditDrawingStroke {
   width: number;
 }
 
-export interface EditImagePlacement {
+interface EditImagePlacement {
   height: number;
   id: string;
   imageIndex: number;
@@ -64,7 +64,7 @@ export interface EditImagePlacement {
   y: number;
 }
 
-export interface EditPdfModifications {
+interface EditPdfModifications {
   drawings?: EditDrawingStroke[];
   images?: EditImagePlacement[];
   replacements?: EditTextReplacement[];
@@ -72,10 +72,12 @@ export interface EditPdfModifications {
   texts?: EditTextAddition[];
 }
 
-export interface EditPdfResult {
+interface EditPdfResult {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   pageCount: number;
 }
+
+export type { EditColorRgb, EditDrawingStroke, EditImagePlacement, EditPdfModifications, EditPdfResult, EditShapeItem, EditShapeType, EditTextAddition, EditTextReplacement };

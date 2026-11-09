@@ -21,7 +21,7 @@ function getClientIp(req: Request): string {
   return req.socket.remoteAddress || '127.0.0.1';
 }
 
-export function sanitizeUser(user: any): UserPayload {
+function sanitizeUser(user: any): UserPayload {
   return {
     ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
     ai_tokens_reset_at: user.ai_tokens_reset_at ? new Date(user.ai_tokens_reset_at).toISOString() : undefined,
@@ -43,7 +43,7 @@ export function sanitizeUser(user: any): UserPayload {
   };
 }
 
-export async function validateStage1(req: Request, res: Response): Promise<void> {
+async function validateStage1(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body;
 
@@ -75,7 +75,7 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
   }
 }
 
-export async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
+async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email, password, username } = req.body;
 
@@ -137,7 +137,7 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
   }
 }
 
-export async function resendRegistrationCode(req: Request, res: Response): Promise<void> {
+async function resendRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email } = req.body;
 
@@ -173,7 +173,7 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
   }
 }
 
-export async function verifyRegistrationCode(req: Request, res: Response): Promise<void> {
+async function verifyRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { code, email } = req.body;
 
@@ -236,7 +236,7 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
   }
 }
 
-export async function login(req: Request, res: Response): Promise<void> {
+async function login(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body;
 
@@ -299,7 +299,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function loginWith2FA(req: Request, res: Response): Promise<void> {
+async function loginWith2FA(req: Request, res: Response): Promise<void> {
   try {
     const { code, temp_token } = req.body || {};
 
@@ -375,7 +375,7 @@ export async function loginWith2FA(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function me(req: Request, res: Response): Promise<void> {
+async function me(req: Request, res: Response): Promise<void> {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const user = getCurrentUser(req);
@@ -438,7 +438,7 @@ export async function me(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function switchAccount(req: Request, res: Response): Promise<void> {
+async function switchAccount(req: Request, res: Response): Promise<void> {
   try {
     const { userId } = req.body;
     const targetUserId = Number(userId);
@@ -469,7 +469,7 @@ export async function switchAccount(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function logout(req: Request, res: Response): Promise<void> {
+async function logout(req: Request, res: Response): Promise<void> {
   try {
     const { userId } = req.body || {};
     const targetUserId = userId ? Number(userId) : undefined;
@@ -489,7 +489,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function logoutAll(req: Request, res: Response): Promise<void> {
+async function logoutAll(req: Request, res: Response): Promise<void> {
   try {
     clearSessionCookie(res);
     res.status(200).json({
@@ -503,3 +503,5 @@ export async function logoutAll(req: Request, res: Response): Promise<void> {
     res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
+
+export { login, loginWith2FA, logout, logoutAll, me, resendRegistrationCode, sanitizeUser, sendRegistrationCode, switchAccount, validateStage1, verifyRegistrationCode };

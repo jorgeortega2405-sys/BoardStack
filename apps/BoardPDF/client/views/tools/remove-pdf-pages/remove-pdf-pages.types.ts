@@ -1,10 +1,10 @@
-export interface RemovePageItem {
+interface RemovePageItem {
   id: string;
   num: number;
   thumbnailDataUrl?: string;
 }
 
-export interface RemovePdfResponseData {
+interface RemovePdfResponseData {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -13,3 +13,5 @@ export interface RemovePdfResponseData {
   remainingPages: number;
   removedPages: number;
 }
+
+export type { RemovePageItem, RemovePdfResponseData };

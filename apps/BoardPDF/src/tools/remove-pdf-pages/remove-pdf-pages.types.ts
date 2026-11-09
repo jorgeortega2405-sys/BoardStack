@@ -1,9 +1,9 @@
-export interface RemovePagesOptions {
+interface RemovePagesOptions {
   filename?: string;
   pagesToRemove: number[];
 }
 
-export interface StoredRemovePagesResult {
+interface StoredRemovePagesResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -15,7 +15,7 @@ export interface StoredRemovePagesResult {
   size: number;
 }
 
-export interface RemovePagesResponse {
+interface RemovePagesResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -24,3 +24,5 @@ export interface RemovePagesResponse {
   remainingPages: number;
   removedPages: number;
 }
+
+export type { RemovePagesOptions, RemovePagesResponse, StoredRemovePagesResult };

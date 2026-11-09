@@ -1,7 +1,4 @@
-# apps/BoardPDF/Dockerfile
-# -------------------------------------------------------------
-# ETAPA 1: Dependencias y Herramientas Nativas Comunes (Base)
-# -------------------------------------------------------------
+# Stage 1: Base native dependencies and tools
 FROM node:20-bookworm-slim AS base
 WORKDIR /workspace
 
@@ -23,9 +20,7 @@ COPY package*.json ./
 COPY apps/BoardPDF/package*.json ./apps/BoardPDF/
 RUN npm install --workspace=apps/BoardPDF
 
-# -------------------------------------------------------------
-# ETAPA 2: Entorno de Desarrollo con Live Reload (runner-dev)
-# -------------------------------------------------------------
+# Stage 2: Development environment with live reload (runner-dev)
 FROM base AS runner-dev
 WORKDIR /workspace/apps/BoardPDF
 
@@ -44,9 +39,7 @@ HEALTHCHECK --interval=15s --timeout=3s --retries=3 --start-period=10s \
 
 CMD ["npm", "run", "dev"]
 
-# -------------------------------------------------------------
-# ETAPA 3: Compilación para Producción (builder)
-# -------------------------------------------------------------
+# Stage 3: Production compilation (builder)
 FROM base AS builder
 WORKDIR /workspace
 
@@ -56,9 +49,7 @@ COPY apps/BoardPDF ./apps/BoardPDF
 WORKDIR /workspace/apps/BoardPDF
 RUN npm run build
 
-# -------------------------------------------------------------
-# ETAPA 4: Entorno de Ejecución Producción (runner)
-# -------------------------------------------------------------
+# Stage 4: Production execution environment (runner)
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 

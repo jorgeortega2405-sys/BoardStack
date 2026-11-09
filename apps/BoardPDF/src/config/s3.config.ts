@@ -23,16 +23,16 @@ if (resolvedEndpoint) {
   clientConfig.endpoint = resolvedEndpoint;
 }
 
-export const s3Client = new S3Client(clientConfig);
-export const S3_BUCKET_NAME = config.s3.bucket;
+const s3Client = new S3Client(clientConfig);
+const S3_BUCKET_NAME = config.s3.bucket;
 
 let isBucketReady = false;
 
-export function isS3Configured(): boolean {
+function isS3Configured(): boolean {
   return Boolean(config.s3.accessKeyId && config.s3.secretAccessKey && config.s3.bucket);
 }
 
-export async function ensureBucketExists(): Promise<boolean> {
+async function ensureBucketExists(): Promise<boolean> {
   if (isBucketReady) {
     return true;
   }
@@ -86,3 +86,5 @@ export async function ensureBucketExists(): Promise<boolean> {
     return false;
   }
 }
+
+export { S3_BUCKET_NAME, ensureBucketExists, isS3Configured, s3Client };

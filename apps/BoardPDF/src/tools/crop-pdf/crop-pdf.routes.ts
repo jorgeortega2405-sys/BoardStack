@@ -15,4 +15,3 @@ router.post('/tools/crop-pdf/process', optionalAuth, uploadMiddleware, cropPdfHa
 router.get('/tools/crop-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

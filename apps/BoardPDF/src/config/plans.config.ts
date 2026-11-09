@@ -1,6 +1,6 @@
 import { SubscriptionTier, SubscriptionTierId } from '../types/subscription.types.js';
 
-export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
+const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
   business: {
     badge: 'Para Equipos',
     borderColor: '#10b981',
@@ -8,11 +8,11 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
     currency: 'USD',
     id: 'business',
     name: 'BoardPDF Negocios',
-    priceMonthly: 19.99,
-    priceYearly: 15.99,
+    priceMonthly: 9.99,
+    priceYearly: 7.99,
     ringBg: '#10b981',
-    stripePriceMonthlyId: 'price_1UWf5dE4dfTcnyKKYCQ5Ue2K',
-    stripePriceYearlyId: 'price_1UWf5dE4dfTcnyKKbvBdN2eP',
+    stripePriceMonthlyId: 'price_1UZxNwE4dfTcnyKKsT1mtERz',
+    stripePriceYearlyId: 'price_1UZxNwE4dfTcnyKK0EF8j8LR',
     tagline: 'Máxima potencia, automatización y colaboración avanzada para despachos y equipos en crecimiento.',
   },
   free: {
@@ -34,16 +34,16 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, SubscriptionTier> = {
     id: 'pro',
     isPopular: true,
     name: 'BoardPDF Pro',
-    priceMonthly: 9.99,
-    priceYearly: 7.99,
+    priceMonthly: 4.99,
+    priceYearly: 3.99,
     ringBg: '#3b82f6',
-    stripePriceMonthlyId: 'price_1UWf5cE4dfTcnyKK45Xiqzgo',
-    stripePriceYearlyId: 'price_1UWf5cE4dfTcnyKK1M2gQcZI',
+    stripePriceMonthlyId: 'price_1UZxNuE4dfTcnyKKGjXMolMm',
+    stripePriceYearlyId: 'price_1UZxNuE4dfTcnyKKEi4hnbG5',
     tagline: 'El plan más equilibrado para profesionales, investigadores y creadores independientes.',
   },
 };
 
-export function normalizeTierKey(tier?: string | null): SubscriptionTierId {
+function normalizeTierKey(tier?: string | null): SubscriptionTierId {
   const clean = (tier || 'free').toLowerCase().trim();
   if (clean === 'negocios' || clean === 'business') {
     return 'business';
@@ -54,17 +54,19 @@ export function normalizeTierKey(tier?: string | null): SubscriptionTierId {
   return 'free';
 }
 
-export function getTierBorderColor(tier?: string | null): string {
+function getTierBorderColor(tier?: string | null): string {
   const norm = normalizeTierKey(tier);
   return PLAN_TIER_CONFIGS[norm].borderColor;
 }
 
-export const TIER_WEIGHTS: Record<SubscriptionTierId, number> = {
+const TIER_WEIGHTS: Record<SubscriptionTierId, number> = {
   business: 2,
   free: 0,
   pro: 1,
 };
 
-export function getTierWeight(tier?: string | null): number {
+function getTierWeight(tier?: string | null): number {
   return TIER_WEIGHTS[normalizeTierKey(tier)];
 }
+
+export { PLAN_TIER_CONFIGS, TIER_WEIGHTS, getTierBorderColor, getTierWeight, normalizeTierKey };

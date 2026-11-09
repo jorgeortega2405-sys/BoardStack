@@ -1,35 +1,18 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { addWatermarkToPdf } from './watermark-pdf.service.js';
 import { WatermarkOptions } from './watermark-pdf.types.js';
 import { Request, Response } from 'express';
 
-export async function addWatermarkHandler(req: Request, res: Response): Promise<void> {
+async function addWatermarkHandler(req: Request, res: Response): Promise<void> {
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-    const pdfFile = files?.file?.[0] || req.file;
-
-    if (!pdfFile) {
-      res.status(400).json({ error: 'Debes seleccionar un archivo PDF.', success: false });
-      return;
+    if (files?.file?.[0] && !req.file) {
+      req.file = files.file[0];
     }
 
-    if (!isPdfBuffer(pdfFile.buffer)) {
-      res.status(400).json({ error: 'El archivo enviado no corresponde a un documento PDF válido.', success: false });
-      return;
-    }
-
-    const userPermissions = (req as any).user?.permissions || [];
-    const limits = getToolLimits('watermark-pdf', userPermissions);
-
-    if (pdfFile.size > limits.maxFileSizeMB * 1024 * 1024) {
-      res.status(403).json({
-        error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos más grandes.`,
-        success: false,
-      });
-      return;
-    }
+    const pdfFile = validatePdfUpload(req, res, 'watermark-pdf');
+    if (!pdfFile) return;
 
     const watermarkImageFile = files?.watermarkImage?.[0];
 
@@ -58,3 +41,5 @@ export async function addWatermarkHandler(req: Request, res: Response): Promise<
     });
   }
 }
+
+export { addWatermarkHandler };

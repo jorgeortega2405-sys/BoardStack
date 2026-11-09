@@ -9,7 +9,7 @@ import { consumePasswordChangeAuth } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
-export async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
+async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -49,7 +49,7 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
+async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -83,7 +83,7 @@ export async function handleDeleteAvatar(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleUpdateUsername(req: Request, res: Response): Promise<void> {
+async function handleUpdateUsername(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -128,7 +128,7 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
   }
 }
 
-export async function handleRequestEmailChangeCode(req: Request, res: Response): Promise<void> {
+async function handleRequestEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -162,7 +162,7 @@ export async function handleRequestEmailChangeCode(req: Request, res: Response):
   }
 }
 
-export async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise<void> {
+async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -191,7 +191,7 @@ export async function handleVerifyEmailChangeCode(req: Request, res: Response): 
   }
 }
 
-export async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
+async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -238,7 +238,7 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function handleGetPreferences(req: Request, res: Response): Promise<void> {
+async function handleGetPreferences(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -253,7 +253,7 @@ export async function handleGetPreferences(req: Request, res: Response): Promise
   }
 }
 
-export async function handleUpdatePreferences(req: Request, res: Response): Promise<void> {
+async function handleUpdatePreferences(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -271,7 +271,7 @@ export async function handleUpdatePreferences(req: Request, res: Response): Prom
   }
 }
 
-export async function handleGetPasswordStatus(req: Request, res: Response): Promise<void> {
+async function handleGetPasswordStatus(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -286,7 +286,7 @@ export async function handleGetPasswordStatus(req: Request, res: Response): Prom
   }
 }
 
-export async function handleVerifyCurrentPassword(req: Request, res: Response): Promise<void> {
+async function handleVerifyCurrentPassword(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -308,7 +308,7 @@ export async function handleVerifyCurrentPassword(req: Request, res: Response): 
   }
 }
 
-export async function handleUpdatePassword(req: Request, res: Response): Promise<void> {
+async function handleUpdatePassword(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -339,7 +339,7 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
   }
 }
 
-export async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
+async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -356,7 +356,7 @@ export async function handleGet2FAStatus(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
+async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -387,7 +387,7 @@ export async function handleGenerate2FA(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function handleEnable2FA(req: Request, res: Response): Promise<void> {
+async function handleEnable2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -442,7 +442,7 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
   }
 }
 
-export async function handleDisable2FA(req: Request, res: Response): Promise<void> {
+async function handleDisable2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -518,7 +518,7 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
   }
 }
 
-export async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
+async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -578,7 +578,7 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
   }
 }
 
-export async function handleGetStorageStats(req: Request, res: Response): Promise<void> {
+async function handleGetStorageStats(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
@@ -592,3 +592,5 @@ export async function handleGetStorageStats(req: Request, res: Response): Promis
     sendInternalError(res, 'Error al obtener almacenamiento', error, 'Ha ocurrido un error inesperado al procesar la solicitud.');
   }
 }
+
+export { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleGetStorageStats, handleRequestEmailChangeCode, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode };

@@ -1,7 +1,7 @@
 import { PurchaseRecord } from '../types/subscription.types.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-export async function generateInvoicePdf(
+async function generateInvoicePdf(
   purchase: PurchaseRecord,
   user: { email: string; id: number; username: string }
 ): Promise<Uint8Array> {
@@ -401,3 +401,5 @@ export async function generateInvoicePdf(
 
   return doc.save();
 }
+
+export { generateInvoicePdf };

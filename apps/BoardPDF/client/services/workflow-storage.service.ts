@@ -1,9 +1,10 @@
 import { UserWorkflow, WorkflowStep } from '../types/workflow.types.js';
+import { t } from './i18n.service.js';
 
 const STORAGE_KEY = 'boardpdf_workflows';
-export const MAX_WORKFLOWS_LIMIT = 100;
+const MAX_WORKFLOWS_LIMIT = 100;
 
-export function getWorkflows(): UserWorkflow[] {
+function getWorkflows(): UserWorkflow[] {
   if (typeof window === 'undefined' || !window.localStorage) {
     return [];
   }
@@ -17,12 +18,12 @@ export function getWorkflows(): UserWorkflow[] {
   }
 }
 
-export function getWorkflow(id: string): UserWorkflow | null {
+function getWorkflow(id: string): UserWorkflow | null {
   const workflows = getWorkflows();
   return workflows.find((w) => w.id === id) || null;
 }
 
-export function saveWorkflow(payload: {
+function saveWorkflow(payload: {
   category?: 'pdf' | 'image';
   description?: string | null;
   id?: string;
@@ -57,7 +58,7 @@ export function saveWorkflow(payload: {
 
   if (workflows.length >= MAX_WORKFLOWS_LIMIT) {
     return {
-      error: `Has alcanzado el límite máximo de ${MAX_WORKFLOWS_LIMIT} flujos de trabajo.`,
+      error: t('ui.has_alcanzado_el_limite_maximo_de_flujos'),
       success: false,
     };
   }
@@ -79,7 +80,7 @@ export function saveWorkflow(payload: {
   return { success: true, workflow: created };
 }
 
-export function deleteWorkflow(id: string): boolean {
+function deleteWorkflow(id: string): boolean {
   if (typeof window === 'undefined' || !window.localStorage) {
     return false;
   }
@@ -92,3 +93,5 @@ export function deleteWorkflow(id: string): boolean {
   window.dispatchEvent(new CustomEvent('workflow:changed'));
   return true;
 }
+
+export { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflow, getWorkflows, saveWorkflow };

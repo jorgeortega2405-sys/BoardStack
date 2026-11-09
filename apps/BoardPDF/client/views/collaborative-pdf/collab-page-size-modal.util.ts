@@ -2,14 +2,15 @@ import { openModal } from '../../components/modal.component.js';
 import { COLLAB_PAGE_PRESETS, PageDimension } from '../../config/collab-page-presets.config.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { setupDropdown } from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
-export interface CollabPageSizeResult {
+interface CollabPageSizeResult {
   applyToAll?: boolean;
   dimensions: PageDimension;
   title?: string;
 }
 
-export interface CollabPageSizeModalOptions {
+interface CollabPageSizeModalOptions {
   currentDimensions?: PageDimension;
   initialTitle?: string;
   mode?: 'create' | 'resize';
@@ -17,7 +18,7 @@ export interface CollabPageSizeModalOptions {
   pageIndex?: number;
 }
 
-export function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
+function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
   const initialDim = options.currentDimensions || { height: 1123, width: 794 };
 
   const matchingPreset = COLLAB_PAGE_PRESETS.find((p) => {
@@ -34,7 +35,7 @@ export function openCollabPageSizeModal(options: CollabPageSizeModalOptions): vo
 
   modalBody.innerHTML = `
     <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size">
-      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" aria-label="Seleccionar tamaño de papel">
+      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" aria-label=t('ui.seleccionar_tamano_de_papel')>
         <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size">
           <svg class="component-icon dropdown-trigger__icon" data-ref="icon-paper-size" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
           <span class="dropdown-trigger__text" data-ref="txt-selected-paper-size">${initialPreset.name} (${initialPreset.description})</span>
@@ -105,7 +106,7 @@ export function openCollabPageSizeModal(options: CollabPageSizeModalOptions): vo
     cancelText: 'Cancelar',
     confirmClass: 'component-button--black',
     confirmText: 'Aplicar tamaño',
-    description: 'Selecciona el formato de papel estándar para tu documento.',
+    description: t('ui.selecciona_el_formato_de_papel_estandar_'),
     onClose: () => {
       dropdownCtrl.destroy();
     },
@@ -129,3 +130,6 @@ export function openCollabPageSizeModal(options: CollabPageSizeModalOptions): vo
     title: `Tamaño de página (Página ${pageNum})`,
   });
 }
+
+export { openCollabPageSizeModal };
+export type { CollabPageSizeModalOptions, CollabPageSizeResult };

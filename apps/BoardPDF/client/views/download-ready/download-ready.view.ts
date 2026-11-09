@@ -40,7 +40,7 @@ const CONTINUE_TOOL_IDS = [
   'translate-pdf',
 ];
 
-export class DownloadReadyController implements ViewController {
+class DownloadReadyController implements ViewController {
   private abortController: AbortController | null = null;
   private cachedBlob: Blob | null = null;
   private container: HTMLElement;
@@ -105,7 +105,7 @@ export class DownloadReadyController implements ViewController {
               filename: json.data.filename,
               returnText: 'Volver a la herramienta',
               returnUrl: '/',
-              subtitle: 'El proceso se ha completado con éxito y tu documento está listo para descargar.',
+              subtitle: t('ui.el_proceso_se_ha_completado_con_exito_y_'),
               title: '¡Tu archivo está listo para descargar!',
               token: this.token,
             };
@@ -173,7 +173,7 @@ export class DownloadReadyController implements ViewController {
     if (!dropdownWrapper || !listEl) return;
 
     if (!this.data || !this.data.downloadUrl) {
-      dropdownWrapper.style.display = 'none';
+      dropdownWrapper.classList.add('is-hidden');
       return;
     }
 
@@ -221,13 +221,13 @@ export class DownloadReadyController implements ViewController {
   private async handleContinueToTool(targetPath: string, btn: HTMLButtonElement): Promise<void> {
     if (!this.data?.downloadUrl) return;
     btn.disabled = true;
-    showToast('Cargando archivo en la herramienta seleccionada...', 'info');
+    showToast(t('toasts.cargando_archivo_en_la_herramienta_selec'), 'info');
 
     try {
       let blob = this.cachedBlob;
       if (!blob) {
         const res = await fetch(this.data.downloadUrl);
-        if (!res.ok) throw new Error('No se pudo recuperar el archivo procesado.');
+        if (!res.ok) throw new Error(t('ui.no_se_pudo_recuperar_el_archivo_procesad'));
         blob = await res.blob();
         this.cachedBlob = blob;
       }
@@ -241,7 +241,7 @@ export class DownloadReadyController implements ViewController {
       setTransferFile(file);
       navigate(targetPath);
     } catch {
-      showToast('Error al preparar el archivo para la herramienta.', 'danger');
+      showToast(t('ui.error_al_preparar_el_archivo_para_la_her'), 'danger');
       btn.disabled = false;
     }
   }
@@ -256,7 +256,7 @@ export class DownloadReadyController implements ViewController {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      showToast('Descarga iniciada con éxito.', 'success');
+      showToast(t('toasts.download_started_success'), 'success');
       setTimeout(() => this.openThankYouModal(), 1000);
     } catch {}
   }
@@ -267,7 +267,7 @@ export class DownloadReadyController implements ViewController {
     this.container.querySelector('[data-ref="btn-download-file"]')?.addEventListener(
       'click',
       () => {
-        showToast('Descargando archivo...', 'info');
+        showToast(t('toasts.descargando_archivo'), 'info');
         setTimeout(() => this.openThankYouModal(), 600);
       },
       { signal }
@@ -389,7 +389,7 @@ export class DownloadReadyController implements ViewController {
       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
     });
     modal.backdrop.querySelector('[data-ref="badge-modal-twitter"]')?.addEventListener('click', () => {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Gestiona y edita tus archivos PDF rápido y fácil con @BoardPDF')}&url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t('ui.gestiona_y_edita_tus_archivos_pdf_rapido'))}&url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
     });
     modal.backdrop.querySelector('[data-ref="badge-modal-linkedin"]')?.addEventListener('click', () => {
       window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
@@ -428,7 +428,7 @@ export class DownloadReadyController implements ViewController {
       showCancel: false,
       showConfirm: false,
       size: 'sm',
-      title: 'Compartir enlace de descarga',
+      title: t('ui.compartir_enlace_de_descarga'),
     });
 
     renderIcons(modal.backdrop);
@@ -442,12 +442,12 @@ export class DownloadReadyController implements ViewController {
       try {
         await navigator.clipboard.writeText(downloadLink);
         if (copyLabel) copyLabel.textContent = '¡Copiado!';
-        showToast('Enlace de descarga copiado al portapapeles.', 'success');
+        showToast(t('toasts.enlace_de_descarga_copiado_al_portapapel'), 'success');
         setTimeout(() => {
           if (copyLabel) copyLabel.textContent = 'Copiar';
         }, 2200);
       } catch {
-        showToast('No se pudo copiar el enlace al portapapeles.', 'danger');
+        showToast(t('ui.no_se_pudo_copiar_el_enlace_al_portapape'), 'danger');
       }
     });
 
@@ -487,14 +487,14 @@ export class DownloadReadyController implements ViewController {
       if (res.ok && json.success) {
         this.isDeleted = true;
         sessionStorage.removeItem('download_ready_data');
-        showToast('Archivo eliminado permanentemente del servidor.', 'success');
+        showToast(t('toasts.file_permanently_deleted'), 'success');
         this.renderDeletedState();
       } else {
-        const errorMsg = json.error || 'No se pudo eliminar el archivo.';
+        const errorMsg = json.error || t('ui.no_se_pudo_eliminar_el_archivo');
         showToast(errorMsg, 'danger');
       }
     } catch {
-      showToast('Error de conexión al intentar eliminar el archivo.', 'danger');
+      showToast(t('ui.error_de_conexion_al_intentar_eliminar_e'), 'danger');
     }
   }
 
@@ -510,17 +510,19 @@ export class DownloadReadyController implements ViewController {
     hideElement(successScreen);
     showElement(expiredScreen);
     if (expiredTitle) expiredTitle.textContent = 'Archivo eliminado';
-    if (expiredDesc) expiredDesc.textContent = 'El archivo ha sido borrado del servidor de forma permanente a petición tuya.';
+    if (expiredDesc) expiredDesc.textContent = t('ui.el_archivo_ha_sido_borrado_del_servidor_');
     if (expiredBadge) expiredBadge.textContent = 'Archivo eliminado';
     if (iconWrap) iconWrap.classList.add('download-expired-card__icon-wrap--danger');
     if (iconUse) iconUse.setAttribute('href', '/icons.svg#delete');
   }
 }
 
-export async function createDownloadReadyView(token?: string): Promise<HTMLElement> {
+async function createDownloadReadyView(token?: string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/download-ready/download-ready.html');
   const controller = new DownloadReadyController(container, token);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { DownloadReadyController, createDownloadReadyView };

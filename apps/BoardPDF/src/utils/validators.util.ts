@@ -1,9 +1,9 @@
-export interface ValidationResult {
+interface ValidationResult {
   error?: string;
   valid: boolean;
 }
 
-export function validateEmail(email: unknown): ValidationResult {
+function validateEmail(email: unknown): ValidationResult {
   if (!email || typeof email !== 'string') {
     return { error: 'El correo electrónico es requerido.', valid: false };
   }
@@ -22,7 +22,7 @@ export function validateEmail(email: unknown): ValidationResult {
   return { valid: true };
 }
 
-export function validatePassword(password: unknown): ValidationResult {
+function validatePassword(password: unknown): ValidationResult {
   if (!password || typeof password !== 'string') {
     return { error: 'La contraseña es requerida.', valid: false };
   }
@@ -38,7 +38,7 @@ export function validatePassword(password: unknown): ValidationResult {
   return { valid: true };
 }
 
-export function validateUsername(username: unknown): ValidationResult {
+function validateUsername(username: unknown): ValidationResult {
   if (!username || typeof username !== 'string') {
     return { error: 'El nombre de usuario es requerido.', valid: false };
   }
@@ -64,7 +64,7 @@ export function validateUsername(username: unknown): ValidationResult {
   return { valid: true };
 }
 
-export function validateVerificationCode(code: unknown): ValidationResult {
+function validateVerificationCode(code: unknown): ValidationResult {
   if (!code || typeof code !== 'string') {
     return { error: 'El código de verificación es requerido.', valid: false };
   }
@@ -76,3 +76,6 @@ export function validateVerificationCode(code: unknown): ValidationResult {
 
   return { valid: true };
 }
+
+export { validateEmail, validatePassword, validateUsername, validateVerificationCode };
+export type { ValidationResult };

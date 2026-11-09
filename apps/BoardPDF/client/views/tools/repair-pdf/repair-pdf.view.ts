@@ -12,8 +12,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { RepairResultData } from './repair-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class RepairPdfController implements ViewController {
+class RepairPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -32,7 +33,7 @@ export class RepairPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Recupera y repara datos de documentos PDF dañados o corruptos de forma rápida y segura.',
+        desc: t('ui.recupera_y_repara_datos_de_documentos_pd'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -224,29 +225,29 @@ export class RepairPdfController implements ViewController {
 
         this.phaseManager?.showProcessing(
           'Analizando y reparando archivo PDF...',
-          'Reconstruyendo la tabla de referencias cruzadas y flujos de contenido'
+          t('ui.reconstruyendo_la_tabla_de_referencias_c')
         );
 
         if (!response.ok || !result.success || !result.data) {
-          throw new Error(result.error || 'Error al reparar el archivo PDF.');
+          throw new Error(result.error || t('ui.error_al_reparar_el_archivo_pdf'));
         }
 
         const token = result.data.fileId;
-        showToast('PDF reparado con éxito.', 'success');
+        showToast(t('toasts.pdf_reparado_con_exito'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.repairedSize,
           filename: result.data.filename,
           returnText: 'Reparar otro archivo PDF',
           returnUrl: '/repair-pdf',
-          subtitle: 'Tu archivo ha sido analizado y reparado con éxito.',
+          subtitle: t('ui.tu_archivo_ha_sido_analizado_y_reparado_'),
           title: '¡PDF reparado con éxito!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al reparar el archivo PDF.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_reparar_el_archivo_p');
         this.phaseManager?.showError({
-          boxText: 'Comprueba que el documento no esté dañado irreparablemente o que el formato sea un PDF estándar.',
+          boxText: t('ui.comprueba_que_el_documento_no_este_danad'),
           boxTitle: 'Error de reparación',
           desc: errorMessage,
           retryText: 'Reintentar Reparar PDF',
@@ -276,10 +277,12 @@ export class RepairPdfController implements ViewController {
   }
 }
 
-export async function createRepairPdfView(): Promise<HTMLElement> {
+async function createRepairPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/repair-pdf/repair-pdf.html');
   const controller = new RepairPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { RepairPdfController, createRepairPdfView };

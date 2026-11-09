@@ -1,9 +1,9 @@
-export interface LanguageInfo {
+interface LanguageInfo {
   code: string;
   name: string;
 }
 
-export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
+const SUPPORTED_LANGUAGES: LanguageInfo[] = [
   { code: 'es', name: 'Español' },
   { code: 'en', name: 'English' },
   { code: 'af', name: 'Afrikaans' },
@@ -97,13 +97,13 @@ export const SUPPORTED_LANGUAGES: LanguageInfo[] = [
   { code: 'zu', name: 'IsiZulu' },
 ];
 
-export const SUPPORTED_LANG_CODES = new Set<string>(
+const SUPPORTED_LANG_CODES = new Set<string>(
   SUPPORTED_LANGUAGES.map((l) => l.code.toLowerCase())
 );
 
-export const DEFAULT_LANGUAGE = 'es';
+const DEFAULT_LANGUAGE = 'es';
 
-export function isSupportedLanguage(code: string | null | undefined): boolean {
+function isSupportedLanguage(code: string | null | undefined): boolean {
   if (!code) return false;
   const clean = String(code).trim().toLowerCase().replace('_', '-');
   if (clean === 'us') return true;
@@ -121,7 +121,7 @@ export function isSupportedLanguage(code: string | null | undefined): boolean {
   return SUPPORTED_LANG_CODES.has(base);
 }
 
-export function normalizeLanguageCode(code: string | null | undefined): string {
+function normalizeLanguageCode(code: string | null | undefined): string {
   if (!code) return DEFAULT_LANGUAGE;
   const clean = String(code).trim().toLowerCase().replace('_', '-');
 
@@ -165,7 +165,7 @@ export function normalizeLanguageCode(code: string | null | undefined): string {
   return DEFAULT_LANGUAGE;
 }
 
-export interface ServerRouteSeoInfo {
+interface ServerRouteSeoInfo {
   category?: string;
   descriptions: Record<string, string>;
   isTool?: boolean;
@@ -174,7 +174,7 @@ export interface ServerRouteSeoInfo {
   titles: Record<string, string>;
 }
 
-export const SERVER_SEO_ROUTES: Record<string, ServerRouteSeoInfo> = {
+const SERVER_SEO_ROUTES: Record<string, ServerRouteSeoInfo> = {
   home: {
     descriptions: {
       en: 'Free and secure online PDF tools. Merge, split, compress, edit, convert, and protect your PDF documents with ease.',
@@ -718,7 +718,7 @@ SERVER_SLUG_MAP.set('sobre-nosotros', 'about');
 SERVER_SLUG_MAP.set('contact', 'contact');
 SERVER_SLUG_MAP.set('contacto', 'contact');
 
-export function getServerCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): string {
+function getServerCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): string {
   const norm = normalizeLanguageCode(lang);
   const info = SERVER_SEO_ROUTES[routeId];
   if (!info) return routeId;
@@ -726,14 +726,14 @@ export function getServerCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE)
   return info.slugs[norm] || info.slugs.en || info.slugs.es || routeId;
 }
 
-export function getServerLocalizedPath(routeId: string, lang = DEFAULT_LANGUAGE): string {
+function getServerLocalizedPath(routeId: string, lang = DEFAULT_LANGUAGE): string {
   const norm = normalizeLanguageCode(lang);
   if (routeId === 'home') return `/${norm}`;
   const slug = getServerCanonicalSlug(routeId, norm);
   return `/${norm}/${slug}`;
 }
 
-export function parseRequestPath(rawPath: string): { isKnownRoute: boolean; lang: string; routeId: string } {
+function parseRequestPath(rawPath: string): { isKnownRoute: boolean; lang: string; routeId: string } {
   const clean = (rawPath || '').split('?')[0].replace(/^\/+|\/+$/g, '');
   if (!clean) {
     return { isKnownRoute: true, lang: DEFAULT_LANGUAGE, routeId: 'home' };
@@ -764,7 +764,7 @@ export function parseRequestPath(rawPath: string): { isKnownRoute: boolean; lang
   };
 }
 
-export function generateSitemapIndexXml(baseUrl: string): string {
+function generateSitemapIndexXml(baseUrl: string): string {
   const base = baseUrl.replace(/\/+$/, '');
   const today = new Date().toISOString().split('T')[0];
 
@@ -779,7 +779,7 @@ ${sitemaps}
 </sitemapindex>`;
 }
 
-export function generateLanguageSitemapXml(lang: string, baseUrl: string): string {
+function generateLanguageSitemapXml(lang: string, baseUrl: string): string {
   const norm = normalizeLanguageCode(lang);
   const base = baseUrl.replace(/\/+$/, '');
   const today = new Date().toISOString().split('T')[0];
@@ -811,7 +811,7 @@ ${urlBlocks}
 </urlset>`;
 }
 
-export function generateRobotsTxt(baseUrl: string): string {
+function generateRobotsTxt(baseUrl: string): string {
   const base = baseUrl.replace(/\/+$/, '');
   return `User-agent: *
 Allow: /
@@ -824,7 +824,7 @@ Sitemap: ${base}/sitemap.xml
 `;
 }
 
-export function injectHtmlSeo(templateHtml: string, reqPath: string, baseUrl: string): string {
+function injectHtmlSeo(templateHtml: string, reqPath: string, baseUrl: string): string {
   const { lang, routeId } = parseRequestPath(reqPath);
   const info = SERVER_SEO_ROUTES[routeId] || SERVER_SEO_ROUTES.home;
   const base = baseUrl.replace(/\/+$/, '');
@@ -882,3 +882,6 @@ export function injectHtmlSeo(templateHtml: string, reqPath: string, baseUrl: st
 
   return html.replace('</head>', `${seoMetaBlock}</head>`);
 }
+
+export { DEFAULT_LANGUAGE, SERVER_SEO_ROUTES, SUPPORTED_LANGUAGES, SUPPORTED_LANG_CODES, generateLanguageSitemapXml, generateRobotsTxt, generateSitemapIndexXml, getServerCanonicalSlug, getServerLocalizedPath, injectHtmlSeo, isSupportedLanguage, normalizeLanguageCode, parseRequestPath };
+export type { LanguageInfo, ServerRouteSeoInfo };

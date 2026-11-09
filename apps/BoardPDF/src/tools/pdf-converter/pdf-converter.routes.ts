@@ -9,4 +9,3 @@ router.post('/tools/pdf-converter/convert', optionalAuth, uploadPdf.single('file
 router.get('/tools/pdf-converter/download/:token', handleToolDownload);
 
 export default router;
-

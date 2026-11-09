@@ -1,9 +1,9 @@
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { captureUrlScreenshot, convertToPdf, convertUrlToPdf, isValidPublicUrl } from './to-pdf-converter.service.js';
 import { ToPdfSourceType } from './to-pdf-converter.types.js';
 import { Request, Response } from 'express';
-
 
 const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
   'excel-to-pdf',
@@ -13,7 +13,7 @@ const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
   'word-to-pdf',
 ]);
 
-export async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
+async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
   try {
     const sourceType = (req.body?.sourceType || req.query?.sourceType) as ToPdfSourceType;
     if (!sourceType || !ALLOWED_SOURCE_TYPES.has(sourceType)) {
@@ -92,7 +92,7 @@ export async function convertToPdfHandler(req: Request, res: Response): Promise<
   }
 }
 
-export async function previewUrlHandler(req: Request, res: Response): Promise<void> {
+async function previewUrlHandler(req: Request, res: Response): Promise<void> {
   try {
     const rawUrl = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
     const screen = typeof req.body?.screen === 'string' ? req.body.screen.trim() : 'screen';
@@ -127,3 +127,4 @@ export async function previewUrlHandler(req: Request, res: Response): Promise<vo
   }
 }
 
+export { convertToPdfHandler, previewUrlHandler };

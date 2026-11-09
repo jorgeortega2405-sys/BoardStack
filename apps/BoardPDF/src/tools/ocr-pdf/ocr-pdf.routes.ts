@@ -16,4 +16,3 @@ router.post('/tools/ocr-pdf/process', optionalAuth, pdfOcrLimiter, uploadMiddlew
 router.get('/tools/ocr-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

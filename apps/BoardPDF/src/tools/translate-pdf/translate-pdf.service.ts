@@ -330,7 +330,7 @@ async function renderTranslatedPdfWithPdfLib(
   return Buffer.from(saved);
 }
 
-export async function translatePdf(params: TranslatePdfParams): Promise<TranslatePdfResponse> {
+async function translatePdf(params: TranslatePdfParams): Promise<TranslatePdfResponse> {
   const { buffer, filename, layoutMode = 'preserve', originalname = 'document.pdf', sourceLang, targetLang } = params;
 
   let resultBuffer: Buffer | null = null;
@@ -428,3 +428,5 @@ export async function translatePdf(params: TranslatePdfParams): Promise<Translat
     targetLang,
   };
 }
+
+export { translatePdf };

@@ -3,7 +3,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { ViewController } from '../../types/common.types.js';
 
-export class HelpPrivacyController implements ViewController {
+class HelpPrivacyController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
@@ -38,10 +38,12 @@ export class HelpPrivacyController implements ViewController {
   }
 }
 
-export async function createHelpPrivacyView(): Promise<HTMLElement> {
+async function createHelpPrivacyView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/help/privacy.html');
   const controller = new HelpPrivacyController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { HelpPrivacyController, createHelpPrivacyView };

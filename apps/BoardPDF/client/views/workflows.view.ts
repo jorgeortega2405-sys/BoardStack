@@ -11,7 +11,7 @@ import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows, saveWorkflow } from 
 import { ToolDefinition, UserWorkflow, WorkflowStep } from '../types/workflow.types.js';
 import { hideElement, setupDropdown, showElement, toggleElement } from '../utils/dom.util.js';
 
-export class WorkflowsController {
+class WorkflowsController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
@@ -58,7 +58,7 @@ export class WorkflowsController {
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow">
         <div class="tool-card__content" data-ref="create-workflow-content">
           <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crea un flujo de trabajo')}</h3>
-          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Crea flujos de trabajo personalizados con tus herramientas favoritas y automatiza tareas para reutilizarlas en cualquier momento.')}</p>
+          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', t('ui.crea_flujos_de_trabajo_personalizados_co'))}</p>
         </div>
         <div class="tool-card__action-link" data-ref="link-create-workflow">
           <span data-ref="txt-action-create-workflow" data-i18n="workflows.create_action">${t('workflows.create_action', 'Crear un flujo de trabajo')}</span>
@@ -150,7 +150,7 @@ export class WorkflowsController {
 
   private openWorkflowModal(workflow?: UserWorkflow): void {
     if (!workflow && this.workflows.length >= MAX_WORKFLOWS_LIMIT) {
-      showToast(`Has alcanzado el límite máximo de ${MAX_WORKFLOWS_LIMIT} flujos de trabajo.`, 'warning');
+      showToast(t('ui.has_alcanzado_el_limite_maximo_de_flujos'), 'warning');
       return;
     }
 
@@ -362,11 +362,11 @@ export class WorkflowsController {
 
     btnAddStep?.addEventListener('click', () => {
       if (!selectedTool) {
-        showToast('Por favor selecciona una herramienta primero.', 'warning');
+        showToast(t('toasts.por_favor_selecciona_una_herramienta_pri'), 'warning');
         return;
       }
       if (isPipelineTerminal()) {
-        showToast('No es posible añadir herramientas después de un paso terminal.', 'warning');
+        showToast(t('toasts.no_es_posible_anadir_herramientas_despue'), 'warning');
         return;
       }
 
@@ -410,7 +410,7 @@ export class WorkflowsController {
       cancelText: 'Cancelar',
       confirmClass: 'component-button--primary component-button--black',
       confirmText: workflow ? 'Guardar cambios' : 'Crear flujo',
-      description: 'Configura las herramientas y el orden de ejecución para automatizar tu proceso.',
+      description: t('ui.configura_las_herramientas_y_el_orden_de'),
       onClose: () => {
         toolDropdownCtrl?.destroy();
         activeSubDropdownCtrls.forEach((c) => c.destroy());
@@ -422,12 +422,12 @@ export class WorkflowsController {
         const name = nameInput?.value.trim() || '';
 
         if (!name) {
-          inst.showError('Por favor ingresa un nombre para el flujo de trabajo.');
+          inst.showError(t('ui.por_favor_ingresa_un_nombre_para_el_fluj'));
           return false;
         }
 
         if (currentSteps.length === 0) {
-          inst.showError('Debes añadir al menos una herramienta a la secuencia.');
+          inst.showError(t('ui.debes_anadir_al_menos_una_herramienta_a_'));
           return false;
         }
 
@@ -439,7 +439,7 @@ export class WorkflowsController {
         });
 
         if (!res.success) {
-          inst.showError(res.error || 'Ocurrió un error al guardar el flujo de trabajo.');
+          inst.showError(res.error || t('ui.ocurrio_un_error_al_guardar_el_flujo_de_'));
           return false;
         }
 
@@ -464,12 +464,12 @@ export class WorkflowsController {
       onConfirm: async () => {
         const deleted = deleteWorkflow(workflow.id);
         if (deleted) {
-          showToast('Flujo de trabajo eliminado exitosamente', 'success');
+          showToast(t('toasts.flujo_de_trabajo_eliminado_exitosamente'), 'success');
           this.loadWorkflows();
           this.renderWorkflows();
           return true;
         }
-        showToast('No se pudo eliminar el flujo de trabajo', 'danger');
+        showToast(t('ui.no_se_pudo_eliminar_el_flujo_de_trabajo'), 'danger');
         return false;
       },
       showCancel: true,
@@ -489,10 +489,12 @@ export class WorkflowsController {
   }
 }
 
-export async function createWorkflowsPageView(): Promise<HTMLElement> {
+async function createWorkflowsPageView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/workflows/workflows.html');
   const controller = new WorkflowsController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { WorkflowsController, createWorkflowsPageView };

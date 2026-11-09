@@ -12,8 +12,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { PdfToMarkdownResultData } from './pdf-to-markdown.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class PdfToMarkdownController implements ViewController {
+class PdfToMarkdownController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -32,7 +33,7 @@ export class PdfToMarkdownController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Archivo PDF',
-        desc: 'Convierte cualquier documento PDF en un archivo Markdown (.md) estructurado y limpio.',
+        desc: t('ui.convierte_cualquier_documento_pdf_en_un_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -220,7 +221,7 @@ export class PdfToMarkdownController implements ViewController {
         );
 
         if (!response.ok || !result.success || !result.data) {
-          throw new Error(result.error || 'Error al convertir el documento a Markdown.');
+          throw new Error(result.error || t('ui.error_al_convertir_el_documento_a_markdo'));
         }
 
         const token = result.data.fileId;
@@ -228,19 +229,19 @@ export class PdfToMarkdownController implements ViewController {
           updateUserAiTokens((result as any).aiTokens.balance);
         }
 
-        showToast('Documento convertido a Markdown con éxito.', 'success');
+        showToast(t('toasts.documento_convertido_a_markdown_con_exit'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: result.data.downloadUrl || `/api/download/${token}`,
           fileSize: result.data.characterCount || 0,
           filename: result.data.filename || 'documento.md',
           returnText: 'Volver a PDF a Markdown',
           returnUrl: '/pdf-to-markdown',
-          subtitle: 'Tu documento se ha convertido a Markdown estructurado con éxito.',
+          subtitle: t('ui.tu_documento_se_ha_convertido_a_markdown'),
           title: '¡Tu archivo Markdown está listo!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al convertir el PDF.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_convertir_el_pdf');
         this.phaseManager?.showError(errorMessage);
         this.showError(errorMessage);
       } finally {
@@ -267,10 +268,12 @@ export class PdfToMarkdownController implements ViewController {
   }
 }
 
-export async function createPdfToMarkdownView(): Promise<HTMLElement> {
+async function createPdfToMarkdownView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/pdf-to-markdown/pdf-to-markdown.html');
   const controller = new PdfToMarkdownController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { PdfToMarkdownController, createPdfToMarkdownView };

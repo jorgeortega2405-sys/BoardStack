@@ -1,4 +1,4 @@
-export interface RedactionBox {
+interface RedactionBox {
   height: number;
   text?: string;
   width: number;
@@ -6,13 +6,13 @@ export interface RedactionBox {
   y: number;
 }
 
-export interface PageRedaction {
+interface PageRedaction {
   boxes: RedactionBox[];
   fullPage?: boolean;
   pageIndex: number;
 }
 
-export interface RedactPdfParams {
+interface RedactPdfParams {
   buffer: Buffer;
   originalFilename?: string;
   redactions: PageRedaction[];
@@ -20,7 +20,7 @@ export interface RedactPdfParams {
   sanitizeMetadata?: boolean;
 }
 
-export interface RedactPdfResponse {
+interface RedactPdfResponse {
   downloadUrl: string;
   fileId: string;
   fileSize: number;
@@ -30,7 +30,7 @@ export interface RedactPdfResponse {
   totalPages: number;
 }
 
-export interface StoredRedactedPdf {
+interface StoredRedactedPdf {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -38,3 +38,5 @@ export interface StoredRedactedPdf {
   filename: string;
   fileSize: number;
 }
+
+export type { PageRedaction, RedactPdfParams, RedactPdfResponse, RedactionBox, StoredRedactedPdf };

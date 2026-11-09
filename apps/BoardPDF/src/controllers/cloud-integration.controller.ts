@@ -3,7 +3,7 @@ import { disconnectUserCloudIntegration, getUserCloudAccessToken, getUserCloudIn
 import { logger } from '../services/logger.service.js';
 import type { Request, Response } from 'express';
 
-export async function handleGetCloudIntegrations(req: Request, res: Response): Promise<void> {
+async function handleGetCloudIntegrations(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -19,7 +19,7 @@ export async function handleGetCloudIntegrations(req: Request, res: Response): P
   }
 }
 
-export async function handleConnectCloudIntegration(req: Request, res: Response): Promise<void> {
+async function handleConnectCloudIntegration(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -59,7 +59,7 @@ export async function handleConnectCloudIntegration(req: Request, res: Response)
   }
 }
 
-export async function handleDisconnectCloudIntegration(req: Request, res: Response): Promise<void> {
+async function handleDisconnectCloudIntegration(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -87,7 +87,7 @@ export async function handleDisconnectCloudIntegration(req: Request, res: Respon
   }
 }
 
-export async function handleGetCloudAccessToken(req: Request, res: Response): Promise<void> {
+async function handleGetCloudAccessToken(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -113,3 +113,5 @@ export async function handleGetCloudAccessToken(req: Request, res: Response): Pr
     res.status(500).json({ error: 'Error al verificar la conexión con el servicio en la nube.', ok: false });
   }
 }
+
+export { handleConnectCloudIntegration, handleDisconnectCloudIntegration, handleGetCloudAccessToken, handleGetCloudIntegrations };

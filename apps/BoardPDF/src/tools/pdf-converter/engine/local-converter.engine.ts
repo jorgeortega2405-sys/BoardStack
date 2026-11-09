@@ -8,7 +8,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-export class LocalConverterEngine implements IConverterEngine {
+class LocalConverterEngine implements IConverterEngine {
   public async convert(params: EngineConversionParams): Promise<EngineConversionResult> {
     const { inputPath, options, originalFilename, outputDir, targetType } = params;
     const baseName = path.basename(originalFilename, path.extname(originalFilename));
@@ -200,3 +200,4 @@ export class LocalConverterEngine implements IConverterEngine {
   }
 }
 
+export { LocalConverterEngine };

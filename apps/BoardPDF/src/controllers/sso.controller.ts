@@ -22,7 +22,7 @@ function resolveBaseUrl(req: Request): string {
   return `${proto}://${host}`;
 }
 
-export function spMetadata(req: Request, res: Response): void {
+function spMetadata(req: Request, res: Response): void {
   try {
     const baseUrl = resolveBaseUrl(req);
     const xml = ssoService.getSpMetadataXml(baseUrl);
@@ -34,7 +34,7 @@ export function spMetadata(req: Request, res: Response): void {
   }
 }
 
-export async function samlLogin(req: Request, res: Response): Promise<void> {
+async function samlLogin(req: Request, res: Response): Promise<void> {
   try {
     const queryTarget = req.query.email || req.query.domain;
     if (!queryTarget || typeof queryTarget !== 'string') {
@@ -74,7 +74,7 @@ export async function samlLogin(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function samlAcs(req: Request, res: Response): Promise<void> {
+async function samlAcs(req: Request, res: Response): Promise<void> {
   try {
     const samlResponseBase64 = req.body?.SAMLResponse;
     if (!samlResponseBase64 || typeof samlResponseBase64 !== 'string') {
@@ -171,3 +171,5 @@ export async function samlAcs(req: Request, res: Response): Promise<void> {
     res.redirect('/login?error=sso_failed');
   }
 }
+
+export { samlAcs, samlLogin, spMetadata };

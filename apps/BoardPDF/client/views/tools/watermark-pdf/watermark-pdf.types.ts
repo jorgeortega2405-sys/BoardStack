@@ -1,6 +1,6 @@
-export type WatermarkType = 'image' | 'text';
+type WatermarkType = 'image' | 'text';
 
-export type WatermarkPosition =
+type WatermarkPosition =
   | 'bottom-center'
   | 'bottom-left'
   | 'bottom-right'
@@ -11,16 +11,18 @@ export type WatermarkPosition =
   | 'top-left'
   | 'top-right';
 
-export interface PageThumbnailItem {
+interface PageThumbnailItem {
   id: string;
   originalIndex: number;
   pageNum: number;
 }
 
-export interface WatermarkPdfResponseData {
+interface WatermarkPdfResponseData {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   totalPages: number;
 }
+
+export type { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType };

@@ -23,7 +23,7 @@ interface Point {
 let wasmInstance: WasmExports | null = null;
 let initPromise: Promise<boolean> | null = null;
 
-export async function initWasmEngine(): Promise<boolean> {
+async function initWasmEngine(): Promise<boolean> {
   if (wasmInstance) return true;
   if (initPromise) return initPromise;
 
@@ -43,11 +43,11 @@ export async function initWasmEngine(): Promise<boolean> {
   return initPromise;
 }
 
-export function isWasmEngineReady(): boolean {
+function isWasmEngineReady(): boolean {
   return wasmInstance !== null;
 }
 
-export function transformBBoxWasm(x: number, y: number, width: number, height: number, angleRad: number): BoundingBox {
+function transformBBoxWasm(x: number, y: number, width: number, height: number, angleRad: number): BoundingBox {
   if (!wasmInstance) {
     const cosA = Math.abs(Math.cos(angleRad));
     const sinA = Math.abs(Math.sin(angleRad));
@@ -74,7 +74,7 @@ export function transformBBoxWasm(x: number, y: number, width: number, height: n
   return result;
 }
 
-export function filterPixelsWasm(imageData: ImageData, filterType: 1 | 2 | 3, param = 0): void {
+function filterPixelsWasm(imageData: ImageData, filterType: 1 | 2 | 3, param = 0): void {
   if (!wasmInstance) return;
   const len = imageData.data.length;
   const ptr = wasmInstance.wasm_alloc(len);
@@ -85,7 +85,7 @@ export function filterPixelsWasm(imageData: ImageData, filterType: 1 | 2 | 3, pa
   wasmInstance.wasm_dealloc(ptr, len);
 }
 
-export function isPointInPolygonWasm(px: number, py: number, points: Point[]): boolean {
+function isPointInPolygonWasm(px: number, py: number, points: Point[]): boolean {
   if (points.length < 3) return false;
   if (!wasmInstance) {
     let inside = false;
@@ -112,3 +112,5 @@ export function isPointInPolygonWasm(px: number, py: number, points: Point[]): b
   wasmInstance.wasm_dealloc(ptr, byteLen);
   return isInside;
 }
+
+export { filterPixelsWasm, initWasmEngine, isPointInPolygonWasm, isWasmEngineReady, transformBBoxWasm };

@@ -1,4 +1,4 @@
-export interface StoredMergedPdf {
+interface StoredMergedPdf {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -8,10 +8,12 @@ export interface StoredMergedPdf {
   size: number;
 }
 
-export interface MergePdfResponse {
+interface MergePdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   pageCount: number;
 }
+
+export type { MergePdfResponse, StoredMergedPdf };

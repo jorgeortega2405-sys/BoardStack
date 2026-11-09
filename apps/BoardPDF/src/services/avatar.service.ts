@@ -11,7 +11,7 @@ const GRADIENT_PALETTES = [
   ['#18181b', '#27272a'],
 ];
 
-export function hashString(str: string): number {
+function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
@@ -20,7 +20,7 @@ export function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-export function escapeXml(str: string): string {
+function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -29,13 +29,13 @@ export function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export function getInitial(name: string): string {
+function getInitial(name: string): string {
   const clean = String(name || '').trim().replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '');
   if (!clean) return 'U';
   return clean.charAt(0).toUpperCase();
 }
 
-export function generateAvatarSvg(name: string, sizeInput?: number): string {
+function generateAvatarSvg(name: string, sizeInput?: number): string {
   const initial = escapeXml(getInitial(name));
   const hash = Math.floor(Math.abs(hashString(name))) || 0;
   const palette = GRADIENT_PALETTES[hash % GRADIENT_PALETTES.length];
@@ -55,3 +55,5 @@ export function generateAvatarSvg(name: string, sizeInput?: number): string {
   <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${fontSize}" font-weight="600" fill="#ffffff" letter-spacing="-0.5">${initial}</text>
 </svg>`;
 }
+
+export { escapeXml, generateAvatarSvg, getInitial, hashString };

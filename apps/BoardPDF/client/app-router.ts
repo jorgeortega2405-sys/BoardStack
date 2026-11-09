@@ -42,25 +42,25 @@ function parseRouteUrl(rawUrl: string): { fullUrl: string; pathname: string; que
   }
 }
 
-export function getCurrentRouteId(): string {
+function getCurrentRouteId(): string {
   return currentActiveRouteId;
 }
 
-export async function switchLanguage(newLang: string): Promise<void> {
+async function switchLanguage(newLang: string): Promise<void> {
   const targetBase = getLocalizedPath(currentActiveRouteId, newLang);
   const searchAndHash = `${window.location.search}${window.location.hash}`;
   await setLanguage(newLang);
   navigate(`${targetBase}${searchAndHash}`, true);
 }
 
-export interface RenderOptions {
+interface RenderOptions {
   updateHistory?: {
     fullUrl: string;
     replace: boolean;
   };
 }
 
-export function navigate(url: string, replace = false): void {
+function navigate(url: string, replace = false): void {
   const { pathname } = parseRouteUrl(url);
   const searchAndHash = url.includes('?') || url.includes('#') ? url.replace(/^[^?#]*/, '') : '';
   const matched = findRoute(pathname);
@@ -94,7 +94,7 @@ function isCollabEditorRoute(pathname: string): boolean {
   return pathname.startsWith('/d/') || pathname === '/d' || pathname.startsWith('/collaborative-pdf/editor');
 }
 
-export async function render(rawPath = window.location.pathname, options?: RenderOptions): Promise<void> {
+async function render(rawPath = window.location.pathname, options?: RenderOptions): Promise<void> {
   const navigationStartTime = performance.now();
   const { pathname: path, query: targetQuery } = parseRouteUrl(options?.updateHistory?.fullUrl || rawPath);
   closeAllModals();
@@ -132,9 +132,9 @@ export async function render(rawPath = window.location.pathname, options?: Rende
 
   const sidebar = await ensureSidebarMounted(layoutContent);
   if (isAuthView) {
-    sidebar.style.display = 'none';
+    sidebar.classList.add('is-hidden');
   } else {
-    sidebar.style.display = '';
+    sidebar.classList.remove('is-hidden');
     showElement(sidebar);
   }
 
@@ -206,9 +206,9 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   const currentSidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
   if (currentSidebar) {
     if (isAuthView) {
-      currentSidebar.style.display = 'none';
+      currentSidebar.classList.add('is-hidden');
     } else {
-      currentSidebar.style.display = '';
+      currentSidebar.classList.remove('is-hidden');
       updateSidebarAuthState(currentSidebar);
       updateSidebarActiveState(currentSidebar, internalPath);
       translateElement(currentSidebar);
@@ -253,10 +253,13 @@ export async function render(rawPath = window.location.pathname, options?: Rende
   previousPath = path;
 }
 
-export function initRouter(): void {
+function initRouter(): void {
   window.addEventListener('popstate', () => {
     void render(window.location.pathname);
   });
 
   void render(window.location.pathname);
 }
+
+export { getCurrentRouteId, initRouter, navigate, render, switchLanguage };
+export type { RenderOptions };

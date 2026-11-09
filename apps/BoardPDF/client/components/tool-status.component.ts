@@ -1,14 +1,15 @@
 import { UploadProgressInfo } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
+import { t } from '../services/i18n.service.js';
 
-export interface ToolStatusOptions {
+interface ToolStatusOptions {
   container: HTMLElement;
   onRetry?: () => void;
   toolName: string;
 }
 
-export class ToolStatusManager {
+class ToolStatusManager {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentPercent = 0;
@@ -166,7 +167,7 @@ export class ToolStatusManager {
 
     if (titleEl) {
       titleEl.textContent = totalFiles > 1
-        ? `Subiendo archivo ${currentFileIndex} de ${totalFiles}`
+        ? t('ui.subiendo_archivo_de')
         : 'Subiendo archivo al servidor...';
     }
     if (subEl) subEl.textContent = 'Transfiriendo datos...';
@@ -174,7 +175,7 @@ export class ToolStatusManager {
     if (speedEl) speedEl.textContent = 'Velocidad de subida: calculando...';
     if (fillEl) {
       fillEl.classList.remove('is-processing');
-      fillEl.style.width = '0%';
+      fillEl.style.setProperty('--progress', '0%');
     }
     if (percentEl) percentEl.textContent = '0%';
     if (badgeEl) badgeEl.textContent = 'SUBIENDO';
@@ -212,9 +213,9 @@ export class ToolStatusManager {
     this.currentPercent = mappedPercent;
 
     if (titleEl && this.currentTotalFiles > 1) {
-      titleEl.textContent = `Subiendo archivo ${totalOrFileIndex} de ${this.currentTotalFiles}`;
+      titleEl.textContent = t('ui.subiendo_archivo_de');
     }
-    if (fillEl) fillEl.style.width = `${mappedPercent}%`;
+    if (fillEl) fillEl.style.setProperty('--progress', `${mappedPercent}%`);
     if (percentEl) percentEl.textContent = `${mappedPercent}%`;
 
     if (etaEl) {
@@ -229,15 +230,15 @@ export class ToolStatusManager {
     }
   }
 
-  public showProcessing(title = 'Procesando documento...', subtitle = 'Por favor espera mientras finaliza la tarea'): void {
+  public showProcessing(title = 'Procesando documento...', subtitle = t('ui.por_favor_espera_mientras_finaliza_la_ta')): void {
     this.startProcessingProgress(title, subtitle);
   }
 
   public showProcessingState(opts?: { subtitle?: string; title?: string } | string, subtitle?: string): void {
     if (typeof opts === 'object' && opts !== null) {
-      this.showProcessing(opts.title || 'Procesando documento...', opts.subtitle || 'Por favor espera mientras finaliza la tarea');
+      this.showProcessing(opts.title || 'Procesando documento...', opts.subtitle || t('ui.por_favor_espera_mientras_finaliza_la_ta'));
     } else {
-      this.showProcessing(opts || 'Procesando documento...', subtitle || 'Por favor espera mientras finaliza la tarea');
+      this.showProcessing(opts || 'Procesando documento...', subtitle || t('ui.por_favor_espera_mientras_finaliza_la_ta'));
     }
   }
 
@@ -268,7 +269,7 @@ export class ToolStatusManager {
     if (fillEl) fillEl.classList.add('is-processing');
 
     this.currentPercent = Math.max(30, this.currentPercent);
-    if (fillEl) fillEl.style.width = `${Math.floor(this.currentPercent)}%`;
+    if (fillEl) fillEl.style.setProperty('--progress', `${Math.floor(this.currentPercent)}%`);
     if (percentEl) percentEl.textContent = `${Math.floor(this.currentPercent)}%`;
 
     this.processingInterval = window.setInterval(() => {
@@ -294,12 +295,12 @@ export class ToolStatusManager {
         if (speedEl) speedEl.textContent = 'Finalizando';
       } else if (this.currentPercent < 93) {
         this.currentPercent += 0.04;
-        if (subEl) subEl.textContent = 'Preparando archivo para descarga...';
+        if (subEl) subEl.textContent = t('ui.preparando_archivo_para_descarga');
         if (etaEl) etaEl.textContent = 'Últimos detalles...';
       }
 
       const displayPercent = Math.min(93, Math.floor(this.currentPercent));
-      if (fillEl) fillEl.style.width = `${displayPercent}%`;
+      if (fillEl) fillEl.style.setProperty('--progress', `${displayPercent}%`);
       if (percentEl) percentEl.textContent = `${displayPercent}%`;
     }, 60);
   }
@@ -326,7 +327,7 @@ export class ToolStatusManager {
     if (speedEl) speedEl.textContent = '100% completado';
     if (fillEl) {
       fillEl.classList.remove('is-processing');
-      fillEl.style.width = '100%';
+      fillEl.style.setProperty('--progress', '100%');
     }
     if (percentEl) percentEl.textContent = '100%';
 
@@ -359,10 +360,10 @@ export class ToolStatusManager {
     const retryTextEl = errorScreen.querySelector<HTMLElement>('[data-ref="txt-retry-btn"]');
 
     if (titleEl) titleEl.textContent = opt.title || '¡Oh no! No hemos podido procesar tus archivos.';
-    if (descEl) descEl.textContent = opt.desc || 'El archivo no se ha procesado porque ocurrió un error durante el procesamiento.';
+    if (descEl) descEl.textContent = opt.desc || t('ui.el_archivo_no_se_ha_procesado_porque_ocu');
     if (boxTitleEl) boxTitleEl.textContent = opt.boxTitle || 'Archivo dañado o no compatible';
     if (boxTextEl) {
-      boxTextEl.textContent = opt.boxText || 'No podemos procesar archivos dañados, protegidos o con formato incorrecto. Comprueba que tu archivo se pueda abrir correctamente e inténtalo de nuevo.';
+      boxTextEl.textContent = opt.boxText || t('ui.no_podemos_procesar_archivos_danados_pro');
     }
     if (retryTextEl) retryTextEl.textContent = opt.retryText || `Reintentar ${this.toolName}`;
   }
@@ -403,3 +404,6 @@ export class ToolStatusManager {
     }
   }
 }
+
+export { ToolStatusManager };
+export type { ToolStatusOptions };

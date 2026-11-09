@@ -1,4 +1,4 @@
-export const HOME_SKELETON_TEMPLATE = `
+const HOME_SKELETON_TEMPLATE = `
 <div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-home">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
     <div class="view-body">
@@ -17,7 +17,7 @@ export const HOME_SKELETON_TEMPLATE = `
 </div>
 `;
 
-export const NOT_FOUND_SKELETON_TEMPLATE = `
+const NOT_FOUND_SKELETON_TEMPLATE = `
 <div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-not-found">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
     <div class="view-body view-body--not-found">
@@ -26,3 +26,5 @@ export const NOT_FOUND_SKELETON_TEMPLATE = `
   </div>
 </div>
 `;
+
+export { HOME_SKELETON_TEMPLATE, NOT_FOUND_SKELETON_TEMPLATE };

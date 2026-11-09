@@ -12,8 +12,9 @@ import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showEle
 import { formatBytes } from '../../../utils/format.util.js';
 import { ToolZoomController } from '../../../utils/tool-zoom.util.js';
 import { ClientRedactTool, ClientRedactionBox, RedactPdfResultData } from './redact-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class RedactPdfController implements ViewController {
+class RedactPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private activePageIndex = 0;
   private container: HTMLElement;
@@ -41,7 +42,7 @@ export class RedactPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Archivo PDF',
-        desc: 'Oculta y elimina de forma irreversible información confidencial, texto o páginas completas de tu PDF.',
+        desc: t('ui.oculta_y_elimina_de_forma_irreversible_i'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -211,7 +212,7 @@ export class RedactPdfController implements ViewController {
 
   private async handleFileSelected(file: File): Promise<void> {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      this.showError('Por favor selecciona un archivo PDF válido.');
+      this.showError(t('ui.por_favor_selecciona_un_archivo_pdf_vali'));
       return;
     }
     const limits = getCurrentUserToolLimits('redact-pdf');
@@ -273,7 +274,7 @@ export class RedactPdfController implements ViewController {
       this.zoomController?.showFooter(true);
       this.zoomController?.updatePageInfo(1, numPages);
     } catch {
-      this.showError('Error al leer el archivo PDF. Verifica que no esté dañado o protegido con contraseña.');
+      this.showError(t('ui.error_al_leer_el_archivo_pdf_verifica_qu'));
       this.resetSelectedFile();
     }
   }
@@ -571,7 +572,7 @@ export class RedactPdfController implements ViewController {
       this.renderPageRedactions(pageIndex);
       this.updateSidebarSummary();
       this.renderThumbnails();
-      showToast('Texto censurado correctamente.', 'success');
+      showToast(t('toasts.texto_censurado_correctamente'), 'success');
     }
   }
 
@@ -654,7 +655,7 @@ export class RedactPdfController implements ViewController {
           this.renderPageRedactions(pageIndex);
           this.updateSidebarSummary();
           this.renderThumbnails();
-          showToast('Área de censura añadida.', 'success');
+          showToast(t('toasts.area_de_censura_anadida'), 'success');
         }
       };
 
@@ -666,10 +667,10 @@ export class RedactPdfController implements ViewController {
   private toggleFullPageRedact(pageIndex: number): void {
     if (this.fullPageRedactions.has(pageIndex)) {
       this.fullPageRedactions.delete(pageIndex);
-      showToast(`Página ${pageIndex + 1} restaurada.`, 'info');
+      showToast(t('toasts.pagina_restaurada'), 'info');
     } else {
       this.fullPageRedactions.add(pageIndex);
-      showToast(`Página ${pageIndex + 1} censurada por completo.`, 'warning');
+      showToast(t('toasts.pagina_censurada_por_completo'), 'warning');
     }
 
     const toggleBtn = this.container.querySelector<HTMLButtonElement>(`[data-ref="btn-toggle-page-${pageIndex}"]`);
@@ -761,13 +762,13 @@ export class RedactPdfController implements ViewController {
 
     this.updateSidebarSummary();
     this.renderThumbnails();
-    showToast('Se eliminaron todas las censuras.', 'info');
+    showToast(t('toasts.se_eliminaron_todas_las_censuras'), 'info');
   }
 
   private handleSearchAndRedact(phrase: string): void {
     const query = phrase.trim().toLowerCase();
     if (!query) {
-      showToast('Introduce una palabra o frase para buscar.', 'warning');
+      showToast(t('toasts.introduce_una_palabra_o_frase_para_busca'), 'warning');
       return;
     }
 
@@ -830,7 +831,7 @@ export class RedactPdfController implements ViewController {
       const emptyMsg = document.createElement('p');
       emptyMsg.className = 'redact-items-list__empty';
       emptyMsg.setAttribute('data-ref', 'redactions-empty-msg');
-      emptyMsg.textContent = 'No has añadido ninguna censura todavía. Selecciona texto en el documento o dibuja un área.';
+      emptyMsg.textContent = t('ui.no_has_anadido_ninguna_censura_todavia_s');
       listContainer.appendChild(emptyMsg);
       return;
     }
@@ -901,7 +902,7 @@ export class RedactPdfController implements ViewController {
     const fullPagesCount = this.fullPageRedactions.size;
 
     if (totalRedactions === 0 && fullPagesCount === 0) {
-      showToast('Añade al menos una censura de texto, área o página completa.', 'warning');
+      showToast(t('toasts.anade_al_menos_una_censura_de_texto_area'), 'warning');
       return;
     }
 
@@ -954,27 +955,27 @@ export class RedactPdfController implements ViewController {
 
       this.phaseManager?.showProcessing(
         'Censurando y purgando contenido...',
-        'Eliminando texto internamente y aplicando marcas de censura permanentes'
+        t('ui.eliminando_texto_internamente_y_aplicand')
       );
 
       if (response.ok && result.success && result.data) {
         const token = result.data.fileId;
-        showToast('Documento censurado con éxito.', 'success');
+        showToast(t('toasts.documento_censurado_con_exito'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename || `${this.currentFile.name.replace(/\.pdf$/i, '')}_censurado.pdf`,
           returnText: 'Censurar otro documento PDF',
           returnUrl: '/redact-pdf',
-          subtitle: `Se ha censurado y protegido exitosamente el documento "${this.currentFile?.name}".`,
+          subtitle: t('tools.redact_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡PDF censurado con éxito!',
           token,
         });
       } else {
-        throw new Error(result.error || result.message || 'Error al censurar el documento PDF.');
+        throw new Error(result.error || result.message || t('ui.error_al_censurar_el_documento_pdf'));
       }
     } catch (err: any) {
-      const message = err?.message || 'Ha ocurrido un error inesperado al procesar el archivo PDF.';
+      const message = err?.message || t('ui.ha_ocurrido_un_error_inesperado_al_proce');
       this.phaseManager?.showError(message);
       this.showError(message);
     } finally {
@@ -1000,10 +1001,12 @@ export class RedactPdfController implements ViewController {
   }
 }
 
-export async function createRedactPdfView(): Promise<HTMLElement> {
+async function createRedactPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/redact-pdf/redact-pdf.html');
   const controller = new RedactPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { RedactPdfController, createRedactPdfView };

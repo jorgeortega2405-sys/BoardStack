@@ -1,13 +1,13 @@
-export type PdfCompressLevel = 'extreme' | 'recommended' | 'low';
+type PdfCompressLevel = 'extreme' | 'recommended' | 'low';
 
-export interface CompressPdfParams {
+interface CompressPdfParams {
   buffer: Buffer;
   filename?: string;
   level: PdfCompressLevel;
   originalname: string;
 }
 
-export interface CompressPdfResponse {
+interface CompressPdfResponse {
   compressedSize: number;
   downloadUrl: string;
   fileId: string;
@@ -18,7 +18,7 @@ export interface CompressPdfResponse {
   savingsPercent: number;
 }
 
-export interface StoredCompressedPdf {
+interface StoredCompressedPdf {
   buffer: Buffer;
   compressedSize: number;
   contentType: string;
@@ -30,3 +30,5 @@ export interface StoredCompressedPdf {
   savingsPercent: number;
   size: number;
 }
+
+export type { CompressPdfParams, CompressPdfResponse, PdfCompressLevel, StoredCompressedPdf };

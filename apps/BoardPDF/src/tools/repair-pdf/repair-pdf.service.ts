@@ -75,7 +75,7 @@ async function runQpdfLinearize(inputPath: string, outputPath: string): Promise<
   return false;
 }
 
-export async function repairPdfBuffer(buffer: Buffer): Promise<{ buffer: Buffer; pageCount: number }> {
+async function repairPdfBuffer(buffer: Buffer): Promise<{ buffer: Buffer; pageCount: number }> {
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_repair_'));
   const inputTempPath = path.join(tempDir, 'broken.pdf');
   const pyOutTempPath = path.join(tempDir, 'repaired_py.pdf');
@@ -143,7 +143,7 @@ export async function repairPdfBuffer(buffer: Buffer): Promise<{ buffer: Buffer;
   return { buffer: finalBuffer, pageCount };
 }
 
-export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfResponse> {
+async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfResponse> {
   const { buffer, filename: customFilename, originalname } = params;
   const originalSize = buffer.length;
   const { buffer: finalBuffer, pageCount } = await repairPdfBuffer(buffer);
@@ -175,3 +175,4 @@ export async function repairPdfFile(params: RepairPdfParams): Promise<RepairPdfR
   };
 }
 
+export { repairPdfBuffer, repairPdfFile };

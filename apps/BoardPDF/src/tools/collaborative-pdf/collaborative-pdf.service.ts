@@ -20,7 +20,7 @@ function readPublicAsset(relPath: string): Buffer | null {
   return null;
 }
 
-export async function renderCollaborativePdf(
+async function renderCollaborativePdf(
   title: string,
   content: CollaborativeDocumentContent
 ): Promise<Buffer> {
@@ -361,7 +361,7 @@ export async function renderCollaborativePdf(
   return Buffer.from(bytes);
 }
 
-export async function listCollaborativeDocuments(
+async function listCollaborativeDocuments(
   userId?: number | null,
   folderId?: string | null | 'all'
 ): Promise<CollaborativeDocumentRecord[]> {
@@ -407,7 +407,7 @@ export async function listCollaborativeDocuments(
   return [];
 }
 
-export async function getCollaborativeDocument(
+async function getCollaborativeDocument(
   id: string
 ): Promise<CollaborativeDocumentRecord | null> {
   try {
@@ -439,7 +439,7 @@ export async function getCollaborativeDocument(
   return null;
 }
 
-export async function saveCollaborativeDocument(payload: {
+async function saveCollaborativeDocument(payload: {
   accessLevel?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   folderId?: string | null;
@@ -500,7 +500,7 @@ export async function saveCollaborativeDocument(payload: {
   };
 }
 
-export async function deleteCollaborativeDocument(id: string, userId?: number | null): Promise<boolean> {
+async function deleteCollaborativeDocument(id: string, userId?: number | null): Promise<boolean> {
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
@@ -532,7 +532,7 @@ export async function deleteCollaborativeDocument(id: string, userId?: number | 
   return true;
 }
 
-export async function getCollaborativeDocMembers(docId: string): Promise<CollaborativeMember[]> {
+async function getCollaborativeDocMembers(docId: string): Promise<CollaborativeMember[]> {
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
@@ -560,7 +560,7 @@ export async function getCollaborativeDocMembers(docId: string): Promise<Collabo
   return [];
 }
 
-export async function addCollaborativeDocMember(
+async function addCollaborativeDocMember(
   docId: string,
   targetUserId: number,
   role: 'editor' | 'viewer' = 'editor',
@@ -594,7 +594,7 @@ export async function addCollaborativeDocMember(
   };
 }
 
-export async function removeCollaborativeDocMember(
+async function removeCollaborativeDocMember(
   docId: string,
   targetUserId: number,
   _requestingUserId?: number | null
@@ -609,7 +609,7 @@ export async function removeCollaborativeDocMember(
   }
 }
 
-export async function updateCollaborativeDocAccessLevel(
+async function updateCollaborativeDocAccessLevel(
   docId: string,
   accessLevel: 'anyone_with_link' | 'restricted',
   _requestingUserId?: number | null
@@ -624,7 +624,7 @@ export async function updateCollaborativeDocAccessLevel(
   }
 }
 
-export async function searchRegisteredUsers(
+async function searchRegisteredUsers(
   query: string,
   excludeDocId?: string
 ): Promise<Array<{ avatar_url: string | null; email: string; id: number; username: string }>> {
@@ -661,7 +661,7 @@ export async function searchRegisteredUsers(
   return [];
 }
 
-export async function getRenderedPdfBuffer(id: string): Promise<Buffer | null> {
+async function getRenderedPdfBuffer(id: string): Promise<Buffer | null> {
   const doc = await getCollaborativeDocument(id);
   if (!doc) return null;
   try {
@@ -672,6 +672,8 @@ export async function getRenderedPdfBuffer(id: string): Promise<Buffer | null> {
   }
 }
 
-export async function getRenderedPdfPath(_id: string): Promise<string | null> {
+async function getRenderedPdfPath(_id: string): Promise<string | null> {
   return null;
 }
+
+export { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel };

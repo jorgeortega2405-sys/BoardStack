@@ -27,4 +27,3 @@ router.post(
 router.get('/tools/translate-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

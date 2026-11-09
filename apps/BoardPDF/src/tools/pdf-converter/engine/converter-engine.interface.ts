@@ -1,6 +1,6 @@
 import { ConversionType, PdfConversionOptions } from '../pdf-converter.types.js';
 
-export interface EngineConversionParams {
+interface EngineConversionParams {
   inputPath: string;
   options?: PdfConversionOptions;
   originalFilename: string;
@@ -8,13 +8,15 @@ export interface EngineConversionParams {
   targetType: ConversionType;
 }
 
-export interface EngineConversionResult {
+interface EngineConversionResult {
   filename: string;
   isZip: boolean;
   mimeType: string;
   outputPath: string;
 }
 
-export interface IConverterEngine {
+interface IConverterEngine {
   convert(params: EngineConversionParams): Promise<EngineConversionResult>;
 }
+
+export type { EngineConversionParams, EngineConversionResult, IConverterEngine };

@@ -2,7 +2,7 @@ import { PageDimension } from '../../config/collab-page-presets.config.js';
 import { wsService } from '../../services/websocket.service.js';
 import { EditorElement, PagePdfSource } from './collaborative-pdf.types.js';
 
-export type CollabActionType =
+type CollabActionType =
   | 'DOC_SYNC_FULL'
   | 'DOC_TITLE_CHANGE'
   | 'DRAWING_ADD'
@@ -29,7 +29,7 @@ export type CollabActionType =
   | 'REDO'
   | 'UNDO';
 
-export interface CollabAction<T = any> {
+interface CollabAction<T = any> {
   pageIndex?: number;
   payload: T;
   senderClientId?: string;
@@ -37,15 +37,15 @@ export interface CollabAction<T = any> {
   type: CollabActionType;
 }
 
-export interface DispatchOptions {
+interface DispatchOptions {
   localOnly?: boolean;
   skipBroadcast?: boolean;
   skipHistory?: boolean;
 }
 
-export type ActionCallback = (action: CollabAction) => void;
+type ActionCallback = (action: CollabAction) => void;
 
-export interface CollabEditorDelegate {
+interface CollabEditorDelegate {
   alignElementToPage: (elementId: string, alignment: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top') => boolean;
   canEdit: () => boolean;
   docDefaultPageSize: PageDimension;
@@ -75,7 +75,7 @@ export interface CollabEditorDelegate {
   updateTransformBoxPosition: () => void;
 }
 
-export class CollabActionDispatcher {
+class CollabActionDispatcher {
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private delegate: CollabEditorDelegate;
   private subscribers = new Set<ActionCallback>();
@@ -541,3 +541,6 @@ export class CollabActionDispatcher {
     }
   }
 }
+
+export { CollabActionDispatcher };
+export type { ActionCallback, CollabAction, CollabActionType, CollabEditorDelegate, DispatchOptions };

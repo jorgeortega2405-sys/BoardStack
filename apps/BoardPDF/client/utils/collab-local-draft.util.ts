@@ -1,4 +1,4 @@
-export interface LocalCollabDraft {
+interface LocalCollabDraft {
   content: {
     elements: any[];
     pageBackgrounds: string[];
@@ -20,7 +20,7 @@ export interface LocalCollabDraft {
 const STORAGE_PREFIX = 'boardpdf_local_draft_';
 const PENDING_SYNC_KEY = 'boardpdf_pending_cloud_sync_draft';
 
-export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>, userId?: number | string | null): LocalCollabDraft {
+function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>, userId?: number | string | null): LocalCollabDraft {
   const existing = getLocalDraft(id);
   const now = new Date().toISOString();
   const effectiveUserId = data.userId !== undefined ? data.userId : (existing?.userId !== undefined ? existing.userId : (userId ?? null));
@@ -49,7 +49,7 @@ export function saveLocalDraft(id: string, data: Partial<LocalCollabDraft>, user
   return draft;
 }
 
-export function getLocalDraft(id: string): LocalCollabDraft | null {
+function getLocalDraft(id: string): LocalCollabDraft | null {
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${id}`);
     if (raw) {
@@ -59,14 +59,14 @@ export function getLocalDraft(id: string): LocalCollabDraft | null {
   return null;
 }
 
-export function removeLocalDraft(id: string): void {
+function removeLocalDraft(id: string): void {
   try {
     localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
     localStorage.removeItem(`boardpdf_wal_${id}`);
   } catch {}
 }
 
-export function clearAllLocalDrafts(): void {
+function clearAllLocalDrafts(): void {
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
@@ -77,7 +77,7 @@ export function clearAllLocalDrafts(): void {
   } catch {}
 }
 
-export function listLocalDrafts(forUserId?: number | string | null): LocalCollabDraft[] {
+function listLocalDrafts(forUserId?: number | string | null): LocalCollabDraft[] {
   const drafts: LocalCollabDraft[] = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -102,7 +102,7 @@ export function listLocalDrafts(forUserId?: number | string | null): LocalCollab
   return drafts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
-export function setPendingCloudSyncDraft(draft: LocalCollabDraft | null): void {
+function setPendingCloudSyncDraft(draft: LocalCollabDraft | null): void {
   try {
     if (draft) {
       sessionStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(draft));
@@ -112,7 +112,7 @@ export function setPendingCloudSyncDraft(draft: LocalCollabDraft | null): void {
   } catch {}
 }
 
-export function getPendingCloudSyncDraft(): LocalCollabDraft | null {
+function getPendingCloudSyncDraft(): LocalCollabDraft | null {
   try {
     const raw = sessionStorage.getItem(PENDING_SYNC_KEY);
     if (raw) {
@@ -121,3 +121,6 @@ export function getPendingCloudSyncDraft(): LocalCollabDraft | null {
   } catch {}
   return null;
 }
+
+export { clearAllLocalDrafts, getLocalDraft, getPendingCloudSyncDraft, listLocalDrafts, removeLocalDraft, saveLocalDraft, setPendingCloudSyncDraft };
+export type { LocalCollabDraft };

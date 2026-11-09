@@ -19,4 +19,3 @@ router.post('/tools/to-pdf/preview', previewUrlHandler);
 router.get('/tools/to-pdf/download/:token', handleToolDownload);
 
 export default router;
-

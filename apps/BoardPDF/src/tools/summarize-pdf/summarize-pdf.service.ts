@@ -122,7 +122,7 @@ No inventes datos que no estén presentes en el texto. Usa Markdown enriquecido 
   return generatedText.trim();
 }
 
-export async function summarizePdf(params: SummarizePdfParams): Promise<SummarizePdfResponse> {
+async function summarizePdf(params: SummarizePdfParams): Promise<SummarizePdfResponse> {
   const { buffer, customPrompt, mode = 'standard', originalname } = params;
 
   const apiKey = config.gemini.apiKey;
@@ -184,3 +184,5 @@ export async function summarizePdf(params: SummarizePdfParams): Promise<Summariz
     wordCount,
   };
 }
+
+export { summarizePdf };

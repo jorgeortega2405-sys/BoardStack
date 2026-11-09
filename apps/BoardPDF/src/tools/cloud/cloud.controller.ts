@@ -1,8 +1,8 @@
 import { logger } from '../../services/logger.service.js';
 import { sanitizePdfFilename } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { Request, Response } from 'express';
 import { URL } from 'url';
-
 
 const ALLOWED_HOST_SUFFIXES = [
   'dl.dropboxusercontent.com',
@@ -17,7 +17,7 @@ function isAllowedHost(hostname: string): boolean {
   return ALLOWED_HOST_SUFFIXES.some((allowed) => lower === allowed || lower.endsWith(`.${allowed}`));
 }
 
-export async function handleFetchCloudFile(req: Request, res: Response): Promise<void> {
+async function handleFetchCloudFile(req: Request, res: Response): Promise<void> {
   try {
     const { filename, url } = req.body;
 
@@ -104,3 +104,5 @@ export async function handleFetchCloudFile(req: Request, res: Response): Promise
     });
   }
 }
+
+export { handleFetchCloudFile };

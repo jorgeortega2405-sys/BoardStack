@@ -13,8 +13,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
 import { ClientDiffItem, ClientPageComparison, ComparePdfResultData, CompareViewMode } from './compare-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class ComparePdfController implements ViewController {
+class ComparePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private comparisonResult: ComparePdfResultData | null = null;
   private container: HTMLElement;
@@ -48,7 +49,7 @@ export class ComparePdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Primer PDF',
-        desc: 'Compara dos archivos PDF uno al lado del otro, detecta cambios de texto semántico y visualiza diferencias con facilidad.',
+        desc: t('ui.compara_dos_archivos_pdf_uno_al_lado_del'),
         hint: 'o arrastra y suelta el PDF aquí para comenzar la comparación',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -392,7 +393,7 @@ export class ComparePdfController implements ViewController {
 
   private async handleFile1Selected(file: File): Promise<void> {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      this.showError('Por favor selecciona un archivo PDF válido.');
+      this.showError(t('ui.por_favor_selecciona_un_archivo_pdf_vali'));
       return;
     }
     const limits = getCurrentUserToolLimits('compare-pdf');
@@ -448,7 +449,7 @@ export class ComparePdfController implements ViewController {
 
   private async handleFile2Selected(file: File): Promise<void> {
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      this.showError('Por favor selecciona un archivo PDF válido para el segundo documento.');
+      this.showError(t('ui.por_favor_selecciona_un_archivo_pdf_vali'));
       return;
     }
     const limits = getCurrentUserToolLimits('compare-pdf');
@@ -713,7 +714,7 @@ export class ComparePdfController implements ViewController {
 
       this.phaseManager?.showProcessing(
         'Comparando documentos PDF...',
-        'Analizando estructura de texto semántico y detectando modificaciones'
+        t('ui.analizando_estructura_de_texto_semantico')
       );
 
       if (response.ok && result.success && result.data) {
@@ -722,12 +723,12 @@ export class ComparePdfController implements ViewController {
         this.renderChangesList();
         this.renderDiffMarkers();
         this.phaseManager?.setPhase('workspace');
-        showToast('Comparación completada exitosamente.', 'success');
+        showToast(t('toasts.comparacion_completada_exitosamente'), 'success');
       } else {
-        throw new Error(result.error || result.message || 'Error al procesar la comparación.');
+        throw new Error(result.error || result.message || t('ui.error_al_procesar_la_comparacion'));
       }
     } catch (err: any) {
-      const message = err?.message || 'Ha ocurrido un error al comparar los documentos.';
+      const message = err?.message || t('ui.ha_ocurrido_un_error_al_comparar_los_doc');
       this.phaseManager?.showError(message);
       this.showError(message);
     } finally {
@@ -759,7 +760,7 @@ export class ComparePdfController implements ViewController {
       const emptyMsg = document.createElement('p');
       emptyMsg.className = 'compare-changes-list__empty';
       emptyMsg.setAttribute('data-ref', 'changes-empty-msg');
-      emptyMsg.textContent = 'Sube el segundo documento para analizar y visualizar las diferencias.';
+      emptyMsg.textContent = t('ui.sube_el_segundo_documento_para_analizar_');
       listContainer.appendChild(emptyMsg);
       if (countBadge) countBadge.textContent = '0';
       return;
@@ -837,7 +838,7 @@ export class ComparePdfController implements ViewController {
       const noMatch = document.createElement('p');
       noMatch.className = 'compare-changes-list__empty';
       noMatch.textContent = this.searchQuery
-        ? 'No se encontraron cambios que coincidan con la búsqueda.'
+        ? t('ui.no_se_encontraron_cambios_que_coincidan_')
         : 'Los documentos son 100% idénticos. No se detectaron diferencias.';
       listContainer.appendChild(noMatch);
     }
@@ -882,7 +883,7 @@ export class ComparePdfController implements ViewController {
 
   private async handleDownloadReport(): Promise<void> {
     if (!this.comparisonResult) {
-      showToast('Por favor carga y compara dos archivos PDF antes de descargar el informe.', 'warning');
+      showToast(t('toasts.por_favor_carga_y_compara_dos_archivos_p'), 'warning');
       return;
     }
 
@@ -893,7 +894,7 @@ export class ComparePdfController implements ViewController {
       filename: this.comparisonResult.filename || 'informe_comparacion.pdf',
       returnText: 'Volver a Comparar PDF',
       returnUrl: '/compare-pdf',
-      subtitle: 'Tu informe detallado de diferencias y análisis comparativo está listo.',
+      subtitle: t('ui.tu_informe_detallado_de_diferencias_y_an'),
       title: '¡Informe de comparación listo!',
       token,
     });
@@ -917,10 +918,12 @@ export class ComparePdfController implements ViewController {
   }
 }
 
-export async function createComparePdfView(): Promise<HTMLElement> {
+async function createComparePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/compare-pdf/compare-pdf.html');
   const controller = new ComparePdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { ComparePdfController, createComparePdfView };

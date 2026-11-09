@@ -31,7 +31,7 @@ interface TicketDetailsData {
   updatedAt: string;
 }
 
-export class ContactController implements ViewController {
+class ContactController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentTrackingToken: string | null = null;
@@ -395,10 +395,12 @@ export class ContactController implements ViewController {
   }
 }
 
-export async function createContactView(): Promise<HTMLElement> {
+async function createContactView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/contact/contact.html');
   const controller = new ContactController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { ContactController, createContactView };

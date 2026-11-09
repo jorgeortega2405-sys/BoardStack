@@ -28,4 +28,3 @@ router.post(
 router.get('/tools/compare-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

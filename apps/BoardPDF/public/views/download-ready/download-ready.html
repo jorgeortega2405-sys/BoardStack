@@ -1,66 +1,63 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper download-ready-wrapper" data-ref="download-ready-wrapper">
-  <div class="tool-layout download-layout" data-ref="ready-success-screen">
-    <main class="tool-layout__workspace download-workspace">
-      <div class="tool-workspace__canvas download-canvas">
-        <div class="download-card">
-          <h1 class="tool-hero-dropzone__title download-card__title" data-ref="ready-title">¡Tu archivo está listo para descargar!</h1>
-          <p class="tool-hero-dropzone__desc download-card__desc" data-ref="ready-subtitle">El proceso se ha completado con éxito y tu documento está listo para descargar.</p>
-
-          <div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready download-card__actions">
-            <div class="download-action-group" data-ref="download-action-group">
-              <a class="component-button component-button--black tool-hero-dropzone__btn-select tool-hero-dropzone__btn-download" data-ref="btn-download-file" href="#" download>
-                <span data-ref="ready-btn-text">Descargar PDF</span>
-              </a>
-            </div>
-            <div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready" data-ref="download-cloud-btns">
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-drive" data-tooltip="Google Drive" aria-label="Google Drive">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-dropbox" data-tooltip="Dropbox" aria-label="Dropbox">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-copy-link" data-tooltip="Copiar enlace de descarga" aria-label="Copiar enlace de descarga">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              </button>
-              <button type="button" class="tool-hero-dropzone__cloud-btn tool-hero-dropzone__cloud-btn--danger" data-ref="btn-delete-file" data-tooltip="Eliminar ahora" aria-label="Eliminar ahora">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-              </button>
-              <div class="dropdown download-continue-dropdown" data-ref="dropdown-continue-tools">
-                <button type="button" class="tool-hero-dropzone__cloud-btn dropdown-trigger" data-ref="btn-continue-tools" data-tooltip="Continuar con otra herramienta" aria-label="Continuar con otra herramienta">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
-                </button>
-                <div class="dropdown-backdrop" data-ref="backdrop-continue-tools"></div>
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 download-continue-menu" data-ref="menu-continue-tools">
-                  <div class="menu-panel__list" data-ref="list-continue-tools"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="banner banner--danger tool-sidebar__error-banner--lg is-hidden" data-ref="ready-error" role="alert"></div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <div class="download-expired-screen is-hidden" data-ref="ready-expired-screen">
-    <div class="download-expired-card">
-      <div class="download-expired-card__icon-wrap">
-        <svg class="component-icon download-expired-card__icon" aria-hidden="true"><use href="/icons.svg#link_off"></use></svg>
-      </div>
-      <span class="component-badge component-badge--danger component-badge--sm download-expired-card__badge">Enlace caducado</span>
-      <h1 class="download-expired-card__title">Enlace no disponible o caducado</h1>
-      <p class="download-expired-card__desc">El archivo ya no está disponible en nuestro servidor o el enlace ha caducado. Por razones de seguridad y privacidad, los archivos temporales se conservan únicamente durante 1 hora.</p>
-      <div class="download-expired-card__actions">
-        <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-expired-home">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-          <span>Volver al inicio</span>
-        </button>
-        <button type="button" class="component-button component-button--outline component-button--h44" data-ref="btn-expired-tools">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
-          <span>Ver herramientas</span>
-        </button>
-      </div>
-    </div>
-  </div>
+<div class="tool-layout download-layout" data-ref="ready-success-screen">
+<main class="tool-layout__workspace download-workspace">
+<div class="tool-workspace__canvas download-canvas" >
+<div class="download-card" >
+<h1 class="tool-hero-dropzone__title download-card__title" data-ref="ready-title">¡Tu archivo está listo para descargar!</h1>
+<p class="tool-hero-dropzone__desc download-card__desc" data-ref="ready-subtitle">El proceso se ha completado con éxito y tu documento está listo para descargar.</p>
+<div class="tool-hero-dropzone__actions tool-hero-dropzone__actions--ready download-card__actions" >
+<div class="download-action-group" data-ref="download-action-group">
+<a class="component-button component-button--black tool-hero-dropzone__btn-select tool-hero-dropzone__btn-download" data-ref="btn-download-file" href="#" download>
+<span data-ref="ready-btn-text">Descargar PDF</span>
+</a>
+</div>
+<div class="tool-hero-dropzone__cloud-btns tool-hero-dropzone__cloud-btns--ready" data-ref="download-cloud-btns">
+<button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-drive" data-tooltip="Google Drive" aria-label="Google Drive">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+</button>
+<button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-save-dropbox" data-tooltip="Dropbox" aria-label="Dropbox">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+</button>
+<button type="button" class="tool-hero-dropzone__cloud-btn" data-ref="btn-copy-link" data-tooltip="Copiar enlace de descarga" aria-label="Copiar enlace de descarga">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+</button>
+<button type="button" class="tool-hero-dropzone__cloud-btn tool-hero-dropzone__cloud-btn--danger" data-ref="btn-delete-file" data-tooltip="Eliminar ahora" data-i18n-aria="common.delete_now" aria-label="Eliminar ahora">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+</button>
+<div class="dropdown download-continue-dropdown" data-ref="dropdown-continue-tools">
+<button type="button" class="tool-hero-dropzone__cloud-btn dropdown-trigger" data-ref="btn-continue-tools" data-tooltip="Continuar con otra herramienta" aria-label="Continuar con otra herramienta">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+</button>
+<div class="dropdown-backdrop" data-ref="backdrop-continue-tools"></div>
+<div class="menu-panel menu-panel--dropdown menu-panel--w-220 download-continue-menu" data-ref="menu-continue-tools">
+<div class="menu-panel__list" data-ref="list-continue-tools"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="banner banner--danger tool-sidebar__error-banner--lg is-hidden" data-ref="ready-error" role="alert"></div>
+</div>
+</div>
+</main>
+</div>
+<div class="download-expired-screen is-hidden" data-ref="ready-expired-screen">
+<div class="download-expired-card" >
+<div class="download-expired-card__icon-wrap" >
+<svg class="component-icon download-expired-card__icon" aria-hidden="true"><use href="/icons.svg#link_off"></use></svg>
+</div>
+<span class="component-badge component-badge--danger component-badge--sm download-expired-card__badge" >Enlace caducado</span>
+<h1 class="download-expired-card__title" >Enlace no disponible o caducado</h1>
+<p class="download-expired-card__desc" >El archivo ya no está disponible en nuestro servidor o el enlace ha caducado. Por razones de seguridad y privacidad, los archivos temporales se conservan únicamente durante 1 hora.</p>
+<div class="download-expired-card__actions" >
+<button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-expired-home">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+<span>Volver al inicio</span>
+</button>
+<button type="button" class="component-button component-button--outline component-button--h44" data-ref="btn-expired-tools">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+<span>Ver herramientas</span>
+</button>
+</div>
+</div>
+</div>
 </div>

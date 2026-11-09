@@ -7,7 +7,7 @@ import { markFileOperationDeleted, markFileOperationExpired, recordFileOperation
 import { type GeneratedTokenResult, generateDownloadToken, verifyDownloadToken } from './download-token.service.js';
 import { logger } from './logger.service.js';
 
-export interface StoredTempFile {
+interface StoredTempFile {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -15,7 +15,7 @@ export interface StoredTempFile {
   [key: string]: any;
 }
 
-export interface StoredTempFileMeta {
+interface StoredTempFileMeta {
   contentType: string;
   createdAt: number;
   filename: string;
@@ -24,7 +24,7 @@ export interface StoredTempFileMeta {
   [key: string]: any;
 }
 
-export interface TempFileStreamResult {
+interface TempFileStreamResult {
   contentType: string;
   fileSize: number;
   filename: string;
@@ -35,7 +35,7 @@ const memoryStore = new Map<string, StoredTempFile>();
 const memoryMetaStore = new Map<string, StoredTempFileMeta>();
 const PREFIX_META = 'tempfile:meta:';
 const EXPIRATION_QUEUE_KEY = 's3:expiration_queue';
-export const DEFAULT_TTL_SECONDS = 60 * 60;
+const DEFAULT_TTL_SECONDS = 60 * 60;
 
 setInterval(() => {
   const now = Date.now();
@@ -69,7 +69,7 @@ function resolveTokenInternalId(rawToken: string): { expired: boolean; fileId: s
   return { expired: false, fileId: rawToken };
 }
 
-export async function storeTempFile(
+async function storeTempFile(
   token: string,
   file: StoredTempFile,
   ttlSeconds: number = DEFAULT_TTL_SECONDS
@@ -141,7 +141,7 @@ export async function storeTempFile(
   return generateDownloadToken(token, file.filename || 'documento.pdf', ttlSeconds);
 }
 
-export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
+async function getTempFile<T extends StoredTempFile = StoredTempFile>(
   token: string
 ): Promise<T | null> {
   const resolved = resolveTokenInternalId(token);
@@ -197,7 +197,7 @@ export async function getTempFile<T extends StoredTempFile = StoredTempFile>(
   return (local as unknown as T) || null;
 }
 
-export async function getTempFileStream(token: string): Promise<TempFileStreamResult | null> {
+async function getTempFileStream(token: string): Promise<TempFileStreamResult | null> {
   const resolved = resolveTokenInternalId(token);
   if (resolved.expired) return null;
   const storageToken = resolved.fileId;
@@ -258,7 +258,7 @@ export async function getTempFileStream(token: string): Promise<TempFileStreamRe
   return null;
 }
 
-export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta | null> {
+async function getTempFileMeta(token: string): Promise<StoredTempFileMeta | null> {
   const resolved = resolveTokenInternalId(token);
   if (resolved.expired) return null;
   const storageToken = resolved.fileId;
@@ -314,7 +314,7 @@ export async function getTempFileMeta(token: string): Promise<StoredTempFileMeta
   return null;
 }
 
-export async function getTempFilePresignedUrl(token: string, expiresInSeconds: number = DEFAULT_TTL_SECONDS): Promise<string | null> {
+async function getTempFilePresignedUrl(token: string, expiresInSeconds: number = DEFAULT_TTL_SECONDS): Promise<string | null> {
   if (!isS3Configured()) {
     return null;
   }
@@ -335,7 +335,7 @@ export async function getTempFilePresignedUrl(token: string, expiresInSeconds: n
   }
 }
 
-export async function deleteTempFile(token: string): Promise<void> {
+async function deleteTempFile(token: string): Promise<void> {
   const resolved = resolveTokenInternalId(token);
   const storageToken = resolved.fileId;
 
@@ -368,4 +368,5 @@ export async function deleteTempFile(token: string): Promise<void> {
   await markFileOperationDeleted(storageToken);
 }
 
-export { type GeneratedTokenResult, generateDownloadToken, verifyDownloadToken };
+export { DEFAULT_TTL_SECONDS, deleteTempFile, generateDownloadToken, getTempFile, getTempFileMeta, getTempFilePresignedUrl, getTempFileStream, storeTempFile, verifyDownloadToken };
+export type { GeneratedTokenResult, StoredTempFile, StoredTempFileMeta, TempFileStreamResult };

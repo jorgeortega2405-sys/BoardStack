@@ -1,0 +1,148 @@
+{
+  "seo": {
+    "collaborative-pdf": {
+      "title": "Diseñar PDF - Crea y Edita Documentos PDF Online | BoardPDF",
+      "description": "Diseña, crea y edita documentos PDF online con formas, texto, plantillas y guardado en la nube."
+    },
+    "merge-pdf": {
+      "title": "Unir PDF - Combina archivos PDF online gratis | BoardPDF",
+      "description": "Combina y une múltiples documentos PDF en un solo archivo en el orden que desees. Rápido, fácil y seguro."
+    },
+    "split-pdf": {
+      "title": "Dividir PDF - Separa páginas de tus documentos PDF | BoardPDF",
+      "description": "Divide un PDF en múltiples archivos o extrae páginas específicas con facilidad y precisión."
+    },
+    "remove-pdf-pages": {
+      "title": "Eliminar Páginas PDF - Borra hojas innecesarias | BoardPDF",
+      "description": "Elimina páginas no deseadas de tu PDF en segundos de forma visual y sencilla."
+    },
+    "extract-pdf-pages": {
+      "title": "Extraer Páginas de PDF - Guarda páginas seleccionadas | BoardPDF",
+      "description": "Extrae páginas específicas de un archivo PDF y crea un nuevo documento al instante."
+    },
+    "organize-pdf": {
+      "title": "Organizar PDF - Reordena, rota y ordena páginas | BoardPDF",
+      "description": "Ordena, elimina y rota páginas de tu archivo PDF fácilmente con vista previa interactiva."
+    },
+    "compress-pdf": {
+      "title": "Comprimir PDF - Reduce el tamaño de tu archivo PDF | BoardPDF",
+      "description": "Reduce el tamaño de tus documentos PDF manteniendo la máxima calidad posible."
+    },
+    "repair-pdf": {
+      "title": "Reparar PDF - Recupera archivos PDF dañados o corruptos | BoardPDF",
+      "description": "Repara y rescata el contenido de archivos PDF dañados o con errores de formato."
+    },
+    "ocr-pdf": {
+      "title": "OCR PDF - Convierte texto escaneado a PDF editable | BoardPDF",
+      "description": "Reconoce texto en documentos escaneados e imágenes para hacerlos buscables y editables."
+    },
+    "jpg-to-pdf": {
+      "title": "JPG a PDF - Convierte imágenes a documentos PDF | BoardPDF",
+      "description": "Convierte fotos e imágenes JPG a formato PDF en segundos con la mejor calidad."
+    },
+    "word-to-pdf": {
+      "title": "Word a PDF - Convierte archivos DOCX a PDF | BoardPDF",
+      "description": "Convierte tus documentos de Word (DOC, DOCX) a PDF manteniendo el diseño original."
+    },
+    "powerpoint-to-pdf": {
+      "title": "PowerPoint a PDF - Convierte diapositivas PPT a PDF | BoardPDF",
+      "description": "Convierte tus presentaciones PPT y PPTX a PDF para compartirlas fácilmente."
+    },
+    "excel-to-pdf": {
+      "title": "Excel a PDF - Convierte hojas de cálculo XLS a PDF | BoardPDF",
+      "description": "Convierte tablas y hojas de cálculo de Excel (XLS, XLSX) a documentos PDF listos para imprimir."
+    },
+    "html-to-pdf": {
+      "title": "HTML a PDF - Convierte páginas web y código a PDF | BoardPDF",
+      "description": "Convierte páginas web, código HTML o URLs a documentos PDF de alta fidelidad."
+    },
+    "pdf-to-jpg": {
+      "title": "PDF a JPG - Extrae imágenes o convierte páginas a JPG | BoardPDF",
+      "description": "Convierte páginas de tu archivo PDF a imágenes JPG de alta resolución o extrae todas las fotos."
+    },
+    "pdf-to-word": {
+      "title": "PDF a Word - Convierte archivos PDF a DOCX editable | BoardPDF",
+      "description": "Convierte tus documentos PDF a Word (DOCX) editables con máxima precisión de texto."
+    },
+    "pdf-to-powerpoint": {
+      "title": "PDF a PowerPoint - Convierte tu PDF a diapositivas PPTX | BoardPDF",
+      "description": "Convierte tus archivos PDF en presentaciones editables de PowerPoint PPTX."
+    },
+    "pdf-to-excel": {
+      "title": "PDF a Excel - Extrae tablas de PDF a hojas XLSX | BoardPDF",
+      "description": "Extrae tablas de tus documentos PDF directamente a hojas de cálculo de Excel en segundos."
+    },
+    "pdf-to-pdfa": {
+      "title": "PDF a PDF/A - Convierte documentos para archivo a largo plazo | BoardPDF",
+      "description": "Transforma tus documentos PDF a formato estándar PDF/A para archivado legal e institucional seguro."
+    },
+    "rotate-pdf": {
+      "title": "Rotar PDF - Gira páginas PDF online | BoardPDF",
+      "description": "Rota tus documentos PDF horizontal o verticalmente. Gira páginas individuales o todo el archivo."
+    },
+    "page-numbers": {
+      "title": "Números de Página en PDF - Numera tus documentos | BoardPDF",
+      "description": "Añade números de página a tus documentos PDF con formato, tipografía y posición personalizados."
+    },
+    "watermark-pdf": {
+      "title": "Marca de Agua en PDF - Protege tus documentos | BoardPDF",
+      "description": "Agrega marcas de agua de texto o imagen a tus archivos PDF con transparencia y posición ajustables."
+    },
+    "crop-pdf": {
+      "title": "Recortar PDF - Ajusta márgenes y recorta páginas | BoardPDF",
+      "description": "Recorta los márgenes o áreas específicas de tu documento PDF de forma precisa e intuitiva."
+    },
+    "edit-pdf": {
+      "title": "Editar PDF - Agrega texto, formas y dibujos online | BoardPDF",
+      "description": "Edita documentos PDF en tu navegador añadiendo texto, firmas, notas, imágenes y dibujos."
+    },
+    "unlock-pdf": {
+      "title": "Desbloquear PDF - Quita la contraseña de seguridad | BoardPDF",
+      "description": "Elimina contraseñas y restricciones de tus archivos PDF para verlos, imprimirlos y editarlos libremente."
+    },
+    "protect-pdf": {
+      "title": "Proteger PDF - Encripta y pon contraseña a tu PDF | BoardPDF",
+      "description": "Protege tus documentos PDF confidenciales con contraseñas seguras y cifrado de última generación."
+    },
+    "redact-pdf": {
+      "title": "Censurar PDF - Oculta datos y texto confidencial | BoardPDF",
+      "description": "Tacha y elimina permanentemente información sensible y datos personales de tus documentos PDF."
+    },
+    "compare-pdf": {
+      "title": "Comparar PDF - Resalta diferencias entre dos archivos | BoardPDF",
+      "description": "Compara dos archivos PDF visualmente lado a lado y detecta cambios y diferencias al instante."
+    },
+    "summarize-pdf": {
+      "title": "Resumir PDF - Extrae resúmenes inteligentes | BoardPDF",
+      "description": "Resume documentos extensos y reportes en segundos con inteligencia artificial avanzada."
+    },
+    "translate-pdf": {
+      "title": "Traducir PDF - Traduce documentos completos | BoardPDF",
+      "description": "Traduce documentos PDF a más de 30 idiomas conservando el diseño y formato original."
+    },
+    "pdf-to-markdown": {
+      "title": "PDF a Markdown - Extrae texto limpio con formato | BoardPDF",
+      "description": "Convierte archivos PDF complejos a formato Markdown limpio listo para Obsidian, Notion y blogs."
+    },
+    "help-faq": {
+      "title": "Preguntas Frecuentes (FAQ) | BoardPDF",
+      "description": "Encuentra respuestas a preguntas frecuentes sobre herramientas PDF, seguridad, privacidad, planes y retención en BoardPDF."
+    },
+    "help-security": {
+      "title": "Política de Seguridad | BoardPDF",
+      "description": "Conoce cómo protege BoardPDF tus documentos con cifrado TLS 1.3, AES-GCM-256, arquitectura de cero conocimiento y borrado efímero automático."
+    },
+    "help-privacy": {
+      "title": "Política de Privacidad | BoardPDF",
+      "description": "Política de Privacidad de BoardPDF. Procesamiento 100% efímero, borrado en < 1 hora, cero entrenamiento de IA y cumplimiento GDPR y CCPA/CPRA."
+    },
+    "help-terms": {
+      "title": "Términos y Condiciones | BoardPDF",
+      "description": "Términos y condiciones de uso de BoardPDF. Lineamientos transparentes, reglas de servicio, arbitraje individual vinculante y renuncia a demandas colectivas."
+    },
+    "help-cookies": {
+      "title": "Política de Cookies | BoardPDF",
+      "description": "Política de Cookies de BoardPDF. Desglose técnico de cookies utilizadas, guías de configuración en navegadores y control de privacidad."
+    }
+  }
+}

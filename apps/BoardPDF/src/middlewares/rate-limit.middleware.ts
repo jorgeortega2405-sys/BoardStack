@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
 
-export interface RateLimiterOptions {
+interface RateLimiterOptions {
   keyGenerator?: (req: Request) => string;
   max: number;
   message?: string;
@@ -76,7 +76,7 @@ else
 end
 `;
 
-export function getClientIp(req: Request): string {
+function getClientIp(req: Request): string {
   const rawRemote = req.socket?.remoteAddress || '';
   const isLoopbackOrPrivate = rawRemote === '127.0.0.1' || rawRemote === '::1' || rawRemote.startsWith('::ffff:127.0.0.1') || rawRemote.startsWith('10.') || rawRemote.startsWith('172.') || rawRemote.startsWith('192.168.');
 
@@ -99,12 +99,12 @@ export function getClientIp(req: Request): string {
   return ip;
 }
 
-export function getUserOrIpKey(req: Request): string {
+function getUserOrIpKey(req: Request): string {
   const user = (req as any).user;
   return user?.id ? `user:${user.id}` : getClientIp(req);
 }
 
-export function createRateLimiter(options: RateLimiterOptions) {
+function createRateLimiter(options: RateLimiterOptions) {
   const {
     keyGenerator = getClientIp,
     max,
@@ -189,49 +189,49 @@ export function createRateLimiter(options: RateLimiterOptions) {
   };
 }
 
-export const forgotPasswordLimiter = createRateLimiter({
+const forgotPasswordLimiter = createRateLimiter({
   max: 3,
   message: 'Demasiadas solicitudes de recuperación de contraseña. Por favor espera 15 minutos antes de intentar de nuevo.',
   prefix: 'forgot_pwd',
   windowMs: 15 * 60 * 1000,
 });
 
-export const resetPasswordLimiter = createRateLimiter({
+const resetPasswordLimiter = createRateLimiter({
   max: 5,
   message: 'Demasiados intentos para restablecer contraseña. Por favor espera 15 minutos.',
   prefix: 'reset_pwd',
   windowMs: 15 * 60 * 1000,
 });
 
-export const loginLimiter = createRateLimiter({
+const loginLimiter = createRateLimiter({
   max: 5,
   message: 'Demasiados intentos de inicio de sesión. Por favor espera 5 minutos antes de volver a intentarlo.',
   prefix: 'login',
   windowMs: 5 * 60 * 1000,
 });
 
-export const registerLimiter = createRateLimiter({
+const registerLimiter = createRateLimiter({
   max: 5,
   message: 'Has intentado registrar demasiadas cuentas recientemente. Por favor espera 15 minutos.',
   prefix: 'register_stage1',
   windowMs: 15 * 60 * 1000,
 });
 
-export const sendCodeLimiter = createRateLimiter({
+const sendCodeLimiter = createRateLimiter({
   max: 3,
   message: 'Demasiados códigos solicitados. Por favor espera 5 minutos para solicitar uno nuevo.',
   prefix: 'send_code',
   windowMs: 5 * 60 * 1000,
 });
 
-export const verifyCodeLimiter = createRateLimiter({
+const verifyCodeLimiter = createRateLimiter({
   max: 5,
   message: 'Demasiados intentos de verificación. Por favor espera 10 minutos.',
   prefix: 'verify_code',
   windowMs: 10 * 60 * 1000,
 });
 
-export const emailCodeLimiter = createRateLimiter({
+const emailCodeLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 10,
   message: 'Demasiadas solicitudes de código de cambio de correo. Por favor espera 5 minutos.',
@@ -239,7 +239,7 @@ export const emailCodeLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const verifyEmailCodeLimiter = createRateLimiter({
+const verifyEmailCodeLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 10,
   message: 'Demasiados intentos de verificación de código de correo. Por favor espera 10 minutos.',
@@ -247,7 +247,7 @@ export const verifyEmailCodeLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
 });
 
-export const avatarLimiter = createRateLimiter({
+const avatarLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 5,
   message: 'Has alcanzado el límite de cambios de foto de perfil. Por favor espera antes de intentar nuevamente.',
@@ -255,7 +255,7 @@ export const avatarLimiter = createRateLimiter({
   windowMs: 12 * 60 * 60 * 1000,
 });
 
-export const preferencesLimiter = createRateLimiter({
+const preferencesLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiados cambios de preferencias en poco tiempo. Por favor espera un momento.',
@@ -263,7 +263,7 @@ export const preferencesLimiter = createRateLimiter({
   windowMs: 60 * 1000,
 });
 
-export const updateUsernameLimiter = createRateLimiter({
+const updateUsernameLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 5,
   message: 'Has intentado cambiar tu nombre de usuario demasiadas veces. Por favor espera 15 minutos.',
@@ -271,7 +271,7 @@ export const updateUsernameLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
 });
 
-export const verifyPasswordLimiter = createRateLimiter({
+const verifyPasswordLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 5,
   message: 'Demasiados intentos de verificación de contraseña. Por favor espera 10 minutos.',
@@ -279,7 +279,7 @@ export const verifyPasswordLimiter = createRateLimiter({
   windowMs: 10 * 60 * 1000,
 });
 
-export const twoFactorGenerateLimiter = createRateLimiter({
+const twoFactorGenerateLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 5,
   message: 'Demasiadas solicitudes de configuración de 2FA. Por favor espera 15 minutos.',
@@ -287,7 +287,7 @@ export const twoFactorGenerateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
 });
 
-export const twoFactorVerifyLimiter = createRateLimiter({
+const twoFactorVerifyLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 10,
   message: 'Demasiados intentos de verificación de 2FA. Por favor espera 15 minutos.',
@@ -295,7 +295,7 @@ export const twoFactorVerifyLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
 });
 
-export const updatePasswordLimiter = createRateLimiter({
+const updatePasswordLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 5,
   message: 'Has intentado cambiar tu contraseña demasiadas veces. Por favor espera 15 minutos.',
@@ -306,7 +306,7 @@ export const updatePasswordLimiter = createRateLimiter({
 
 
 
-export const pdfMergeLimiter = createRateLimiter({
+const pdfMergeLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes de unión de PDF. Por favor espera unos minutos.',
@@ -314,7 +314,7 @@ export const pdfMergeLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfSplitLimiter = createRateLimiter({
+const pdfSplitLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes de división de PDF. Por favor espera unos minutos.',
@@ -322,7 +322,7 @@ export const pdfSplitLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfRemovePagesLimiter = createRateLimiter({
+const pdfRemovePagesLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes para eliminar páginas de PDF. Por favor espera unos minutos.',
@@ -330,7 +330,7 @@ export const pdfRemovePagesLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfOrganizeLimiter = createRateLimiter({
+const pdfOrganizeLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes para ordenar PDF. Por favor espera unos minutos.',
@@ -338,7 +338,7 @@ export const pdfOrganizeLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfCompressLimiter = createRateLimiter({
+const pdfCompressLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes para comprimir PDF. Por favor espera unos minutos.',
@@ -346,7 +346,7 @@ export const pdfCompressLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfRepairLimiter = createRateLimiter({
+const pdfRepairLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 30,
   message: 'Has realizado demasiadas solicitudes para reparar PDF. Por favor espera unos minutos.',
@@ -354,7 +354,7 @@ export const pdfRepairLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfOcrLimiter = createRateLimiter({
+const pdfOcrLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 20,
   message: 'Has realizado demasiadas solicitudes para procesar OCR en PDF. Por favor espera unos minutos.',
@@ -362,7 +362,7 @@ export const pdfOcrLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const comparePdfLimiter = createRateLimiter({
+const comparePdfLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 25,
   message: 'Has realizado demasiadas solicitudes para comparar documentos PDF. Por favor espera unos minutos.',
@@ -370,7 +370,7 @@ export const comparePdfLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const redactPdfLimiter = createRateLimiter({
+const redactPdfLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 25,
   message: 'Has realizado demasiadas solicitudes para censurar documentos PDF. Por favor espera unos minutos.',
@@ -378,7 +378,7 @@ export const redactPdfLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const removeBackgroundLimiter = createRateLimiter({
+const removeBackgroundLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 25,
   message: 'Has realizado demasiadas solicitudes para eliminar fondos de imagen. Por favor espera unos minutos.',
@@ -386,7 +386,7 @@ export const removeBackgroundLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const pdfToMarkdownLimiter = createRateLimiter({
+const pdfToMarkdownLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 20,
   message: 'Has realizado demasiadas solicitudes para convertir documentos PDF a Markdown. Por favor espera unos minutos.',
@@ -394,7 +394,7 @@ export const pdfToMarkdownLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const summarizePdfLimiter = createRateLimiter({
+const summarizePdfLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 20,
   message: 'Has realizado demasiadas solicitudes para resumir documentos PDF. Por favor espera unos minutos.',
@@ -402,7 +402,7 @@ export const summarizePdfLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const translatePdfLimiter = createRateLimiter({
+const translatePdfLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 15,
   message: 'Has realizado demasiadas solicitudes para traducir documentos PDF. Por favor espera unos minutos.',
@@ -410,7 +410,7 @@ export const translatePdfLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const paymentLimiter = createRateLimiter({
+const paymentLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   max: 12,
   message: 'Has realizado demasiados intentos de compra o pago. Por favor espera unos minutos antes de intentar de nuevo.',
@@ -418,7 +418,7 @@ export const paymentLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
 });
 
-export const contactLimiter = createRateLimiter({
+const contactLimiter = createRateLimiter({
   keyGenerator: getClientIp,
   max: 6,
   message: 'Has enviado demasiados mensajes de contacto. Por favor espera unos minutos antes de intentar de nuevo.',
@@ -426,4 +426,5 @@ export const contactLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
 });
 
-
+export { avatarLimiter, comparePdfLimiter, contactLimiter, createRateLimiter, emailCodeLimiter, forgotPasswordLimiter, getClientIp, getUserOrIpKey, loginLimiter, paymentLimiter, pdfCompressLimiter, pdfMergeLimiter, pdfOcrLimiter, pdfOrganizeLimiter, pdfRemovePagesLimiter, pdfRepairLimiter, pdfSplitLimiter, pdfToMarkdownLimiter, preferencesLimiter, redactPdfLimiter, registerLimiter, removeBackgroundLimiter, resetPasswordLimiter, sendCodeLimiter, summarizePdfLimiter, translatePdfLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyCodeLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter };
+export type { RateLimiterOptions };

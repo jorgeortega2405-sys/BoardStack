@@ -45,7 +45,7 @@ function applyCropToPage(page: PDFPage, box: CropBoxPercent): void {
   }
 }
 
-export async function cropPdf(
+async function cropPdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: CropPdfOptions
@@ -106,3 +106,5 @@ export async function cropPdf(
     totalPages,
   };
 }
+
+export { cropPdf };

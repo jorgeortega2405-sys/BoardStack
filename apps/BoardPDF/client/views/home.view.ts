@@ -14,7 +14,7 @@ import { showToast } from '../services/toast.service.js';
 import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows } from '../services/workflow-storage.service.js';
 import { UserWorkflow } from '../types/workflow.types.js';
 
-export class HomeController {
+class HomeController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentCategory = 'all';
@@ -86,7 +86,7 @@ export class HomeController {
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow" data-category="workflows">
         <div class="tool-card__content" data-ref="create-workflow-content">
           <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crea un flujo de trabajo')}</h3>
-          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Crea flujos de trabajo personalizados con tus herramientas favoritas y automatiza tareas para reutilizarlas en cualquier momento.')}</p>
+          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', t('ui.crea_flujos_de_trabajo_personalizados_co'))}</p>
         </div>
         <div class="tool-card__action-link" data-ref="link-create-workflow">
           <span data-ref="txt-action-create-workflow" data-i18n="workflows.create_action">${t('workflows.create_action', 'Crear un flujo de trabajo')}</span>
@@ -265,7 +265,7 @@ export class HomeController {
       description: `¿Estás seguro de que deseas eliminar permanentemente el flujo de trabajo "${wf.name}"? Esta acción no se puede deshacer.`,
       onConfirm: async () => {
         deleteWorkflow(id);
-        showToast('Flujo de trabajo eliminado exitosamente', 'info');
+        showToast(t('toasts.flujo_de_trabajo_eliminado_exitosamente'), 'info');
         this.loadWorkflows();
         this.renderTools();
         return true;
@@ -284,10 +284,12 @@ export class HomeController {
   }
 }
 
-export async function createHomeView(): Promise<HTMLElement> {
+async function createHomeView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/home.html');
   const controller = new HomeController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { HomeController, createHomeView };

@@ -4,20 +4,20 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
 
-export const COOKIE_NAME = 'boardpdf_session';
-export const MAX_CONCURRENT_ACCOUNTS = 3;
-export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const COOKIE_NAME = 'boardpdf_session';
+const MAX_CONCURRENT_ACCOUNTS = 3;
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
 
-export function createMultiAccountToken(session: MultiAccountSessionPayload): string {
+function createMultiAccountToken(session: MultiAccountSessionPayload): string {
   const now = Date.now();
   const sessionWithMeta: MultiAccountSessionPayload = {
     ...session,
@@ -30,7 +30,7 @@ export function createMultiAccountToken(session: MultiAccountSessionPayload): st
   return `${payloadBase64}.${signature}`;
 }
 
-export function verifyMultiAccountToken(token: string): MultiAccountSessionPayload | null {
+function verifyMultiAccountToken(token: string): MultiAccountSessionPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 2) return null;
@@ -63,7 +63,7 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
   }
 }
 
-export function getMultiAccountSession(req: Request): MultiAccountSessionPayload | null {
+function getMultiAccountSession(req: Request): MultiAccountSessionPayload | null {
   if ((req as any)._cachedMultiAccountSession) {
     return (req as any)._cachedMultiAccountSession;
   }
@@ -78,7 +78,7 @@ export function getMultiAccountSession(req: Request): MultiAccountSessionPayload
   return session;
 }
 
-export function setMultiAccountCookie(res: Response, session: MultiAccountSessionPayload): void {
+function setMultiAccountCookie(res: Response, session: MultiAccountSessionPayload): void {
   if (res.headersSent) return;
   const token = createMultiAccountToken(session);
   res.cookie(COOKIE_NAME, token, {
@@ -90,7 +90,7 @@ export function setMultiAccountCookie(res: Response, session: MultiAccountSessio
   });
 }
 
-export function clearSessionCookie(res: Response): void {
+function clearSessionCookie(res: Response): void {
   if (res.headersSent) return;
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
@@ -100,7 +100,7 @@ export function clearSessionCookie(res: Response): void {
   });
 }
 
-export async function addAccountToSession(
+async function addAccountToSession(
   res: Response,
   req: Request,
   user: UserPayload
@@ -164,7 +164,7 @@ export async function addAccountToSession(
   return updatedSession;
 }
 
-export async function switchAccountInSession(
+async function switchAccountInSession(
   res: Response,
   req: Request,
   targetUserId: number
@@ -187,7 +187,7 @@ export async function switchAccountInSession(
   return { accounts: session.accounts, activeUser: target, success: true };
 }
 
-export function updateActiveAccountInSession(
+function updateActiveAccountInSession(
   res: Response,
   req: Request,
   updatedData: Partial<UserPayload>
@@ -207,14 +207,14 @@ export function updateActiveAccountInSession(
   }
 }
 
-export async function revokeAllUserSessions(
+async function revokeAllUserSessions(
   _userId: number,
   _ip?: string,
   _ua?: string
 ): Promise<void> {
 }
 
-export async function removeAccountFromSession(
+async function removeAccountFromSession(
   res: Response,
   req: Request,
   userId?: number
@@ -244,3 +244,5 @@ export async function removeAccountFromSession(
   const activeUser = session.accounts.find((a) => a.id === session.activeId) || session.accounts[0];
   return { accounts: session.accounts, activeUser, remainingCount: session.accounts.length };
 }
+
+export { COOKIE_NAME, MAX_CONCURRENT_ACCOUNTS, SESSION_TTL_MS, addAccountToSession, clearSessionCookie, createMultiAccountToken, getMultiAccountSession, hashPassword, removeAccountFromSession, revokeAllUserSessions, setMultiAccountCookie, switchAccountInSession, updateActiveAccountInSession, verifyMultiAccountToken, verifyPassword };

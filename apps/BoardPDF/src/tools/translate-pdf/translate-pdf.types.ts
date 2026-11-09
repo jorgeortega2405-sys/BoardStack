@@ -1,4 +1,4 @@
-export interface TranslatePdfParams {
+interface TranslatePdfParams {
   buffer: Buffer;
   filename: string;
   layoutMode?: 'preserve' | 'text_only';
@@ -7,7 +7,7 @@ export interface TranslatePdfParams {
   targetLang: string;
 }
 
-export interface TranslatePdfResponse {
+interface TranslatePdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -18,7 +18,7 @@ export interface TranslatePdfResponse {
   targetLang: string;
 }
 
-export interface StoredTranslatedPdf {
+interface StoredTranslatedPdf {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -29,3 +29,5 @@ export interface StoredTranslatedPdf {
   sourceLang?: string;
   targetLang: string;
 }
+
+export type { StoredTranslatedPdf, TranslatePdfParams, TranslatePdfResponse };

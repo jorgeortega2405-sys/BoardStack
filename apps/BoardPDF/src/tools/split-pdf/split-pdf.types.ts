@@ -1,11 +1,11 @@
-export type SplitMode = 'range' | 'pages' | 'size';
+type SplitMode = 'range' | 'pages' | 'size';
 
-export interface SplitRangeItem {
+interface SplitRangeItem {
   from: number;
   to: number;
 }
 
-export interface SplitPdfOptions {
+interface SplitPdfOptions {
   filename?: string;
   fixedPageCount?: number;
   maxSizeBytes?: number;
@@ -16,7 +16,7 @@ export interface SplitPdfOptions {
   submode?: 'all' | 'custom' | 'fixed';
 }
 
-export interface StoredSplitResult {
+interface StoredSplitResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -28,7 +28,7 @@ export interface StoredSplitResult {
   totalPages: number;
 }
 
-export interface SplitPdfResponse {
+interface SplitPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -37,3 +37,5 @@ export interface SplitPdfResponse {
   partsCount: number;
   totalPages: number;
 }
+
+export type { SplitMode, SplitPdfOptions, SplitPdfResponse, SplitRangeItem, StoredSplitResult };

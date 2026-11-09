@@ -1,12 +1,12 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
-import { getPdfPageCount, isPdfBuffer } from '../../utils/pdf.util.js';
+import { getPdfPageCount } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { summarizePdf } from './summarize-pdf.service.js';
 import { SummaryMode } from './summarize-pdf.types.js';
 import { Request, Response } from 'express';
 
-export async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
+async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
   const user = (req as any).user;
   if (!user) {
     res.status(401).json({
@@ -16,36 +16,10 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     return;
   }
 
-  const file = req.file;
-
-  if (!file) {
-    res.status(400).json({
-      error: 'Debes seleccionar un archivo PDF para generar el resumen.',
-      success: false,
-    });
-    return;
-  }
-
-  if (!isPdfBuffer(file.buffer)) {
-    res.status(400).json({
-      error: 'El archivo seleccionado no es un PDF válido.',
-      success: false,
-    });
-    return;
-  }
+  const file = validatePdfUpload(req, res, 'summarize-pdf');
+  if (!file) return;
 
   const userPerms = (user.permissions as string[]) || [];
-  const limits = getToolLimits('summarize-pdf', userPerms);
-  const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
-
-  if (file.buffer.length > maxBytes) {
-    res.status(400).json({
-      error: `El archivo PDF seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`,
-      success: false,
-    });
-    return;
-  }
-
   const pageCount = await getPdfPageCount(file.buffer);
   const requiredTokens = calculatePdfCost('summarize-pdf', pageCount, file.buffer.length);
   const tokenInfo = await getUserTokenBalance(user.id, userPerms);
@@ -112,3 +86,5 @@ export async function handleSummarizePdf(req: Request, res: Response): Promise<v
     });
   }
 }
+
+export { handleSummarizePdf };

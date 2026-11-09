@@ -1,6 +1,6 @@
 import { EditorElement } from './collaborative-pdf.types.js';
 
-export function moveElementLayer(
+function moveElementLayer(
   elements: EditorElement[],
   elementId: string,
   direction: 'back' | 'backward' | 'forward' | 'front'
@@ -54,7 +54,7 @@ export function moveElementLayer(
   return true;
 }
 
-export function reorderElementLayer(
+function reorderElementLayer(
   elements: EditorElement[],
   draggedId: string,
   targetId: string
@@ -70,7 +70,7 @@ export function reorderElementLayer(
   return true;
 }
 
-export function alignElementToPage(
+function alignElementToPage(
   elem: EditorElement,
   alignment: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top',
   dim: { height: number; width: number }
@@ -101,3 +101,5 @@ export function alignElementToPage(
   }
   return true;
 }
+
+export { alignElementToPage, moveElementLayer, reorderElementLayer };

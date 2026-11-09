@@ -11,6 +11,7 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { CONVERSION_CONFIGS, ConversionRouteConfig, ExcelSheetsOption, JpgConversionMode, JpgQuality, OcrOption, PdfALevel } from './pdf-converter.types.js';
+import { t } from '../../../services/i18n.service.js';
 
 const PDFA_LEGENDS: Record<PdfALevel, string> = {
   '1a': '<p>Basado en un PDF 1.4. Nivel A (accesible) conforme con requisitos estándar adicionales:</p><ul><li>Especificación de idioma</li><li>Estructura jerárquica del documento</li><li>Separaciones de texto etiquetado y texto descriptivo para imágenes y símbolos</li><li>Mapeado de caracteres a Unicode</li></ul><p>También lista de <a class="link" href="https://en.wikipedia.org/wiki/PDF/A#Description" target="_blank" rel="noopener">elementos prohibidos</a>.</p>',
@@ -23,7 +24,7 @@ const PDFA_LEGENDS: Record<PdfALevel, string> = {
   '3u': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel U (Unicode):</p><ul><li>Todos los requisitos de PDF/A-3b</li><li>Mapeado garantizado de texto a Unicode</li><li>Soporte para adjuntos de cualquier formato con búsqueda de texto</li></ul>',
 };
 
-export class PdfConverterController implements ViewController {
+class PdfConverterController implements ViewController {
   private abortController: AbortController | null = null;
   private allowDowngrade = true;
   private config: ConversionRouteConfig;
@@ -149,7 +150,7 @@ export class PdfConverterController implements ViewController {
       });
       if (jpgModeDesc) {
         jpgModeDesc.textContent = val === 'pages'
-          ? 'Cada página del PDF se convertirá en una imagen JPG.'
+          ? t('ui.cada_pagina_del_pdf_se_convertira_en_una')
           : 'Todas las imágenes dentro del archivo PDF se extraerán y se convertirán a JPG.';
       }
     }, { signal });
@@ -379,14 +380,14 @@ export class PdfConverterController implements ViewController {
         );
         const result = (await response.json()) as { data?: { downloadToken: string }; error?: string; success: boolean };
 
-        this.phaseManager?.showProcessing('Convirtiendo documento...', 'Por favor espera mientras finaliza la conversión');
+        this.phaseManager?.showProcessing('Convirtiendo documento...', t('ui.por_favor_espera_mientras_finaliza_la_co'));
 
         if (!response.ok || !result.success || !result.data?.downloadToken) {
-          throw new Error(result.error || 'Error procesando la conversión.');
+          throw new Error(result.error || t('ui.error_procesando_la_conversion'));
         }
 
         const token = result.data.downloadToken;
-        showToast('Documento convertido exitosamente', 'success');
+        showToast(t('toasts.documento_convertido_exitosamente'), 'success');
         const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
         const customTitle = docTitleInput?.value.trim();
         const baseName = customTitle || (this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '');
@@ -398,12 +399,12 @@ export class PdfConverterController implements ViewController {
           filename: finalFilename,
           returnText: this.config.title,
           returnUrl: window.location.pathname,
-          subtitle: `Tu documento PDF ha sido convertido a formato ${this.config.targetBadge} con total precisión.`,
+          subtitle: t('ui.tu_documento_pdf_ha_sido_convertido_a_fo'),
           title: `¡${this.config.title} completada con éxito!`,
           token,
         });
       } catch {
-        this.phaseManager?.showError('Ha ocurrido un error al convertir el documento. Por favor intenta más tarde.', () => {
+        this.phaseManager?.showError(t('ui.ha_ocurrido_un_error_al_convertir_el_doc'), () => {
           this.phaseManager?.setPhase('workspace');
         });
       } finally {
@@ -413,10 +414,12 @@ export class PdfConverterController implements ViewController {
   }
 }
 
-export async function createPdfConverterView(targetType?: string): Promise<HTMLElement> {
+async function createPdfConverterView(targetType?: string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/pdf-converter/pdf-converter.html');
   const controller = new PdfConverterController(container, targetType);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { PdfConverterController, createPdfConverterView };

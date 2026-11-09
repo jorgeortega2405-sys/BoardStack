@@ -7,7 +7,7 @@ import { logger } from './logger.service.js';
 import { permissionService } from './permission.service.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
-export class PurchaseService {
+class PurchaseService {
   private static instance: PurchaseService;
 
   private constructor() {}
@@ -346,4 +346,6 @@ export class PurchaseService {
   }
 }
 
-export const purchaseService = PurchaseService.getInstance();
+const purchaseService = PurchaseService.getInstance();
+
+export { PurchaseService, purchaseService };

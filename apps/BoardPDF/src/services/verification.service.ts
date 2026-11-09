@@ -1,7 +1,7 @@
 import { redis } from '../config/redis.config.js';
 import crypto from 'crypto';
 
-export interface PendingRegistration {
+interface PendingRegistration {
   attempts: number;
   code: string;
   createdAt: number;
@@ -13,11 +13,11 @@ export interface PendingRegistration {
 const REDIS_REG_PREFIX = 'reg_pending:';
 const DEFAULT_TTL_SECONDS = 900;
 
-export function generateSixDigitCode(): string {
+function generateSixDigitCode(): string {
   return String(crypto.randomInt(100000, 1000000));
 }
 
-export async function savePendingRegistration(
+async function savePendingRegistration(
   email: string,
   data: { code: string; passwordHash: string; username: string },
   ttlSeconds = DEFAULT_TTL_SECONDS
@@ -35,7 +35,7 @@ export async function savePendingRegistration(
   await redis.setex(key, ttlSeconds, JSON.stringify(payload));
 }
 
-export async function getPendingRegistration(email: string): Promise<PendingRegistration | null> {
+async function getPendingRegistration(email: string): Promise<PendingRegistration | null> {
   const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
   const raw = await redis.get(key);
   if (!raw) return null;
@@ -76,7 +76,7 @@ redis.call('DEL', key)
 return {1, raw}
 `;
 
-export async function verifyAndConsumeCode(
+async function verifyAndConsumeCode(
   email: string,
   inputCode: string
 ): Promise<{ data?: PendingRegistration; error?: string; success: boolean }> {
@@ -126,7 +126,7 @@ export async function verifyAndConsumeCode(
   return { error: 'No se pudo verificar el código.', success: false };
 }
 
-export async function deletePendingRegistration(email: string): Promise<void> {
+async function deletePendingRegistration(email: string): Promise<void> {
   const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
   await redis.del(key);
 }
@@ -134,7 +134,7 @@ export async function deletePendingRegistration(email: string): Promise<void> {
 const REDIS_EMAIL_CHANGE_PREFIX = 'email_change_code:';
 const REDIS_EMAIL_CHANGE_AUTH_PREFIX = 'email_change_auth:';
 
-export interface EmailChangeCodePayload {
+interface EmailChangeCodePayload {
   attempts: number;
   code: string;
   createdAt: number;
@@ -142,7 +142,7 @@ export interface EmailChangeCodePayload {
   userId: number;
 }
 
-export async function saveEmailChangeCode(
+async function saveEmailChangeCode(
   userId: number,
   currentEmail: string,
   code: string,
@@ -193,7 +193,7 @@ redis.call('SETEX', authKey, authTtl, '1')
 return {1, 'authorized'}
 `;
 
-export async function verifyEmailChangeCode(
+async function verifyEmailChangeCode(
   userId: number,
   inputCode: string
 ): Promise<{ error?: string; success: boolean; token?: string }> {
@@ -241,7 +241,7 @@ export async function verifyEmailChangeCode(
   return { error: 'Error al verificar el código.', success: false };
 }
 
-export async function isEmailChangeAuthorized(userId: number): Promise<boolean> {
+async function isEmailChangeAuthorized(userId: number): Promise<boolean> {
   const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
   const val = await redis.get(authKey);
   return Boolean(val);
@@ -258,7 +258,7 @@ else
 end
 `;
 
-export async function consumeEmailChangeAuthorization(
+async function consumeEmailChangeAuthorization(
   userId: number
 ): Promise<{ error?: string; valid: boolean }> {
   const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
@@ -276,12 +276,12 @@ export async function consumeEmailChangeAuthorization(
 
 const REDIS_PASSWORD_CHANGE_AUTH_PREFIX = 'pwd_change_auth:';
 
-export async function savePasswordChangeAuth(userId: number, ttlSeconds = 300): Promise<void> {
+async function savePasswordChangeAuth(userId: number, ttlSeconds = 300): Promise<void> {
   const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
   await redis.setex(key, ttlSeconds, 'authorized');
 }
 
-export async function isPasswordChangeAuthorized(userId: number): Promise<boolean> {
+async function isPasswordChangeAuthorized(userId: number): Promise<boolean> {
   const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
   const val = await redis.get(key);
   return Boolean(val);
@@ -298,7 +298,7 @@ else
 end
 `;
 
-export async function consumePasswordChangeAuth(
+async function consumePasswordChangeAuth(
   userId: number
 ): Promise<{ error?: string; valid: boolean }> {
   const authKey = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
@@ -313,3 +313,6 @@ export async function consumePasswordChangeAuth(
 
   return { valid: true };
 }
+
+export { consumeEmailChangeAuthorization, consumePasswordChangeAuth, deletePendingRegistration, generateSixDigitCode, getPendingRegistration, isEmailChangeAuthorized, isPasswordChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, savePendingRegistration, verifyAndConsumeCode, verifyEmailChangeCode };
+export type { EmailChangeCodePayload, PendingRegistration };

@@ -1,87 +1,78 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="protect-pdf-wrapper">
-  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-
-    <div class="tool-top-bar__right" data-ref="tool-top-right">
-      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-        <span class="component-button__text">Opciones</span>
-      </button>
-
-      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-protect" disabled>
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-        <span class="component-button__text">Proteger PDF</span>
-      </button>
-    </div>
-  </header>
-
-  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="protect-pdf-layout">
-    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="protect-pdf-workspace">
-      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="protect-workspace-card">
-
-        <div class="pdf-reorder-hint">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-          <span>Configura una contraseña segura en el panel de opciones para cifrar tu documento con AES-256.</span>
-        </div>
-
-        <div class="pdf-items-grid" data-ref="pdf-items-grid">
-          <div class="pdf-card">
-            <div class="pdf-card__actions">
-              <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" aria-label="Eliminar archivo">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-              </button>
-            </div>
-            <div class="pdf-card__sheet-wrapper">
-              <div class="pdf-card__sheet">
-                <canvas class="pdf-card__canvas" data-ref="protect-doc-canvas"></canvas>
-              </div>
-            </div>
-            <span class="pdf-card__filename" data-ref="txt-file-name">documento.pdf</span>
-            <span class="pdf-card__meta" data-ref="txt-file-size">0 KB</span>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-
-    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="protect-pdf-sidebar">
-      <div class="tool-sidebar__header">
-        <div class="tool-sidebar__header-left">
-          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-          <h2 class="tool-sidebar__title">Opciones de protección</h2>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Contraseña</span>
-          <label class="field">
-            <input class="field__input field__input--has-action" data-ref="input-password" type="password" placeholder=" " autocomplete="new-password" />
-            <span class="field__label">Introduce una contraseña</span>
-            <button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            </button>
-          </label>
-        </div>
-
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Confirmar contraseña</span>
-          <label class="field">
-            <input class="field__input field__input--has-action" data-ref="input-confirm-password" type="password" placeholder=" " autocomplete="new-password" />
-            <span class="field__label">Repetir contraseña</span>
-            <button type="button" class="field__action" data-ref="btn-toggle-confirm-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            </button>
-          </label>
-        </div>
-      </div>
-    </aside>
-  </div>
-  </div>
+<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+<div class="tool-top-bar__right" data-ref="tool-top-right">
+<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
+<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+<span class="component-button__text" >Opciones</span>
+</button>
+<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-protect" disabled>
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+<span class="component-button__text" >Proteger PDF</span>
+</button>
 </div>
+</header>
+<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="protect-pdf-layout">
+<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="protect-pdf-workspace">
+<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="protect-workspace-card">
+<div class="pdf-reorder-hint" >
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+<span>Configura una contraseña segura en el panel de opciones para cifrar tu documento con AES-256.</span>
+</div>
+<div class="pdf-items-grid" data-ref="pdf-items-grid">
+<div class="pdf-card" >
+<div class="pdf-card__actions" >
+<button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" data-i18n-aria="common.delete_file" aria-label="Eliminar archivo">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
+<div class="pdf-card__sheet-wrapper" >
+<div class="pdf-card__sheet" >
+<canvas class="pdf-card__canvas" data-ref="protect-doc-canvas"></canvas>
+</div>
+</div>
+<span class="pdf-card__filename" data-ref="txt-file-name">documento.pdf</span>
+<span class="pdf-card__meta" data-ref="txt-file-size">0 KB</span>
+</div>
+</div>
+</div>
+</main>
+<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="protect-pdf-sidebar">
+<div class="tool-sidebar__header" >
+<div class="tool-sidebar__header-left" >
+<svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+<h2 class="tool-sidebar__title" >Opciones de protección</h2>
+</div>
+<button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
+<div class="tool-sidebar__body" >
+<div class="tool-sidebar__section" >
+<span class="tool-sidebar__section-title" >Contraseña</span>
+<label class="field" >
+<input class="field__input field__input--has-action" data-ref="input-password" type="password" placeholder=" " autocomplete="new-password" />
+<span class="field__label" >Introduce una contraseña</span>
+<button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" data-i18n-aria="common.show_password" aria-label="Mostrar contraseña">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+</button>
+</label>
+</div>
+<div class="tool-sidebar__section" >
+<span class="tool-sidebar__section-title" >Confirmar contraseña</span>
+<label class="field" >
+<input class="field__input field__input--has-action" data-ref="input-confirm-password" type="password" placeholder=" " autocomplete="new-password" />
+<span class="field__label" >Repetir contraseña</span>
+<button type="button" class="field__action" data-ref="btn-toggle-confirm-password" data-tooltip="Mostrar contraseña" data-i18n-aria="common.show_password" aria-label="Mostrar contraseña">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+</button>
+</label>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</div> 

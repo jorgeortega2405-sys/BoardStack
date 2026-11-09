@@ -14,7 +14,7 @@ function sanitizeBaseFilename(rawName?: string, defaultName = 'documento_dividid
   return clean || defaultName;
 }
 
-export async function splitPdfFile(
+async function splitPdfFile(
   fileBuffer: Buffer,
   originalFilename: string,
   options: SplitPdfOptions
@@ -248,3 +248,5 @@ export async function splitPdfFile(
     totalPages,
   };
 }
+
+export { splitPdfFile };

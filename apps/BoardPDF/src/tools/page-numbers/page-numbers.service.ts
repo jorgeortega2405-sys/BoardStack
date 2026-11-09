@@ -35,7 +35,7 @@ function resolvePositionForPage(
   }
 }
 
-export async function addPageNumbers(
+async function addPageNumbers(
   fileBuffer: Buffer,
   originalFilename: string,
   options: PageNumberOptions
@@ -174,3 +174,5 @@ export async function addPageNumbers(
     totalPages,
   };
 }
+
+export { addPageNumbers };

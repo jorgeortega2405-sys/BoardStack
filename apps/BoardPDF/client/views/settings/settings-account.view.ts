@@ -12,7 +12,7 @@ import { AVAILABLE_LANGUAGES } from '../../utils/languages.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { validateAndSanitizeFile, validateEmail, validateUsername } from '../../utils/validators.util.js';
 
-export class SettingsAccountController implements ViewController {
+class SettingsAccountController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private dropdownController: { close: () => void; destroy: () => void; update: () => void } | null = null;
@@ -66,23 +66,23 @@ export class SettingsAccountController implements ViewController {
     const btnSave = this.container.querySelector<HTMLElement>('[data-ref="btn-save-avatar"]');
 
     if (state === 'preview') {
-      if (btnUpload) btnUpload.style.display = 'none';
-      if (btnChange) btnChange.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-flex';
-      if (btnSave) btnSave.style.display = 'inline-flex';
+      if (btnUpload) btnUpload.classList.add('is-hidden');
+      if (btnChange) btnChange.classList.add('is-hidden');
+      if (btnDelete) btnDelete.classList.add('is-hidden');
+      if (btnCancel) btnCancel.classList.remove('is-hidden');
+      if (btnSave) btnSave.classList.remove('is-hidden');
     } else if (state === 'custom') {
-      if (btnUpload) btnUpload.style.display = 'none';
-      if (btnChange) btnChange.style.display = 'inline-flex';
-      if (btnDelete) btnDelete.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnSave) btnSave.style.display = 'none';
+      if (btnUpload) btnUpload.classList.add('is-hidden');
+      if (btnChange) btnChange.classList.remove('is-hidden');
+      if (btnDelete) btnDelete.classList.remove('is-hidden');
+      if (btnCancel) btnCancel.classList.add('is-hidden');
+      if (btnSave) btnSave.classList.add('is-hidden');
     } else {
-      if (btnUpload) btnUpload.style.display = 'inline-flex';
-      if (btnChange) btnChange.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnSave) btnSave.style.display = 'none';
+      if (btnUpload) btnUpload.classList.remove('is-hidden');
+      if (btnChange) btnChange.classList.add('is-hidden');
+      if (btnDelete) btnDelete.classList.add('is-hidden');
+      if (btnCancel) btnCancel.classList.add('is-hidden');
+      if (btnSave) btnSave.classList.add('is-hidden');
     }
   }
 
@@ -259,18 +259,18 @@ export class SettingsAccountController implements ViewController {
       e.preventDefault();
       this.hideBanner('username-error');
       if (inputUsername) inputUsername.value = currentUser?.username || '';
-      if (usernameViewBox) usernameViewBox.style.display = 'none';
-      if (usernameViewActions) usernameViewActions.style.display = 'none';
-      if (usernameEditRow) usernameEditRow.style.display = 'flex';
+      if (usernameViewBox) usernameViewBox.classList.add('is-hidden');
+      if (usernameViewActions) usernameViewActions.classList.add('is-hidden');
+      if (usernameEditRow) usernameEditRow.classList.remove('is-hidden');
       inputUsername?.focus();
     }, { signal });
 
     btnCancelUsername?.addEventListener('click', (e) => {
       e.preventDefault();
       this.hideBanner('username-error');
-      if (usernameEditRow) usernameEditRow.style.display = 'none';
-      if (usernameViewBox) usernameViewBox.style.display = '';
-      if (usernameViewActions) usernameViewActions.style.display = '';
+      if (usernameEditRow) usernameEditRow.classList.add('is-hidden');
+      if (usernameViewBox) usernameViewBox.classList.remove('is-hidden');
+      if (usernameViewActions) usernameViewActions.classList.remove('is-hidden');
     }, { signal });
 
     btnSaveUsername?.addEventListener('click', async (e) => {
@@ -284,9 +284,9 @@ export class SettingsAccountController implements ViewController {
       }
 
       if (newUsername === currentUser?.username) {
-        if (usernameEditRow) usernameEditRow.style.display = 'none';
-        if (usernameViewBox) usernameViewBox.style.display = '';
-        if (usernameViewActions) usernameViewActions.style.display = '';
+        if (usernameEditRow) usernameEditRow.classList.add('is-hidden');
+        if (usernameViewBox) usernameViewBox.classList.remove('is-hidden');
+        if (usernameViewActions) usernameViewActions.classList.remove('is-hidden');
         return;
       }
 
@@ -304,9 +304,9 @@ export class SettingsAccountController implements ViewController {
             if (!this.hasCustomAvatar()) {
               this.refreshAvatarsInDom(null);
             }
-            if (usernameEditRow) usernameEditRow.style.display = 'none';
-            if (usernameViewBox) usernameViewBox.style.display = '';
-            if (usernameViewActions) usernameViewActions.style.display = '';
+            if (usernameEditRow) usernameEditRow.classList.add('is-hidden');
+            if (usernameViewBox) usernameViewBox.classList.remove('is-hidden');
+            if (usernameViewActions) usernameViewActions.classList.remove('is-hidden');
             showToast(t('settings.your_account.username_updated_toast') || 'Nombre de usuario actualizado exitosamente.', 'success');
           } else {
             this.showBanner('item-username', 'username-error', data.error || t('common.error_occurred'));
@@ -329,17 +329,17 @@ export class SettingsAccountController implements ViewController {
     const activateEmailEditMode = () => {
       this.hideBanner('email-error');
       if (inputEmail) inputEmail.value = currentUser?.email || '';
-      if (emailViewBox) emailViewBox.style.display = 'none';
-      if (emailViewActions) emailViewActions.style.display = 'none';
-      if (emailEditRow) emailEditRow.style.display = 'flex';
+      if (emailViewBox) emailViewBox.classList.add('is-hidden');
+      if (emailViewActions) emailViewActions.classList.add('is-hidden');
+      if (emailEditRow) emailEditRow.classList.remove('is-hidden');
       inputEmail?.focus();
     };
 
     const deactivateEmailEditMode = () => {
       this.hideBanner('email-error');
-      if (emailEditRow) emailEditRow.style.display = 'none';
-      if (emailViewBox) emailViewBox.style.display = '';
-      if (emailViewActions) emailViewActions.style.display = '';
+      if (emailEditRow) emailEditRow.classList.add('is-hidden');
+      if (emailViewBox) emailViewBox.classList.remove('is-hidden');
+      if (emailViewActions) emailViewActions.classList.remove('is-hidden');
     };
 
     btnCancelEmail?.addEventListener('click', (e) => {
@@ -350,7 +350,7 @@ export class SettingsAccountController implements ViewController {
     btnSaveEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
       if (currentUser?.is_sso) {
-        this.showBanner('item-email', 'email-error', t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.');
+        this.showBanner('item-email', 'email-error', t('settings.your_account.sso_email_blocked_toast') || t('ui.tu_correo_electronico_esta_gestionado_po'));
         return;
       }
       const newEmail = inputEmail?.value?.trim() || '';
@@ -391,7 +391,7 @@ export class SettingsAccountController implements ViewController {
     btnEditEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
       if (currentUser?.is_sso) {
-        showToast(t('settings.your_account.sso_email_blocked_toast') || 'Tu correo electrónico está gestionado por tu organización mediante SSO y no puede ser modificado.', 'warning');
+        showToast(t('settings.your_account.sso_email_blocked_toast') || t('ui.tu_correo_electronico_esta_gestionado_po'), 'warning');
         return;
       }
       this.hideBanner('email-error');
@@ -416,12 +416,12 @@ export class SettingsAccountController implements ViewController {
           openModal({
             cancelText: t('common.cancel'),
             confirmText: t('common.continue'),
-            description: t('settings.your_account.modal_email_verify_desc', { email: currentUser?.email || '' }) || `Ingresa el código de 6 dígitos que enviamos a ${currentUser?.email || ''}`,
-            title: t('settings.your_account.modal_email_verify_title') || 'Verifica tu identidad',
+            description: t('settings.your_account.modal_email_verify_desc', { email: currentUser?.email || '' }),
+            title: t('settings.your_account.modal_email_verify_title'),
             bodyHtml: `
               <label class="field" data-ref="field-email-code">
                 <input class="field__input field__input--code" data-ref="modal-input-code" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder=" " autocomplete="one-time-code" />
-                <span class="field__label" data-ref="modal-label-code">${t('settings.your_account.modal_email_code_placeholder') || 'Código de 6 dígitos'}</span>
+                <span class="field__label" data-ref="modal-label-code">${t('settings.your_account.modal_email_code_placeholder')}</span>
               </label>
             `,
             onConfirm: async (inst) => {
@@ -429,7 +429,7 @@ export class SettingsAccountController implements ViewController {
               const inputCode = inputCodeEl?.value?.trim() || '';
 
               if (!inputCode) {
-                inst.showError(t('validation.code_required') || 'Ingresa el código de 6 dígitos.');
+                inst.showError(t('validation.code_required') || t('ui.ingresa_el_codigo_de_6_digitos'));
                 return;
               }
               if (inputCode.length !== 6 || !/^\d+$/.test(inputCode)) {
@@ -482,7 +482,7 @@ export class SettingsAccountController implements ViewController {
           const res = await postApi(API_ROUTES.settings.googleDisconnect, {});
           const data = await res.json();
           if (!res.ok || !data.ok) {
-            this.showBanner('item-google', 'google-error', data.error || t('common.error_occurred', 'Error al desconectar la cuenta.'), 'danger');
+            this.showBanner('item-google', 'google-error', data.error || t('common.error_occurred', t('ui.error_al_desconectar_la_cuenta')), 'danger');
             return;
           }
 
@@ -494,7 +494,7 @@ export class SettingsAccountController implements ViewController {
           this.populateUserData();
           showToast(t('settings.your_account.google_disconnected_toast', 'Cuenta de Google desconectada exitosamente.'), 'success');
         } catch (_) {
-          this.showBanner('item-google', 'google-error', t('common.error_occurred', 'Error al desconectar la cuenta.'), 'danger');
+          this.showBanner('item-google', 'google-error', t('common.error_occurred', t('ui.error_al_desconectar_la_cuenta')), 'danger');
         }
       });
     }, { signal });
@@ -606,32 +606,32 @@ export class SettingsAccountController implements ViewController {
         const dropbox = data.integrations.find((i: any) => i.provider === 'dropbox' && i.is_active);
 
         if (gdrive) {
-          if (btnConnectGdrive) btnConnectGdrive.style.display = 'none';
-          if (btnDisconnectGdrive) btnDisconnectGdrive.style.display = 'inline-flex';
+          if (btnConnectGdrive) btnConnectGdrive.classList.add('is-hidden');
+          if (btnDisconnectGdrive) btnDisconnectGdrive.classList.remove('is-hidden');
           if (itemGdriveDesc) {
             itemGdriveDesc.textContent = gdrive.account_email
               ? `Conectado como ${gdrive.account_email}`
               : t('settings.your_account.gdrive_connected_desc', 'Tu cuenta de Google Drive está vinculada.');
           }
         } else {
-          if (btnConnectGdrive) btnConnectGdrive.style.display = 'inline-flex';
-          if (btnDisconnectGdrive) btnDisconnectGdrive.style.display = 'none';
+          if (btnConnectGdrive) btnConnectGdrive.classList.remove('is-hidden');
+          if (btnDisconnectGdrive) btnDisconnectGdrive.classList.add('is-hidden');
           if (itemGdriveDesc) {
-            itemGdriveDesc.textContent = t('settings.your_account.gdrive_desc', 'Conecta tu Google Drive para importar y exportar documentos PDF automáticamente.');
+            itemGdriveDesc.textContent = t('settings.your_account.gdrive_desc', t('ui.conecta_tu_google_drive_para_importar_y_'));
           }
         }
 
         if (dropbox) {
-          if (btnConnectDropbox) btnConnectDropbox.style.display = 'none';
-          if (btnDisconnectDropbox) btnDisconnectDropbox.style.display = 'inline-flex';
+          if (btnConnectDropbox) btnConnectDropbox.classList.add('is-hidden');
+          if (btnDisconnectDropbox) btnDisconnectDropbox.classList.remove('is-hidden');
           if (itemDropboxDesc) {
             itemDropboxDesc.textContent = t('settings.your_account.dropbox_connected_desc', 'Tu cuenta de Dropbox está vinculada.');
           }
         } else {
-          if (btnConnectDropbox) btnConnectDropbox.style.display = 'inline-flex';
-          if (btnDisconnectDropbox) btnDisconnectDropbox.style.display = 'none';
+          if (btnConnectDropbox) btnConnectDropbox.classList.remove('is-hidden');
+          if (btnDisconnectDropbox) btnDisconnectDropbox.classList.add('is-hidden');
           if (itemDropboxDesc) {
-            itemDropboxDesc.textContent = t('settings.your_account.dropbox_desc', 'Conecta tu cuenta de Dropbox para acceder a tus archivos sin autorizar en cada sesión.');
+            itemDropboxDesc.textContent = t('settings.your_account.dropbox_desc', t('ui.conecta_tu_cuenta_de_dropbox_para_accede'));
           }
         }
       }
@@ -650,14 +650,14 @@ export class SettingsAccountController implements ViewController {
       if (displayEmail) displayEmail.textContent = currentUser.email;
 
       if (currentUser.is_sso) {
-        if (btnEditEmail) btnEditEmail.style.display = 'none';
+        if (btnEditEmail) btnEditEmail.classList.add('is-hidden');
         if (badgeSsoEmail) {
-          badgeSsoEmail.style.display = 'inline-flex';
+          badgeSsoEmail.classList.remove('is-hidden');
           renderIcons(badgeSsoEmail);
         }
       } else {
-        if (btnEditEmail) btnEditEmail.style.display = '';
-        if (badgeSsoEmail) badgeSsoEmail.style.display = 'none';
+        if (btnEditEmail) btnEditEmail.classList.remove('is-hidden');
+        if (badgeSsoEmail) badgeSsoEmail.classList.add('is-hidden');
       }
 
       const avatarUrl = currentUser.avatar_url || this.getDefaultAvatarUrl(currentUser.username);
@@ -667,8 +667,8 @@ export class SettingsAccountController implements ViewController {
     } else {
       if (displayUsername) displayUsername.textContent = '—';
       if (displayEmail) displayEmail.textContent = '—';
-      if (btnEditEmail) btnEditEmail.style.display = '';
-      if (badgeSsoEmail) badgeSsoEmail.style.display = 'none';
+      if (btnEditEmail) btnEditEmail.classList.remove('is-hidden');
+      if (badgeSsoEmail) badgeSsoEmail.classList.add('is-hidden');
       this.refreshAvatarsInDom(null);
       this.updateAvatarButtonsState('default');
       applyAvatarTier(avatarPreviewBox, 'free');
@@ -679,13 +679,13 @@ export class SettingsAccountController implements ViewController {
     const itemGoogleDesc = this.container.querySelector<HTMLElement>('[data-ref="item-google-desc"]');
 
     if (currentUser?.google_connected) {
-      if (btnConnectGoogle) btnConnectGoogle.style.display = 'none';
-      if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'inline-flex';
+      if (btnConnectGoogle) btnConnectGoogle.classList.add('is-hidden');
+      if (btnDisconnectGoogle) btnDisconnectGoogle.classList.remove('is-hidden');
       if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_connected_desc', 'Tu cuenta de Google está vinculada actualmente.');
     } else {
-      if (btnConnectGoogle) btnConnectGoogle.style.display = 'inline-flex';
-      if (btnDisconnectGoogle) btnDisconnectGoogle.style.display = 'none';
-      if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_desc', 'Vincula tu cuenta de Google para iniciar sesión con un solo clic.');
+      if (btnConnectGoogle) btnConnectGoogle.classList.remove('is-hidden');
+      if (btnDisconnectGoogle) btnDisconnectGoogle.classList.add('is-hidden');
+      if (itemGoogleDesc) itemGoogleDesc.textContent = t('settings.your_account.google_desc', t('ui.vincula_tu_cuenta_de_google_para_iniciar'));
     }
   }
 
@@ -705,10 +705,10 @@ export class SettingsAccountController implements ViewController {
         showToast(t('settings.your_account.google_connected_success', 'Cuenta de Google vinculada exitosamente.'), 'success');
         window.history.replaceState({}, '', '/settings/your-account');
       } else if (error === 'google_already_linked') {
-        this.showBanner('item-google', 'google-error', t('settings.your_account.google_already_linked', 'Esta cuenta de Google ya está vinculada a otra cuenta de BoardPDF.'), 'danger');
+        this.showBanner('item-google', 'google-error', t('settings.your_account.google_already_linked', t('ui.esta_cuenta_de_google_ya_esta_vinculada_')), 'danger');
         window.history.replaceState({}, '', '/settings/your-account');
       } else if (error === 'google_token_failed' || error === 'google_profile_failed' || error === 'google_failed') {
-        this.showBanner('item-google', 'google-error', t('settings.your_account.google_connect_failed', 'No se pudo vincular la cuenta de Google. Intenta nuevamente.'), 'danger');
+        this.showBanner('item-google', 'google-error', t('settings.your_account.google_connect_failed', t('ui.no_se_pudo_vincular_la_cuenta_de_google_')), 'danger');
         window.history.replaceState({}, '', '/settings/your-account');
       }
     } catch (_) {}
@@ -748,11 +748,11 @@ export class SettingsAccountController implements ViewController {
         const name = item.querySelector('.menu-item__text')?.textContent?.toLowerCase() || '';
         const code = (item.getAttribute('data-lang') || '').toLowerCase();
         const match = !cleanQuery || name.includes(cleanQuery) || code.includes(cleanQuery);
-        item.style.display = match ? 'flex' : 'none';
+        item.classList.toggle('is-hidden', !match);
         if (match) matches++;
       });
       if (langEmptyEl) {
-        langEmptyEl.style.display = matches === 0 ? 'block' : 'none';
+        langEmptyEl.classList.toggle('is-hidden', matches !== 0);
       }
     };
 
@@ -815,12 +815,11 @@ export class SettingsAccountController implements ViewController {
     let banner = anchorEl.parentElement.querySelector<HTMLElement>(`[data-ref="${bannerRef}"]`);
     if (!banner) {
       banner = document.createElement('div');
-      banner.className = `banner banner--${type}`;
+      banner.className = `banner banner--${type} banner--account`;
       banner.setAttribute('data-ref', bannerRef);
-      banner.style.margin = '0 24px 16px 24px';
       anchorEl.after(banner);
     } else {
-      banner.className = `banner banner--${type}`;
+      banner.className = `banner banner--${type} banner--account`;
     }
     banner.textContent = text;
     showElement(banner);
@@ -835,10 +834,12 @@ export class SettingsAccountController implements ViewController {
   }
 }
 
-export async function createYourAccountView(): Promise<HTMLElement> {
+async function createYourAccountView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/your-account.html');
   const controller = new SettingsAccountController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { SettingsAccountController, createYourAccountView };

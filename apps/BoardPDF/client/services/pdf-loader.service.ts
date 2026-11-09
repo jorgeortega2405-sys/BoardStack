@@ -1,7 +1,7 @@
 const docPromiseCache = new Map<string, Promise<any>>();
 let pdfjsPromise: Promise<any> | null = null;
 
-export async function loadPdfJs(): Promise<any> {
+async function loadPdfJs(): Promise<any> {
   if (!pdfjsPromise) {
     pdfjsPromise = import('pdfjs-dist').then((pdfjsLib) => {
       if (typeof window !== 'undefined') {
@@ -17,7 +17,7 @@ export async function loadPdfJs(): Promise<any> {
   return pdfjsPromise;
 }
 
-export async function loadPdfDocument(source: ArrayBuffer | string | Uint8Array, options: Record<string, any> = {}): Promise<any> {
+async function loadPdfDocument(source: ArrayBuffer | string | Uint8Array, options: Record<string, any> = {}): Promise<any> {
   const cacheKey = typeof source === 'string' ? source : null;
   if (cacheKey && docPromiseCache.has(cacheKey)) {
     return docPromiseCache.get(cacheKey)!;
@@ -56,10 +56,12 @@ export async function loadPdfDocument(source: ArrayBuffer | string | Uint8Array,
   return promise;
 }
 
-export function clearPdfDocumentCache(sourceKey?: string): void {
+function clearPdfDocumentCache(sourceKey?: string): void {
   if (sourceKey) {
     docPromiseCache.delete(sourceKey);
   } else {
     docPromiseCache.clear();
   }
 }
+
+export { clearPdfDocumentCache, loadPdfDocument, loadPdfJs };

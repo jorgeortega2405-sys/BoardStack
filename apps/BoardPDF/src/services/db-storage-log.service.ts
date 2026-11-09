@@ -1,7 +1,7 @@
 import { getDbPool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 
-export interface FileOperationRecord {
+interface FileOperationRecord {
   fileSize?: number;
   filename: string;
   mimeType?: string;
@@ -12,7 +12,7 @@ export interface FileOperationRecord {
   ttlSeconds: number;
 }
 
-export async function recordFileOperation(record: FileOperationRecord): Promise<void> {
+async function recordFileOperation(record: FileOperationRecord): Promise<void> {
   try {
     const pool = getDbPool();
     const expiresAt = new Date(Date.now() + record.ttlSeconds * 1000);
@@ -45,7 +45,7 @@ export async function recordFileOperation(record: FileOperationRecord): Promise<
   }
 }
 
-export async function markFileOperationExpired(token: string): Promise<void> {
+async function markFileOperationExpired(token: string): Promise<void> {
   try {
     const pool = getDbPool();
     const query = `
@@ -59,7 +59,7 @@ export async function markFileOperationExpired(token: string): Promise<void> {
   }
 }
 
-export async function markFileOperationDeleted(token: string): Promise<void> {
+async function markFileOperationDeleted(token: string): Promise<void> {
   try {
     const pool = getDbPool();
     const query = `
@@ -72,3 +72,6 @@ export async function markFileOperationDeleted(token: string): Promise<void> {
     logger.db.warn('No se pudo marcar archivo como eliminado en MySQL', err);
   }
 }
+
+export { markFileOperationDeleted, markFileOperationExpired, recordFileOperation };
+export type { FileOperationRecord };

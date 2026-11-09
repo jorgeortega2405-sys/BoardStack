@@ -35,7 +35,7 @@ function getSafeErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function listProjectFoldersHandler(req: Request, res: Response): Promise<void> {
+async function listProjectFoldersHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     const parentIdParam = req.query.parentId as string | undefined;
@@ -58,7 +58,7 @@ export async function listProjectFoldersHandler(req: Request, res: Response): Pr
   }
 }
 
-export async function getProjectFolderHandler(req: Request, res: Response): Promise<void> {
+async function getProjectFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id) {
@@ -140,7 +140,7 @@ export async function getProjectFolderHandler(req: Request, res: Response): Prom
   }
 }
 
-export async function createProjectFolderHandler(req: Request, res: Response): Promise<void> {
+async function createProjectFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     const { color, folderType, name, parentId } = req.body;
@@ -168,7 +168,7 @@ export async function createProjectFolderHandler(req: Request, res: Response): P
   }
 }
 
-export async function renameProjectFolderHandler(req: Request, res: Response): Promise<void> {
+async function renameProjectFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -189,7 +189,7 @@ export async function renameProjectFolderHandler(req: Request, res: Response): P
   }
 }
 
-export async function deleteProjectFolderHandler(req: Request, res: Response): Promise<void> {
+async function deleteProjectFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id) {
@@ -214,7 +214,7 @@ export async function deleteProjectFolderHandler(req: Request, res: Response): P
   }
 }
 
-export async function moveDocFolderHandler(req: Request, res: Response): Promise<void> {
+async function moveDocFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { folderId } = req.body;
@@ -235,7 +235,7 @@ export async function moveDocFolderHandler(req: Request, res: Response): Promise
   }
 }
 
-export async function moveUploadFolderHandler(req: Request, res: Response): Promise<void> {
+async function moveUploadFolderHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { folderId } = req.body;
@@ -256,7 +256,7 @@ export async function moveUploadFolderHandler(req: Request, res: Response): Prom
   }
 }
 
-export async function deleteUploadAssetHandler(req: Request, res: Response): Promise<void> {
+async function deleteUploadAssetHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id) {
@@ -278,3 +278,5 @@ export async function deleteUploadAssetHandler(req: Request, res: Response): Pro
     });
   }
 }
+
+export { createProjectFolderHandler, deleteProjectFolderHandler, deleteUploadAssetHandler, getProjectFolderHandler, listProjectFoldersHandler, moveDocFolderHandler, moveUploadFolderHandler, renameProjectFolderHandler };

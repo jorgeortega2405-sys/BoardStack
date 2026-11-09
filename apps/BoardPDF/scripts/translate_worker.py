@@ -5,7 +5,7 @@ import pymupdf
 
 def main():
     if len(sys.argv) < 4:
-        print(json.dumps({"error": "Uso: python translate_worker.py <input.pdf> <output.pdf> <translations.json>"}))
+        print(json.dumps({"error": "Usage: python translate_worker.py <input.pdf> <output.pdf> <translations.json>"}))
         sys.exit(1)
 
     input_pdf = sys.argv[1]
@@ -13,7 +13,7 @@ def main():
     json_path = sys.argv[3]
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({"error": "El archivo de entrada no existe"}))
+        print(json.dumps({"error": "Input file does not exist"}))
         sys.exit(1)
 
     with open(json_path, "r", encoding="utf-8") as f:

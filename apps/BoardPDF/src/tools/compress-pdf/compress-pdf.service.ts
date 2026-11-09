@@ -79,7 +79,7 @@ async function runGhostscriptCompression(inputPath: string, outputPath: string, 
   return false;
 }
 
-export async function compressPdfFile(params: CompressPdfParams): Promise<CompressPdfResponse> {
+async function compressPdfFile(params: CompressPdfParams): Promise<CompressPdfResponse> {
   const { buffer, filename: customFilename, level, originalname } = params;
   const originalSize = buffer.length;
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_compress_'));
@@ -163,3 +163,5 @@ export async function compressPdfFile(params: CompressPdfParams): Promise<Compre
     savingsPercent,
   };
 }
+
+export { compressPdfFile };

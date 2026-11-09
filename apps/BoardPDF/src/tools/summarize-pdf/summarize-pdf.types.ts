@@ -1,6 +1,6 @@
-export type SummaryMode = 'standard' | 'advanced';
+type SummaryMode = 'standard' | 'advanced';
 
-export interface SummarizePdfParams {
+interface SummarizePdfParams {
   buffer: Buffer;
   customPrompt?: string;
   filename?: string;
@@ -8,7 +8,7 @@ export interface SummarizePdfParams {
   originalname: string;
 }
 
-export interface SummarizePdfResponse {
+interface SummarizePdfResponse {
   characterCount: number;
   extractedChars: number;
   filename: string;
@@ -17,3 +17,5 @@ export interface SummarizePdfResponse {
   summary: string;
   wordCount: number;
 }
+
+export type { SummarizePdfParams, SummarizePdfResponse, SummaryMode };

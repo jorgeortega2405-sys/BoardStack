@@ -1,32 +1,13 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { protectPdf } from './protect-pdf.service.js';
 import { ProtectPdfOptions } from './protect-pdf.types.js';
 import { Request, Response } from 'express';
 
-export async function protectPdfHandler(req: Request, res: Response): Promise<void> {
+async function protectPdfHandler(req: Request, res: Response): Promise<void> {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Debes seleccionar un archivo PDF.', success: false });
-      return;
-    }
-
-    if (!isPdfBuffer(req.file.buffer)) {
-      res.status(400).json({ error: 'El archivo enviado no corresponde a un documento PDF válido.', success: false });
-      return;
-    }
-
-    const userPermissions = (req as any).user?.permissions || [];
-    const limits = getToolLimits('protect-pdf', userPermissions);
-
-    if (req.file.size > limits.maxFileSizeMB * 1024 * 1024) {
-      res.status(403).json({
-        error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar archivos más grandes.`,
-        success: false,
-      });
-      return;
-    }
+    const file = validatePdfUpload(req, res, 'protect-pdf');
+    if (!file) return;
 
     let options: ProtectPdfOptions = { password: '' };
     if (req.body?.options) {
@@ -44,7 +25,7 @@ export async function protectPdfHandler(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const result = await protectPdf(req.file.buffer, req.file.originalname, options);
+    const result = await protectPdf(file.buffer, file.originalname, options);
     res.json({ data: result, success: true });
   } catch (err: unknown) {
     logger.app.error('Fallo en endpoint protectPdfHandler', err);
@@ -54,3 +35,5 @@ export async function protectPdfHandler(req: Request, res: Response): Promise<vo
     });
   }
 }
+
+export { protectPdfHandler };

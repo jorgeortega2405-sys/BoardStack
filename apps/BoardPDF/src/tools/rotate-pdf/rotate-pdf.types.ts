@@ -1,15 +1,15 @@
-export interface RotatePageItem {
+interface RotatePageItem {
   pageIndex: number;
   rotation: number;
 }
 
-export interface RotatePdfOptions {
+interface RotatePdfOptions {
   filename?: string;
   globalRotation?: number;
   pages: RotatePageItem[];
 }
 
-export interface RotatePdfResponse {
+interface RotatePdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -17,7 +17,7 @@ export interface RotatePdfResponse {
   totalPages: number;
 }
 
-export interface StoredRotatePdfResult {
+interface StoredRotatePdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -26,3 +26,5 @@ export interface StoredRotatePdfResult {
   pagesCount: number;
   size: number;
 }
+
+export type { RotatePageItem, RotatePdfOptions, RotatePdfResponse, StoredRotatePdfResult };

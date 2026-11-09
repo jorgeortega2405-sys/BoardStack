@@ -152,7 +152,7 @@ async function callGeminiApi(
   return stripMarkdownCodeFences(candidateText);
 }
 
-export async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise<PdfToMarkdownResponse> {
+async function convertPdfToMarkdown(params: PdfToMarkdownParams): Promise<PdfToMarkdownResponse> {
   const startTime = Date.now();
   const {
     buffer,
@@ -268,3 +268,5 @@ Respeta la estructura, tablas GFM y formato semántico del documento sin preámb
     wordCount,
   };
 }
+
+export { convertPdfToMarkdown };

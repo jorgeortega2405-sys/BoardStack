@@ -3,7 +3,7 @@ import { estimateAiTokenCost, getUserTokenBalance } from '../services/ai-token.s
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
-export async function handleGetTokenBalance(req: Request, res: Response): Promise<void> {
+async function handleGetTokenBalance(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -27,7 +27,7 @@ export async function handleGetTokenBalance(req: Request, res: Response): Promis
   }
 }
 
-export async function handleEstimateTokenCost(req: Request, res: Response): Promise<void> {
+async function handleEstimateTokenCost(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -62,3 +62,5 @@ export async function handleEstimateTokenCost(req: Request, res: Response): Prom
     });
   }
 }
+
+export { handleEstimateTokenCost, handleGetTokenBalance };

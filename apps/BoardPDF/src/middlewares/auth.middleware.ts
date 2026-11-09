@@ -3,7 +3,7 @@ import { permissionService } from '../services/permission.service.js';
 import { SessionAccount, UserPayload } from '../types/auth.types.js';
 import type { NextFunction, Request, Response } from 'express';
 
-export function getCurrentUser(req: Request): UserPayload | null {
+function getCurrentUser(req: Request): UserPayload | null {
   if ((req as any).user) {
     return (req as any).user;
   }
@@ -17,12 +17,12 @@ export function getCurrentUser(req: Request): UserPayload | null {
   return active;
 }
 
-export function getLinkedAccounts(req: Request): SessionAccount[] {
+function getLinkedAccounts(req: Request): SessionAccount[] {
   const session = getMultiAccountSession(req);
   return session ? session.accounts : [];
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const user = getCurrentUser(req);
   if (!user) {
     res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
@@ -40,7 +40,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
+async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const user = getCurrentUser(req);
   if (user && (!user.permissions || !Array.isArray(user.permissions) || user.permissions.length === 0)) {
     try {
@@ -54,7 +54,7 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
   next();
 }
 
-export function hasPermission(userOrPermissions: any, permission: string): boolean {
+function hasPermission(userOrPermissions: any, permission: string): boolean {
   if (!userOrPermissions) return false;
   if (Array.isArray(userOrPermissions)) {
     return userOrPermissions.includes(permission);
@@ -65,12 +65,12 @@ export function hasPermission(userOrPermissions: any, permission: string): boole
   return false;
 }
 
-export function hasSubscriptionFeature(userOrPermissions: any, feature: string): boolean {
+function hasSubscriptionFeature(userOrPermissions: any, feature: string): boolean {
   const normalized = feature.startsWith('subscription:feature:') ? feature : `subscription:feature:${feature}`;
   return hasPermission(userOrPermissions, normalized);
 }
 
-export function requirePermission(permission: string) {
+function requirePermission(permission: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const user = getCurrentUser(req);
     if (!user) {
@@ -90,7 +90,9 @@ export function requirePermission(permission: string) {
   };
 }
 
-export function requireFeature(feature: string) {
+function requireFeature(feature: string) {
   const normalized = feature.startsWith('subscription:feature:') ? feature : `subscription:feature:${feature}`;
   return requirePermission(normalized);
 }
+
+export { getCurrentUser, getLinkedAccounts, hasPermission, hasSubscriptionFeature, optionalAuth, requireAuth, requireFeature, requirePermission };

@@ -7,7 +7,7 @@ import { showToast } from '../services/toast.service.js';
 import { setupDropdown, toggleElement } from '../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES, getLanguageName } from '../utils/languages.util.js';
 
-export function getFooterHtml(): string {
+function getFooterHtml(): string {
   const currentLang = getCurrentLanguage();
   const currentLangName = getLanguageName(currentLang);
 
@@ -29,7 +29,7 @@ export function getFooterHtml(): string {
                 <text x="50" y="30" font-family="'Inter', -apple-system, sans-serif" font-size="25" font-weight="700" fill="currentColor" letter-spacing="-0.5">Board<tspan fill="#E11D48" font-weight="900">PDF</tspan></text>
               </svg>
             </a>
-            <p class="footer-col__desc" data-ref="footer-brand-desc" data-i18n="footer.tagline">${t('footer.tagline') || 'Herramientas inteligentes, rápidas y seguras para potenciar tu productividad con documentos PDF.'}</p>
+            <p class="footer-col__desc" data-ref="footer-brand-desc" data-i18n="footer.tagline">${t('footer.tagline') || t('ui.herramientas_inteligentes_rapidas_y_segu')}</p>
           </div>
 
           <div class="footer-col" data-ref="footer-col-producto">
@@ -146,7 +146,7 @@ export function getFooterHtml(): string {
   `;
 }
 
-export function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): { destroy: () => void } {
+function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): { destroy: () => void } {
   translateElement(container);
   const langDropdown = container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-footer-language"]');
   const langSelectedText = container.querySelector<HTMLElement>('[data-ref="footer-language-selected-text"]');
@@ -240,3 +240,5 @@ export function mountSiteFooter(container: HTMLElement, signal?: AbortSignal): {
     },
   };
 }
+
+export { getFooterHtml, mountSiteFooter };

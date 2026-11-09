@@ -1,97 +1,88 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="about-wrapper">
-  <div class="view-backdrop view-backdrop--dots" data-ref="about-backdrop"></div>
-  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="about-scrollable">
-    <div class="view-body" data-ref="about-view">
-      <header class="view-section" data-ref="header-section">
-        <div class="component-block component-block--compact" data-ref="header-bar">
-          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
-            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
-          </a>
-        </div>
-      </header>
-
-      <section class="view-section" data-ref="about-hero-section">
-        <div class="component-block" data-ref="about-hero">
-          <div class="view-hero__content" data-ref="about-hero-content">
-            <div class="component-badge component-badge--sm" data-ref="about-badge">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-              <span data-ref="about-badge-text" data-i18n="about.badge"></span>
-            </div>
-            <h1 class="view-hero__title" data-ref="about-title" data-i18n="about.title"></h1>
-            <p class="view-hero__subtitle" data-ref="about-subtitle" data-i18n="about.subtitle"></p>
-          </div>
-        </div>
-      </section>
-
-      <section class="view-section" data-ref="about-content-section">
-        <div class="view-container about-container" data-ref="about-container">
-          <section class="component-block" data-ref="about-card-origin">
-            <div class="view-card__header" data-ref="about-header-origin">
-              <h2 class="view-card__title" data-ref="about-title-origin" data-i18n="about.origin_title"></h2>
-            </div>
-            <p class="view-card__text" data-ref="about-text-origin-1" data-i18n="about.origin_text_1"></p>
-            <p class="view-card__text" data-ref="about-text-origin-2" data-i18n="about.origin_text_2"></p>
-          </section>
-
-          <section class="component-block" data-ref="about-card-evolution">
-            <div class="view-card__header" data-ref="about-header-evolution">
-              <h2 class="view-card__title" data-ref="about-title-evolution" data-i18n="about.evolution_title"></h2>
-            </div>
-            <p class="view-card__text" data-ref="about-text-evolution-1" data-i18n="about.evolution_text_1"></p>
-            <p class="view-card__text" data-ref="about-text-evolution-2" data-i18n="about.evolution_text_2"></p>
-          </section>
-
-          <section class="component-block" data-ref="about-card-values">
-            <div class="view-card__header" data-ref="about-header-values">
-              <h2 class="view-card__title" data-ref="about-title-values" data-i18n="about.values_title"></h2>
-            </div>
-            <p class="view-card__text" data-ref="about-text-values" data-i18n="about.values_intro"></p>
-            <div class="feature-grid about-pillars-grid" data-ref="about-pillars-grid">
-              <div class="feature-card" data-ref="about-pillar-privacy">
-                <div class="feature-card__icon-box" data-ref="about-pillar-icon-privacy">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-                </div>
-                <h3 class="feature-card__title" data-ref="about-pillar-title-privacy" data-i18n="about.pillar_privacy_title"></h3>
-                <p class="feature-card__desc" data-ref="about-pillar-desc-privacy" data-i18n="about.pillar_privacy_desc"></p>
-              </div>
-
-              <div class="feature-card" data-ref="about-pillar-quality">
-                <div class="feature-card__icon-box" data-ref="about-pillar-icon-quality">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
-                </div>
-                <h3 class="feature-card__title" data-ref="about-pillar-title-quality" data-i18n="about.pillar_quality_title"></h3>
-                <p class="feature-card__desc" data-ref="about-pillar-desc-quality" data-i18n="about.pillar_quality_desc"></p>
-              </div>
-
-              <div class="feature-card" data-ref="about-pillar-universal">
-                <div class="feature-card__icon-box" data-ref="about-pillar-icon-universal">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
-                </div>
-                <h3 class="feature-card__title" data-ref="about-pillar-title-universal" data-i18n="about.pillar_universal_title"></h3>
-                <p class="feature-card__desc" data-ref="about-pillar-desc-universal" data-i18n="about.pillar_universal_desc"></p>
-              </div>
-            </div>
-          </section>
-
-          <section class="component-block" data-ref="about-card-future">
-            <div class="view-card__header" data-ref="about-header-future">
-              <h2 class="view-card__title" data-ref="about-title-future" data-i18n="about.future_title"></h2>
-            </div>
-            <p class="view-card__text" data-ref="about-text-future-1" data-i18n="about.future_text_1"></p>
-            <p class="view-card__text" data-ref="about-text-future-2" data-i18n="about.future_text_2"></p>
-          </section>
-
-          <section class="view-cta-banner" data-ref="about-cta-banner">
-            <h2 class="view-cta-banner__title" data-ref="about-cta-title" data-i18n="about.cta_title"></h2>
-            <p class="view-cta-banner__desc" data-ref="about-cta-desc" data-i18n="about.cta_desc"></p>
-            <div class="view-cta-banner__actions" data-ref="about-cta-actions">
-              <a class="component-button component-button--white component-button--h44" data-ref="btn-about-explore" data-i18n="about.cta_btn" data-navigate="/help/documentation" href="/help/documentation"></a>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <footer class="view-section" data-ref="about-footer-section"></footer>
-    </div>
-  </div>
+<div class="view-backdrop view-backdrop--dots" data-ref="about-backdrop"></div>
+<div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="about-scrollable">
+<div class="view-body" data-ref="about-view">
+<header class="view-section" data-ref="header-section">
+<div class="component-block component-block--compact" data-ref="header-bar">
+<a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+<span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+</a>
 </div>
+</header>
+<section class="view-section" data-ref="about-hero-section">
+<div class="component-block" data-ref="about-hero">
+<div class="view-hero__content" data-ref="about-hero-content">
+<div class="component-badge component-badge--sm" data-ref="about-badge">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+<span data-ref="about-badge-text" data-i18n="about.badge"></span>
+</div>
+<h1 class="view-hero__title" data-ref="about-title" data-i18n="about.title"></h1>
+<p class="view-hero__subtitle" data-ref="about-subtitle" data-i18n="about.subtitle"></p>
+</div>
+</div>
+</section>
+<section class="view-section" data-ref="about-content-section">
+<div class="view-container about-container" data-ref="about-container">
+<section class="component-block" data-ref="about-card-origin">
+<div class="view-card__header" data-ref="about-header-origin">
+<h2 class="view-card__title" data-ref="about-title-origin" data-i18n="about.origin_title"></h2>
+</div>
+<p class="view-card__text" data-ref="about-text-origin-1" data-i18n="about.origin_text_1"></p>
+<p class="view-card__text" data-ref="about-text-origin-2" data-i18n="about.origin_text_2"></p>
+</section>
+<section class="component-block" data-ref="about-card-evolution">
+<div class="view-card__header" data-ref="about-header-evolution">
+<h2 class="view-card__title" data-ref="about-title-evolution" data-i18n="about.evolution_title"></h2>
+</div>
+<p class="view-card__text" data-ref="about-text-evolution-1" data-i18n="about.evolution_text_1"></p>
+<p class="view-card__text" data-ref="about-text-evolution-2" data-i18n="about.evolution_text_2"></p>
+</section>
+<section class="component-block" data-ref="about-card-values">
+<div class="view-card__header" data-ref="about-header-values">
+<h2 class="view-card__title" data-ref="about-title-values" data-i18n="about.values_title"></h2>
+</div>
+<p class="view-card__text" data-ref="about-text-values" data-i18n="about.values_intro"></p>
+<div class="feature-grid about-pillars-grid" data-ref="about-pillars-grid">
+<div class="feature-card" data-ref="about-pillar-privacy">
+<div class="feature-card__icon-box" data-ref="about-pillar-icon-privacy">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+</div>
+<h3 class="feature-card__title" data-ref="about-pillar-title-privacy" data-i18n="about.pillar_privacy_title"></h3>
+<p class="feature-card__desc" data-ref="about-pillar-desc-privacy" data-i18n="about.pillar_privacy_desc"></p>
+</div>
+<div class="feature-card" data-ref="about-pillar-quality">
+<div class="feature-card__icon-box" data-ref="about-pillar-icon-quality">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
+</div>
+<h3 class="feature-card__title" data-ref="about-pillar-title-quality" data-i18n="about.pillar_quality_title"></h3>
+<p class="feature-card__desc" data-ref="about-pillar-desc-quality" data-i18n="about.pillar_quality_desc"></p>
+</div>
+<div class="feature-card" data-ref="about-pillar-universal">
+<div class="feature-card__icon-box" data-ref="about-pillar-icon-universal">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
+</div>
+<h3 class="feature-card__title" data-ref="about-pillar-title-universal" data-i18n="about.pillar_universal_title"></h3>
+<p class="feature-card__desc" data-ref="about-pillar-desc-universal" data-i18n="about.pillar_universal_desc"></p>
+</div>
+</div>
+</section>
+<section class="component-block" data-ref="about-card-future">
+<div class="view-card__header" data-ref="about-header-future">
+<h2 class="view-card__title" data-ref="about-title-future" data-i18n="about.future_title"></h2>
+</div>
+<p class="view-card__text" data-ref="about-text-future-1" data-i18n="about.future_text_1"></p>
+<p class="view-card__text" data-ref="about-text-future-2" data-i18n="about.future_text_2"></p>
+</section>
+<section class="view-cta-banner" data-ref="about-cta-banner">
+<h2 class="view-cta-banner__title" data-ref="about-cta-title" data-i18n="about.cta_title"></h2>
+<p class="view-cta-banner__desc" data-ref="about-cta-desc" data-i18n="about.cta_desc"></p>
+<div class="view-cta-banner__actions" data-ref="about-cta-actions">
+<a class="component-button component-button--white component-button--h44" data-ref="btn-about-explore" data-i18n="about.cta_btn" data-navigate="/help/documentation" href="/help/documentation"></a>
+</div>
+</section>
+</div>
+</section>
+<footer class="view-section" data-ref="about-footer-section"></footer>
+</div>
+</div>
+</div> 

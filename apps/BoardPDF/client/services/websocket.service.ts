@@ -1,4 +1,4 @@
-export interface AiProgressEvent {
+interface AiProgressEvent {
   message?: string;
   percent?: number;
   result?: Record<string, unknown>;
@@ -10,7 +10,7 @@ export interface AiProgressEvent {
   totalSteps?: number;
 }
 
-export interface CollabJoinOptions {
+interface CollabJoinOptions {
   avatarUrl?: string | null;
   docId: string;
   isGuest?: boolean;
@@ -333,4 +333,7 @@ class WebSocketClientService {
   }
 }
 
-export const wsService = new WebSocketClientService();
+const wsService = new WebSocketClientService();
+
+export { wsService };
+export type { AiProgressEvent, CollabJoinOptions };

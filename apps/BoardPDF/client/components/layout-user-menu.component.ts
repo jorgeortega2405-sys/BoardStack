@@ -4,8 +4,9 @@ import { navigate } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
 import { getUserAvatarUrl } from '../utils/avatar.util.js';
 import { applyAvatarTier } from '../utils/tier.util.js';
+import { t } from '../services/i18n.service.js';
 
-export function setupUserMenu(sidebar: HTMLElement): () => void {
+function setupUserMenu(sidebar: HTMLElement): () => void {
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
   const railItemLogin = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-login"]');
   const btnLogin = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-login"]');
@@ -105,10 +106,10 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
           closeMenu();
           const res = await switchAccountApi(acc.id);
           if (res.success) {
-            showToast(`Cuenta cambiada a ${acc.username}`, 'info');
+            showToast(t('toasts.cuenta_cambiada_a'), 'info');
             navigate(window.location.pathname);
           } else {
-            showToast(res.error || 'No se pudo cambiar de cuenta', 'danger');
+            showToast(res.error || t('ui.no_se_pudo_cambiar_de_cuenta'), 'danger');
           }
         });
       }
@@ -217,7 +218,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     e.preventDefault();
     closeMenu();
     if (linkedAccounts.length >= 3) {
-      showToast('Máximo de 3 cuentas alcanzado.', 'info');
+      showToast(t('toasts.maximo_de_3_cuentas_alcanzado'), 'info');
       return;
     }
     navigate('/login');
@@ -235,10 +236,10 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     const res = await logoutApi();
     if (res.success) {
       if (res.switched && res.user) {
-        showToast(`Has cambiado a la cuenta de ${res.user.username}`, 'info');
+        showToast(t('toasts.has_cambiado_a_la_cuenta_de'), 'info');
         navigate(window.location.pathname);
       } else {
-        showToast('Sesión cerrada exitosamente.', 'info');
+        showToast(t('toasts.sesion_cerrada_exitosamente'), 'info');
         navigate('/login');
       }
     }
@@ -248,7 +249,7 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     e.preventDefault();
     closeMenu();
     await logoutAllApi();
-    showToast('Se han cerrado todas las sesiones.', 'info');
+    showToast(t('toasts.se_han_cerrado_todas_las_sesiones'), 'info');
     navigate('/login');
   });
 
@@ -270,3 +271,5 @@ export function setupUserMenu(sidebar: HTMLElement): () => void {
     unsubAuth();
   };
 }
+
+export { setupUserMenu };

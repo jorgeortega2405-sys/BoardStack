@@ -35,7 +35,7 @@ function calculateCoords(
   return { x, y };
 }
 
-export async function addWatermarkToPdf(
+async function addWatermarkToPdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: WatermarkOptions,
@@ -206,3 +206,5 @@ export async function addWatermarkToPdf(
     totalPages,
   };
 }
+
+export { addWatermarkToPdf };

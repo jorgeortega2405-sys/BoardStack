@@ -1,10 +1,11 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { getApi, postApi } from './api.service.js';
 import { showToast } from './toast.service.js';
+import { t } from './i18n.service.js';
 
-export const GOOGLE_DRIVE_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || '';
-export const GOOGLE_DRIVE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
-export const GOOGLE_DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile';
+const GOOGLE_DRIVE_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || '';
+const GOOGLE_DRIVE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile';
 
 const STORAGE_KEY_TOKEN = 'boardpdf_gdrive_token';
 const STORAGE_KEY_EXPIRES = 'boardpdf_gdrive_expires_at';
@@ -16,7 +17,7 @@ let gisLoadingPromise: Promise<void> | null = null;
 let gapiLoadingPromise: Promise<void> | null = null;
 let tokenClientInstance: any = null;
 
-export function loadGisScript(): Promise<void> {
+function loadGisScript(): Promise<void> {
   if (typeof google !== 'undefined' && google?.accounts?.oauth2) {
     return Promise.resolve();
   }
@@ -41,7 +42,7 @@ export function loadGisScript(): Promise<void> {
   return gisLoadingPromise;
 }
 
-export function loadGapiScript(): Promise<void> {
+function loadGapiScript(): Promise<void> {
   if (typeof gapi !== 'undefined' && gapi?.load) {
     return Promise.resolve();
   }
@@ -52,7 +53,7 @@ export function loadGapiScript(): Promise<void> {
     const existing = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
     if (existing) {
       existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', () => reject(new Error('No se pudo cargar la librería cliente de Google.')));
+      existing.addEventListener('error', () => reject(new Error(t('ui.no_se_pudo_cargar_la_libreria_cliente_de'))));
       return;
     }
     const script = document.createElement('script');
@@ -60,13 +61,13 @@ export function loadGapiScript(): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('No se pudo cargar la librería cliente de Google.'));
+    script.onerror = () => reject(new Error(t('ui.no_se_pudo_cargar_la_libreria_cliente_de')));
     document.head.appendChild(script);
   });
   return gapiLoadingPromise;
 }
 
-export function getGoogleDriveToken(): string | null {
+function getGoogleDriveToken(): string | null {
   try {
     const expiresAt = sessionStorage.getItem(STORAGE_KEY_EXPIRES);
     if (!expiresAt || Date.now() > Number(expiresAt)) {
@@ -79,7 +80,7 @@ export function getGoogleDriveToken(): string | null {
   }
 }
 
-export async function getOrFetchGoogleDriveToken(): Promise<string | null> {
+async function getOrFetchGoogleDriveToken(): Promise<string | null> {
   const local = getGoogleDriveToken();
   if (local) return local;
 
@@ -98,11 +99,11 @@ export async function getOrFetchGoogleDriveToken(): Promise<string | null> {
   return null;
 }
 
-export function isGoogleDriveConnected(): boolean {
+function isGoogleDriveConnected(): boolean {
   return Boolean(getGoogleDriveToken());
 }
 
-export function disconnectGoogleDrive(): void {
+function disconnectGoogleDrive(): void {
   try {
     const token = sessionStorage.getItem(STORAGE_KEY_TOKEN);
     if (token && typeof google !== 'undefined' && google?.accounts?.oauth2?.revoke) {
@@ -113,11 +114,11 @@ export function disconnectGoogleDrive(): void {
   sessionStorage.removeItem(STORAGE_KEY_EXPIRES);
 }
 
-export async function connectGoogleDrive(): Promise<{ error?: string; success: boolean; token?: string }> {
+async function connectGoogleDrive(): Promise<{ error?: string; success: boolean; token?: string }> {
   try {
     await loadGisScript();
   } catch {
-    return { error: 'No se pudo cargar el cliente de autenticación de Google.', success: false };
+    return { error: t('ui.no_se_pudo_cargar_el_cliente_de_autentic'), success: false };
   }
 
   return new Promise((resolve) => {
@@ -129,7 +130,7 @@ export async function connectGoogleDrive(): Promise<{ error?: string; success: b
             return;
           }
           if (!response.access_token) {
-            resolve({ error: 'No se recibió el token de acceso de Google.', success: false });
+            resolve({ error: t('ui.no_se_recibio_el_token_de_acceso_de_goog'), success: false });
             return;
           }
 
@@ -165,7 +166,7 @@ export async function connectGoogleDrive(): Promise<{ error?: string; success: b
         },
         client_id: GOOGLE_DRIVE_CLIENT_ID,
         error_callback: (err: any) => {
-          resolve({ error: err?.message || 'Error en la autenticación con Google.', success: false });
+          resolve({ error: err?.message || t('ui.error_en_la_autenticacion_con_google'), success: false });
         },
         prompt: 'consent',
         scope: GOOGLE_DRIVE_SCOPES,
@@ -173,12 +174,12 @@ export async function connectGoogleDrive(): Promise<{ error?: string; success: b
 
       tokenClientInstance.requestAccessToken();
     } catch {
-      resolve({ error: 'Error al iniciar la conexión con Google Drive.', success: false });
+      resolve({ error: t('ui.error_al_iniciar_la_conexion_con_google_'), success: false });
     }
   });
 }
 
-export async function pickGoogleDriveFiles(options: {
+async function pickGoogleDriveFiles(options: {
   mimeTypes?: string[];
   multiselect?: boolean;
 } = {}): Promise<File[]> {
@@ -198,7 +199,7 @@ export async function pickGoogleDriveFiles(options: {
   try {
     await loadGapiScript();
   } catch {
-    showToast('No se pudo inicializar el selector de archivos de Google.', 'danger');
+    showToast(t('ui.no_se_pudo_inicializar_el_selector_de_ar'), 'danger');
     return [];
   }
 
@@ -271,14 +272,14 @@ export async function pickGoogleDriveFiles(options: {
         const pickerInstance = builder.build();
         pickerInstance.setVisible(true);
       } catch {
-        showToast('Error al desplegar el selector de Google Drive.', 'danger');
+        showToast(t('ui.error_al_desplegar_el_selector_de_google'), 'danger');
         resolve([]);
       }
     });
   });
 }
 
-export async function exportToGoogleDrive(downloadUrl: string, filename: string): Promise<void> {
+async function exportToGoogleDrive(downloadUrl: string, filename: string): Promise<void> {
   let token = await getOrFetchGoogleDriveToken();
   if (!token) {
     const auth = await connectGoogleDrive();
@@ -289,11 +290,11 @@ export async function exportToGoogleDrive(downloadUrl: string, filename: string)
     token = auth.token;
   }
 
-  showToast('Subiendo archivo a Google Drive...', 'info');
+  showToast(t('toasts.gdrive_uploading'), 'info');
 
   try {
     const fileRes = await fetch(downloadUrl);
-    if (!fileRes.ok) throw new Error('No se pudo descargar el archivo para exportar.');
+    if (!fileRes.ok) throw new Error(t('ui.no_se_pudo_descargar_el_archivo_para_exp'));
     const blob = await fileRes.blob();
 
     const metadata = {
@@ -317,9 +318,10 @@ export async function exportToGoogleDrive(downloadUrl: string, filename: string)
       throw new Error(`Upload error ${uploadRes.status}`);
     }
 
-    showToast('Archivo guardado en Google Drive con éxito.', 'success');
+    showToast(t('toasts.archivo_guardado_en_google_drive_con_exi'), 'success');
   } catch {
     showToast('Error al subir el archivo a Google Drive.', 'danger');
   }
 }
 
+export { GOOGLE_DRIVE_API_KEY, GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_SCOPES, connectGoogleDrive, disconnectGoogleDrive, exportToGoogleDrive, getGoogleDriveToken, getOrFetchGoogleDriveToken, isGoogleDriveConnected, loadGapiScript, loadGisScript, pickGoogleDriveFiles };

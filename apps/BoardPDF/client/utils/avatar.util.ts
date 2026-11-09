@@ -1,7 +1,7 @@
 import { currentUser } from '../services/api.service.js';
 import { applyAvatarTier, getFallbackTierColor } from './tier.util.js';
 
-export interface AvatarUserLike {
+interface AvatarUserLike {
   avatar_url?: string | null;
   email?: string | null;
   id?: number | string | null;
@@ -10,7 +10,7 @@ export interface AvatarUserLike {
   username?: string | null;
 }
 
-export interface RenderAvatarOptions {
+interface RenderAvatarOptions {
   className?: string;
   dataRef?: string;
   size?: number;
@@ -29,7 +29,7 @@ const GRADIENT_PALETTES = [
   ['#18181b', '#27272a'],
 ];
 
-export function hashString(str: string): number {
+function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
@@ -38,7 +38,7 @@ export function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-export function escapeXml(str: string): string {
+function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -47,13 +47,13 @@ export function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export function getInitial(name: string): string {
+function getInitial(name: string): string {
   const clean = String(name || '').trim().replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '');
   if (!clean) return 'U';
   return clean.charAt(0).toUpperCase();
 }
 
-export function getAvatarDataUri(name: string, sizeInput?: number): string {
+function getAvatarDataUri(name: string, sizeInput?: number): string {
   const initial = escapeXml(getInitial(name));
   const hash = Math.floor(Math.abs(hashString(name))) || 0;
   const palette = GRADIENT_PALETTES[hash % GRADIENT_PALETTES.length];
@@ -67,7 +67,7 @@ export function getAvatarDataUri(name: string, sizeInput?: number): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export function getUserAvatarUrl(user: AvatarUserLike, size?: number): string {
+function getUserAvatarUrl(user: AvatarUserLike, size?: number): string {
   const currentUserId = currentUser?.id !== undefined ? String(currentUser.id) : null;
   const targetId = user.id !== undefined && user.id !== null ? String(user.id) : user.user_id !== undefined && user.user_id !== null ? String(user.user_id) : null;
 
@@ -85,7 +85,7 @@ export function getUserAvatarUrl(user: AvatarUserLike, size?: number): string {
   return getAvatarDataUri(displayName, size);
 }
 
-export function renderUserAvatarHtml(user: AvatarUserLike, options?: RenderAvatarOptions): string {
+function renderUserAvatarHtml(user: AvatarUserLike, options?: RenderAvatarOptions): string {
   const url = getUserAvatarUrl(user, options?.size);
   const displayName = user.username || user.email || 'User';
   const tier = (user.subscription_tier || 'free').toLowerCase();
@@ -97,7 +97,7 @@ export function renderUserAvatarHtml(user: AvatarUserLike, options?: RenderAvata
   return `<div class="${className}"${dataRefAttr} data-tier="${tier}"><img src="${url}" alt="${displayName}" /></div>`;
 }
 
-export function createAvatarElement(user: AvatarUserLike, options?: RenderAvatarOptions): HTMLElement {
+function createAvatarElement(user: AvatarUserLike, options?: RenderAvatarOptions): HTMLElement {
   const container = document.createElement('div');
   const baseClassName = options?.className || 'table-user-avatar';
   const tier = (user.subscription_tier || 'free').toLowerCase();
@@ -118,3 +118,6 @@ export function createAvatarElement(user: AvatarUserLike, options?: RenderAvatar
 }
 
 export { applyAvatarTier, getFallbackTierColor } from './tier.util.js';
+
+export { createAvatarElement, escapeXml, getAvatarDataUri, getInitial, getUserAvatarUrl, hashString, renderUserAvatarHtml };
+export type { AvatarUserLike, RenderAvatarOptions };

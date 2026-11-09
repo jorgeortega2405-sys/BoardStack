@@ -2,7 +2,7 @@ import { currentUser, escapeHtml } from '../../services/api.service.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { RemotePeer } from './collaborative-pdf.types.js';
 
-export function addPeerPresenceBubble(container: HTMLElement, peer: RemotePeer): void {
+function addPeerPresenceBubble(container: HTMLElement, peer: RemotePeer): void {
   const presenceContainer = container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
   if (!presenceContainer) return;
 
@@ -26,7 +26,7 @@ export function addPeerPresenceBubble(container: HTMLElement, peer: RemotePeer):
   }
 }
 
-export function removePeerPresenceBubble(container: HTMLElement, clientId: string): void {
+function removePeerPresenceBubble(container: HTMLElement, clientId: string): void {
   const presenceContainer = container.querySelector<HTMLElement>('[data-ref="collab-presence-container"]');
   if (!presenceContainer) return;
   const bubble = presenceContainer.querySelector<HTMLElement>(`[data-client-id="${clientId}"]`);
@@ -39,7 +39,7 @@ export function removePeerPresenceBubble(container: HTMLElement, clientId: strin
   }
 }
 
-export function renderPresenceList(
+function renderPresenceList(
   container: HTMLElement,
   remotePeers: Map<string, RemotePeer>,
   myColor: string,
@@ -88,7 +88,7 @@ export function renderPresenceList(
   }
 }
 
-export function renderRemoteCursor(
+function renderRemoteCursor(
   container: HTMLElement,
   remoteCursorElements: Map<string, HTMLElement>,
   remoteCursorTimers: Map<string, ReturnType<typeof setTimeout>>,
@@ -130,3 +130,5 @@ export function renderRemoteCursor(
   }, 4000);
   remoteCursorTimers.set(msg.clientId, newTimer);
 }
+
+export { addPeerPresenceBubble, removePeerPresenceBubble, renderPresenceList, renderRemoteCursor };

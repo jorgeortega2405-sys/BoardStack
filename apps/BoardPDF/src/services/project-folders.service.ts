@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-export interface ProjectFolderRecord {
+interface ProjectFolderRecord {
   color?: string | null;
   created_at: string;
   document_count?: number;
@@ -19,7 +19,7 @@ export interface ProjectFolderRecord {
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative');
 
-export async function ensureUploadsFolder(userId: number | null): Promise<ProjectFolderRecord> {
+async function ensureUploadsFolder(userId: number | null): Promise<ProjectFolderRecord> {
   const pool = getDbPool();
   try {
     const [rows] = await pool.query<any[]>(
@@ -62,7 +62,7 @@ export async function ensureUploadsFolder(userId: number | null): Promise<Projec
   }
 }
 
-export async function listProjectFolders(userId: number | null, parentId?: string | null, folderType?: 'project' | 'upload_folder'): Promise<{ folders: ProjectFolderRecord[]; uploadsFolder: ProjectFolderRecord }> {
+async function listProjectFolders(userId: number | null, parentId?: string | null, folderType?: 'project' | 'upload_folder'): Promise<{ folders: ProjectFolderRecord[]; uploadsFolder: ProjectFolderRecord }> {
   const uploadsFolder = await ensureUploadsFolder(userId);
   const pool = getDbPool();
 
@@ -155,7 +155,7 @@ export async function listProjectFolders(userId: number | null, parentId?: strin
   }
 }
 
-export async function getProjectFolderById(id: string, userId: number | null): Promise<ProjectFolderRecord | null> {
+async function getProjectFolderById(id: string, userId: number | null): Promise<ProjectFolderRecord | null> {
   const pool = getDbPool();
   try {
     const [rows] = await pool.query<any[]>(
@@ -172,7 +172,7 @@ export async function getProjectFolderById(id: string, userId: number | null): P
   }
 }
 
-export async function createProjectFolder(payload: {
+async function createProjectFolder(payload: {
   color?: string | null;
   folderType?: 'project' | 'upload_folder';
   name: string;
@@ -223,7 +223,7 @@ export async function createProjectFolder(payload: {
   };
 }
 
-export async function renameProjectFolder(id: string, newName: string, userId: number | null): Promise<ProjectFolderRecord> {
+async function renameProjectFolder(id: string, newName: string, userId: number | null): Promise<ProjectFolderRecord> {
   const cleanName = (newName || '').trim();
   if (!cleanName) {
     throw new Error('El nombre de la carpeta no puede estar vacío.');
@@ -250,7 +250,7 @@ export async function renameProjectFolder(id: string, newName: string, userId: n
   return folder;
 }
 
-export async function deleteProjectFolder(id: string, userId: number | null): Promise<boolean> {
+async function deleteProjectFolder(id: string, userId: number | null): Promise<boolean> {
   const folder = await getProjectFolderById(id, userId);
   if (!folder) {
     return false;
@@ -284,7 +284,7 @@ export async function deleteProjectFolder(id: string, userId: number | null): Pr
   return true;
 }
 
-export async function moveDocToFolder(docId: string, folderId: string | null, userId?: number | null): Promise<boolean> {
+async function moveDocToFolder(docId: string, folderId: string | null, userId?: number | null): Promise<boolean> {
   const pool = getDbPool();
   if (folderId) {
     const targetFolder = await getProjectFolderById(folderId, userId ?? null);
@@ -300,7 +300,7 @@ export async function moveDocToFolder(docId: string, folderId: string | null, us
   return res && res.affectedRows > 0;
 }
 
-export async function moveUploadToFolder(uploadId: string, folderId: string | null, userId?: number | null): Promise<boolean> {
+async function moveUploadToFolder(uploadId: string, folderId: string | null, userId?: number | null): Promise<boolean> {
   const pool = getDbPool();
   if (folderId) {
     const targetFolder = await getProjectFolderById(folderId, userId ?? null);
@@ -333,3 +333,6 @@ export async function moveUploadToFolder(uploadId: string, folderId: string | nu
 
   return true;
 }
+
+export { createProjectFolder, deleteProjectFolder, ensureUploadsFolder, getProjectFolderById, listProjectFolders, moveDocToFolder, moveUploadToFolder, renameProjectFolder };
+export type { ProjectFolderRecord };

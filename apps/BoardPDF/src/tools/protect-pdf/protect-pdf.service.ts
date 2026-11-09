@@ -8,7 +8,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-export async function protectPdf(
+async function protectPdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: ProtectPdfOptions
@@ -76,3 +76,5 @@ with pikepdf.open(input_path) as pdf:
     ]);
   }
 }
+
+export { protectPdf };

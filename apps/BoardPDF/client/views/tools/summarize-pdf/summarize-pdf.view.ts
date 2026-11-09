@@ -12,6 +12,7 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, animateTypewriter, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
 import { SummarizePdfResultData } from './summarize-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
 function renderSimpleMarkdown(md: string): string {
   const lines = md.split('\n');
@@ -87,7 +88,7 @@ function formatInlineMarkdown(text: string): string {
     .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
 
-export class SummarizePdfController implements ViewController {
+class SummarizePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -112,7 +113,7 @@ export class SummarizePdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Archivo PDF',
-        desc: 'Lee, comprende y sintetiza cualquier documento PDF con inteligencia artificial.',
+        desc: t('ui.lee_comprende_y_sintetiza_cualquier_docu'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -211,13 +212,13 @@ export class SummarizePdfController implements ViewController {
 
   public async handleFileSelected(file: File): Promise<void> {
     if (!currentUser) {
-      showToast('Debes iniciar sesión para utilizar las herramientas con Inteligencia Artificial.', 'warning');
+      showToast(t('toasts.debes_iniciar_sesion_para_utilizar_las_h'), 'warning');
       navigate('/login');
       return;
     }
 
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      showToast('Solo se permiten documentos en formato PDF.', 'danger');
+      showToast(t('tools.only_pdf_allowed'), 'danger');
       return;
     }
 
@@ -245,7 +246,7 @@ export class SummarizePdfController implements ViewController {
       void this.renderAllPages();
       await this.startSummarize();
     } catch {
-      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté protegido o dañado.', 'danger');
+      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
       this.resetSelectedFile();
     }
   }
@@ -411,7 +412,7 @@ export class SummarizePdfController implements ViewController {
       this.phaseManager?.showProcessing('Resumiendo documento PDF...', 'Leyendo documento y sintetizando puntos clave con IA');
 
       if (!response.ok || !result.success || !result.data) {
-        throw new Error(result.error || 'Error al generar el resumen del documento.');
+        throw new Error(result.error || t('ui.error_al_generar_el_resumen_del_document'));
       }
 
       this.currentResult = result.data;
@@ -421,10 +422,10 @@ export class SummarizePdfController implements ViewController {
       this.phaseManager?.setPhase('workspace');
       if (settingsBtn) settingsBtn.classList.add('is-visible');
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
-      showToast('Resumen generado exitosamente.', 'success');
+      showToast(t('toasts.summary_generated_success'), 'success');
       this.renderSummaryResult(result.data);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error inesperado al resumir el PDF.';
+      const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_resumir_el_pdf');
       this.phaseManager?.showError(errorMessage, () => {
         this.phaseManager?.setPhase('workspace');
         if (settingsBtn) settingsBtn.classList.add('is-visible');
@@ -455,10 +456,12 @@ export class SummarizePdfController implements ViewController {
   }
 }
 
-export async function createSummarizePdfView(): Promise<HTMLElement> {
+async function createSummarizePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/summarize-pdf/summarize-pdf.html');
   const controller = new SummarizePdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { SummarizePdfController, createSummarizePdfView };

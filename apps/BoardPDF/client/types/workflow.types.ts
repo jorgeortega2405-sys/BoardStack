@@ -1,10 +1,10 @@
-export interface WorkflowStep {
+interface WorkflowStep {
   id: string;
   options: Record<string, any>;
   tool: string;
 }
 
-export interface UserWorkflow {
+interface UserWorkflow {
   category: 'pdf' | 'image';
   created_at: string;
   description: string | null;
@@ -14,7 +14,7 @@ export interface UserWorkflow {
   updated_at: string;
 }
 
-export interface ToolDefinition {
+interface ToolDefinition {
   category: 'pdf' | 'image';
   group: string;
   icon: string;
@@ -24,10 +24,12 @@ export interface ToolDefinition {
   targetType?: string;
 }
 
-export interface OrganizePageItem {
+interface OrganizePageItem {
   id: string;
   originalIndex: number;
   pageNum: number;
   rotation: number;
   thumbnailDataUrl?: string;
 }
+
+export type { OrganizePageItem, ToolDefinition, UserWorkflow, WorkflowStep };

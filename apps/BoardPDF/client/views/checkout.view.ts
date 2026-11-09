@@ -8,7 +8,7 @@ import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
-export class CheckoutController implements ViewController {
+class CheckoutController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentIntent: any = null;
@@ -32,7 +32,7 @@ export class CheckoutController implements ViewController {
 
   async init(): Promise<void> {
     if (!currentUser) {
-      showToast(t('upgrade.login_required', 'Inicia sesión para seleccionar un plan.'), 'info');
+      showToast(t('upgrade.login_required', t('ui.inicia_sesion_para_seleccionar_un_plan')), 'info');
       navigate('/login');
       return;
     }
@@ -121,13 +121,13 @@ export class CheckoutController implements ViewController {
     const summaryPriceRow = this.container.querySelector<HTMLElement>('.checkout-summary-price-row');
     const summaryNotice = this.container.querySelector<HTMLElement>('[data-ref="summary-notice-text"]');
 
-    if (step1El) step1El.style.display = 'none';
-    if (step2El) step2El.style.display = 'none';
-    if (btnNext) btnNext.style.display = 'none';
-    if (btnSubmit) btnSubmit.style.display = 'none';
+    if (step1El) step1El.classList.add('is-hidden');
+    if (step2El) step2El.classList.add('is-hidden');
+    if (btnNext) btnNext.classList.add('is-hidden');
+    if (btnSubmit) btnSubmit.classList.add('is-hidden');
 
     if (activeBlock) {
-      activeBlock.style.display = 'flex';
+      activeBlock.classList.remove('is-hidden');
     }
 
     const planName = targetTier === 'business' ? 'BoardPDF Negocios' : 'BoardPDF Pro';
@@ -136,23 +136,23 @@ export class CheckoutController implements ViewController {
     if (titleEl) {
       titleEl.textContent = isExactSame
         ? `Ya cuentas con el plan ${planName}`
-        : 'Tu cuenta ya cuenta con un plan superior';
+        : t('ui.tu_cuenta_ya_cuenta_con_un_plan_superior');
     }
 
     if (descEl) {
       descEl.textContent = isExactSame
-        ? `Tu cuenta ya dispone de este plan activo. No requieres realizar ningún pago adicional para disfrutar de todas sus ventajas.`
-        : `Actualmente dispones del plan ${currentName}, el cual ya incluye todas las herramientas y límites avanzados del plan ${planName}.`;
+        ? t('ui.tu_cuenta_ya_dispone_de_este_plan_activo')
+        : t('ui.actualmente_dispones_del_plan_el_cual_ya');
     }
 
     if (summaryPriceRow) {
-      summaryPriceRow.style.display = 'none';
+      summaryPriceRow.classList.add('is-hidden');
     }
 
     if (summaryNotice) {
       summaryNotice.textContent = isExactSame
-        ? 'Plan actualmente activo en tu cuenta.'
-        : `Plan superior (${currentName}) activo en tu cuenta.`;
+        ? t('ui.plan_actualmente_activo_en_tu_cuenta')
+        : t('ui.plan_superior_activo_en_tu_cuenta');
     }
 
     const signal = this.abortController?.signal;
@@ -251,16 +251,16 @@ export class CheckoutController implements ViewController {
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
 
     if (step === 1) {
-      if (step1El) step1El.style.display = 'flex';
-      if (step2El) step2El.style.display = 'none';
-      if (btnNext) btnNext.style.display = 'flex';
-      if (btnSubmit) btnSubmit.style.display = 'none';
+      if (step1El) step1El.classList.remove('is-hidden');
+      if (step2El) step2El.classList.add('is-hidden');
+      if (btnNext) btnNext.classList.remove('is-hidden');
+      if (btnSubmit) btnSubmit.classList.add('is-hidden');
     } else {
-      if (step1El) step1El.style.display = 'none';
-      if (step2El) step2El.style.display = 'flex';
-      if (btnNext) btnNext.style.display = 'none';
+      if (step1El) step1El.classList.add('is-hidden');
+      if (step2El) step2El.classList.remove('is-hidden');
+      if (btnNext) btnNext.classList.add('is-hidden');
       if (btnSubmit) {
-        btnSubmit.style.display = 'flex';
+        btnSubmit.classList.remove('is-hidden');
         btnSubmit.disabled = !this.isCardSelected;
       }
 
@@ -288,7 +288,7 @@ export class CheckoutController implements ViewController {
     const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-payment"]');
 
     methodCard?.classList.remove('is-selected');
-    if (methodBody) methodBody.style.display = 'none';
+    if (methodBody) methodBody.classList.add('is-hidden');
     if (btnSubmit) btnSubmit.disabled = true;
   }
 
@@ -328,7 +328,7 @@ export class CheckoutController implements ViewController {
 
     if (this.isCardSelected) {
       methodCard?.classList.add('is-selected');
-      if (methodBody) methodBody.style.display = 'flex';
+      if (methodBody) methodBody.classList.remove('is-hidden');
       if (!this.paymentElement) {
         void this.initializeGateway();
       } else if (btnSubmit) {
@@ -336,7 +336,7 @@ export class CheckoutController implements ViewController {
       }
     } else {
       methodCard?.classList.remove('is-selected');
-      if (methodBody) methodBody.style.display = 'none';
+      if (methodBody) methodBody.classList.add('is-hidden');
       if (btnSubmit) btnSubmit.disabled = true;
     }
   }
@@ -369,12 +369,12 @@ export class CheckoutController implements ViewController {
 
     if (isRecurring) {
       if (text1) text1.textContent = 'Cancela cuando quieras. Sin compromisos a largo plazo.';
-      if (text2) text2.textContent = 'Acceso inmediato e ilimitado a todas las herramientas avanzadas.';
-      if (text3) text3.textContent = 'Facturación automática para que nunca pierdas el acceso a tus archivos.';
+      if (text2) text2.textContent = t('ui.acceso_inmediato_e_ilimitado_a_todas_las');
+      if (text3) text3.textContent = t('ui.facturacion_automatica_para_que_nunca_pi');
     } else {
       if (text1) text1.textContent = 'Sin pagos recurrentes. Renueva únicamente cuando tú lo decidas.';
-      if (text2) text2.textContent = 'Sin cargos automáticos posteriores en tu tarjeta bancaria.';
-      if (text3) text3.textContent = 'Acceso completo garantizado durante todo el período prepagado.';
+      if (text2) text2.textContent = t('ui.sin_cargos_automaticos_posteriores_en_tu');
+      if (text3) text3.textContent = t('ui.acceso_completo_garantizado_durante_todo');
     }
   }
 
@@ -402,7 +402,7 @@ export class CheckoutController implements ViewController {
       if (price2) price2.textContent = isBusiness ? 'USD $191.88' : 'USD $95.88';
       if (badge2) {
         badge2.textContent = 'Ahorra 20%';
-        badge2.style.display = 'inline-flex';
+        badge2.classList.remove('is-hidden');
       }
 
       const isMonthlySelected = this.recurringCycle === 'monthly';
@@ -418,7 +418,7 @@ export class CheckoutController implements ViewController {
       if (price2) price2.textContent = isBusiness ? 'USD $191.88' : 'USD $95.88';
       if (badge2) {
         badge2.textContent = 'Mejor valor';
-        badge2.style.display = 'inline-flex';
+        badge2.classList.remove('is-hidden');
       }
 
       const isOneMonthSelected = this.oneTimeDuration === '1_month';
@@ -485,8 +485,8 @@ export class CheckoutController implements ViewController {
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
 
     if (btnSubmit) btnSubmit.disabled = true;
-    if (loadingEl) loadingEl.style.display = 'flex';
-    if (errorBanner) errorBanner.style.display = 'none';
+    if (loadingEl) loadingEl.classList.remove('is-hidden');
+    if (errorBanner) errorBanner.classList.add('is-hidden');
 
     if (this.paymentElement) {
       try {
@@ -501,9 +501,9 @@ export class CheckoutController implements ViewController {
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
             errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
-            errorBanner.style.display = 'block';
+            errorBanner.classList.remove('is-hidden');
           }
-          if (loadingEl) loadingEl.style.display = 'none';
+          if (loadingEl) loadingEl.classList.add('is-hidden');
           return;
         }
         this.currentIntent = res;
@@ -512,9 +512,9 @@ export class CheckoutController implements ViewController {
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
             errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
-            errorBanner.style.display = 'block';
+            errorBanner.classList.remove('is-hidden');
           }
-          if (loadingEl) loadingEl.style.display = 'none';
+          if (loadingEl) loadingEl.classList.add('is-hidden');
           return;
         }
         this.currentIntent = res;
@@ -548,7 +548,7 @@ export class CheckoutController implements ViewController {
       if (mountPoint) {
         this.paymentElement.mount(mountPoint);
         this.paymentElement.on('ready', () => {
-          if (loadingEl) loadingEl.style.display = 'none';
+          if (loadingEl) loadingEl.classList.add('is-hidden');
           if (btnSubmit && this.isCardSelected) btnSubmit.disabled = false;
         });
 
@@ -558,16 +558,16 @@ export class CheckoutController implements ViewController {
               if (btnSubmit) btnSubmit.disabled = true;
             } else if (e.complete) {
               if (btnSubmit && this.isCardSelected) btnSubmit.disabled = false;
-              errorBanner.style.display = 'none';
+              errorBanner.classList.add('is-hidden');
             }
           }
         });
       }
     } catch {
-      if (loadingEl) loadingEl.style.display = 'none';
+      if (loadingEl) loadingEl.classList.add('is-hidden');
       if (errorBanner) {
-        errorBanner.textContent = 'Error al cargar los componentes de pago seguro.';
-        errorBanner.style.display = 'block';
+        errorBanner.textContent = t('ui.error_al_cargar_los_componentes_de_pago_');
+        errorBanner.classList.remove('is-hidden');
       }
     } finally {
       this.isInitializingGateway = false;
@@ -584,7 +584,7 @@ export class CheckoutController implements ViewController {
     this.isSubmitting = true;
     if (btnSubmit) btnSubmit.disabled = true;
     if (btnSubmitText) btnSubmitText.textContent = 'Procesando pago...';
-    if (errorBanner) errorBanner.style.display = 'none';
+    if (errorBanner) errorBanner.classList.add('is-hidden');
 
     try {
       const userLang = navigator.language || 'es-ES';
@@ -608,8 +608,8 @@ export class CheckoutController implements ViewController {
 
       if (error) {
         if (errorBanner) {
-          errorBanner.textContent = error.message || 'Error al procesar el pago.';
-          errorBanner.style.display = 'block';
+          errorBanner.textContent = error.message || t('ui.error_al_procesar_el_pago');
+          errorBanner.classList.remove('is-hidden');
         }
         this.isSubmitting = false;
         if (btnSubmit) btnSubmit.disabled = false;
@@ -648,13 +648,13 @@ export class CheckoutController implements ViewController {
 
         navigate('/settings/billing');
       } else {
-        showToast('El pago está en proceso de verificación.', 'info');
+        showToast(t('toasts.el_pago_esta_en_proceso_de_verificacion'), 'info');
         navigate('/settings/billing');
       }
     } catch {
       if (errorBanner) {
-        errorBanner.textContent = 'Error inesperado al confirmar la transacción.';
-        errorBanner.style.display = 'block';
+        errorBanner.textContent = t('ui.error_inesperado_al_confirmar_la_transac');
+        errorBanner.classList.remove('is-hidden');
       }
       this.isSubmitting = false;
       if (btnSubmit) btnSubmit.disabled = false;
@@ -663,10 +663,12 @@ export class CheckoutController implements ViewController {
   }
 }
 
-export async function createCheckoutView(initialQuery?: URLSearchParams): Promise<HTMLElement> {
+async function createCheckoutView(initialQuery?: URLSearchParams): Promise<HTMLElement> {
   const container = await loadTemplate('/views/checkout/checkout.html');
   const controller = new CheckoutController(container, initialQuery);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { CheckoutController, createCheckoutView };

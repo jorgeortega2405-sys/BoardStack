@@ -2,17 +2,17 @@ import { getDbPool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 import type { RowDataPacket } from 'mysql2';
 
-export interface CloudIntegrationStatus {
+interface CloudIntegrationStatus {
   connected: boolean;
   email: string | null;
 }
 
-export interface UserCloudIntegrationsResponse {
+interface UserCloudIntegrationsResponse {
   dropbox: CloudIntegrationStatus;
   google_drive: CloudIntegrationStatus;
 }
 
-export async function getUserCloudIntegrations(userId: number): Promise<UserCloudIntegrationsResponse> {
+async function getUserCloudIntegrations(userId: number): Promise<UserCloudIntegrationsResponse> {
   const result: UserCloudIntegrationsResponse = {
     dropbox: { connected: false, email: null },
     google_drive: { connected: false, email: null },
@@ -41,7 +41,7 @@ export async function getUserCloudIntegrations(userId: number): Promise<UserClou
   return result;
 }
 
-export async function saveUserCloudIntegration(
+async function saveUserCloudIntegration(
   userId: number,
   provider: 'google_drive' | 'dropbox',
   data: {
@@ -88,7 +88,7 @@ export async function saveUserCloudIntegration(
   }
 }
 
-export async function disconnectUserCloudIntegration(
+async function disconnectUserCloudIntegration(
   userId: number,
   provider: 'google_drive' | 'dropbox'
 ): Promise<boolean> {
@@ -106,7 +106,7 @@ export async function disconnectUserCloudIntegration(
   }
 }
 
-export async function getUserCloudAccessToken(
+async function getUserCloudAccessToken(
   userId: number,
   provider: 'google_drive' | 'dropbox'
 ): Promise<string | null> {
@@ -131,3 +131,6 @@ export async function getUserCloudAccessToken(
     return null;
   }
 }
+
+export { disconnectUserCloudIntegration, getUserCloudAccessToken, getUserCloudIntegrations, saveUserCloudIntegration };
+export type { CloudIntegrationStatus, UserCloudIntegrationsResponse };

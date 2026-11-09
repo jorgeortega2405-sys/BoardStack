@@ -1,6 +1,6 @@
 import { EditorElement } from './collaborative-pdf.types.js';
 
-export function findSearchMatches(
+function findSearchMatches(
   elements: EditorElement[],
   query: string,
   matchCase: boolean
@@ -19,7 +19,7 @@ export function findSearchMatches(
   return matches;
 }
 
-export function replaceCurrentMatch(
+function replaceCurrentMatch(
   elements: EditorElement[],
   match: { elementId: string; pageIndex: number },
   search: string,
@@ -38,7 +38,7 @@ export function replaceCurrentMatch(
   return true;
 }
 
-export function replaceAllMatches(
+function replaceAllMatches(
   elements: EditorElement[],
   search: string,
   replaceWith: string,
@@ -61,3 +61,5 @@ export function replaceAllMatches(
   }
   return count;
 }
+
+export { findSearchMatches, replaceAllMatches, replaceCurrentMatch };

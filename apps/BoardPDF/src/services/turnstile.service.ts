@@ -1,7 +1,7 @@
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 
-export interface TurnstileVerifyResult {
+interface TurnstileVerifyResult {
   action?: string;
   cdata?: string;
   challengeTs?: string;
@@ -11,7 +11,7 @@ export interface TurnstileVerifyResult {
   success: boolean;
 }
 
-export async function verifyTurnstileToken(token: string, remoteIp?: string): Promise<TurnstileVerifyResult> {
+async function verifyTurnstileToken(token: string, remoteIp?: string): Promise<TurnstileVerifyResult> {
   if (!token || typeof token !== 'string' || !token.trim()) {
     return { error: 'El token de verificación de seguridad es requerido.', success: false };
   }
@@ -105,3 +105,6 @@ export async function verifyTurnstileToken(token: string, remoteIp?: string): Pr
     };
   }
 }
+
+export { verifyTurnstileToken };
+export type { TurnstileVerifyResult };

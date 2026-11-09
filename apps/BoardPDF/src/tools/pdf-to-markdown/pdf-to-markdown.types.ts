@@ -1,6 +1,6 @@
-export type MarkdownConversionMode = 'academic' | 'clean' | 'structured' | 'tables';
+type MarkdownConversionMode = 'academic' | 'clean' | 'structured' | 'tables';
 
-export interface PdfToMarkdownParams {
+interface PdfToMarkdownParams {
   buffer: Buffer;
   customPrompt?: string;
   includeMathLatex?: boolean;
@@ -10,7 +10,7 @@ export interface PdfToMarkdownParams {
   removeHeadersFooters?: boolean;
 }
 
-export interface PdfToMarkdownResponse {
+interface PdfToMarkdownResponse {
   characterCount: number;
   downloadUrl: string;
   fileId: string;
@@ -23,7 +23,7 @@ export interface PdfToMarkdownResponse {
   wordCount: number;
 }
 
-export interface StoredMarkdownFile {
+interface StoredMarkdownFile {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -32,3 +32,5 @@ export interface StoredMarkdownFile {
   fileSize: number;
   markdown: string;
 }
+
+export type { MarkdownConversionMode, PdfToMarkdownParams, PdfToMarkdownResponse, StoredMarkdownFile };

@@ -1,11 +1,11 @@
 import { t } from '../services/i18n.service.js';
 
-export interface ValidationResult {
+interface ValidationResult {
   error?: string;
   valid: boolean;
 }
 
-export function validateEmail(email: unknown): ValidationResult {
+function validateEmail(email: unknown): ValidationResult {
   if (!email || typeof email !== 'string') {
     return { error: t('validation.email_required', 'El correo electrónico es requerido.'), valid: false };
   }
@@ -24,7 +24,7 @@ export function validateEmail(email: unknown): ValidationResult {
   return { valid: true };
 }
 
-export function validatePassword(password: unknown): ValidationResult {
+function validatePassword(password: unknown): ValidationResult {
   if (!password || typeof password !== 'string') {
     return { error: t('validation.password_required', 'La contraseña es requerida.'), valid: false };
   }
@@ -34,13 +34,13 @@ export function validatePassword(password: unknown): ValidationResult {
   }
 
   if (password.length > 128) {
-    return { error: t('validation.password_max', 'La contraseña no puede exceder los 128 caracteres.'), valid: false };
+    return { error: t('validation.password_max', t('ui.la_contrasena_no_puede_exceder_los_128_c')), valid: false };
   }
 
   return { valid: true };
 }
 
-export function validateUsername(username: unknown): ValidationResult {
+function validateUsername(username: unknown): ValidationResult {
   if (!username || typeof username !== 'string') {
     return { error: t('validation.username_required', 'El nombre de usuario es requerido.'), valid: false };
   }
@@ -52,7 +52,7 @@ export function validateUsername(username: unknown): ValidationResult {
   }
 
   if (trimmed.length > 30) {
-    return { error: t('validation.username_max', 'El nombre de usuario no puede superar los 30 caracteres.'), valid: false };
+    return { error: t('validation.username_max', t('ui.el_nombre_de_usuario_no_puede_superar_lo')), valid: false };
   }
 
   const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
@@ -66,9 +66,9 @@ export function validateUsername(username: unknown): ValidationResult {
   return { valid: true };
 }
 
-export function validateVerificationCode(code: unknown): ValidationResult {
+function validateVerificationCode(code: unknown): ValidationResult {
   if (!code || typeof code !== 'string') {
-    return { error: t('validation.code_required', 'Ingresa el código de 6 dígitos.'), valid: false };
+    return { error: t('validation.code_required', t('ui.ingresa_el_codigo_de_6_digitos')), valid: false };
   }
 
   const trimmed = code.trim();
@@ -79,23 +79,23 @@ export function validateVerificationCode(code: unknown): ValidationResult {
   return { valid: true };
 }
 
-export interface FileValidationOptions {
+interface FileValidationOptions {
   allowedMimes?: string[];
   maxMb?: number;
 }
 
-export interface FileValidationResult {
+interface FileValidationResult {
   error?: string;
   file?: File;
   valid: boolean;
 }
 
-export function validateAndSanitizeFile(
+function validateAndSanitizeFile(
   file: unknown,
   options: FileValidationOptions = {}
 ): FileValidationResult {
   if (!file || !(file instanceof File)) {
-    return { error: 'No se proporcionó un archivo válido.', valid: false };
+    return { error: t('ui.no_se_proporciono_un_archivo_valido'), valid: false };
   }
 
   if (file.size <= 0) {
@@ -106,7 +106,7 @@ export function validateAndSanitizeFile(
   const maxBytes = maxMb * 1024 * 1024;
   if (file.size > maxBytes) {
     return {
-      error: `El archivo supera el límite permitido de ${maxMb} MB.`,
+      error: t('ui.el_archivo_supera_el_limite_permitido_de'),
       valid: false,
     };
   }
@@ -143,7 +143,7 @@ const ACADEMIC_PATTERNS: RegExp[] = [
   /@([a-z0-9\-]+\.)*educa\.[a-z]{2,5}$/i,
 ];
 
-export function isAcademicEmail(email: unknown): boolean {
+function isAcademicEmail(email: unknown): boolean {
   if (!email || typeof email !== 'string' || !email.includes('@')) {
     return false;
   }
@@ -151,4 +151,5 @@ export function isAcademicEmail(email: unknown): boolean {
   return ACADEMIC_PATTERNS.some((pattern) => pattern.test(clean));
 }
 
-
+export { isAcademicEmail, validateAndSanitizeFile, validateEmail, validatePassword, validateUsername, validateVerificationCode };
+export type { FileValidationOptions, FileValidationResult, ValidationResult };

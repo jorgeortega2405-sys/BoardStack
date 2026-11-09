@@ -1,4 +1,4 @@
-export function formatBytes(bytes: number, decimals = 2): string {
+function formatBytes(bytes: number, decimals = 2): string {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
@@ -7,7 +7,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-export function parsePageNumbers(raw: string, maxPages: number): number[] {
+function parsePageNumbers(raw: string, maxPages: number): number[] {
   const result = new Set<number>();
   const parts = raw.split(',');
   for (const part of parts) {
@@ -34,7 +34,7 @@ export function parsePageNumbers(raw: string, maxPages: number): number[] {
   return Array.from(result).sort((a, b) => a - b);
 }
 
-export function formatPageNumbers(pages: number[]): string {
+function formatPageNumbers(pages: number[]): string {
   if (pages.length === 0) return '';
   const sorted = [...new Set(pages)].sort((a, b) => a - b);
   const ranges: string[] = [];
@@ -53,3 +53,5 @@ export function formatPageNumbers(pages: number[]): string {
   ranges.push(start === end ? `${start}` : `${start}-${end}`);
   return ranges.join(', ');
 }
+
+export { formatBytes, formatPageNumbers, parsePageNumbers };

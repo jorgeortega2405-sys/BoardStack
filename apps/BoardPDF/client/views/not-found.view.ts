@@ -1,7 +1,7 @@
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 
-export class NotFoundController {
+class NotFoundController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
 
@@ -23,10 +23,12 @@ export class NotFoundController {
   }
 }
 
-export async function createNotFoundView(): Promise<HTMLElement> {
+async function createNotFoundView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/error/404.html');
   const controller = new NotFoundController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { NotFoundController, createNotFoundView };

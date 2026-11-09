@@ -1,82 +1,73 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="compress-pdf-wrapper">
-  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-
-    <div class="tool-top-bar__right" data-ref="tool-top-right">
-      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-        <span class="component-button__text">Opciones</span>
-      </button>
-
-      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-compress-action" disabled>
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
-        <span class="component-button__text" data-ref="txt-compress-action">Comprimir PDF</span>
-      </button>
-    </div>
-  </header>
-
-  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="compress-pdf-layout">
-    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="compress-pdf-workspace">
-      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="compress-selected-card">
-
-        <div class="pdf-reorder-hint">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
-          <span>Elige el nivel de compresión en las opciones para optimizar el tamaño de tu archivo.</span>
-        </div>
-
-        <div class="pdf-items-grid" data-ref="pdf-items-grid">
-          <div class="pdf-card">
-            <div class="pdf-card__actions">
-              <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" aria-label="Eliminar archivo">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-              </button>
-            </div>
-            <div class="pdf-card__sheet-wrapper">
-              <div class="pdf-card__sheet">
-                <canvas class="pdf-card__canvas" data-ref="doc-preview-canvas"></canvas>
-              </div>
-            </div>
-            <span class="pdf-card__filename" data-ref="selected-file-name">documento.pdf</span>
-            <span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-
-    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="compress-pdf-sidebar">
-      <div class="tool-sidebar__header">
-        <div class="tool-sidebar__header-left">
-          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-          <h2 class="tool-sidebar__title">Opciones de compresión</h2>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar__section">
-          <span class="tool-sidebar__section-title">Nivel de Compresión</span>
-          <div class="component-tabs" data-ref="compress-level-toggle" data-level="recommended" data-active="1">
-            <button type="button" class="component-tab" data-ref="btn-compress-extreme" data-level="extreme">Extrema</button>
-            <button type="button" class="component-tab is-active" data-ref="btn-compress-recommended" data-level="recommended">Recomendada</button>
-            <button type="button" class="component-tab" data-ref="btn-compress-low" data-level="low">Baja</button>
-          </div>
-        </div>
-
-        <div class="compress-quality-card" data-ref="compress-quality-card">
-          <div class="compress-quality-card__header">
-            <svg class="component-icon compress-quality-card__icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
-            <span class="compress-quality-card__title" data-ref="compress-quality-title">Compresión recomendada</span>
-          </div>
-          <p class="compress-quality-card__desc" data-ref="compress-quality-desc">Buena calidad visual, reducción sustancial de tamaño.</p>
-        </div>
-      </div>
-    </aside>
-  </div>
-  </div>
+<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+<div class="tool-top-bar__right" data-ref="tool-top-right">
+<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
+<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+<span class="component-button__text" >Opciones</span>
+</button>
+<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-compress-action" disabled>
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
+<span class="component-button__text" data-ref="txt-compress-action">Comprimir PDF</span>
+</button>
 </div>
+</header>
+<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="compress-pdf-layout">
+<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="compress-pdf-workspace">
+<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="compress-selected-card">
+<div class="pdf-reorder-hint" >
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
+<span>Elige el nivel de compresión en las opciones para optimizar el tamaño de tu archivo.</span>
+</div>
+<div class="pdf-items-grid" data-ref="pdf-items-grid">
+<div class="pdf-card" >
+<div class="pdf-card__actions" >
+<button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" data-i18n-aria="common.delete_file" aria-label="Eliminar archivo">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
+<div class="pdf-card__sheet-wrapper" >
+<div class="pdf-card__sheet" >
+<canvas class="pdf-card__canvas" data-ref="doc-preview-canvas"></canvas>
+</div>
+</div>
+<span class="pdf-card__filename" data-ref="selected-file-name">documento.pdf</span>
+<span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
+</div>
+</div>
+</div>
+</main>
+<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="compress-pdf-sidebar">
+<div class="tool-sidebar__header" >
+<div class="tool-sidebar__header-left" >
+<svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+<h2 class="tool-sidebar__title" >Opciones de compresión</h2>
+</div>
+<button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
+<div class="tool-sidebar__body" >
+<div class="tool-sidebar__section" >
+<span class="tool-sidebar__section-title" >Nivel de Compresión</span>
+<div class="component-tabs" data-ref="compress-level-toggle" data-level="recommended" data-active="1">
+<button type="button" class="component-tab" data-ref="btn-compress-extreme" data-level="extreme">Extrema</button>
+<button type="button" class="component-tab is-active" data-ref="btn-compress-recommended" data-level="recommended">Recomendada</button>
+<button type="button" class="component-tab" data-ref="btn-compress-low" data-level="low">Baja</button>
+</div>
+</div>
+<div class="compress-quality-card" data-ref="compress-quality-card">
+<div class="compress-quality-card__header" >
+<svg class="component-icon compress-quality-card__icon" aria-hidden="true"><use href="/icons.svg#compress"></use></svg>
+<span class="compress-quality-card__title" data-ref="compress-quality-title">Compresión recomendada</span>
+</div>
+<p class="compress-quality-card__desc" data-ref="compress-quality-desc">Buena calidad visual, reducción sustancial de tamaño.</p>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</div> 

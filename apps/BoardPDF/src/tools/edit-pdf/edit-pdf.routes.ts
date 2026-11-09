@@ -25,4 +25,3 @@ router.post(
 router.get('/tools/edit-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

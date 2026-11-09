@@ -1,190 +1,115 @@
-# Project: Enterprise Subscription & Organization Management (BoardPDF)
+# Project: Comprehensive Audit, Legal & Billing Alignment, Architectural Cleanup, and Strict Standards Enforcement
 
 ## Architecture
-- **Application**: BoardPDF (`apps/BoardPDF`)
-- **Database Authority**: `database/db_identity.sql` and `database/init.sql` (AGENTS.md Rule 11: CERO inline DDL).
-- **Backend**: Express + TypeScript in `apps/BoardPDF/src/`
-  - PBAC Engine: `PermissionService` (`src/services/permission.service.ts`) resolving active permissions from `subscription_tier_permissions`, `role_permissions`, and `organization_members`.
-  - Middlewares: `auth.middleware.ts` (`requirePermission`, `requireFeature`, `hasPermission`, `hasSubscriptionFeature`).
-  - Organization API: `organization.routes.ts` mounted at `/api` in `src/index.ts` handled by `organization.controller.ts` and `organization.service.ts`.
-  - Security: Strict compliance with AGENTS.md Rule 1 (Zero sensitive error leakage) and Rule 2 (Zero `console.*`, using `Logger`).
-- **Frontend**: SPA in `apps/BoardPDF/client/` and partials in `apps/BoardPDF/public/views/`
-  - Layout & Navigation: `layout.component.ts` and `sidebar.html` rendering `rail-item-organization` exclusively when active permission `subscription:feature:organization` is present.
-  - SPA Routing: `routes.config.ts` mounting `/organization`, `/organization/dashboard`, `/organization/members`, `/organization/sso` with PBAC route guards.
-  - Views: `apps/BoardPDF/client/views/organization/` (`organization.view.ts`, `organization-dashboard.view.ts`, `organization-members.view.ts`, `organization-sso.view.ts`).
-  - Templates: `apps/BoardPDF/public/views/organization/` (`dashboard.html`, `members.html`, `sso.html`).
-  - Directives: AGENTS.md Rule 3 (Zero IDs, only `data-ref`), Rule 4 (button `type` first), Rule 5 (error banners below action buttons), Rule 7 (horizontal imports), Rule 8 (zero comments), Rule 9 (standard lifecycle with `AbortController`), Rule 10 (PBAC only).
-- **Automated Test Suite (R5)**:
-  - 5 modular suites in `apps/BoardPDF/test/organization/` using Node 20 native `node:test` + `node:assert` + `tsx`.
+- **Application**: BoardStack Monorepo and BoardPDF Web Application (`apps/BoardPDF`)
+- **Backend Architecture (`apps/BoardPDF/src/`)**:
+  - Express + TypeScript backend configured with central environment validation in `src/config/env.config.ts`.
+  - Zero `process.env.* ||` fallback patterns in TypeScript code. Zero hardcoded secrets/passwords/fallback credentials.
+  - Centralized logging service (`src/services/logger.service.ts`): all application, database, and security logs route through `logger.app`, `logger.db`, or `logger.security`.
+  - Safe HTTP error responses: 100% of 500/400 error handlers return generic user-safe error messages with zero stack traces, SQL queries, or internal paths.
+  - Tool Controller Boilerplate Deduplication: shared request validation helper (`src/utils/tool-handler.util.ts`) unifying file check, PDF buffer validation, and limit checks across 21 tool controllers.
+- **Stripe & Billing Architecture**:
+  - Standalone setup script (`apps/BoardPDF/scripts/init-stripe-products.ts`) programmatically creating products and prices via Stripe SDK.
+  - Pro Tier: $4.99/mo (monthly recurring), $47.90/yr (annual recurring with 20% discount), $99.00 (one-time prepaid pass).
+  - Business Tier: $9.99/mo (monthly recurring), $95.90/yr (annual recurring with 20% discount), $199.00 (one-time prepaid pass).
+  - Pricing Cards Disclaimer: advance billing, auto-renewal, cancel-anytime policy via user settings, and refund policy accurately described.
+- **Legal & Public Documentation Architecture**:
+  - Views in `apps/BoardPDF/public/views/help/` (`terms.html`, `privacy.html`, `cookies.html`, `security.html`, `faq.html`).
+  - Translations in `apps/BoardPDF/public/translations/` (`es/`, `en/`).
+  - Reflects real stateless platform capabilities (AWS S3/MinIO ephemeral object storage with AES-256-GCM, Redis session cache & rate limiting, Cloudflare Turnstile bot verification, TOTP 2FA, zero AI model training).
+  - Outdated "100% free with no charges" claims replaced with accurate subscription terms, auto-renewal, and cancellation policies.
+- **Code Directives & Quality Standards**:
+  - Standard TypeScript structure: imports top (horizontal, sorted), logic middle, exports cleanly grouped at the bottom (`export { ... }`, `export default ...`, `export type { ... }`).
+  - 100% self-documenting code: zero JSDoc (`/** ... */`), zero PHPDoc, zero decorative comment banners, zero redundant inline comments.
+  - Non-web code (Python, Rust, Dockerfiles, SQL schemas, Shell): 100% English naming, logs, CLI strings, and technical annotations.
+  - Full Web Internationalization (AGENTS.md Rule 3): zero hardcoded Spanish in HTML templates and client TypeScript controllers. All user-facing text resolved via `data-i18n*` or `t(...)`.
+  - Modular CSS Architecture (AGENTS.md Rule 6, 12): view-specific class names refactored to generic BEM component classes (`component-block`, `component-group`, `component-item`, `view-hero`, `view-container`, etc.).
+  - Zero inline styles (`style="..."` or `element.style.*`).
+  - Zero HTML IDs (Rule 9: `data-ref="..."` exclusively).
+  - Button `type` attribute first (Rule 10).
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| F1 | PBAC & Organization Database Schema | Define tables for permissions, roles, role_permissions, subscription_tier_permissions, organizations, organization_members, organization_invitations, and organization_sso_configs in database/db_identity.sql and database/init.sql | M1 | R2, Explorer 1 |
-| F2 | Enterprise Subscription Seed & Tier Mapping | Add SQL seeds assigning enterprise tier permissions (subscription:feature:organization, subscription:feature:sso, org:*, members:*, sso:*) and query for direct database assignment | M1 | R2, Explorer 1 |
-| F3 | Backend PermissionService & PBAC Middleware | Implement PermissionService with Redis caching and update auth.middleware.ts with requireFeature, hasPermission, and hasSubscriptionFeature | M1 | R2, Explorer 1 |
-| F4 | User Payload & Auth Delivery of Permissions | Update sanitizeUser, UserPayload, and /api/auth/me to deliver active permissions: string[] to the client | M1 | R1, R2, Explorer 1 |
-| F5 | Organization Overview & Stats API | Endpoints GET /api/organization and PUT /api/organization with requireFeature('organization') and requirePermission('org:manage') | M1 | R3, Explorer 1 |
-| F6 | Organization Member & Invitation Management API | Endpoints for listing members, creating invitations, updating roles, and removing members with granular PBAC guards | M1 | R3, Explorer 1 |
-| F7 | SAML 2.0 Configuration & Validation API | Endpoints GET /api/organization/sso and PUT /api/organization/sso with validation for Entity ID, ACS URL, X.509 cert PEM, and XML metadata | M1 | R4, Explorer 1 |
-| F8 | Client User Type & State Extension | Update client User interface in client/types/auth.types.ts to include permissions?: string[] and expose hasPermission helper | M2 | R1, Explorer 2 |
-| F9 | Navigation Rail Organization Button | Add rail-item-organization to sidebar.html and update layout.component.ts to toggle visibility based on subscription:feature:organization | M2 | R1, Explorer 2 |
-| F10 | Organization Drawer & Navigation Routing | Wire organization drawer mode in layout.component.ts and register routes /organization, /organization/dashboard, /organization/members, /organization/sso in routes.config.ts | M2 | R1, R3, R4, Explorer 2 |
-| F11 | Organization Dashboard View & Template | Implement OrganizationDashboardController and dashboard.html with summary stats, organization info, and quick actions | M2 | R3, Explorer 2 |
-| F12 | Organization Members View & Template | Implement OrganizationMembersController and members.html with members list, invite member modal, role change, and delete actions | M2 | R3, Explorer 2 |
-| F13 | Organization SSO/SAML 2.0 View & Template | Implement OrganizationSsoController and sso.html with toggle switch, SAML 2.0 parameters input, validation, and error banner below action buttons | M2 | R4, Explorer 2 |
-| F14 | Sales Contact Form Omission & Route Guard | Ensure no sales contact form or active sales route exists anywhere, preserving direct DB assignment workflow | M2 | R2, Explorer 2 |
-| F15 | PBAC Access Control Automated Test Suite | Test suite verifying 401 unauthenticated, 403 non-Enterprise, 200 Enterprise, and granular permissions enforcement | M3 | R5, Explorer 3 |
-| F16 | Navigation & View Rendering Automated Test Suite | Test suite verifying rail-item-organization visibility and HTML template compliance (Rules 3, 4, 5) | M3 | R5, Explorer 3 |
-| F17 | Member Management Automated Test Suite | Test suite verifying member listing, invitations, role modification, remove member, and duplicate guards | M3 | R5, Explorer 3 |
-| F18 | SAML 2.0 Configuration Automated Test Suite | Test suite verifying SAML toggle, parameter validation (Entity ID, ACS URL, cert/XML), and persistence | M3 | R5, Explorer 3 |
-| F19 | Negative & Security Automated Test Suite | Test suite verifying 404 on sales contact form/routes and zero leakage of sensitive error traces/SQL in HTTP responses | M3 | R5, Explorer 3 |
-| F20 | Build, Typecheck & Quality Assurance | Verify npm run typecheck and npm run build pass with 0 errors | M3 | Criteria, Explorer 3 |
-| F21 | Adversarial Hardening & Forensic Audit | Run 2 Reviewers, 2 Challengers, and Forensic Auditor verifying zero integrity violations and 100% compliance | M4 | Criteria, AGENTS.md |
+| F1 | Legal Policies Real Platform Alignment | Rewrite 4 legal policies (Terms, Privacy, Cookies, Security) in `help/*.html` and `translations/*/` to reflect real stateless architecture (S3/MinIO, Redis, MySQL, Turnstile, 2FA, zero AI training) with professional liability protection | M1 | R1, Survey 1 |
+| F2 | Terms of Service Section 10 Alignment | Replace obsolete "Gratuidad del Servicio" in Terms with accurate paid subscription terms, advance recurring billing, auto-renewal, cancel-anytime, and refund policies | M1 | R1, Survey 1 |
+| F3 | FAQ Section Billing & Refund Alignment | Rewrite FAQ billing items in `general.json` to accurately explain subscription tiers, auto-renewal, cancel-anytime, and refund conditions matching live payment features | M1 | R1, Survey 1 |
+| F4 | Pricing Disclaimer Replacement | Replace placeholder text beneath pricing cards in `pricing.html` and `general.json` with accurate text detailing advance billing, automatic renewal, cancel-anytime policy, and refund terms | M1 | R1, Survey 1 |
+| F5 | Stripe Product & Pricing Initialization Script | Create standalone idempotent TypeScript script `scripts/init-stripe-products.ts` registering Pro ($4.99/mo, $47.90/yr, $99.00 one-time) and calibrated Business ($9.99/mo, $95.90/yr, $199.00 one-time) | M1 | R2, Survey 1 |
+| F6 | Centralized Env Config Fallback Elimination | Eliminate all 46 `process.env.* \|\|` fallback patterns in `src/config/env.config.ts`, replacing with direct accesses or safe nullish coalescing without fallback credentials/secrets | M2 | R3, Survey 2 |
+| F7 | Tool Converter & Process Util Env Fallback Elimination | Guard `process.env.LOCALAPPDATA` in `to-pdf-converter.service.ts` and `process.util.ts` with standard conditionals, eliminating all remaining `process.env.* \|\|` patterns | M2 | R3, Survey 2 |
+| F8 | TypeScript Export Structure Standardization | Refactor 214 TypeScript files across monorepo to group all exports cleanly at the bottom of the file (`export { ... }`, `export default ...`, `export type { ... }`) | M3 | R4, Survey 2 |
+| F9 | TypeScript Comment & Annotation Stripping | Strip all inline explanatory comments in production files (`collab-fonts.config.ts`) and decorative comment headers in test suites, enforcing 100% self-documenting code | M3 | R4, Survey 2 |
+| F10 | Non-Web Code 100% English Remediation | Translate all Spanish logs/messages in Rust `collab-server`, CLI usage/errors in Python workers (`scripts/*.py`), comments in Dockerfiles, and SQL schema documentation to 100% English | M3 | R4, Survey 2 |
+| F11 | Centralized Backend Logging Enforcement | Enforce exclusive logging through `Logger` service (`logger.app`, `logger.db`, `logger.security`), maintaining zero raw `console.*` in backend | M4 | R5, Survey 2 |
+| F12 | HTTP Error Response Sanitization | Audit and ensure 100% of HTTP error responses return generic, user-safe messages with zero technical details, stack traces, or SQL queries | M4 | R5, Survey 2 |
+| F13 | Backend Tool Controller Boilerplate Deduplication | Create shared controller validation helper `src/utils/tool-handler.util.ts` (`validatePdfUpload`) and refactor 21 tool controllers to eliminate redundant validation and error boilerplate | M4 | R5, Survey 2 |
+| F14 | Frontend Tool Dropzone & Markup Deduplication | Consolidate duplicate dropzone and top-bar markup across tool views into reusable components and shared templates | M4 | R5, Survey 2 |
+| F15 | HTML Templates Internationalization (Zero Hardcoded Spanish) | Eliminate 528 hardcoded text nodes and 673 attribute violations across 44 HTML templates in `public/views/`, leaving elements empty with `data-i18n*` attributes | M5 | R6, Survey 3 |
+| F16 | Client TypeScript Internationalization | Migrate 697 Spanish string literals and 185 raw `showToast` calls in client TypeScript to `t(...)` translations | M5 | R6, Survey 3 |
+| F17 | Translation Dictionaries Expansion & Parity | Add 17 missing keys to `general.json`, register all newly created translation keys, and scaffold the `en/` dictionary bundle for complete bilingual support | M5 | R6, Survey 3 |
+| F18 | View-Specific CSS Classes Refactoring | Refactor 184 view-specific CSS classes across 10 view domains to generic BEM component classes (`component-block`, `component-group`, `component-item`, `view-hero`, `view-container`, etc.) | M6 | R7, Survey 3 |
+| F19 | TypeScript DOM Class Query Decoupling | Decouple 106 TypeScript DOM queries by class to use semantic `[data-ref="..."]` selectors to prevent visual or functional regressions | M6 | R7, Survey 3 |
+| F20 | HTML Inline Style Elimination (Rule 6) | Eliminate 232 inline styles in HTML templates (especially 31 `style="display: none;"` to `.is-hidden`), maintaining zero inline styles outside strict geometric canvas exceptions | M6 | R7, Survey 3 |
+| F21 | E2E Automated Verification Suite (Tiers 1-4) | Comprehensive opaque-box test suite covering all 7 requirements (Tiers 1-4, 85+ test cases) publishing `TEST_READY.md` | M7 | Dual Track, Acceptance |
+| F22 | Adversarial Hardening (Tier 5) & Forensic Integrity Audit | Stress-testing, edge cases, white-box coverage hardening, and binary forensic audit verifying zero integrity violations | M7 | Dual Track, Acceptance |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Database Schema, PBAC Engine & Backend Organization Services | F1, F2, F3, F4, F5, F6, F7 | none | DONE |
-| M2 | Frontend Navigation Layout & Organization Views | F8, F9, F10, F11, F12, F13, F14 | M1 | DONE |
-| M3 | Automated Test Suite & E2E Verification (R5) | F15, F16, F17, F18, F19, F20 | M1, M2 | DONE |
-| M4 | Adversarial Hardening & Final Gate | F21 | M3 | DONE |
+| M1 | Legal Policies, FAQs, Pricing Disclaimers Alignment & Stripe Setup Script | F1, F2, F3, F4, F5 | none | DONE |
+| M2 | Security & Environment Variable Fallback Elimination | F6, F7 | none | DONE |
+| M3 | TypeScript Export Standardization, Annotation Stripping & Non-Web English | F8, F9, F10 | none | IN_PROGRESS |
+| M4 | Centralized Logging, Error Response Safety & Code Deduplication | F11, F12, F13, F14 | none | PLANNED |
+| M5 | Full Web Internationalization (Zero Hardcoded Spanish) | F15, F16, F17 | M1 | PLANNED |
+| M6 | CSS Class Modularization to Generic BEM & Inline Style Elimination | F18, F19, F20 | M5 | PLANNED |
+| M7 | Full E2E Test Suite Pass (Tiers 1-4) & Adversarial Hardening (Tier 5) | F21, F22 | M1, M2, M3, M4, M5, M6 | PLANNED |
 
 ## Interface Contracts
+### 1. Stripe Setup Script (`apps/BoardPDF/scripts/init-stripe-products.ts`)
+- Standalone CLI execution via `npx tsx scripts/init-stripe-products.ts`.
+- Reads `STRIPE_SECRET_KEY` from environment; exits with error code 1 if absent without fallback values.
+- Idempotent API queries via Stripe SDK matching `metadata.tier` ('pro' | 'business').
+- Creates/reuses products and prices matching:
+  - Pro: $4.99/mo (`499`), $47.90/yr (`4790`), $99.00 one-time (`9900`).
+  - Business: $9.99/mo (`999`), $95.90/yr (`9590`), $199.00 one-time (`19900`).
+- Prints formatted summary and configuration snippets for `plans.config.ts` and `.env`.
 
-### 1. Database DDL Authority (`database/db_identity.sql` & `database/init.sql`)
-```sql
-CREATE TABLE IF NOT EXISTS permissions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL UNIQUE,
-  description VARCHAR(255) NULL,
-  category VARCHAR(50) NOT NULL DEFAULT 'general',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_permission_name (name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+### 2. Environment Configuration (`apps/BoardPDF/src/config/env.config.ts`)
+- Direct access to `process.env[key]` or safe nullish coalescing (`?? ''`) for non-secrets.
+- Zero occurrences of `process.env.* ||` fallback patterns.
+- Zero fallback credentials or passwords.
 
-CREATE TABLE IF NOT EXISTS roles (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL UNIQUE,
-  description VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_role_name (name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+### 3. Backend Tool Validation Handler (`apps/BoardPDF/src/utils/tool-handler.util.ts`)
+- Function `validatePdfUpload(req: Request, res: Response, toolId: string): Express.Multer.File | null`
+  - Validates `req.file` presence (returns 400 with user-safe message if missing).
+  - Validates PDF buffer magic bytes (returns 400 if invalid).
+  - Validates file size against PBAC plan limits (returns 400 if exceeded).
+  - Returns sanitized `Express.Multer.File` on success.
 
-CREATE TABLE IF NOT EXISTS role_permissions (
-  role_id INT NOT NULL,
-  permission_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (role_id, permission_id),
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+### 4. Internationalization Service (`apps/BoardPDF/client/services/i18n.service.ts`)
+- All HTML templates: element text nodes are empty, referencing translation keys via `data-i18n="..."`.
+- All attributes: `data-i18n-placeholder`, `data-i18n-aria`, `data-i18n-title`, `data-i18n-tooltip`.
+- All TypeScript client notifications: `showToast(t('key'), type)`. Zero raw string literals.
+- Translation dictionaries: `public/translations/es/` and `public/translations/en/` maintaining complete key parity.
 
-CREATE TABLE IF NOT EXISTS subscription_tier_permissions (
-  tier VARCHAR(50) NOT NULL,
-  permission_id INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (tier, permission_id),
-  INDEX idx_sub_tier (tier),
-  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organizations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  uuid VARCHAR(36) NOT NULL UNIQUE,
-  name VARCHAR(100) NOT NULL,
-  slug VARCHAR(100) NOT NULL UNIQUE,
-  owner_id INT NOT NULL,
-  logo_url VARCHAR(512) NULL,
-  domain VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_org_owner (owner_id),
-  INDEX idx_org_slug (slug),
-  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_members (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  user_id INT NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'member',
-  status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
-  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_org_user (organization_id, user_id),
-  INDEX idx_org_members_user (user_id),
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_invitations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'member',
-  token VARCHAR(64) NOT NULL UNIQUE,
-  invited_by INT NOT NULL,
-  status ENUM('pending', 'accepted', 'revoked', 'expired') NOT NULL DEFAULT 'pending',
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_org_invitations_token (token),
-  INDEX idx_org_invitations_email (email),
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS organization_sso_configs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  organization_id INT NOT NULL UNIQUE,
-  enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  entity_id VARCHAR(512) NOT NULL DEFAULT '',
-  acs_url VARCHAR(512) NOT NULL DEFAULT '',
-  idp_sso_url VARCHAR(512) NULL,
-  idp_certificate TEXT NULL,
-  idp_metadata_xml MEDIUMTEXT NULL,
-  allow_unlinked_users BOOLEAN NOT NULL DEFAULT FALSE,
-  enforce_sso BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-### 2. Backend Organization REST API Contracts (`/api/organization/*`)
-- `GET /api/organization`: Returns `{ organization: { id, uuid, name, slug, owner_id, domain, created_at }, stats: { members_count, active_invitations_count, sso_enabled } }`
-- `PUT /api/organization`: Body `{ name?: string, domain?: string }`.
-- `GET /api/organization/members`: Returns `{ members: Array<{ id, user_id, email, username, role, status, joined_at }>, invitations: Array<{ id, email, role, status, expires_at, created_at }> }`
-- `POST /api/organization/members/invite`: Body `{ email: string, role: 'admin' | 'member' }`.
-- `PUT /api/organization/members/:id/role`: Body `{ role: 'admin' | 'member' }`.
-- `DELETE /api/organization/members/:id`: Removes member.
-- `DELETE /api/organization/invitations/:id`: Revokes invitation.
-- `GET /api/organization/sso`: Returns `{ sso: { enabled, entity_id, acs_url, idp_sso_url, has_certificate, has_metadata_xml, enforce_sso } }`
-- `PUT /api/organization/sso`: Body `{ enabled: boolean, entity_id?: string, acs_url?: string, idp_sso_url?: string, idp_certificate?: string, idp_metadata_xml?: string, enforce_sso?: boolean }`.
-
-### 3. Navigation Rail Item Contract (`sidebar.html`)
-```html
-<div class="rail-nav-item rail-nav-item--org is-hidden" data-ref="rail-item-organization">
-  <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-organization" data-tooltip="Organización" data-i18n-tooltip="nav.organization" data-i18n-aria="nav.organization" aria-label="Organización">
-    <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
-  </button>
-  <span class="rail-nav-item__label" data-ref="rail-label-organization" data-i18n="nav.organization">Organización</span>
-</div>
-```
+### 5. Modular BEM CSS Component Classes (`apps/BoardPDF/public/css/`)
+- `.component-block`, `.component-group`, `.component-item`, `.view-hero`, `.view-container`, `.component-card`.
+- Modifier classes: `.component-block--notice`, `.component-grid--pricing`, `.component-card--option`, etc.
+- Utility `.is-hidden` replacing inline `style="display: none;"`.
 
 ## Code Layout
-- `database/db_identity.sql`: Canonical DDL authority for all tables and PBAC seeds.
-- `database/init.sql`: Docker bootstrap schema file kept strictly in sync with db_identity.sql.
-- `apps/BoardPDF/src/services/permission.service.ts`: PBAC permission resolution & cache engine.
-- `apps/BoardPDF/src/services/organization.service.ts`: Organization, members, invitations, and SAML business logic.
-- `apps/BoardPDF/src/controllers/organization.controller.ts`: REST controller for /api/organization/*.
-- `apps/BoardPDF/src/routes/organization.routes.ts`: Organization Express router with PBAC guards.
-- `apps/BoardPDF/src/middlewares/auth.middleware.ts`: PBAC middleware functions (requirePermission, requireFeature, hasPermission).
-- `apps/BoardPDF/client/types/auth.types.ts`: Extended User interface with permissions?: string[].
-- `apps/BoardPDF/client/components/layout.component.ts`: Navigation rail button rendering & drawer integration.
-- `apps/BoardPDF/public/views/components/sidebar.html`: Rail HTML partial.
-- `apps/BoardPDF/client/config/routes.config.ts`: Organization routes and PBAC client guards.
-- `apps/BoardPDF/client/views/organization/*`: TypeScript view controllers for Dashboard, Members, and SSO.
-- `apps/BoardPDF/public/views/organization/*`: HTML templates for Dashboard, Members, and SSO.
-- `apps/BoardPDF/test/organization/*`: Modular automated test suites for R5.
+- `apps/BoardPDF/public/views/help/*.html`: Legal policies and FAQ templates.
+- `apps/BoardPDF/public/views/pricing/pricing.html`: Pricing cards and disclaimer template.
+- `apps/BoardPDF/public/translations/es/*.json`: Spanish translation dictionaries (`general.json`, `terms.json`, `privacy.json`, `cookies.json`, `security.json`).
+- `apps/BoardPDF/public/translations/en/*.json`: English translation dictionaries maintaining full key parity.
+- `apps/BoardPDF/scripts/init-stripe-products.ts`: Standalone Stripe initialization script.
+- `apps/BoardPDF/src/config/env.config.ts`: Centralized environment configuration (zero fallbacks).
+- `apps/BoardPDF/src/services/logger.service.ts`: Centralized backend logging service.
+- `apps/BoardPDF/src/utils/tool-handler.util.ts`: Shared tool request validation helper.
+- `apps/BoardPDF/src/tools/*/*.controller.ts`: Refactored tool controllers using shared validation.
+- `apps/BoardPDF/client/views/**/*.ts`: Client TypeScript controllers with bottom exports and `t(...)` i18n.
+- `apps/BoardPDF/public/css/components/`: Modular BEM stylesheets (`component-views.css`, `component-layout.css`, `component-overlays.css`, etc.).
+- `apps/BoardPDF/collab-server/`: Rust collaborative WebSocket server (100% English).
+- `apps/BoardPDF/scripts/*.py`: Python workers (100% English).
+- `apps/BoardPDF/test/e2e/`: Automated E2E verification test suite for R1-R7.

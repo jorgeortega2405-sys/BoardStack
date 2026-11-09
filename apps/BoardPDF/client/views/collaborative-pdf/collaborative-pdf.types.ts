@@ -1,4 +1,4 @@
-export interface ElementText {
+interface ElementText {
   align?: 'center' | 'justify' | 'left' | 'right';
   authorName?: string;
   backgroundColor?: string;
@@ -29,7 +29,7 @@ export interface ElementText {
   y: number;
 }
 
-export interface ElementShape {
+interface ElementShape {
   borderRadius?: number;
   fillColor?: string;
   flipHorizontal?: boolean;
@@ -52,7 +52,7 @@ export interface ElementShape {
   y2?: number;
 }
 
-export interface ElementDrawing {
+interface ElementDrawing {
   color: string;
   id: string;
   opacity?: number;
@@ -62,7 +62,7 @@ export interface ElementDrawing {
   width: number;
 }
 
-export interface ElementImage {
+interface ElementImage {
   borderColor?: string;
   borderRadius?: number;
   borderStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
@@ -82,7 +82,7 @@ export interface ElementImage {
   y: number;
 }
 
-export interface ElementTableCell {
+interface ElementTableCell {
   align?: 'center' | 'left' | 'right';
   backgroundColor?: string;
   color?: string;
@@ -90,7 +90,7 @@ export interface ElementTableCell {
   text: string;
 }
 
-export interface ElementTable {
+interface ElementTable {
   borderColor: string;
   borderWidth: number;
   cellPadding: number;
@@ -112,7 +112,7 @@ export interface ElementTable {
   y: number;
 }
 
-export type ChartType =
+type ChartType =
   | 'area-overlap'
   | 'area-stacked'
   | 'bar-grouped'
@@ -128,13 +128,13 @@ export type ChartType =
   | 'progress-ring'
   | 'scatter';
 
-export interface ElementChartDataSeries {
+interface ElementChartDataSeries {
   color?: string;
   name: string;
   values: number[];
 }
 
-export interface ElementChartOptions {
+interface ElementChartOptions {
   colorPalette?: string[];
   colorScheme?: 'amber' | 'blue' | 'coral' | 'emerald' | 'gray' | 'purple';
   currencyOrUnit?: string;
@@ -160,7 +160,7 @@ export interface ElementChartOptions {
   yAxisTitle?: string;
 }
 
-export interface ElementChart {
+interface ElementChart {
   chartType: ChartType;
   height: number;
   id: string;
@@ -175,14 +175,14 @@ export interface ElementChart {
   y: number;
 }
 
-export type EditorElement = ElementChart | ElementDrawing | ElementImage | ElementShape | ElementTable | ElementText;
+type EditorElement = ElementChart | ElementDrawing | ElementImage | ElementShape | ElementTable | ElementText;
 
-export interface PagePdfSource {
+interface PagePdfSource {
   pageNumber: number;
   pdfUrl: string;
 }
 
-export interface UploadedAsset {
+interface UploadedAsset {
   createdAt?: string;
   id: string;
   mimeType?: string;
@@ -193,7 +193,7 @@ export interface UploadedAsset {
   url: string;
 }
 
-export interface DocMember {
+interface DocMember {
   avatar_url?: string | null;
   email?: string;
   id?: number;
@@ -202,7 +202,7 @@ export interface DocMember {
   username: string;
 }
 
-export interface RemotePeer {
+interface RemotePeer {
   avatarUrl?: string | null;
   clientId: string;
   color: string;
@@ -211,7 +211,7 @@ export interface RemotePeer {
   username: string;
 }
 
-export const CHART_PALETTES: Record<string, string[]> = {
+const CHART_PALETTES: Record<string, string[]> = {
   amber: ['#d97706', '#f59e0b', '#fbbf24', '#fde68a'],
   blue: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'],
   coral: ['#e11d48', '#f43f5e', '#fb7185', '#fecdd3'],
@@ -220,7 +220,7 @@ export const CHART_PALETTES: Record<string, string[]> = {
   purple: ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd'],
 };
 
-export function applyListFormatting(text: string, type: 'bullet' | 'none' | 'numbered'): string {
+function applyListFormatting(text: string, type: 'bullet' | 'none' | 'numbered'): string {
   const lines = text.split('\n');
   return lines.map((line, idx) => {
     const cleaned = line.replace(/^([•\-\*]|\d+[\.\)])\s*/, '').trim();
@@ -231,5 +231,8 @@ export function applyListFormatting(text: string, type: 'bullet' | 'none' | 'num
   }).join('\n');
 }
 
-export const PAGE_WIDTH = 794;
-export const PAGE_HEIGHT = 1123;
+const PAGE_WIDTH = 794;
+const PAGE_HEIGHT = 1123;
+
+export { CHART_PALETTES, PAGE_HEIGHT, PAGE_WIDTH, applyListFormatting };
+export type { ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, PagePdfSource, RemotePeer, UploadedAsset };

@@ -1,26 +1,26 @@
-export type ToPdfSourceType =
+type ToPdfSourceType =
   | 'excel-to-pdf'
   | 'html-to-pdf'
   | 'jpg-to-pdf'
   | 'powerpoint-to-pdf'
   | 'word-to-pdf';
 
-export type JpgOrientation = 'portrait' | 'landscape';
-export type JpgPageSize = 'fit' | 'a4' | 'letter';
-export type JpgPageMargin = 'none' | 'small' | 'large';
+type JpgOrientation = 'portrait' | 'landscape';
+type JpgPageSize = 'fit' | 'a4' | 'letter';
+type JpgPageMargin = 'none' | 'small' | 'large';
 
-export interface JpgToPdfOptions {
+interface JpgToPdfOptions {
   margin?: JpgPageMargin;
   merge?: boolean;
   orientation?: JpgOrientation;
   pageSize?: JpgPageSize;
 }
 
-export type HtmlScreenSize = 'screen' | '1920' | '1440' | '768' | '320';
-export type HtmlOrientation = 'portrait' | 'landscape';
-export type HtmlMargin = 'none' | 'small' | 'large';
+type HtmlScreenSize = 'screen' | '1920' | '1440' | '768' | '320';
+type HtmlOrientation = 'portrait' | 'landscape';
+type HtmlMargin = 'none' | 'small' | 'large';
 
-export interface HtmlToPdfOptions {
+interface HtmlToPdfOptions {
   blockAds?: boolean;
   margin?: HtmlMargin;
   orientation?: HtmlOrientation;
@@ -29,7 +29,7 @@ export interface HtmlToPdfOptions {
   singlePage?: boolean;
 }
 
-export interface ToPdfConversionResult {
+interface ToPdfConversionResult {
   downloadToken: string;
   downloadUrl: string;
   fileSize: number;
@@ -38,7 +38,7 @@ export interface ToPdfConversionResult {
   success: boolean;
 }
 
-export interface StoredToPdfFile {
+interface StoredToPdfFile {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -47,3 +47,5 @@ export interface StoredToPdfFile {
   mimeType: string;
   token: string;
 }
+
+export type { HtmlMargin, HtmlOrientation, HtmlScreenSize, HtmlToPdfOptions, JpgOrientation, JpgPageMargin, JpgPageSize, JpgToPdfOptions, StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType };

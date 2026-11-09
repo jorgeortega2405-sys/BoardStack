@@ -16,4 +16,3 @@ router.post('/tools/repair-pdf/repair', optionalAuth, pdfRepairLimiter, uploadMi
 router.get('/tools/repair-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

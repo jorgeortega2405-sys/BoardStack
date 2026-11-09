@@ -4,7 +4,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { bindFileDropzone } from '../utils/dom.util.js';
 
-export interface ToolDropzoneOptions {
+interface ToolDropzoneOptions {
   accept?: string;
   buttonText?: string;
   container: HTMLElement;
@@ -17,7 +17,7 @@ export interface ToolDropzoneOptions {
   title?: string;
 }
 
-export class ToolDropzoneComponent {
+class ToolDropzoneComponent {
   private abortController: AbortController | null = null;
   private dropzoneElement: HTMLElement | null = null;
   private options: ToolDropzoneOptions;
@@ -128,3 +128,6 @@ export class ToolDropzoneComponent {
     }
   }
 }
+
+export { ToolDropzoneComponent };
+export type { ToolDropzoneOptions };

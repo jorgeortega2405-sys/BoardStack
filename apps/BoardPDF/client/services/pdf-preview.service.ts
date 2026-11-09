@@ -61,11 +61,11 @@ function addToCache(key: string, canvasBuffer: HTMLCanvasElement, width: number,
   renderCache.set(key, { canvasBuffer, height, width });
 }
 
-export function clearPdfThumbnailCache(): void {
+function clearPdfThumbnailCache(): void {
   renderCache.clear();
 }
 
-export async function renderPdfThumbnail(
+async function renderPdfThumbnail(
   fileOrDoc: File | any,
   canvas: HTMLCanvasElement,
   options: { dpr?: boolean; pageNum?: number; targetWidth?: number } = {}
@@ -211,7 +211,7 @@ export async function renderPdfThumbnail(
   }
 }
 
-export async function generateThumbnailDataUrl(
+async function generateThumbnailDataUrl(
   pdfDocument: any,
   pageNum = 1,
   targetWidth = 200,
@@ -273,3 +273,5 @@ export async function generateThumbnailDataUrl(
     }
   }
 }
+
+export { clearPdfThumbnailCache, generateThumbnailDataUrl, renderPdfThumbnail };

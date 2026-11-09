@@ -1,6 +1,6 @@
-export type ClientMarkdownMode = 'academic' | 'clean' | 'structured' | 'tables';
+type ClientMarkdownMode = 'academic' | 'clean' | 'structured' | 'tables';
 
-export interface PdfToMarkdownResultData {
+interface PdfToMarkdownResultData {
   characterCount: number;
   downloadUrl: string;
   fileId: string;
@@ -12,3 +12,5 @@ export interface PdfToMarkdownResultData {
   processingTimeMs: number;
   wordCount: number;
 }
+
+export type { ClientMarkdownMode, PdfToMarkdownResultData };

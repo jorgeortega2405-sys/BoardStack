@@ -1,28 +1,28 @@
-export type SubscriptionTierKey = 'business' | 'free' | 'pro';
+type SubscriptionTierKey = 'business' | 'free' | 'pro';
 
-export interface ToolLimitTierConfig {
+interface ToolLimitTierConfig {
   maxFiles: number;
   maxFileSizeMB: number;
   maxTotalSizeMB: number;
   requiredPermission?: string;
 }
 
-export interface ToolTierLimits {
+interface ToolTierLimits {
   business: ToolLimitTierConfig;
   free: ToolLimitTierConfig;
   pro: ToolLimitTierConfig;
 }
 
-export type AllPdfToolsLimits = Record<string, ToolTierLimits>;
+type AllPdfToolsLimits = Record<string, ToolTierLimits>;
 
-export interface PlanFeatureItem {
+interface PlanFeatureItem {
   description: string;
   highlight?: boolean;
   icon?: string;
   title: string;
 }
 
-export interface PlanBenefitsDefinition {
+interface PlanBenefitsDefinition {
   badge?: string;
   buttonText: string;
   category: 'general';
@@ -45,13 +45,13 @@ export interface PlanBenefitsDefinition {
   tagline: string;
 }
 
-export const WORKFLOW_LIMITS: Record<SubscriptionTierKey, number> = {
+const WORKFLOW_LIMITS: Record<SubscriptionTierKey, number> = {
   business: 200,
   free: 5,
   pro: 50,
 };
 
-export const ALL_TOOLS_LIMITS: AllPdfToolsLimits = {
+const ALL_TOOLS_LIMITS: AllPdfToolsLimits = {
   'collaborative-pdf': {
     business: { maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'subscription:feature:business' },
     free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
@@ -224,7 +224,7 @@ export const ALL_TOOLS_LIMITS: AllPdfToolsLimits = {
   },
 };
 
-export const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinition> = {
+const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinition> = {
   business: {
     badge: 'Para Equipos',
     buttonText: 'Obtener Negocios',
@@ -353,7 +353,7 @@ export const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinit
   },
 };
 
-export function normalizeTierKey(tier?: string | null): SubscriptionTierKey {
+function normalizeTierKey(tier?: string | null): SubscriptionTierKey {
   const clean = (tier || 'free').toLowerCase().trim();
   if (clean === 'negocios' || clean === 'business') {
     return 'business';
@@ -364,12 +364,12 @@ export function normalizeTierKey(tier?: string | null): SubscriptionTierKey {
   return 'free';
 }
 
-export function getPlanBenefits(tier?: string | null): PlanBenefitsDefinition {
+function getPlanBenefits(tier?: string | null): PlanBenefitsDefinition {
   const norm = normalizeTierKey(tier);
   return PLAN_TIER_BENEFITS[norm];
 }
 
-export function getToolTierLimits(toolId: string, tier: SubscriptionTierKey = 'free'): ToolLimitTierConfig {
+function getToolTierLimits(toolId: string, tier: SubscriptionTierKey = 'free'): ToolLimitTierConfig {
   const tool = ALL_TOOLS_LIMITS[toolId];
   if (!tool) {
     return { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 };
@@ -378,7 +378,7 @@ export function getToolTierLimits(toolId: string, tier: SubscriptionTierKey = 'f
   return tool[norm];
 }
 
-export function resolveToolLimits(toolId: string, permissions: string[] = []): ToolLimitTierConfig {
+function resolveToolLimits(toolId: string, permissions: string[] = []): ToolLimitTierConfig {
   const tool = ALL_TOOLS_LIMITS[toolId];
   if (!tool) {
     return { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 };
@@ -402,3 +402,6 @@ export function resolveToolLimits(toolId: string, permissions: string[] = []): T
 
   return tool.free;
 }
+
+export { ALL_TOOLS_LIMITS, PLAN_TIER_BENEFITS, WORKFLOW_LIMITS, getPlanBenefits, getToolTierLimits, normalizeTierKey, resolveToolLimits };
+export type { AllPdfToolsLimits, PlanBenefitsDefinition, PlanFeatureItem, SubscriptionTierKey, ToolLimitTierConfig, ToolTierLimits };

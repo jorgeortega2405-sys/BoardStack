@@ -1,16 +1,16 @@
-export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'danger';
+type ToastType = 'success' | 'error' | 'warning' | 'info' | 'danger';
 
-export interface ViewController {
+interface ViewController {
   destroy?: () => void;
   init?: (container: HTMLElement) => Promise<void> | void;
 }
 
-export interface Language {
+interface Language {
   code: string;
   name: string;
 }
 
-export interface ModalInstance {
+interface ModalInstance {
   backdrop: HTMLElement;
   body: HTMLElement;
   btnCancel: HTMLElement | null;
@@ -34,7 +34,7 @@ export interface ModalInstance {
   [key: string]: any;
 }
 
-export interface ModalOptions {
+interface ModalOptions {
   bodyHtml?: HTMLElement | string;
   cancelText?: string;
   confirmClass?: string;
@@ -51,3 +51,5 @@ export interface ModalOptions {
   title?: string;
   titleKey?: string;
 }
+
+export type { Language, ModalInstance, ModalOptions, ToastType, ViewController };

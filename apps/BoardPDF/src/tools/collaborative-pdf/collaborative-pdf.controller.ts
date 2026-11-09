@@ -5,6 +5,7 @@ import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../se
 import { logger } from '../../services/logger.service.js';
 import { removeBackground } from '../../services/photoroom.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
@@ -21,7 +22,7 @@ function ensureUploadsDir(): void {
   }
 }
 
-export async function listCollaborativeDocsHandler(req: Request, res: Response): Promise<void> {
+async function listCollaborativeDocsHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user || !user.id) {
@@ -48,7 +49,7 @@ export async function listCollaborativeDocsHandler(req: Request, res: Response):
   }
 }
 
-export async function getCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
+async function getCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
@@ -121,7 +122,7 @@ export async function getCollaborativeDocHandler(req: Request, res: Response): P
   }
 }
 
-export async function saveCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
+async function saveCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     const id = req.params.id || req.body.id || (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `doc_${crypto.randomBytes(8).toString('hex')}`);
@@ -182,7 +183,7 @@ export async function saveCollaborativeDocHandler(req: Request, res: Response): 
   }
 }
 
-export async function getCollaborativeDocMembersHandler(req: Request, res: Response): Promise<void> {
+async function getCollaborativeDocMembersHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
@@ -200,7 +201,7 @@ export async function getCollaborativeDocMembersHandler(req: Request, res: Respo
   }
 }
 
-export async function addCollaborativeDocMemberHandler(req: Request, res: Response): Promise<void> {
+async function addCollaborativeDocMemberHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { role = 'editor', userId } = req.body;
@@ -225,7 +226,7 @@ export async function addCollaborativeDocMemberHandler(req: Request, res: Respon
   }
 }
 
-export async function removeCollaborativeDocMemberHandler(req: Request, res: Response): Promise<void> {
+async function removeCollaborativeDocMemberHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id, userId } = req.params;
     const targetUserId = parseInt(userId, 10);
@@ -252,7 +253,7 @@ export async function removeCollaborativeDocMemberHandler(req: Request, res: Res
   }
 }
 
-export async function updateCollaborativeDocAccessLevelHandler(req: Request, res: Response): Promise<void> {
+async function updateCollaborativeDocAccessLevelHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     const { accessLevel } = req.body;
@@ -277,7 +278,7 @@ export async function updateCollaborativeDocAccessLevelHandler(req: Request, res
   }
 }
 
-export async function searchCollaborativeUsersHandler(req: Request, res: Response): Promise<void> {
+async function searchCollaborativeUsersHandler(req: Request, res: Response): Promise<void> {
   try {
     const query = typeof req.query.q === 'string' ? req.query.q : '';
     const excludeDocId = typeof req.query.docId === 'string' ? req.query.docId : undefined;
@@ -292,7 +293,7 @@ export async function searchCollaborativeUsersHandler(req: Request, res: Respons
   }
 }
 
-export async function deleteCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
+async function deleteCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
@@ -330,7 +331,7 @@ export async function deleteCollaborativeDocHandler(req: Request, res: Response)
   }
 }
 
-export async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): Promise<void> {
+async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
@@ -392,7 +393,7 @@ export async function downloadCollaborativeDocPdfHandler(req: Request, res: Resp
   }
 }
 
-export async function uploadCollaborativeAssetHandler(req: Request, res: Response): Promise<void> {
+async function uploadCollaborativeAssetHandler(req: Request, res: Response): Promise<void> {
   try {
     const files = req.files as Express.Multer.File[] | undefined;
     const file = req.file as Express.Multer.File | undefined;
@@ -566,7 +567,7 @@ export async function uploadCollaborativeAssetHandler(req: Request, res: Respons
   }
 }
 
-export async function listCollaborativeUploadsHandler(req: Request, res: Response): Promise<void> {
+async function listCollaborativeUploadsHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user || !user.id) {
@@ -617,7 +618,7 @@ export async function listCollaborativeUploadsHandler(req: Request, res: Respons
   }
 }
 
-export async function removeBackgroundHandler(req: Request, res: Response): Promise<void> {
+async function removeBackgroundHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user || !user.id) {
@@ -788,3 +789,5 @@ export async function removeBackgroundHandler(req: Request, res: Response): Prom
     });
   }
 }
+
+export { addCollaborativeDocMemberHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler };

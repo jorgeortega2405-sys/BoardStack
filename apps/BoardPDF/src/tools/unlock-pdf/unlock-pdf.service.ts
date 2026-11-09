@@ -8,7 +8,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-export async function unlockPdf(
+async function unlockPdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: UnlockPdfOptions
@@ -82,3 +82,5 @@ except pikepdf.PasswordError:
     ]);
   }
 }
+
+export { unlockPdf };

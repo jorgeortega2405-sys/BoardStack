@@ -1,6 +1,6 @@
-export type ClientPdfCompressLevel = 'extreme' | 'recommended' | 'low';
+type ClientPdfCompressLevel = 'extreme' | 'recommended' | 'low';
 
-export interface CompressResultData {
+interface CompressResultData {
   compressedSize: number;
   downloadUrl: string;
   fileId: string;
@@ -10,3 +10,5 @@ export interface CompressResultData {
   savingsBytes: number;
   savingsPercent: number;
 }
+
+export type { ClientPdfCompressLevel, CompressResultData };

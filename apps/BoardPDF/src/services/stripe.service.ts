@@ -7,7 +7,7 @@ import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
 import Stripe from 'stripe';
 
-export class StripeService {
+class StripeService {
   private static instance: StripeService;
   private stripe: Stripe;
 
@@ -1117,4 +1117,6 @@ export class StripeService {
   }
 }
 
-export const stripeService = StripeService.getInstance();
+const stripeService = StripeService.getInstance();
+
+export { StripeService, stripeService };

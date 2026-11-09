@@ -23,8 +23,6 @@ if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-export { UPLOADS_DIR };
-
 function getBasePdfName(originalFilename: string): string {
   const ext = path.extname(originalFilename);
   const base = path.basename(originalFilename, ext);
@@ -38,9 +36,12 @@ function getBrowserCommand(): string | null {
       'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
       'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
       'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-      path.join(process.env.LOCALAPPDATA || '', 'Google\\Chrome\\Application\\chrome.exe'),
-      path.join(process.env.LOCALAPPDATA || '', 'Microsoft\\Edge\\Application\\msedge.exe'),
     ];
+    const localAppData = process.env.LOCALAPPDATA;
+    if (localAppData) {
+      candidates.push(path.join(localAppData, 'Google\\Chrome\\Application\\chrome.exe'));
+      candidates.push(path.join(localAppData, 'Microsoft\\Edge\\Application\\msedge.exe'));
+    }
     for (const candidate of candidates) {
       if (candidate && fs.existsSync(candidate)) {
         return candidate;
@@ -71,8 +72,11 @@ function getLibreOfficeCommand(): string {
     const candidates = [
       'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
       'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
-      path.join(process.env.LOCALAPPDATA || '', 'Programs\\LibreOffice\\program\\soffice.exe'),
     ];
+    const localAppData = process.env.LOCALAPPDATA;
+    if (localAppData) {
+      candidates.push(path.join(localAppData, 'Programs\\LibreOffice\\program\\soffice.exe'));
+    }
     for (const candidate of candidates) {
       if (fs.existsSync(candidate)) {
         return candidate;
@@ -89,7 +93,7 @@ function getLibreOfficeCommand(): string {
   return 'libreoffice';
 }
 
-export function isValidPublicUrl(rawUrl: string): boolean {
+function isValidPublicUrl(rawUrl: string): boolean {
   try {
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -257,7 +261,7 @@ async function createFallbackPdfFromHtml(html: string, titleOrUrl: string, outpu
   await fs.promises.writeFile(outputPath, pdfBytes);
 }
 
-export async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Promise<ToPdfConversionResult> {
+async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Promise<ToPdfConversionResult> {
   const parsed = new URL(rawUrl);
   let baseHostname = parsed.hostname.replace(/[^a-zA-Z0-9.-]/g, '_') || 'pagina-web';
   if (baseHostname.startsWith('www.')) {
@@ -339,7 +343,7 @@ export async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions
   }
 }
 
-export async function convertToPdf(
+async function convertToPdf(
   fileOrFiles: Express.Multer.File | Express.Multer.File[],
   sourceType: ToPdfSourceType,
   jpgOptions?: JpgToPdfOptions
@@ -551,7 +555,7 @@ export async function convertToPdf(
   }
 }
 
-export async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<string | null> {
+async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<string | null> {
   const browserCmd = getBrowserCommand();
   if (!browserCmd || !isValidPublicUrl(rawUrl)) {
     return null;
@@ -634,3 +638,5 @@ export async function captureUrlScreenshot(rawUrl: string, screen?: string): Pro
   }
   return null;
 }
+
+export { UPLOADS_DIR, captureUrlScreenshot, convertToPdf, convertUrlToPdf, isValidPublicUrl };

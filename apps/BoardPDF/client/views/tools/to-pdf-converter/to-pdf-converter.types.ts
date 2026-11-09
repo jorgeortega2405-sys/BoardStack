@@ -1,19 +1,20 @@
-export type ToPdfSourceType =
+import { t } from '../../../services/i18n.service.js';
+type ToPdfSourceType =
   | 'excel-to-pdf'
   | 'html-to-pdf'
   | 'jpg-to-pdf'
   | 'powerpoint-to-pdf'
   | 'word-to-pdf';
 
-export type JpgOrientation = 'portrait' | 'landscape';
-export type JpgPageSize = 'fit' | 'a4' | 'letter';
-export type JpgPageMargin = 'none' | 'small' | 'large';
+type JpgOrientation = 'portrait' | 'landscape';
+type JpgPageSize = 'fit' | 'a4' | 'letter';
+type JpgPageMargin = 'none' | 'small' | 'large';
 
-export type HtmlScreenSize = 'screen' | '1920' | '1440' | '768' | '320';
-export type HtmlOrientation = 'portrait' | 'landscape';
-export type HtmlMargin = 'none' | 'small' | 'large';
+type HtmlScreenSize = 'screen' | '1920' | '1440' | '768' | '320';
+type HtmlOrientation = 'portrait' | 'landscape';
+type HtmlMargin = 'none' | 'small' | 'large';
 
-export interface ToPdfRouteConfig {
+interface ToPdfRouteConfig {
   accept: string;
   actionText: string;
   browseText?: string;
@@ -27,17 +28,17 @@ export interface ToPdfRouteConfig {
   title: string;
 }
 
-export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
+const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
   '/excel-to-pdf': {
     accept: '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
     actionText: 'Convertir a PDF',
     browseText: 'Seleccionar Archivo',
-    convertingText: 'Convirtiendo hojas de cálculo a PDF...',
+    convertingText: t('ui.convirtiendo_hojas_de_calculo_a_pdf'),
     formatBadge: 'XLSX / XLS',
     hintText: 'o arrastra y suelta tu archivo aquí',
     icon: 'table_chart',
     sourceType: 'excel-to-pdf',
-    subtitle: 'Convierte tus libros y hojas de Excel en documentos PDF de alta precisión.',
+    subtitle: t('ui.convierte_tus_libros_y_hojas_de_excel_en'),
     title: 'Excel a PDF',
   },
   '/html-a-pdf': {
@@ -46,11 +47,11 @@ export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
     browseText: 'Ingresar URL',
     convertingText: 'Renderizando página web a PDF...',
     formatBadge: 'URL / HTML',
-    hintText: 'Pega la URL de cualquier página web para convertirla a PDF',
+    hintText: t('ui.pega_la_url_de_cualquier_pagina_web_para'),
     icon: 'language',
     isUrlMode: true,
     sourceType: 'html-to-pdf',
-    subtitle: 'Transforma páginas web y archivos HTML en documentos PDF formateados.',
+    subtitle: t('ui.transforma_paginas_web_y_archivos_html_e'),
     title: 'HTML a PDF',
   },
   '/html-to-pdf': {
@@ -59,11 +60,11 @@ export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
     browseText: 'Ingresar URL',
     convertingText: 'Renderizando página web a PDF...',
     formatBadge: 'URL / HTML',
-    hintText: 'Pega la URL de cualquier página web para convertirla a PDF',
+    hintText: t('ui.pega_la_url_de_cualquier_pagina_web_para'),
     icon: 'language',
     isUrlMode: true,
     sourceType: 'html-to-pdf',
-    subtitle: 'Transforma páginas web y archivos HTML en documentos PDF formateados.',
+    subtitle: t('ui.transforma_paginas_web_y_archivos_html_e'),
     title: 'HTML a PDF',
   },
   '/jpg-to-pdf': {
@@ -75,7 +76,7 @@ export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
     hintText: 'o arrastra y suelta tu archivo aquí',
     icon: 'image',
     sourceType: 'jpg-to-pdf',
-    subtitle: 'Convierte tus imágenes JPG, JPEG o PNG en un documento PDF de alta calidad.',
+    subtitle: t('ui.convierte_tus_imagenes_jpg_jpeg_o_png_en'),
     title: 'JPG a PDF',
   },
   '/powerpoint-to-pdf': {
@@ -87,7 +88,7 @@ export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
     hintText: 'o arrastra y suelta tu archivo aquí',
     icon: 'slideshow',
     sourceType: 'powerpoint-to-pdf',
-    subtitle: 'Convierte tus presentaciones de PowerPoint a PDF manteniendo diapositivas y formato.',
+    subtitle: t('ui.convierte_tus_presentaciones_de_powerpoi'),
     title: 'PowerPoint a PDF',
   },
   '/word-to-pdf': {
@@ -99,7 +100,10 @@ export const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
     hintText: 'o arrastra y suelta tu archivo aquí',
     icon: 'description',
     sourceType: 'word-to-pdf',
-    subtitle: 'Convierte tus documentos de Word a archivos PDF conservando estilos y tipografía.',
+    subtitle: t('ui.convierte_tus_documentos_de_word_a_archi'),
     title: 'Word a PDF',
   },
 };
+
+export { TO_PDF_CONFIGS };
+export type { HtmlMargin, HtmlOrientation, HtmlScreenSize, JpgOrientation, JpgPageMargin, JpgPageSize, ToPdfRouteConfig, ToPdfSourceType };

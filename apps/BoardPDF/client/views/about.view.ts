@@ -3,7 +3,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { ViewController } from '../types/common.types.js';
 
-export class AboutController implements ViewController {
+class AboutController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
@@ -38,10 +38,12 @@ export class AboutController implements ViewController {
   }
 }
 
-export async function createAboutView(): Promise<HTMLElement> {
+async function createAboutView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/about/about.html');
   const controller = new AboutController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { AboutController, createAboutView };

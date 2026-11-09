@@ -14,4 +14,3 @@ const uploadMiddleware = createPdfUploadMiddleware({
 router.post('/tools/summarize-pdf/summarize', requireAuth, summarizePdfLimiter, uploadMiddleware, handleSummarizePdf);
 
 export default router;
-

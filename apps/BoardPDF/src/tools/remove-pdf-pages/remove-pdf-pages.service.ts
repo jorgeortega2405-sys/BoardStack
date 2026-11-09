@@ -5,7 +5,7 @@ import { RemovePagesOptions, RemovePagesResponse, StoredRemovePagesResult } from
 import crypto from 'crypto';
 import { PDFDocument } from 'pdf-lib';
 
-export async function removePdfPages(
+async function removePdfPages(
   fileBuffer: Buffer,
   originalFilename: string,
   options: RemovePagesOptions
@@ -77,3 +77,5 @@ export async function removePdfPages(
     removedPages: toRemoveSet.size,
   };
 }
+
+export { removePdfPages };

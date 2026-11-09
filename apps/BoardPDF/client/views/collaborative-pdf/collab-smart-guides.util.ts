@@ -1,6 +1,6 @@
 import { EditorElement, ElementChart, ElementImage, ElementShape, ElementTable, ElementText } from './collaborative-pdf.types.js';
 
-export function renderActiveSmartGuides(
+function renderActiveSmartGuides(
   pageIndex: number,
   x: number,
   y: number,
@@ -266,7 +266,7 @@ export function renderActiveSmartGuides(
   }
 }
 
-export function applySmartGuides(
+function applySmartGuides(
   item: { height?: number; id: string; pageIndex?: number; width?: number },
   rawX: number,
   rawY: number,
@@ -378,7 +378,7 @@ export function applySmartGuides(
   return { x: snappedX, y: snappedY };
 }
 
-export function clearSmartGuides(container: HTMLElement, pageIndex?: number): void {
+function clearSmartGuides(container: HTMLElement, pageIndex?: number): void {
   if (pageIndex !== undefined) {
     const svg = container.querySelector<SVGElement>(`[data-ref="guides-svg-${pageIndex}"]`);
     if (svg) svg.innerHTML = '';
@@ -389,3 +389,5 @@ export function clearSmartGuides(container: HTMLElement, pageIndex?: number): vo
     });
   }
 }
+
+export { applySmartGuides, clearSmartGuides, renderActiveSmartGuides };

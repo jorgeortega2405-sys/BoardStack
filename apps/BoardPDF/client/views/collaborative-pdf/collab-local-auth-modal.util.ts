@@ -1,7 +1,7 @@
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 
-export function openLocalAuthModal(
+function openLocalAuthModal(
   docId: string,
   onStoreCurrentAsPending: () => void,
   onClose?: () => void
@@ -69,3 +69,5 @@ export function openLocalAuthModal(
 
   return modal;
 }
+
+export { openLocalAuthModal };

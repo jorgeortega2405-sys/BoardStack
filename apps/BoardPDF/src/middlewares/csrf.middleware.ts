@@ -7,7 +7,7 @@ const CSRF_COOKIE_NAME = 'boardpdf_csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+function csrfProtection(req: Request, res: Response, next: NextFunction): void {
   let token = req.cookies[CSRF_COOKIE_NAME];
   if (!token) {
     token = crypto.randomBytes(32).toString('hex');
@@ -47,3 +47,5 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
 
   next();
 }
+
+export { csrfProtection };

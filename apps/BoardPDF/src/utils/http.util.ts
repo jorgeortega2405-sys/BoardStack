@@ -2,7 +2,7 @@ import { logger } from '../services/logger.service.js';
 import { UserPayload } from '../types/auth.types.js';
 import { Response } from 'express';
 
-export function sanitizeUser(user: any): UserPayload {
+function sanitizeUser(user: any): UserPayload {
   const tier = user.subscription_tier || 'free';
   return {
     ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
@@ -18,35 +18,35 @@ export function sanitizeUser(user: any): UserPayload {
   };
 }
 
-export function sendSuccess(res: Response, data: Record<string, any> = {}, statusCode = 200): void {
+function sendSuccess(res: Response, data: Record<string, any> = {}, statusCode = 200): void {
   res.status(statusCode).json({ ok: true, ...data });
 }
 
-export function sendCreated(res: Response, data: Record<string, any> = {}): void {
+function sendCreated(res: Response, data: Record<string, any> = {}): void {
   res.status(201).json({ ok: true, ...data });
 }
 
-export function sendBadRequest(res: Response, error: string): void {
+function sendBadRequest(res: Response, error: string): void {
   res.status(400).json({ error, ok: false });
 }
 
-export function sendUnauthorized(res: Response, error = 'No autorizado.'): void {
+function sendUnauthorized(res: Response, error = 'No autorizado.'): void {
   res.status(401).json({ error, ok: false });
 }
 
-export function sendForbidden(res: Response, error = 'Acceso denegado.'): void {
+function sendForbidden(res: Response, error = 'Acceso denegado.'): void {
   res.status(403).json({ error, ok: false });
 }
 
-export function sendNotFound(res: Response, error = 'Recurso no encontrado.'): void {
+function sendNotFound(res: Response, error = 'Recurso no encontrado.'): void {
   res.status(404).json({ error, ok: false });
 }
 
-export function sendConflict(res: Response, error: string): void {
+function sendConflict(res: Response, error: string): void {
   res.status(409).json({ error, ok: false });
 }
 
-export function sendInternalError(
+function sendInternalError(
   res: Response,
   contextMessage: string,
   error: unknown,
@@ -55,3 +55,5 @@ export function sendInternalError(
   logger.app.error(contextMessage, error);
   res.status(500).json({ error: userFacingMessage, ok: false });
 }
+
+export { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized };

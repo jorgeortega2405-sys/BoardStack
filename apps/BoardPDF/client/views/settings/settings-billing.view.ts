@@ -8,7 +8,7 @@ import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { BillingDetailsResponse } from '../../types/subscription.types.js';
 
-export async function createBillingView(): Promise<HTMLElement> {
+async function createBillingView(): Promise<HTMLElement> {
   await checkAuthSession();
   const container = await loadTemplate('/views/settings/billing.html');
   translateElement(container);
@@ -114,7 +114,7 @@ export async function createBillingView(): Promise<HTMLElement> {
             planDescEl.textContent = `${amountText}Plan activo mediante pago único. Sin cargos de renovación automática.`;
           }
         } else if (info.cancel_at_period_end) {
-          planDescEl.textContent = (t('settings.billing.plan_desc_scheduled') || 'Tu plan expirará el {date}. Conservas todos tus beneficios hasta esa fecha.').replace('{date}', dateFormatted);
+          planDescEl.textContent = (t('settings.billing.plan_desc_scheduled') || t('ui.tu_plan_expirara_el_date_conservas_todos')).replace('{date}', dateFormatted);
         } else {
           planDescEl.textContent = (t('settings.billing.plan_desc_active') || '{amount}Próximo cobro programado para el {date}.').replace('{amount}', amountText).replace('{date}', dateFormatted);
         }
@@ -139,7 +139,7 @@ export async function createBillingView(): Promise<HTMLElement> {
           if (info.cancel_at_period_end) {
             iconCancelSubUse?.setAttribute('href', '/icons.svg#autorenew');
             cancelTitleEl.textContent = t('settings.billing.reactivate_sub_title') || 'Reactivar suscripción';
-            cancelDescEl.textContent = (t('settings.billing.reactivate_sub_desc') || 'Tu suscripción finalizará el {date}. Puedes reactivarla en cualquier momento para seguir disfrutando de todas las funciones sin interrupciones.').replace('{date}', dateFormatted);
+            cancelDescEl.textContent = (t('settings.billing.reactivate_sub_desc') || t('ui.tu_suscripcion_finalizara_el_date_puedes')).replace('{date}', dateFormatted);
             btnToggleSub.textContent = t('settings.billing.btn_reactivate_sub') || 'Reactivar suscripción';
             btnToggleSub.className = 'component-button component-button--h34 component-button--black';
             btnToggleSub.onclick = (e) => {
@@ -149,7 +149,7 @@ export async function createBillingView(): Promise<HTMLElement> {
           } else {
             iconCancelSubUse?.setAttribute('href', '/icons.svg#close');
             cancelTitleEl.textContent = t('settings.billing.cancel_sub_title') || 'Cancelar suscripción';
-            cancelDescEl.textContent = t('settings.billing.cancel_sub_desc') || 'Cancela la renovación automática de tu suscripción. Conservarás todos tus beneficios premium hasta el final del período facturado.';
+            cancelDescEl.textContent = t('settings.billing.cancel_sub_desc') || t('ui.cancela_la_renovacion_automatica_de_tu_s');
             btnToggleSub.textContent = t('settings.billing.btn_cancel_subscription') || 'Cancelar suscripción';
             btnToggleSub.className = 'component-button component-button--h34';
             btnToggleSub.onclick = (e) => {
@@ -162,7 +162,7 @@ export async function createBillingView(): Promise<HTMLElement> {
     } else {
       if (planNameEl) planNameEl.textContent = t('settings.billing.free_plan_title') || 'Plan Gratuito';
       if (planStatusBadge) planStatusBadge.classList.add('is-hidden');
-      if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc') || 'Actualmente disfrutas del plan básico gratuito de BoardPDF.';
+      if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc') || t('ui.actualmente_disfrutas_del_plan_basico_gr');
 
       if (btnUpgrade) {
         btnUpgrade.textContent = t('settings.billing.btn_explore_plans') || 'Explorar planes';
@@ -217,7 +217,7 @@ export async function createBillingView(): Promise<HTMLElement> {
       openModal({
         confirmClass: 'component-button--black',
         confirmText: t('settings.billing.btn_confirm_cancel_sub') || 'Confirmar cancelación',
-        description: (t('settings.billing.modal_cancel_sub_desc') || 'Tu suscripción no se renovará al concluir el período actual. Mantendrás todas tus funciones premium hasta el {date} y después no se realizará ningún cobro.').replace('{date}', dateFormatted),
+        description: (t('settings.billing.modal_cancel_sub_desc') || t('ui.tu_suscripcion_no_se_renovara_al_conclui')).replace('{date}', dateFormatted),
         title: t('settings.billing.modal_cancel_sub_title') || '¿Cancelar suscripción?',
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);
@@ -225,15 +225,15 @@ export async function createBillingView(): Promise<HTMLElement> {
             const res = await updateAutoRenewalApi(true);
             if (res.success) {
               inst.close();
-              showToast(t('settings.billing.toast_subscription_cancelled') || 'Tu suscripción no se renovará. Mantendrás tu plan hasta el término del ciclo.', 'info');
+              showToast(t('settings.billing.toast_subscription_cancelled') || t('ui.tu_suscripcion_no_se_renovara_mantendras'), 'info');
               await loadBillingData();
             } else {
               inst.setConfirmLoading(false);
-              showToast(res.error || t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+              showToast(res.error || t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
             }
           } catch {
             inst.setConfirmLoading(false);
-            showToast(t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+            showToast(t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
           }
         },
       });
@@ -245,10 +245,10 @@ export async function createBillingView(): Promise<HTMLElement> {
             showToast(t('settings.billing.toast_subscription_reactivated') || 'Suscripción reactivada exitosamente.', 'success');
             await loadBillingData();
           } else {
-            showToast(res.error || t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+            showToast(res.error || t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
           }
         } catch {
-          showToast(t('common.error_occurred') || 'Error al procesar la solicitud.', 'danger');
+          showToast(t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
         }
       })();
     }
@@ -290,13 +290,14 @@ export async function createBillingView(): Promise<HTMLElement> {
             badgePercent.className = 'component-badge component-badge--neutral';
           }
         }
-        barFill.style.width = `${Math.min(100, pct)}%`;
+        barFill.style.setProperty('--progress-pct', `${Math.min(100, pct)}%`);
+        barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
         if (pct >= 90) {
-          barFill.style.backgroundColor = 'var(--danger, #ef4444)';
+          barFill.classList.add('component-progress__bar--danger');
         } else if (pct >= 75) {
-          barFill.style.backgroundColor = 'var(--warning, #f59e0b)';
+          barFill.classList.add('component-progress__bar--warning');
         } else {
-          barFill.style.backgroundColor = 'var(--primary, #0f172a)';
+          barFill.classList.add('component-progress__bar--primary');
         }
         if (textAvailable) {
           textAvailable.textContent = `${formatBytes(avail)} disponibles`;
@@ -307,7 +308,7 @@ export async function createBillingView(): Promise<HTMLElement> {
       const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
       const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
       textUsed.textContent = `${formatBytes(used)} de ${formatBytes(limit)} utilizados`;
-      barFill.style.width = `${pct}%`;
+      barFill.style.setProperty('--progress-pct', `${pct}%`);
     }
   };
 
@@ -355,13 +356,14 @@ export async function createBillingView(): Promise<HTMLElement> {
         badgePercent.className = 'component-badge component-badge--neutral';
       }
     }
-    barFill.style.width = `${pct}%`;
+    barFill.style.setProperty('--progress-pct', `${pct}%`);
+    barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
     if (pct <= 10) {
-      barFill.style.backgroundColor = 'var(--danger, #ef4444)';
+      barFill.classList.add('component-progress__bar--danger');
     } else if (pct <= 25) {
-      barFill.style.backgroundColor = 'var(--warning, #f59e0b)';
+      barFill.classList.add('component-progress__bar--warning');
     } else {
-      barFill.style.backgroundColor = 'var(--primary, #0f172a)';
+      barFill.classList.add('component-progress__bar--primary');
     }
 
     if (resetDateText) {
@@ -394,3 +396,5 @@ export async function createBillingView(): Promise<HTMLElement> {
 
   return container;
 }
+
+export { createBillingView };

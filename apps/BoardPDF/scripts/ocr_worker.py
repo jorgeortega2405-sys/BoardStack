@@ -90,7 +90,7 @@ def process_ocr(input_pdf, output_pdf, language="spa", deskew_enabled=True):
 
 def main():
     if len(sys.argv) < 3:
-        print(json.dumps({'error': 'Uso: python ocr_worker.py <input> <output> [lang] [deskew]', 'success': False}))
+        print(json.dumps({'error': 'Usage: python ocr_worker.py <input> <output> [lang] [deskew]', 'success': False}))
         sys.exit(1)
 
     input_pdf = sys.argv[1]
@@ -99,7 +99,7 @@ def main():
     deskew = sys.argv[4] != "0" if len(sys.argv) > 4 else True
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({'error': 'Archivo de entrada no existe', 'success': False}))
+        print(json.dumps({'error': 'Input file does not exist', 'success': False}))
         sys.exit(1)
 
     try:

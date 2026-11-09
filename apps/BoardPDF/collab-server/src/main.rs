@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = format!("0.0.0.0:{}", port).parse()?;
     let listener = TcpListener::bind(&addr).await?;
     println!(
-        "[CollabServer] Servidor WebSocket colaborativo escuchando en {} (Límite por room: {} colaboradores)",
+        "[CollabServer] Collaborative WebSocket server listening on {} (Room limit: {} collaborators)",
         addr, max_collab
     );
 
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let hub_clone = Arc::clone(&hub);
         tokio::spawn(async move {
             if let Err(err) = handle_connection(stream, peer_addr, hub_clone).await {
-                eprintln!("[CollabServer] Error en conexión con {}: {:?}", peer_addr, err);
+                eprintln!("[CollabServer] Connection error with {}: {:?}", peer_addr, err);
             }
         });
     }
@@ -189,7 +189,7 @@ async fn handle_connection(
                     Message::Text(text) => {
                         if text.len() > MAX_MESSAGE_BYTES {
                             let err_msg = ServerMessage::Error {
-                                message: "El tamaño del mensaje excede el límite permitido (1 MB).".to_string(),
+                                message: "Message payload exceeds allowed limit (1 MB).".to_string(),
                                 code: Some("PAYLOAD_TOO_LARGE".to_string()),
                             };
                             if let Ok(json_str) = serde_json::to_string(&err_msg) {
@@ -201,9 +201,9 @@ async fn handle_connection(
                         let client_msg: ClientMessage = match serde_json::from_str(text.as_str()) {
                             Ok(m) => m,
                             Err(err) => {
-                                eprintln!("[CollabServer] Error deserializando JSON: {:?}", err);
+                                eprintln!("[CollabServer] Error deserializing JSON: {:?}", err);
                                 let err_msg = ServerMessage::Error {
-                                    message: "Formato de mensaje no válido.".to_string(),
+                                    message: "Invalid message format.".to_string(),
                                     code: Some("INVALID_JSON".to_string()),
                                 };
                                 if let Ok(json_str) = serde_json::to_string(&err_msg) {
@@ -219,7 +219,7 @@ async fn handle_connection(
                                 continue;
                             } else {
                                 let rate_msg = ServerMessage::RateLimited {
-                                    message: "Demasiadas peticiones por segundo. Por favor reduce la velocidad.".to_string(),
+                                    message: "Rate limit exceeded. Please slow down.".to_string(),
                                 };
                                 if let Ok(json_str) = serde_json::to_string(&rate_msg) {
                                     let _ = tx.try_send(Message::Text(json_str.into()));
@@ -273,7 +273,7 @@ async fn handle_connection(
                                     JoinResult::RoomFull { max_collaborators } => {
                                         let full_msg = ServerMessage::RoomFull {
                                             message: format!(
-                                                "Esta sala colaborativa ha alcanzado el límite máximo de {} colaboradores simultáneos.",
+                                                "This collaborative room has reached the maximum limit of {} concurrent collaborators.",
                                                 max_collaborators
                                             ),
                                             max_collaborators,

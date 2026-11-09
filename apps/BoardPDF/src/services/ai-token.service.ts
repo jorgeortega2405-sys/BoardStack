@@ -3,18 +3,18 @@ import { logger } from './logger.service.js';
 import { permissionService } from './permission.service.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
-export interface UserTokenRecord extends RowDataPacket {
+interface UserTokenRecord extends RowDataPacket {
   ai_tokens_balance: number;
   ai_tokens_reset_at: Date;
 }
 
-export interface AiTokenBalanceInfo {
+interface AiTokenBalanceInfo {
   balance: number;
   limit: number;
   resetAt: string;
 }
 
-export interface AiTokenEstimateResult {
+interface AiTokenEstimateResult {
   canAfford: boolean;
   cost: number;
   currentBalance: number;
@@ -22,7 +22,7 @@ export interface AiTokenEstimateResult {
   remainingAfter: number;
 }
 
-export interface ConsumeAiTokenResult {
+interface ConsumeAiTokenResult {
   balance: number;
   consumed: number;
   limit: number;
@@ -31,7 +31,7 @@ export interface ConsumeAiTokenResult {
   success: boolean;
 }
 
-export function getMonthlyQuotaByPermissions(permissions: string[] = []): number {
+function getMonthlyQuotaByPermissions(permissions: string[] = []): number {
   if (permissions.includes('subscription:feature:business')) {
     return 5000;
   }
@@ -41,7 +41,7 @@ export function getMonthlyQuotaByPermissions(permissions: string[] = []): number
   return 100;
 }
 
-export function calculatePdfCost(toolId: string, pageCount: number, fileSizeBytes: number): number {
+function calculatePdfCost(toolId: string, pageCount: number, fileSizeBytes: number): number {
   if (toolId === 'remove-background' || toolId === 'image-remove-bg') {
     return 10;
   }
@@ -62,7 +62,7 @@ export function calculatePdfCost(toolId: string, pageCount: number, fileSizeByte
   return Math.max(1, baseCost + (safePages * costPerPage) + sizeFactor);
 }
 
-export async function getUserTokenBalance(userId: number, permissions?: string[]): Promise<AiTokenBalanceInfo> {
+async function getUserTokenBalance(userId: number, permissions?: string[]): Promise<AiTokenBalanceInfo> {
   const pool = getDbPool();
   let perms = permissions;
   if (!perms) {
@@ -128,7 +128,7 @@ export async function getUserTokenBalance(userId: number, permissions?: string[]
   };
 }
 
-export async function estimateAiTokenCost(params: {
+async function estimateAiTokenCost(params: {
   fileSizeBytes: number;
   pageCount: number;
   permissions?: string[];
@@ -149,7 +149,7 @@ export async function estimateAiTokenCost(params: {
   };
 }
 
-export async function consumeAiTokens(params: {
+async function consumeAiTokens(params: {
   fileSizeBytes: number;
   pageCount: number;
   permissions?: string[];
@@ -220,3 +220,6 @@ export async function consumeAiTokens(params: {
     success: true,
   };
 }
+
+export { calculatePdfCost, consumeAiTokens, estimateAiTokenCost, getMonthlyQuotaByPermissions, getUserTokenBalance };
+export type { AiTokenBalanceInfo, AiTokenEstimateResult, ConsumeAiTokenResult, UserTokenRecord };

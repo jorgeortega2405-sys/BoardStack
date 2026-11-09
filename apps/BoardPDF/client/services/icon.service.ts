@@ -2,7 +2,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
 
-export function renderIcons(root: ParentNode = document): void {
+function renderIcons(root: ParentNode = document): void {
   const targets = root.querySelectorAll<HTMLElement>('.component-icon, .material-symbols-rounded');
 
   targets.forEach((node) => {
@@ -36,3 +36,5 @@ export function renderIcons(root: ParentNode = document): void {
     node.replaceWith(svg);
   });
 }
+
+export { renderIcons };

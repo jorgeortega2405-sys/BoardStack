@@ -1,4 +1,4 @@
-export interface SelectedPdfItem {
+interface SelectedPdfItem {
   file: File;
   id: string;
   isEncrypted?: boolean;
@@ -8,10 +8,12 @@ export interface SelectedPdfItem {
   thumbnailDataUrl?: string;
 }
 
-export interface MergePdfResponseData {
+interface MergePdfResponseData {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   pageCount: number;
 }
+
+export type { MergePdfResponseData, SelectedPdfItem };

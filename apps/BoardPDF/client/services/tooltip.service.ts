@@ -28,7 +28,7 @@ function createTooltipElement(text: string): { arrow: HTMLElement; content: HTML
   return { arrow, content, el };
 }
 
-export function showTooltip(target: HTMLElement | null): void {
+function showTooltip(target: HTMLElement | null): void {
   if (!target) return;
   const text = target.getAttribute('data-tooltip');
   if (!text || !text.trim()) {
@@ -81,7 +81,7 @@ export function showTooltip(target: HTMLElement | null): void {
   });
 }
 
-export function hideTooltip(): void {
+function hideTooltip(): void {
   if (tooltipEl) {
     tooltipEl.remove();
     tooltipEl = null;
@@ -95,7 +95,7 @@ export function hideTooltip(): void {
   activeTarget = null;
 }
 
-export function initTooltips(): void {
+function initTooltips(): void {
   document.addEventListener('mouseover', (e: MouseEvent) => {
     const target = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-tooltip]');
     if (target) {
@@ -114,3 +114,5 @@ export function initTooltips(): void {
     hideTooltip();
   });
 }
+
+export { hideTooltip, initTooltips, showTooltip };

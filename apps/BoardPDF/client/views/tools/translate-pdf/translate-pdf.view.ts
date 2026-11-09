@@ -13,6 +13,7 @@ import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSideba
 import { formatBytes } from '../../../utils/format.util.js';
 import { OCR_LANGUAGES } from '../ocr-pdf/ocr-pdf.types.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
 const CLEAN_LANGUAGES = OCR_LANGUAGES.filter(
   (lang) => !lang.code.includes('_') && lang.code !== 'equ' && !lang.name.includes('antiguo')
@@ -25,7 +26,7 @@ const SOURCE_LANG_ITEMS = [
 
 const TARGET_LANG_ITEMS = [...CLEAN_LANGUAGES];
 
-export class TranslatePdfViewController implements ViewController {
+class TranslatePdfViewController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -39,7 +40,7 @@ export class TranslatePdfViewController implements ViewController {
 
   private readonly layoutDetails = {
     preserve: {
-      desc: 'El PDF procesado mantendrá el diseño lo más cercano posible al PDF original.',
+      desc: t('ui.el_pdf_procesado_mantendra_el_diseno_lo_'),
       title: 'Mantener el diseño',
     },
     text_only: {
@@ -58,7 +59,7 @@ export class TranslatePdfViewController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar Archivo PDF',
-        desc: 'Traduce documentos completos conservando tablas, imágenes, columnas y el diseño original con IA avanzada.',
+        desc: t('ui.traduce_documentos_completos_conservando'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -265,7 +266,7 @@ export class TranslatePdfViewController implements ViewController {
 
   private handleFileSelected(file: File): void {
     if (!currentUser) {
-      showToast('Debes iniciar sesión para utilizar las herramientas con Inteligencia Artificial.', 'warning');
+      showToast(t('toasts.debes_iniciar_sesion_para_utilizar_las_h'), 'warning');
       navigate('/login');
       return;
     }
@@ -273,7 +274,7 @@ export class TranslatePdfViewController implements ViewController {
     this.hideError();
 
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-      this.showError('Solo se permiten documentos en formato PDF.');
+      this.showError(t('tools.only_pdf_allowed'));
       return;
     }
 
@@ -374,19 +375,19 @@ export class TranslatePdfViewController implements ViewController {
         this.phaseManager?.showProcessing(
           'Traduciendo documento...',
           this.selectedLayout === 'preserve'
-            ? 'Conservando formato, tipografía y tablas en el idioma de destino'
-            : 'Generando documento con texto traducido estructurado'
+            ? t('ui.conservando_formato_tipografia_y_tablas_')
+            : t('ui.generando_documento_con_texto_traducido_')
         );
 
         if (!response.ok || !res.success || !res.data) {
-          throw new Error(res.error || 'Error al traducir el documento PDF.');
+          throw new Error(res.error || t('ui.error_al_traducir_el_documento_pdf'));
         }
 
         const token = res.data.fileId;
         if ((res as any).aiTokens?.balance !== undefined) {
           updateUserAiTokens((res as any).aiTokens.balance);
         }
-        showToast('Documento traducido con éxito.', 'success');
+        showToast(t('toasts.documento_traducido_con_exito'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: res.data.size,
@@ -398,7 +399,7 @@ export class TranslatePdfViewController implements ViewController {
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error al conectar con el servidor.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_al_conectar_con_el_servidor');
         this.phaseManager?.showError(errorMessage);
         this.showError(errorMessage);
       } finally {
@@ -425,10 +426,12 @@ export class TranslatePdfViewController implements ViewController {
   }
 }
 
-export async function createTranslatePdfView(): Promise<HTMLElement> {
+async function createTranslatePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/translate-pdf/translate-pdf.html');
   const controller = new TranslatePdfViewController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { TranslatePdfViewController, createTranslatePdfView };

@@ -2,13 +2,13 @@ import { ToastType } from '../types/common.types.js';
 
 let extendedAlertsEnabled = false;
 
-export function setToastPreferences(prefs: { extended_alerts?: boolean }): void {
+function setToastPreferences(prefs: { extended_alerts?: boolean }): void {
   if (typeof prefs?.extended_alerts === 'boolean') {
     extendedAlertsEnabled = prefs.extended_alerts;
   }
 }
 
-export function showToast(message: string, type: ToastType = 'success', customDuration: number | null = null): () => void {
+function showToast(message: string, type: ToastType = 'success', customDuration: number | null = null): () => void {
   if (!message) return () => {};
 
   let container = document.querySelector('[data-ref="toast-container"]');
@@ -63,9 +63,11 @@ export function showToast(message: string, type: ToastType = 'success', customDu
   return dismiss;
 }
 
-export const toast = {
+const toast = {
   error: (msg: string, dur?: number) => showToast(msg, 'error', dur ?? null),
   info: (msg: string, dur?: number) => showToast(msg, 'info', dur ?? null),
   success: (msg: string, dur?: number) => showToast(msg, 'success', dur ?? null),
   warning: (msg: string, dur?: number) => showToast(msg, 'warning', dur ?? null),
 };
+
+export { setToastPreferences, showToast, toast };

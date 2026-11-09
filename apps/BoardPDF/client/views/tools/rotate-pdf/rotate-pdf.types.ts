@@ -1,4 +1,4 @@
-export interface RotatePageItem {
+interface RotatePageItem {
   id: string;
   originalIndex: number;
   pageNum: number;
@@ -6,10 +6,12 @@ export interface RotatePageItem {
   thumbnailUrl?: string;
 }
 
-export interface RotatePdfResponseData {
+interface RotatePdfResponseData {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   totalPages: number;
 }
+
+export type { RotatePageItem, RotatePdfResponseData };

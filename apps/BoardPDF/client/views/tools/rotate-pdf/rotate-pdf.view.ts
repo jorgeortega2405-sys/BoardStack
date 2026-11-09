@@ -11,8 +11,9 @@ import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { RotatePageItem, RotatePdfResponseData } from './rotate-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class RotatePdfController implements ViewController {
+class RotatePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -33,7 +34,7 @@ export class RotatePdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Gira tus páginas PDF permanentemente a 90, 180 o 270 grados en segundos.',
+        desc: t('ui.gira_tus_paginas_pdf_permanentemente_a_9'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -193,7 +194,7 @@ export class RotatePdfController implements ViewController {
         void this.renderPageThumbnail(item.pageNum, card);
       }
     } catch {
-      this.showError('No se pudo leer el archivo PDF. Asegúrate de que no esté dañado ni protegido con contraseña.');
+      this.showError(t('ui.no_se_pudo_leer_el_archivo_pdf_asegurate'));
       this.resetToInitial();
     }
   }
@@ -320,23 +321,23 @@ export class RotatePdfController implements ViewController {
         this.phaseManager?.showProcessing('Rotando páginas del PDF...');
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al procesar la rotación del documento.');
+          throw new Error(result.error || t('ui.ocurrio_un_error_al_procesar_la_rotacion'));
         }
 
         const token = result.data.fileId;
-        showToast('PDF rotado correctamente.', 'success');
+        showToast(t('toasts.pdf_rotado_correctamente'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
           returnText: 'Rotar otro archivo PDF',
           returnUrl: '/rotate-pdf',
-          subtitle: `Las orientaciones de página para "${this.currentFile?.name}" se han aplicado correctamente.`,
+          subtitle: t('tools.rotate_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡PDF rotado con éxito!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al rotar el documento.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_rotar_el_documento');
         this.phaseManager?.showError(errorMessage);
         this.showError(errorMessage);
       } finally {
@@ -383,10 +384,12 @@ export class RotatePdfController implements ViewController {
   }
 }
 
-export async function createRotatePdfView(): Promise<HTMLElement> {
+async function createRotatePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/rotate-pdf/rotate-pdf.html');
   const controller = new RotatePdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { RotatePdfController, createRotatePdfView };

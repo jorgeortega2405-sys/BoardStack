@@ -8,7 +8,7 @@ import fs from 'fs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 
-export interface UserRecord extends RowDataPacket {
+interface UserRecord extends RowDataPacket {
   ai_tokens_balance?: number;
   ai_tokens_reset_at?: Date;
   avatar_url?: string | null;
@@ -29,14 +29,14 @@ export interface UserRecord extends RowDataPacket {
   username: string;
 }
 
-export interface UserPreferencesRecord extends RowDataPacket {
+interface UserPreferencesRecord extends RowDataPacket {
   language: string;
   theme: string;
   updated_at?: Date;
   user_id: number;
 }
 
-export interface UserPreferences {
+interface UserPreferences {
   language: string;
   theme: string;
 }
@@ -46,7 +46,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
 };
 
-export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, google_id, google_email FROM users WHERE email = ? LIMIT 1',
@@ -56,7 +56,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
   return rows[0];
 }
 
-export async function findUserByUsername(username: string): Promise<UserRecord | null> {
+async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at FROM users WHERE username = ? LIMIT 1',
@@ -66,7 +66,7 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
   return rows[0];
 }
 
-export async function findUserById(id: number): Promise<UserRecord | null> {
+async function findUserById(id: number): Promise<UserRecord | null> {
   const cacheKey = cacheService.CACHE_KEYS.userProfile(String(id));
   try {
     const cached = await cacheService.get<UserRecord>(cacheKey);
@@ -88,7 +88,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   return user;
 }
 
-export async function findUserByGoogleId(googleId: string): Promise<UserRecord | null> {
+async function findUserByGoogleId(googleId: string): Promise<UserRecord | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE google_id = ? LIMIT 1',
@@ -98,7 +98,7 @@ export async function findUserByGoogleId(googleId: string): Promise<UserRecord |
   return rows[0];
 }
 
-export async function linkGoogleAccount(userId: number, googleId: string, googleEmail: string): Promise<boolean> {
+async function linkGoogleAccount(userId: number, googleId: string, googleEmail: string): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET google_id = ?, google_email = ? WHERE id = ?',
@@ -108,7 +108,7 @@ export async function linkGoogleAccount(userId: number, googleId: string, google
   return result.affectedRows > 0;
 }
 
-export async function unlinkGoogleAccount(userId: number): Promise<boolean> {
+async function unlinkGoogleAccount(userId: number): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET google_id = NULL, google_email = NULL WHERE id = ?',
@@ -118,7 +118,7 @@ export async function unlinkGoogleAccount(userId: number): Promise<boolean> {
   return result.affectedRows > 0;
 }
 
-export async function generateUniqueUsername(preferred: string): Promise<string> {
+async function generateUniqueUsername(preferred: string): Promise<string> {
   const pool = getDbPool();
   let base = preferred.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
   if (base.length < 3) base = `user_${base}`;
@@ -132,13 +132,13 @@ export async function generateUniqueUsername(preferred: string): Promise<string>
   }
 }
 
-export async function invalidateUserProfileCache(userId: number): Promise<void> {
+async function invalidateUserProfileCache(userId: number): Promise<void> {
   try {
     await cacheService.invalidateUser(String(userId));
   } catch {}
 }
 
-export async function findUserDuplicates(
+async function findUserDuplicates(
   email: string,
   username: string
 ): Promise<{ emailExists: boolean; usernameExists: boolean }> {
@@ -154,7 +154,7 @@ export async function findUserDuplicates(
   return { emailExists, usernameExists };
 }
 
-export async function createUser(data: {
+async function createUser(data: {
   avatarUrl?: string | null;
   email: string;
   googleEmail?: string | null;
@@ -210,7 +210,7 @@ export async function createUser(data: {
   };
 }
 
-export async function updateUserLastLogin(userId: number, ip?: string | null): Promise<void> {
+async function updateUserLastLogin(userId: number, ip?: string | null): Promise<void> {
   try {
     const pool = getDbPool();
     await pool.query(
@@ -222,7 +222,7 @@ export async function updateUserLastLogin(userId: number, ip?: string | null): P
   }
 }
 
-export async function updateUserAvatar(userId: number, avatarUrl: string | null): Promise<boolean> {
+async function updateUserAvatar(userId: number, avatarUrl: string | null): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET avatar_url = ? WHERE id = ?',
@@ -232,7 +232,7 @@ export async function updateUserAvatar(userId: number, avatarUrl: string | null)
   return result.affectedRows > 0;
 }
 
-export async function updateUsername(userId: number, username: string): Promise<boolean> {
+async function updateUsername(userId: number, username: string): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET username = ? WHERE id = ?',
@@ -242,7 +242,7 @@ export async function updateUsername(userId: number, username: string): Promise<
   return result.affectedRows > 0;
 }
 
-export async function updateUserEmail(userId: number, email: string): Promise<boolean> {
+async function updateUserEmail(userId: number, email: string): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET email = ? WHERE id = ?',
@@ -252,7 +252,7 @@ export async function updateUserEmail(userId: number, email: string): Promise<bo
   return result.affectedRows > 0;
 }
 
-export async function updateUserPassword(userId: number, passwordHash: string): Promise<boolean> {
+async function updateUserPassword(userId: number, passwordHash: string): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET password_hash = ? WHERE id = ?',
@@ -262,7 +262,7 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   return result.affectedRows > 0;
 }
 
-export async function getUser2FASecret(userId: number): Promise<{ two_factor_recovery_codes: string | null; two_factor_secret: string | null } | null> {
+async function getUser2FASecret(userId: number): Promise<{ two_factor_recovery_codes: string | null; two_factor_secret: string | null } | null> {
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
     'SELECT two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
@@ -276,7 +276,7 @@ export async function getUser2FASecret(userId: number): Promise<{ two_factor_rec
   };
 }
 
-export async function enableUser2FA(
+async function enableUser2FA(
   userId: number,
   secret: string,
   backupCodes: string[]
@@ -293,7 +293,7 @@ export async function enableUser2FA(
   return result.affectedRows > 0;
 }
 
-export async function disableUser2FA(userId: number): Promise<boolean> {
+async function disableUser2FA(userId: number): Promise<boolean> {
   const pool = getDbPool();
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET two_factor_enabled = FALSE, two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?',
@@ -303,7 +303,7 @@ export async function disableUser2FA(userId: number): Promise<boolean> {
   return result.affectedRows > 0;
 }
 
-export async function verifyAndConsumeBackupCode(userId: number, code: string): Promise<boolean> {
+async function verifyAndConsumeBackupCode(userId: number, code: string): Promise<boolean> {
   const twoFactorData = await getUser2FASecret(userId);
   if (!twoFactorData || !twoFactorData.two_factor_recovery_codes) {
     return false;
@@ -334,7 +334,7 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
   return result.affectedRows > 0;
 }
 
-export async function getUserPreferences(userId: number): Promise<UserPreferences> {
+async function getUserPreferences(userId: number): Promise<UserPreferences> {
   const cacheKey = cacheService.CACHE_KEYS.userPrefs(String(userId));
   try {
     const cached = await cacheService.get<UserPreferences>(cacheKey);
@@ -372,7 +372,7 @@ export async function getUserPreferences(userId: number): Promise<UserPreference
   return prefs;
 }
 
-export async function updateUserPreferences(
+async function updateUserPreferences(
   userId: number,
   updates: Partial<UserPreferences>
 ): Promise<UserPreferences> {
@@ -399,7 +399,7 @@ export async function updateUserPreferences(
   return next;
 }
 
-export async function deleteUserPermanently(userId: number): Promise<boolean> {
+async function deleteUserPermanently(userId: number): Promise<boolean> {
   const user = await findUserById(userId);
   if (!user) {
     return false;
@@ -443,3 +443,6 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     connection.release();
   }
 }
+
+export { createUser, deleteUserPermanently, disableUser2FA, enableUser2FA, findUserByEmail, findUserByGoogleId, findUserById, findUserByUsername, findUserDuplicates, generateUniqueUsername, getUser2FASecret, getUserPreferences, invalidateUserProfileCache, linkGoogleAccount, unlinkGoogleAccount, updateUserAvatar, updateUserEmail, updateUserLastLogin, updateUserPassword, updateUserPreferences, updateUsername, verifyAndConsumeBackupCode };
+export type { UserPreferences, UserPreferencesRecord, UserRecord };

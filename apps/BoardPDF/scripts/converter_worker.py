@@ -120,7 +120,7 @@ def convert_to_xlsx(input_pdf, output_file, options=None):
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Hoja 1" if single_sheet else "Página 1"
+    ws.title = "Sheet 1" if single_sheet else "Page 1"
 
     header_font = Font(name="Arial", size=10, bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
@@ -138,7 +138,7 @@ def convert_to_xlsx(input_pdf, output_file, options=None):
             if single_sheet:
                 current_ws = ws
             else:
-                current_ws = ws if p_idx == 0 else wb.create_sheet(title=f"Página {p_idx + 1}")
+                current_ws = ws if p_idx == 0 else wb.create_sheet(title=f"Page {p_idx + 1}")
                 current_row = 1
 
             tables = page.extract_tables({
@@ -238,7 +238,7 @@ def convert_to_jpg(input_pdf, output_pattern, options=None):
 
 def main():
     if len(sys.argv) < 4:
-        print(json.dumps({'error': 'Uso: python converter_worker.py <format> <input> <output>', 'success': False}))
+        print(json.dumps({'error': 'Usage: python converter_worker.py <format> <input> <output>', 'success': False}))
         sys.exit(1)
 
     target_format = sys.argv[1].lower()
@@ -252,7 +252,7 @@ def main():
             pass
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({'error': 'Archivo de entrada no encontrado', 'success': False}))
+        print(json.dumps({'error': 'Input file not found', 'success': False}))
         sys.exit(1)
 
     try:
@@ -265,7 +265,7 @@ def main():
         elif target_format == 'jpg' or target_format == 'jpeg':
             convert_to_jpg(input_pdf, output_file, options)
         else:
-            print(json.dumps({'error': f'Formato no soportado: {target_format}', 'success': False}))
+            print(json.dumps({'error': f'Unsupported format: {target_format}', 'success': False}))
             sys.exit(1)
 
         print(json.dumps({'output': output_file, 'success': True}))

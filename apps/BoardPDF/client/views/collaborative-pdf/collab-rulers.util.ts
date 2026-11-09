@@ -1,4 +1,4 @@
-export function updateRulers(container: HTMLElement, showRulersAndGuides: boolean, zoomLevel = 1.0): void {
+function updateRulers(container: HTMLElement, showRulersAndGuides: boolean, zoomLevel = 1.0): void {
   if (!showRulersAndGuides) return;
   const workspace = container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
   const canvasTop = container.querySelector<HTMLCanvasElement>('[data-ref="ruler-top"]');
@@ -134,7 +134,7 @@ export function updateRulers(container: HTMLElement, showRulersAndGuides: boolea
   ctxLeft.restore();
 }
 
-export function renderPersistentGuidesSvg(
+function renderPersistentGuidesSvg(
   pageIndex: number,
   width: number,
   height: number,
@@ -254,3 +254,5 @@ export function renderPersistentGuidesSvg(
 
   return svg;
 }
+
+export { renderPersistentGuidesSvg, updateRulers };

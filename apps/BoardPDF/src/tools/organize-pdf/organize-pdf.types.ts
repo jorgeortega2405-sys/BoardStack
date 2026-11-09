@@ -1,15 +1,15 @@
-export interface PageOrderOption {
+interface PageOrderOption {
   pageIndex: number;
   rotation?: number;
 }
 
-export interface OrganizePdfOptions {
+interface OrganizePdfOptions {
   filename?: string;
   order?: 'asc' | 'reverse' | 'default';
   pagesOrder?: PageOrderOption[];
 }
 
-export interface StoredOrganizePdfResult {
+interface StoredOrganizePdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -19,10 +19,12 @@ export interface StoredOrganizePdfResult {
   size: number;
 }
 
-export interface OrganizePdfResponse {
+interface OrganizePdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   totalPages: number;
 }
+
+export type { OrganizePdfOptions, OrganizePdfResponse, PageOrderOption, StoredOrganizePdfResult };

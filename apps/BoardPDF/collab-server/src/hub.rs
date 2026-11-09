@@ -27,7 +27,7 @@ impl Room {
             if is_lossy {
                 let _ = tx.try_send(message_str.to_string());
             } else if let Err(err) = tx.try_send(message_str.to_string()) {
-                eprintln!("[CollabServer] Advertencia: Mutación crítica descartada para cliente {} por saturación de canal: {:?}", client_id, err);
+                eprintln!("[CollabServer] Warning: Critical mutation dropped for client {} due to channel saturation: {:?}", client_id, err);
             }
         }
     }

@@ -35,7 +35,7 @@ async function estimatePdfPages(file: File): Promise<number> {
   return 1;
 }
 
-export class MergePdfController implements ViewController {
+class MergePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentResult: MergePdfResponseData | null = null;
@@ -56,7 +56,7 @@ export class MergePdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar archivos PDF',
-        desc: 'Une PDFs y ponlos en el orden que prefieras. ¡Rápido y fácil!',
+        desc: t('ui.une_pdfs_y_ponlos_en_el_orden_que_prefie'),
         hint: 'o arrastra y suelta los PDF aquí',
         multiselect: true,
         onFilesSelected: (files: File[]) => {
@@ -514,27 +514,27 @@ export class MergePdfController implements ViewController {
 
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Uniendo documentos PDF...', 'Generando archivo unificado con el orden seleccionado');
+      this.phaseManager?.showProcessing('Uniendo documentos PDF...', t('ui.generando_archivo_unificado_con_el_orden'));
 
       if (!response.ok || !json.success) {
-        throw new Error(json.error || 'No se pudieron unir los documentos PDF. Intenta nuevamente.');
+        throw new Error(json.error || t('ui.no_se_pudieron_unir_los_documentos_pdf_i'));
       }
 
       this.currentResult = json.data as MergePdfResponseData;
       const token = this.currentResult.fileId;
-      showToast('¡Documentos PDF unidos exitosamente!', 'success');
+      showToast(t('toasts.pdf_merged_success'), 'success');
       this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
         returnText: 'Unir más archivos PDF',
         returnUrl: '/merge-pdf',
-        subtitle: `Se han unido exitosamente ${this.selectedFiles.length} archivos en un solo documento.`,
+        subtitle: t('ui.se_han_unido_exitosamente_archivos_en_un'),
         title: '¡PDFs unidos con éxito!',
         token,
       });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al procesar la unión de archivos.';
+      const msg = err instanceof Error ? err.message : t('ui.error_al_procesar_la_union_de_archivos');
       if (isLimitErrorMessage(msg)) {
         showUpgradeLimitModal({
           currentCount: this.selectedFiles.length,
@@ -576,10 +576,12 @@ export class MergePdfController implements ViewController {
   }
 }
 
-export async function createMergePdfView(): Promise<HTMLElement> {
+async function createMergePdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/merge-pdf/merge-pdf.html');
   const controller = new MergePdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { MergePdfController, createMergePdfView };

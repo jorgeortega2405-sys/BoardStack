@@ -10,8 +10,9 @@ import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class PageNumbersController implements ViewController {
+class PageNumbersController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -39,17 +40,17 @@ export class PageNumbersController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Añade numeración de páginas en cualquier posición, formato y tipografía a tu documento PDF.',
+        desc: t('ui.anade_numeracion_de_paginas_en_cualquier'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Insertar números de página',
+        title: t('ui.insertar_numeros_de_pagina'),
       },
       sidebarRef: 'page-numbers-sidebar',
       toolId: 'page-numbers',
-      toolName: 'Insertar números de página',
+      toolName: t('ui.insertar_numeros_de_pagina'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'pn-workspace-card',
     });
@@ -205,7 +206,7 @@ export class PageNumbersController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast('Selecciona únicamente un archivo PDF válido.', 'danger');
+      showToast(t('ui.selecciona_unicamente_un_archivo_pdf_val'), 'danger');
       return;
     }
 
@@ -254,7 +255,7 @@ export class PageNumbersController implements ViewController {
       if (executeBtn) executeBtn.disabled = false;
       this.renderPagesView();
     } catch {
-      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado ni protegido.', 'danger');
+      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
       this.resetToInitial();
     }
   }
@@ -431,26 +432,26 @@ export class PageNumbersController implements ViewController {
           success: boolean;
         };
 
-        this.phaseManager?.showProcessing('Insertando números de página...', 'Renderizando y estampando las numeraciones en el documento PDF');
+        this.phaseManager?.showProcessing(t('ui.insertando_numeros_de_pagina'), t('ui.renderizando_y_estampando_las_numeracion'));
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al insertar números de página.');
+          throw new Error(result.error || t('ui.ocurrio_un_error_al_insertar_numeros_de_'));
         }
 
         const token = result.data.fileId;
-        showToast('Números de página insertados con éxito.', 'success');
+        showToast(t('toasts.page_numbers_inserted'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
           returnText: 'Numerar otro documento PDF',
           returnUrl: '/page-numbers',
-          subtitle: `Se han insertado exitosamente los números de página en "${this.currentFile?.name}".`,
+          subtitle: t('tools.page_numbers_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡Números de página insertados!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al numerar el documento.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_numerar_el_documento');
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
@@ -483,10 +484,12 @@ export class PageNumbersController implements ViewController {
   }
 }
 
-export async function createPageNumbersView(): Promise<HTMLElement> {
+async function createPageNumbersView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/page-numbers/page-numbers.html');
   const controller = new PageNumbersController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { PageNumbersController, createPageNumbersView };

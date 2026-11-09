@@ -11,8 +11,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
 import { CropBoxPercent, CropPdfResponseData } from './crop-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class CropPdfController implements ViewController {
+class CropPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private cropAllPages = true;
@@ -39,7 +40,7 @@ export class CropPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Recorta las páginas de tu documento PDF de forma interactiva y ajusta los márgenes a tu medida.',
+        desc: t('ui.recorta_las_paginas_de_tu_documento_pdf_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -292,7 +293,7 @@ export class CropPdfController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast('Selecciona únicamente un archivo PDF válido.', 'danger');
+      showToast(t('ui.selecciona_unicamente_un_archivo_pdf_val'), 'danger');
       return;
     }
 
@@ -339,7 +340,7 @@ export class CropPdfController implements ViewController {
       await this.renderCurrentPage();
       this.updateCropDisplay();
     } catch {
-      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado ni protegido.', 'danger');
+      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
       this.resetToInitial();
     }
   }
@@ -476,23 +477,23 @@ export class CropPdfController implements ViewController {
         this.phaseManager?.showProcessing('Recortando páginas del documento PDF...', 'Ajustando los márgenes visuales y vectoriales del documento');
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al recortar el documento.');
+          throw new Error(result.error || t('ui.ocurrio_un_error_al_recortar_el_document'));
         }
 
         const token = result.data.fileId;
-        showToast('PDF recortado correctamente.', 'success');
+        showToast(t('toasts.pdf_cropped_success'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
           returnText: 'Recortar otro documento PDF',
           returnUrl: '/crop-pdf',
-          subtitle: `Se ha aplicado exitosamente el área de recorte a "${this.currentFile?.name}".`,
+          subtitle: t('tools.crop_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡PDF recortado con éxito!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al recortar el documento.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_recortar_el_document');
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
@@ -529,10 +530,12 @@ export class CropPdfController implements ViewController {
   }
 }
 
-export async function createCropPdfView(): Promise<HTMLElement> {
+async function createCropPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/crop-pdf/crop-pdf.html');
   const controller = new CropPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { CropPdfController, createCropPdfView };

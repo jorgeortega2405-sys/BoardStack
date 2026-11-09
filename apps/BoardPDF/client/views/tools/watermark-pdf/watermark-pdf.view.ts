@@ -10,8 +10,9 @@ import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType } from './watermark-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class WatermarkPdfController implements ViewController {
+class WatermarkPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private activeTab: WatermarkType = 'text';
   private container: HTMLElement;
@@ -41,7 +42,7 @@ export class WatermarkPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Añade marcas de agua personalizadas de texto o imágenes a tus documentos PDF con total precisión.',
+        desc: t('ui.anade_marcas_de_agua_personalizadas_de_t'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files: File[]) => {
@@ -219,7 +220,7 @@ export class WatermarkPdfController implements ViewController {
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast('Selecciona únicamente un archivo PDF válido.', 'danger');
+      showToast(t('ui.selecciona_unicamente_un_archivo_pdf_val'), 'danger');
       return;
     }
 
@@ -268,7 +269,7 @@ export class WatermarkPdfController implements ViewController {
       if (executeBtn) executeBtn.disabled = false;
       this.renderPagesGrid();
     } catch {
-      showToast('No se pudo leer el archivo PDF seleccionado. Asegúrate de que no esté dañado ni protegido.', 'danger');
+      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
       this.resetToInitial();
     }
   }
@@ -323,7 +324,7 @@ export class WatermarkPdfController implements ViewController {
     if (!this.currentFile || this.isProcessing) return;
 
     if (this.activeTab === 'image' && !this.watermarkImageFile) {
-      showToast('Por favor selecciona una imagen para usarla como marca de agua.', 'warning');
+      showToast(t('toasts.select_watermark_image'), 'warning');
       return;
     }
 
@@ -376,26 +377,26 @@ export class WatermarkPdfController implements ViewController {
           success: boolean;
         };
 
-        this.phaseManager?.showProcessing('Insertando marca de agua en el PDF...', 'Estampando elementos con la opacidad y posición configuradas');
+        this.phaseManager?.showProcessing(t('ui.insertando_marca_de_agua_en_el_pdf'), t('ui.estampando_elementos_con_la_opacidad_y_p'));
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al insertar la marca de agua.');
+          throw new Error(result.error || t('ui.ocurrio_un_error_al_insertar_la_marca_de'));
         }
 
         const token = result.data.fileId;
-        showToast('Marca de agua insertada con éxito.', 'success');
+        showToast(t('toasts.marca_de_agua_insertada_con_exito'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
-          returnText: 'Insertar otra marca de agua',
+          returnText: t('ui.insertar_otra_marca_de_agua'),
           returnUrl: '/watermark-pdf',
-          subtitle: `Se ha aplicado exitosamente la marca de agua en "${this.currentFile?.name}".`,
+          subtitle: t('tools.watermark_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡Marca de agua insertada!',
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al insertar la marca de agua.';
+        const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_insertar_la_marca_de');
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
@@ -432,10 +433,12 @@ export class WatermarkPdfController implements ViewController {
   }
 }
 
-export async function createWatermarkPdfView(): Promise<HTMLElement> {
+async function createWatermarkPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/watermark-pdf/watermark-pdf.html');
   const controller = new WatermarkPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { WatermarkPdfController, createWatermarkPdfView };

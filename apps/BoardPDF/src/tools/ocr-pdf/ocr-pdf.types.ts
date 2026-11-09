@@ -1,6 +1,6 @@
-export type OcrLanguage = string;
+type OcrLanguage = string;
 
-export interface OcrPdfParams {
+interface OcrPdfParams {
   buffer: Buffer;
   deskew?: boolean;
   filename?: string;
@@ -8,7 +8,7 @@ export interface OcrPdfParams {
   originalname: string;
 }
 
-export interface OcrPdfResponse {
+interface OcrPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -18,7 +18,7 @@ export interface OcrPdfResponse {
   processedSize: number;
 }
 
-export interface StoredOcrPdf {
+interface StoredOcrPdf {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -29,3 +29,5 @@ export interface StoredOcrPdf {
   pageCount: number;
   size: number;
 }
+
+export type { OcrLanguage, OcrPdfParams, OcrPdfResponse, StoredOcrPdf };

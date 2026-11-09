@@ -75,7 +75,7 @@ async function runOcrmypdf(inputPath: string, outputPath: string, language: stri
   return false;
 }
 
-export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfResponse> {
+async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfResponse> {
   const { buffer, deskew = true, filename: customFilename, language = 'spa', originalname } = params;
   const originalSize = buffer.length;
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdf_ocr_'));
@@ -156,3 +156,4 @@ export async function processOcrPdf(params: OcrPdfParams): Promise<OcrPdfRespons
   };
 }
 
+export { processOcrPdf };

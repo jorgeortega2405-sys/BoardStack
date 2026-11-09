@@ -1,16 +1,17 @@
-export interface ShapeDefinition {
+import { t } from '../../services/i18n.service.js';
+interface ShapeDefinition {
   cardHtml: string;
   name: string;
   shape: string;
 }
 
-export interface ShapeCategory {
+interface ShapeCategory {
   id: string;
   shapes: ShapeDefinition[];
   title: string;
 }
 
-export const SHAPES_CATALOG: Record<string, ShapeCategory> = {
+const SHAPES_CATALOG: Record<string, ShapeCategory> = {
   "lines": {
     "id": "lines",
     "title": "Líneas",
@@ -188,8 +189,8 @@ export const SHAPES_CATALOG: Record<string, ShapeCategory> = {
       },
       {
         "shape": "quarter-circle-arc",
-        "name": "Banda de cuarto de círculo",
-        "cardHtml": "<button type=\"button\" class=\"collaborative-shape-card\" data-ref=\"btn-panel-shape-quarter-circle-arc\" data-shape=\"quarter-circle-arc\" data-tooltip=\"Banda de cuarto de círculo\" aria-label=\"Banda de cuarto de círculo\"> <svg class=\"collaborative-shape-card__svg\" viewBox=\"0 0 40 40\" width=\"32\" height=\"32\"><path d=\"M 3 37 H 17 A 20 20 0 0 1 37 17 V 3 A 34 34 0 0 0 3 37 Z\" fill=\"#000000\"/></svg> </button>"
+        "name": t('ui.banda_de_cuarto_de_circulo'),
+        "cardHtml": "<button type=\"button\" class=\"collaborative-shape-card\" data-ref=\"btn-panel-shape-quarter-circle-arc\" data-shape=\"quarter-circle-arc\" data-tooltip=\t('ui.banda_de_cuarto_de_circulo') aria-label=\t('ui.banda_de_cuarto_de_circulo')> <svg class=\"collaborative-shape-card__svg\" viewBox=\"0 0 40 40\" width=\"32\" height=\"32\"><path d=\"M 3 37 H 17 A 20 20 0 0 1 37 17 V 3 A 34 34 0 0 0 3 37 Z\" fill=\"#000000\"/></svg> </button>"
       },
       {
         "shape": "semicircle-arc",
@@ -373,7 +374,7 @@ export const SHAPES_CATALOG: Record<string, ShapeCategory> = {
   },
   "flowchart": {
     "id": "flowchart",
-    "title": "Formas de diagrama de flujo",
+    "title": t('ui.formas_de_diagrama_de_flujo'),
     "shapes": [
       {
         "shape": "flowchart-preparation",
@@ -706,3 +707,6 @@ export const SHAPES_CATALOG: Record<string, ShapeCategory> = {
     ]
   }
 };
+
+export { SHAPES_CATALOG };
+export type { ShapeCategory, ShapeDefinition };

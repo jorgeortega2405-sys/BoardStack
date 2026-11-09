@@ -1,10 +1,10 @@
-export interface RepairPdfParams {
+interface RepairPdfParams {
   buffer: Buffer;
   filename?: string;
   originalname: string;
 }
 
-export interface RepairPdfResponse {
+interface RepairPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -14,7 +14,7 @@ export interface RepairPdfResponse {
   status: string;
 }
 
-export interface StoredRepairedPdf {
+interface StoredRepairedPdf {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -24,3 +24,5 @@ export interface StoredRepairedPdf {
   pageCount: number;
   size: number;
 }
+
+export type { RepairPdfParams, RepairPdfResponse, StoredRepairedPdf };

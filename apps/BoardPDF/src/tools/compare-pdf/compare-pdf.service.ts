@@ -235,7 +235,7 @@ async function generateReportPdf(
   return Buffer.from(pdfBytes);
 }
 
-export async function comparePdfDocuments(params: ComparePdfParams): Promise<ComparePdfResponse> {
+async function comparePdfDocuments(params: ComparePdfParams): Promise<ComparePdfResponse> {
   const { buffer1, buffer2, filename1 = 'documento_1.pdf', filename2 = 'documento_2.pdf' } = params;
 
   if (!buffer1 || buffer1.length === 0 || !buffer2 || buffer2.length === 0) {
@@ -396,5 +396,6 @@ export async function comparePdfDocuments(params: ComparePdfParams): Promise<Com
   };
 }
 
-export { comparePdfDocuments as comparePdfs };
+const comparePdfs = comparePdfDocuments;
 
+export { comparePdfDocuments, comparePdfs };

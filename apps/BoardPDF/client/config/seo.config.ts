@@ -1,6 +1,7 @@
+import { t } from '../services/i18n.service.js';
 import { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, normalizeLanguageCode } from '../utils/languages.util.js';
 
-export interface RouteSeoInfo {
+interface RouteSeoInfo {
   category?: string;
   descriptions: Record<string, string>;
   isTool?: boolean;
@@ -9,33 +10,29 @@ export interface RouteSeoInfo {
   titles: Record<string, string>;
 }
 
-export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
+const SEO_ROUTES: Record<string, RouteSeoInfo> = {
   'collaborative-pdf': {
     category: 'collaborative',
     descriptions: {
-      en: 'Design, create, and edit PDF documents online with shapes, text, templates, and cloud storage.',
-      es: 'Diseña, crea y edita documentos PDF online con formas, texto, plantillas y guardado en la nube.',
+      en: 'Design, create, and edit PDF documents online with shapes, text, templates, and cloud storage.',
     },
     isTool: true,
     routeId: 'collaborative-pdf',
     slugs: {
       de: 'kollaboratives-pdf',
-      en: 'collaborative-pdf',
-      es: 'pdf-colaborativo',
+      en: 'collaborative-pdf',
       fr: 'pdf-collaboratif',
       it: 'pdf-collaborativo',
       pt: 'pdf-colaborativo',
     },
     titles: {
-      en: 'Design PDF - Create & Edit PDF Documents Online | BoardPDF',
-      es: 'Diseñar PDF - Crea y Edita Documentos PDF Online | BoardPDF',
+      en: 'Design PDF - Create & Edit PDF Documents Online | BoardPDF',
     },
   },
 
   home: {
     descriptions: {
-      en: 'Free and secure online PDF tools. Merge, split, compress, edit, convert, and protect your PDF documents with ease.',
-      es: 'Herramientas PDF online 100% gratis y seguras. Une, divide, comprime, edita, convierte y protege tus documentos PDF con facilidad.',
+      en: 'Free and secure online PDF tools. Merge, split, compress, edit, convert, and protect your PDF documents with ease.',
     },
     routeId: 'home',
     slugs: {
@@ -47,802 +44,684 @@ export const SEO_ROUTES: Record<string, RouteSeoInfo> = {
       pt: '',
     },
     titles: {
-      en: 'BoardPDF - Free & Secure Online PDF Tools',
-      es: 'BoardPDF - Herramientas PDF online 100% gratis y seguras',
+      en: 'BoardPDF - Free & Secure Online PDF Tools',
     },
   },
   'merge-pdf': {
     category: 'organize',
     descriptions: {
-      en: 'Combine and merge multiple PDF documents into one single file in the exact order you want. Fast, easy, and secure.',
-      es: 'Combina y une múltiples documentos PDF en un solo archivo en el orden que desees. Rápido, fácil y seguro.',
+      en: 'Combine and merge multiple PDF documents into one single file in the exact order you want. Fast, easy, and secure.',
     },
     isTool: true,
     routeId: 'merge-pdf',
     slugs: {
       de: 'pdf-zusammenfuegen',
-      en: 'merge-pdf',
-      es: 'unir-pdf',
+      en: 'merge-pdf',
       fr: 'fusionner-pdf',
       it: 'unire-pdf',
       pt: 'juntar-pdf',
     },
     titles: {
-      en: 'Merge PDF - Combine PDF files online for free | BoardPDF',
-      es: 'Unir PDF - Combina archivos PDF online gratis | BoardPDF',
+      en: 'Merge PDF - Combine PDF files online for free | BoardPDF',
     },
   },
   'split-pdf': {
     category: 'organize',
     descriptions: {
-      en: 'Split a PDF into multiple files or extract specific pages with ease and high precision.',
-      es: 'Divide un PDF en múltiples archivos o extrae páginas específicas con facilidad y precisión.',
+      en: 'Split a PDF into multiple files or extract specific pages with ease and high precision.',
     },
     isTool: true,
     routeId: 'split-pdf',
     slugs: {
       de: 'pdf-teilen',
-      en: 'split-pdf',
-      es: 'dividir-pdf',
+      en: 'split-pdf',
       fr: 'diviser-pdf',
       it: 'dividere-pdf',
       pt: 'dividir-pdf',
     },
     titles: {
-      en: 'Split PDF - Separate PDF pages online | BoardPDF',
-      es: 'Dividir PDF - Separa páginas de tus documentos PDF | BoardPDF',
+      en: 'Split PDF - Separate PDF pages online | BoardPDF',
     },
   },
   'remove-pdf-pages': {
     category: 'organize',
     descriptions: {
-      en: 'Remove unwanted pages from your PDF document visually and instantly.',
-      es: 'Elimina páginas no deseadas de tu PDF en segundos de forma visual y sencilla.',
+      en: 'Remove unwanted pages from your PDF document visually and instantly.',
     },
     isTool: true,
     routeId: 'remove-pdf-pages',
     slugs: {
       de: 'pdf-seiten-loeschen',
-      en: 'remove-pdf-pages',
-      es: 'eliminar-paginas-pdf',
+      en: 'remove-pdf-pages',
       fr: 'supprimer-pages-pdf',
       it: 'eliminare-pagine-pdf',
       pt: 'remover-paginas-pdf',
     },
     titles: {
-      en: 'Remove PDF Pages - Delete unwanted pages | BoardPDF',
-      es: 'Eliminar Páginas PDF - Borra hojas innecesarias | BoardPDF',
+      en: 'Remove PDF Pages - Delete unwanted pages | BoardPDF',
     },
   },
   'extract-pdf-pages': {
     category: 'organize',
     descriptions: {
-      en: 'Extract specific pages from your PDF document and generate a new file instantly.',
-      es: 'Extrae páginas específicas de un archivo PDF y crea un nuevo documento al instante.',
+      en: 'Extract specific pages from your PDF document and generate a new file instantly.',
     },
     isTool: true,
     routeId: 'extract-pdf-pages',
     slugs: {
       de: 'pdf-seiten-extrahieren',
-      en: 'extract-pdf-pages',
-      es: 'extraer-paginas-pdf',
+      en: 'extract-pdf-pages',
       fr: 'extraire-pages-pdf',
       it: 'estrarre-pagine-pdf',
       pt: 'extrair-paginas-pdf',
     },
     titles: {
-      en: 'Extract PDF Pages - Save selected pages | BoardPDF',
-      es: 'Extraer Páginas de PDF - Guarda páginas seleccionadas | BoardPDF',
+      en: 'Extract PDF Pages - Save selected pages | BoardPDF',
     },
   },
   'organize-pdf': {
     category: 'organize',
     descriptions: {
-      en: 'Sort, remove and rotate pages in your PDF file easily with interactive visual preview.',
-      es: 'Ordena, elimina y rota páginas de tu archivo PDF fácilmente con vista previa interactiva.',
+      en: 'Sort, remove and rotate pages in your PDF file easily with interactive visual preview.',
     },
     isTool: true,
     routeId: 'organize-pdf',
     slugs: {
       de: 'pdf-organisieren',
-      en: 'organize-pdf',
-      es: 'organizar-pdf',
+      en: 'organize-pdf',
       fr: 'organiser-pdf',
       it: 'organizzare-pdf',
       pt: 'organizar-pdf',
     },
     titles: {
-      en: 'Organize PDF - Reorder, rotate and sort pages | BoardPDF',
-      es: 'Organizar PDF - Reordena, rota y ordena páginas | BoardPDF',
+      en: 'Organize PDF - Reorder, rotate and sort pages | BoardPDF',
     },
   },
   'compress-pdf': {
     category: 'optimize',
     descriptions: {
-      en: 'Reduce your PDF file size while maintaining the highest possible document quality.',
-      es: 'Reduce el tamaño de tus documentos PDF manteniendo la máxima calidad posible.',
+      en: 'Reduce your PDF file size while maintaining the highest possible document quality.',
     },
     isTool: true,
     routeId: 'compress-pdf',
     slugs: {
       de: 'pdf-verkleinern',
-      en: 'compress-pdf',
-      es: 'comprimir-pdf',
+      en: 'compress-pdf',
       fr: 'compresser-pdf',
       it: 'comprimere-pdf',
       pt: 'comprimir-pdf',
     },
     titles: {
-      en: 'Compress PDF - Reduce PDF file size online | BoardPDF',
-      es: 'Comprimir PDF - Reduce el tamaño de tu archivo PDF | BoardPDF',
+      en: 'Compress PDF - Reduce PDF file size online | BoardPDF',
     },
   },
   'repair-pdf': {
     category: 'optimize',
     descriptions: {
-      en: 'Repair and recover content from damaged or corrupted PDF documents online.',
-      es: 'Repara y rescata el contenido de archivos PDF dañados o con errores de formato.',
+      en: 'Repair and recover content from damaged or corrupted PDF documents online.',
     },
     isTool: true,
     routeId: 'repair-pdf',
     slugs: {
       de: 'pdf-reparieren',
-      en: 'repair-pdf',
-      es: 'reparar-pdf',
+      en: 'repair-pdf',
       fr: 'reparer-pdf',
       it: 'riparare-pdf',
       pt: 'reparar-pdf',
     },
     titles: {
-      en: 'Repair PDF - Fix corrupt and damaged PDF files | BoardPDF',
-      es: 'Reparar PDF - Recupera archivos PDF dañados o corruptos | BoardPDF',
+      en: 'Repair PDF - Fix corrupt and damaged PDF files | BoardPDF',
     },
   },
   'ocr-pdf': {
     category: 'optimize',
     descriptions: {
-      en: 'Recognize text from scanned documents and images to make them searchable and selectable.',
-      es: 'Reconoce texto en documentos escaneados e imágenes para hacerlos buscables y editables.',
+      en: 'Recognize text from scanned documents and images to make them searchable and selectable.',
     },
     isTool: true,
     routeId: 'ocr-pdf',
     slugs: {
       de: 'ocr-pdf',
-      en: 'ocr-pdf',
-      es: 'ocr-pdf',
+      en: 'ocr-pdf',
       fr: 'ocr-pdf',
       it: 'ocr-pdf',
       pt: 'ocr-pdf',
     },
     titles: {
-      en: 'OCR PDF - Convert scanned PDF to searchable text | BoardPDF',
-      es: 'OCR PDF - Convierte texto escaneado a PDF editable | BoardPDF',
+      en: 'OCR PDF - Convert scanned PDF to searchable text | BoardPDF',
     },
   },
   'jpg-to-pdf': {
     category: 'convert-to-pdf',
     descriptions: {
-      en: 'Convert JPG photos and images to PDF format in seconds with optimal quality.',
-      es: 'Convierte fotos e imágenes JPG a formato PDF en segundos con la mejor calidad.',
+      en: 'Convert JPG photos and images to PDF format in seconds with optimal quality.',
     },
     isTool: true,
     routeId: 'jpg-to-pdf',
     slugs: {
       de: 'jpg-in-pdf',
-      en: 'jpg-to-pdf',
-      es: 'jpg-a-pdf',
+      en: 'jpg-to-pdf',
       fr: 'jpg-en-pdf',
       it: 'da-jpg-a-pdf',
       pt: 'jpg-para-pdf',
     },
     titles: {
-      en: 'JPG to PDF - Convert images to PDF documents | BoardPDF',
-      es: 'JPG a PDF - Convierte imágenes a documentos PDF | BoardPDF',
+      en: 'JPG to PDF - Convert images to PDF documents | BoardPDF',
     },
   },
   'word-to-pdf': {
     category: 'convert-to-pdf',
     descriptions: {
-      en: 'Convert your Word documents (DOC, DOCX) to PDF keeping original formatting intact.',
-      es: 'Convierte tus documentos de Word (DOC, DOCX) a PDF manteniendo el diseño original.',
+      en: 'Convert your Word documents (DOC, DOCX) to PDF keeping original formatting intact.',
     },
     isTool: true,
     routeId: 'word-to-pdf',
     slugs: {
       de: 'word-in-pdf',
-      en: 'word-to-pdf',
-      es: 'word-a-pdf',
+      en: 'word-to-pdf',
       fr: 'word-en-pdf',
       it: 'da-word-a-pdf',
       pt: 'word-para-pdf',
     },
     titles: {
-      en: 'Word to PDF - Convert DOCX files to PDF | BoardPDF',
-      es: 'Word a PDF - Convierte archivos DOCX a PDF | BoardPDF',
+      en: 'Word to PDF - Convert DOCX files to PDF | BoardPDF',
     },
   },
   'powerpoint-to-pdf': {
     category: 'convert-to-pdf',
     descriptions: {
-      en: 'Convert your PPT and PPTX presentations into PDF files for easy sharing.',
-      es: 'Convierte tus presentaciones PPT y PPTX a PDF para compartirlas fácilmente.',
+      en: 'Convert your PPT and PPTX presentations into PDF files for easy sharing.',
     },
     isTool: true,
     routeId: 'powerpoint-to-pdf',
     slugs: {
       de: 'powerpoint-in-pdf',
-      en: 'powerpoint-to-pdf',
-      es: 'powerpoint-a-pdf',
+      en: 'powerpoint-to-pdf',
       fr: 'powerpoint-en-pdf',
       it: 'da-powerpoint-a-pdf',
       pt: 'powerpoint-para-pdf',
     },
     titles: {
-      en: 'PowerPoint to PDF - Convert PPT slides to PDF | BoardPDF',
-      es: 'PowerPoint a PDF - Convierte diapositivas PPT a PDF | BoardPDF',
+      en: 'PowerPoint to PDF - Convert PPT slides to PDF | BoardPDF',
     },
   },
   'excel-to-pdf': {
     category: 'convert-to-pdf',
     descriptions: {
-      en: 'Convert Excel tables and spreadsheets (XLS, XLSX) to print-ready PDF files.',
-      es: 'Convierte tablas y hojas de cálculo de Excel (XLS, XLSX) a documentos PDF listos para imprimir.',
+      en: 'Convert Excel tables and spreadsheets (XLS, XLSX) to print-ready PDF files.',
     },
     isTool: true,
     routeId: 'excel-to-pdf',
     slugs: {
       de: 'excel-in-pdf',
-      en: 'excel-to-pdf',
-      es: 'excel-a-pdf',
+      en: 'excel-to-pdf',
       fr: 'excel-en-pdf',
       it: 'da-excel-a-pdf',
       pt: 'excel-para-pdf',
     },
     titles: {
-      en: 'Excel to PDF - Convert XLS spreadsheets to PDF | BoardPDF',
-      es: 'Excel a PDF - Convierte hojas de cálculo XLS a PDF | BoardPDF',
+      en: 'Excel to PDF - Convert XLS spreadsheets to PDF | BoardPDF',
     },
   },
   'html-to-pdf': {
     category: 'convert-to-pdf',
     descriptions: {
-      en: 'Convert web pages, HTML code or URLs into high-fidelity PDF documents.',
-      es: 'Convierte páginas web, código HTML o URLs a documentos PDF de alta fidelidad.',
+      en: 'Convert web pages, HTML code or URLs into high-fidelity PDF documents.',
     },
     isTool: true,
     routeId: 'html-to-pdf',
     slugs: {
       de: 'html-in-pdf',
-      en: 'html-to-pdf',
-      es: 'html-a-pdf',
+      en: 'html-to-pdf',
       fr: 'html-en-pdf',
       it: 'da-html-a-pdf',
       pt: 'html-para-pdf',
     },
     titles: {
-      en: 'HTML to PDF - Convert web pages and HTML to PDF | BoardPDF',
-      es: 'HTML a PDF - Convierte páginas web y código a PDF | BoardPDF',
+      en: 'HTML to PDF - Convert web pages and HTML to PDF | BoardPDF',
     },
   },
   'pdf-to-jpg': {
     category: 'convert-from-pdf',
     descriptions: {
-      en: 'Convert your PDF pages to high-resolution JPG images or extract all images easily.',
-      es: 'Convierte páginas de tu archivo PDF a imágenes JPG de alta resolución o extrae todas las fotos.',
+      en: 'Convert your PDF pages to high-resolution JPG images or extract all images easily.',
     },
     isTool: true,
     routeId: 'pdf-to-jpg',
     slugs: {
       de: 'pdf-in-jpg',
-      en: 'pdf-to-jpg',
-      es: 'pdf-a-jpg',
+      en: 'pdf-to-jpg',
       fr: 'pdf-en-jpg',
       it: 'da-pdf-a-jpg',
       pt: 'pdf-para-jpg',
     },
     titles: {
-      en: 'PDF to JPG - Extract images or convert pages to JPG | BoardPDF',
-      es: 'PDF a JPG - Extrae imágenes o convierte páginas a JPG | BoardPDF',
+      en: 'PDF to JPG - Extract images or convert pages to JPG | BoardPDF',
     },
   },
   'pdf-to-word': {
     category: 'convert-from-pdf',
     descriptions: {
-      en: 'Convert your PDF files to editable Word (DOCX) documents with pinpoint accuracy.',
-      es: 'Convierte tus documentos PDF a Word (DOCX) editables con máxima precisión de texto.',
+      en: 'Convert your PDF files to editable Word (DOCX) documents with pinpoint accuracy.',
     },
     isTool: true,
     routeId: 'pdf-to-word',
     slugs: {
       de: 'pdf-in-word',
-      en: 'pdf-to-word',
-      es: 'pdf-a-word',
+      en: 'pdf-to-word',
       fr: 'pdf-en-word',
       it: 'da-pdf-a-word',
       pt: 'pdf-para-word',
     },
     titles: {
-      en: 'PDF to Word - Convert PDF files to editable DOCX | BoardPDF',
-      es: 'PDF a Word - Convierte archivos PDF a DOCX editable | BoardPDF',
+      en: 'PDF to Word - Convert PDF files to editable DOCX | BoardPDF',
     },
   },
   'pdf-to-powerpoint': {
     category: 'convert-from-pdf',
     descriptions: {
-      en: 'Convert your PDF files into editable PowerPoint PPTX slide presentations.',
-      es: 'Convierte tus archivos PDF en presentaciones editables de PowerPoint PPTX.',
+      en: 'Convert your PDF files into editable PowerPoint PPTX slide presentations.',
     },
     isTool: true,
     routeId: 'pdf-to-powerpoint',
     slugs: {
       de: 'pdf-in-powerpoint',
-      en: 'pdf-to-powerpoint',
-      es: 'pdf-a-powerpoint',
+      en: 'pdf-to-powerpoint',
       fr: 'pdf-en-powerpoint',
       it: 'da-pdf-a-powerpoint',
       pt: 'pdf-para-powerpoint',
     },
     titles: {
-      en: 'PDF to PowerPoint - Convert PDF to PPTX slides | BoardPDF',
-      es: 'PDF a PowerPoint - Convierte tu PDF a diapositivas PPTX | BoardPDF',
+      en: 'PDF to PowerPoint - Convert PDF to PPTX slides | BoardPDF',
     },
   },
   'pdf-to-excel': {
     category: 'convert-from-pdf',
     descriptions: {
-      en: 'Extract tables from your PDF documents directly into Excel spreadsheets in seconds.',
-      es: 'Extrae tablas de tus documentos PDF directamente a hojas de cálculo de Excel en segundos.',
+      en: 'Extract tables from your PDF documents directly into Excel spreadsheets in seconds.',
     },
     isTool: true,
     routeId: 'pdf-to-excel',
     slugs: {
       de: 'pdf-in-excel',
-      en: 'pdf-to-excel',
-      es: 'pdf-a-excel',
+      en: 'pdf-to-excel',
       fr: 'pdf-en-excel',
       it: 'da-pdf-a-excel',
       pt: 'pdf-para-excel',
     },
     titles: {
-      en: 'PDF to Excel - Extract PDF tables to XLSX spreadsheets | BoardPDF',
-      es: 'PDF a Excel - Extrae tablas de PDF a hojas XLSX | BoardPDF',
+      en: 'PDF to Excel - Extract PDF tables to XLSX spreadsheets | BoardPDF',
     },
   },
   'pdf-to-pdfa': {
     category: 'convert-from-pdf',
     descriptions: {
-      en: 'Transform your PDF documents to standard PDF/A format for secure legal and institutional archiving.',
-      es: 'Transforma tus documentos PDF a formato estándar PDF/A para archivado legal e institucional seguro.',
+      en: 'Transform your PDF documents to standard PDF/A format for secure legal and institutional archiving.',
     },
     isTool: true,
     routeId: 'pdf-to-pdfa',
     slugs: {
       de: 'pdf-in-pdfa',
-      en: 'pdf-to-pdfa',
-      es: 'pdf-a-pdfa',
+      en: 'pdf-to-pdfa',
       fr: 'pdf-en-pdfa',
       it: 'da-pdf-a-pdfa',
       pt: 'pdf-para-pdfa',
     },
     titles: {
-      en: 'PDF to PDF/A - Convert documents for long-term archiving | BoardPDF',
-      es: 'PDF a PDF/A - Convierte documentos para archivo a largo plazo | BoardPDF',
+      en: 'PDF to PDF/A - Convert documents for long-term archiving | BoardPDF',
     },
   },
   'rotate-pdf': {
     category: 'edit',
     descriptions: {
-      en: 'Rotate your PDF documents horizontally or vertically. Rotate single pages or the entire file.',
-      es: 'Rota tus documentos PDF horizontal o verticalmente. Gira páginas individuales o todo el archivo.',
+      en: 'Rotate your PDF documents horizontally or vertically. Rotate single pages or the entire file.',
     },
     isTool: true,
     routeId: 'rotate-pdf',
     slugs: {
       de: 'pdf-drehen',
-      en: 'rotate-pdf',
-      es: 'rotar-pdf',
+      en: 'rotate-pdf',
       fr: 'pivoter-pdf',
       it: 'ruotare-pdf',
       pt: 'rodar-pdf',
     },
     titles: {
-      en: 'Rotate PDF - Turn PDF pages online | BoardPDF',
-      es: 'Rotar PDF - Gira páginas PDF online | BoardPDF',
+      en: 'Rotate PDF - Turn PDF pages online | BoardPDF',
     },
   },
   'page-numbers': {
     category: 'edit',
     descriptions: {
-      en: 'Add page numbers to your PDF documents with custom typography, formatting, and positioning.',
-      es: 'Añade números de página a tus documentos PDF con formato, tipografía y posición personalizados.',
+      en: 'Add page numbers to your PDF documents with custom typography, formatting, and positioning.',
     },
     isTool: true,
     routeId: 'page-numbers',
     slugs: {
       de: 'seitenzahlen-pdf',
-      en: 'page-numbers',
-      es: 'numeros-de-pagina',
+      en: 'page-numbers',
       fr: 'numeroter-pdf',
       it: 'numeri-di-pagina-pdf',
       pt: 'numerar-pdf',
     },
     titles: {
-      en: 'Page Numbers in PDF - Number your PDF pages | BoardPDF',
-      es: 'Números de Página en PDF - Numera tus documentos | BoardPDF',
+      en: 'Page Numbers in PDF - Number your PDF pages | BoardPDF',
     },
   },
   'watermark-pdf': {
     category: 'edit',
     descriptions: {
-      en: 'Add text or image watermarks to your PDF files with customizable transparency and position.',
-      es: 'Agrega marcas de agua de texto o imagen a tus archivos PDF con transparencia y posición ajustables.',
+      en: 'Add text or image watermarks to your PDF files with customizable transparency and position.',
     },
     isTool: true,
     routeId: 'watermark-pdf',
     slugs: {
       de: 'pdf-wasserzeichen',
-      en: 'watermark-pdf',
-      es: 'marca-de-agua',
+      en: 'watermark-pdf',
       fr: 'filigrane-pdf',
       it: 'filigrana-pdf',
       pt: 'marca-dagua',
     },
     titles: {
-      en: 'Watermark PDF - Add watermarks to your documents | BoardPDF',
-      es: 'Marca de Agua en PDF - Protege tus documentos | BoardPDF',
+      en: 'Watermark PDF - Add watermarks to your documents | BoardPDF',
     },
   },
   'crop-pdf': {
     category: 'edit',
     descriptions: {
-      en: 'Trim margins or specific regions of your PDF document with precision and ease.',
-      es: 'Recorta los márgenes o áreas específicas de tu documento PDF de forma precisa e intuitiva.',
+      en: 'Trim margins or specific regions of your PDF document with precision and ease.',
     },
     isTool: true,
     routeId: 'crop-pdf',
     slugs: {
       de: 'pdf-zuschneiden',
-      en: 'crop-pdf',
-      es: 'recortar-pdf',
+      en: 'crop-pdf',
       fr: 'recadrer-pdf',
       it: 'ritagliare-pdf',
       pt: 'cortar-pdf',
     },
     titles: {
-      en: 'Crop PDF - Trim margins and crop PDF pages | BoardPDF',
-      es: 'Recortar PDF - Ajusta márgenes y recorta páginas | BoardPDF',
+      en: 'Crop PDF - Trim margins and crop PDF pages | BoardPDF',
     },
   },
   'edit-pdf': {
     category: 'edit',
     descriptions: {
-      en: 'Edit PDF documents in your browser by adding text, signatures, annotations, images, and shapes.',
-      es: 'Edita documentos PDF en tu navegador añadiendo texto, firmas, notas, imágenes y dibujos.',
+      en: 'Edit PDF documents in your browser by adding text, signatures, annotations, images, and shapes.',
     },
     isTool: true,
     routeId: 'edit-pdf',
     slugs: {
       de: 'pdf-bearbeiten',
-      en: 'edit-pdf',
-      es: 'editar-pdf',
+      en: 'edit-pdf',
       fr: 'modifier-pdf',
       it: 'modificare-pdf',
       pt: 'editar-pdf',
     },
     titles: {
-      en: 'Edit PDF - Add text, shapes and drawings online | BoardPDF',
-      es: 'Editar PDF - Agrega texto, formas y dibujos online | BoardPDF',
+      en: 'Edit PDF - Add text, shapes and drawings online | BoardPDF',
     },
   },
   'unlock-pdf': {
     category: 'security',
     descriptions: {
-      en: 'Remove passwords and restrictions from your PDF files to view, print, and edit them freely.',
-      es: 'Elimina contraseñas y restricciones de tus archivos PDF para verlos, imprimirlos y editarlos libremente.',
+      en: 'Remove passwords and restrictions from your PDF files to view, print, and edit them freely.',
     },
     isTool: true,
     routeId: 'unlock-pdf',
     slugs: {
       de: 'pdf-entsperren',
-      en: 'unlock-pdf',
-      es: 'desbloquear-pdf',
+      en: 'unlock-pdf',
       fr: 'deverrouiller-pdf',
       it: 'sbloccare-pdf',
       pt: 'desbloquear-pdf',
     },
     titles: {
-      en: 'Unlock PDF - Remove password and permissions | BoardPDF',
-      es: 'Desbloquear PDF - Quita la contraseña de seguridad | BoardPDF',
+      en: 'Unlock PDF - Remove password and permissions | BoardPDF',
     },
   },
   'protect-pdf': {
     category: 'security',
     descriptions: {
-      en: 'Protect your confidential PDF files with strong passwords and state-of-the-art encryption.',
-      es: 'Protege tus documentos PDF confidenciales con contraseñas seguras y cifrado de última generación.',
+      en: 'Protect your confidential PDF files with strong passwords and state-of-the-art encryption.',
     },
     isTool: true,
     routeId: 'protect-pdf',
     slugs: {
       de: 'pdf-schuetzen',
-      en: 'protect-pdf',
-      es: 'proteger-pdf',
+      en: 'protect-pdf',
       fr: 'proteger-pdf',
       it: 'proteggere-pdf',
       pt: 'proteger-pdf',
     },
     titles: {
-      en: 'Protect PDF - Encrypt and password protect your PDF | BoardPDF',
-      es: 'Proteger PDF - Encripta y pon contraseña a tu PDF | BoardPDF',
+      en: 'Protect PDF - Encrypt and password protect your PDF | BoardPDF',
     },
   },
   'redact-pdf': {
     category: 'security',
     descriptions: {
-      en: 'Permanently blackout and sanitize sensitive information and personal data from your PDF files.',
-      es: 'Tacha y elimina permanentemente información sensible y datos personales de tus documentos PDF.',
+      en: 'Permanently blackout and sanitize sensitive information and personal data from your PDF files.',
     },
     isTool: true,
     routeId: 'redact-pdf',
     slugs: {
       de: 'pdf-schwaerzen',
-      en: 'redact-pdf',
-      es: 'censurar-pdf',
+      en: 'redact-pdf',
       fr: 'biffer-pdf',
       it: 'censurare-pdf',
       pt: 'censurar-pdf',
     },
     titles: {
-      en: 'Redact PDF - Permanently blackout sensitive info | BoardPDF',
-      es: 'Censurar PDF - Oculta datos y texto confidencial | BoardPDF',
+      en: 'Redact PDF - Permanently blackout sensitive info | BoardPDF',
     },
   },
   'compare-pdf': {
     category: 'security',
     descriptions: {
-      en: 'Compare two PDF documents visually side by side to instantly spot text and visual changes.',
-      es: 'Compara dos archivos PDF visualmente lado a lado y detecta cambios y diferencias al instante.',
+      en: 'Compare two PDF documents visually side by side to instantly spot text and visual changes.',
     },
     isTool: true,
     routeId: 'compare-pdf',
     slugs: {
       de: 'pdf-vergleichen',
-      en: 'compare-pdf',
-      es: 'comparar-pdf',
+      en: 'compare-pdf',
       fr: 'comparer-pdf',
       it: 'confrontare-pdf',
       pt: 'comparar-pdf',
     },
     titles: {
-      en: 'Compare PDF - Spot differences between two files | BoardPDF',
-      es: 'Comparar PDF - Resalta diferencias entre dos archivos | BoardPDF',
+      en: 'Compare PDF - Spot differences between two files | BoardPDF',
     },
   },
   'summarize-pdf': {
     category: 'pdf-intelligence',
     descriptions: {
-      en: 'Summarize extensive documents, reports and articles in seconds using advanced artificial intelligence.',
-      es: 'Resume documentos extensos y reportes en segundos con inteligencia artificial avanzada.',
+      en: 'Summarize extensive documents, reports and articles in seconds using advanced artificial intelligence.',
     },
     isTool: true,
     routeId: 'summarize-pdf',
     slugs: {
       de: 'pdf-zusammenfassen',
-      en: 'summarize-pdf',
-      es: 'resumir-pdf',
+      en: 'summarize-pdf',
       fr: 'resumer-pdf',
       it: 'riassumere-pdf',
       pt: 'resumir-pdf',
     },
     titles: {
-      en: 'Summarize PDF - Smart automatic summaries | BoardPDF',
-      es: 'Resumir PDF - Extrae resúmenes inteligentes | BoardPDF',
+      en: 'Summarize PDF - Smart automatic summaries | BoardPDF',
     },
   },
   'translate-pdf': {
     category: 'pdf-intelligence',
     descriptions: {
-      en: 'Translate PDF documents into more than 30 languages while preserving original formatting and layout.',
-      es: 'Traduce documentos PDF a más de 30 idiomas conservando el diseño y formato original.',
+      en: 'Translate PDF documents into more than 30 languages while preserving original formatting and layout.',
     },
     isTool: true,
     routeId: 'translate-pdf',
     slugs: {
       de: 'pdf-uebersetzen',
-      en: 'translate-pdf',
-      es: 'traducir-pdf',
+      en: 'translate-pdf',
       fr: 'traduire-pdf',
       it: 'tradurre-pdf',
       pt: 'traduzir-pdf',
     },
     titles: {
-      en: 'Translate PDF - Translate complete documents | BoardPDF',
-      es: 'Traducir PDF - Traduce documentos completos | BoardPDF',
+      en: 'Translate PDF - Translate complete documents | BoardPDF',
     },
   },
   'pdf-to-markdown': {
     category: 'pdf-intelligence',
     descriptions: {
-      en: 'Convert complex PDF files into clean Markdown format ready for Obsidian, Notion, and notes.',
-      es: 'Convierte archivos PDF complejos a formato Markdown limpio listo para Obsidian, Notion y blogs.',
+      en: 'Convert complex PDF files into clean Markdown format ready for Obsidian, Notion, and notes.',
     },
     isTool: true,
     routeId: 'pdf-to-markdown',
     slugs: {
       de: 'pdf-in-markdown',
-      en: 'pdf-to-markdown',
-      es: 'pdf-a-markdown',
+      en: 'pdf-to-markdown',
       fr: 'pdf-en-markdown',
       it: 'da-pdf-a-markdown',
       pt: 'pdf-para-markdown',
     },
     titles: {
-      en: 'PDF to Markdown - Clean text and table extraction | BoardPDF',
-      es: 'PDF a Markdown - Extrae texto limpio con formato | BoardPDF',
+      en: 'PDF to Markdown - Clean text and table extraction | BoardPDF',
     },
   },
   about: {
     descriptions: {
-      en: 'Learn about the story, mission, and core values driving BoardPDF.',
-      es: 'Conoce la historia, la misión y los valores fundamentales que impulsan a BoardPDF.',
+      en: 'Learn about the story, mission, and core values driving BoardPDF.',
     },
     routeId: 'about',
     slugs: {
-      en: 'about',
-      es: 'sobre-nosotros',
+      en: 'about',
     },
     titles: {
-      en: 'About Us - Our Story | BoardPDF',
-      es: 'Sobre Nosotros - Nuestra Historia | BoardPDF',
+      en: 'About Us - Our Story | BoardPDF',
     },
   },
   checkout: {
     descriptions: {
-      en: 'Complete your BoardPDF subscription checkout securely.',
-      es: 'Completa tu suscripción de BoardPDF de forma segura.',
+      en: 'Complete your BoardPDF subscription checkout securely.',
     },
     routeId: 'checkout',
     slugs: {
       de: 'kasse',
-      en: 'checkout',
-      es: 'checkout',
+      en: 'checkout',
       fr: 'caisse',
       it: 'cassa',
       pt: 'checkout',
     },
     titles: {
-      en: 'Checkout | BoardPDF',
-      es: 'Completar Suscripción | BoardPDF',
+      en: 'Checkout | BoardPDF',
     },
   },
   contact: {
     descriptions: {
-      en: 'Get in touch with the BoardPDF team for inquiries, support, or partnership opportunities.',
-      es: 'Ponte en contacto con el equipo de BoardPDF para consultas, soporte o alianzas.',
+      en: 'Get in touch with the BoardPDF team for inquiries, support, or partnership opportunities.',
     },
     routeId: 'contact',
     slugs: {
-      en: 'contact',
-      es: 'contacto',
+      en: 'contact',
     },
     titles: {
-      en: 'Contact Us | BoardPDF',
-      es: 'Contacto | BoardPDF',
+      en: 'Contact Us | BoardPDF',
     },
   },
   pricing: {
     descriptions: {
-      en: 'Explore BoardPDF subscription plans and pricing for professionals, teams, and enterprises.',
-      es: 'Descubre los planes y precios de suscripción de BoardPDF para profesionales, equipos y empresas.',
+      en: 'Explore BoardPDF subscription plans and pricing for professionals, teams, and enterprises.',
     },
     routeId: 'pricing',
     slugs: {
       de: 'preise',
-      en: 'pricing',
-      es: 'precios',
+      en: 'pricing',
       fr: 'tarifs',
       it: 'prezzi',
       pt: 'precos',
     },
     titles: {
-      en: 'Pricing & Plans | BoardPDF',
-      es: 'Planes y Precios | BoardPDF',
+      en: 'Pricing & Plans | BoardPDF',
     },
   },
 
   'help-faq': {
     descriptions: {
-      en: 'Find answers to common questions about BoardPDF PDF tools, security, privacy, pricing, and document lifecycle.',
-      es: 'Encuentra respuestas a preguntas frecuentes sobre herramientas PDF, seguridad, privacidad, planes y retención en BoardPDF.',
+      en: 'Find answers to common questions about BoardPDF PDF tools, security, privacy, pricing, and document lifecycle.',
     },
     routeId: 'help-faq',
     slugs: {
       de: 'faq',
-      en: 'faq',
-      es: 'preguntas-frecuentes',
+      en: 'faq',
       fr: 'faq',
       it: 'faq',
       pt: 'perguntas-frequentes',
     },
     titles: {
-      en: 'Frequently Asked Questions (FAQ) | BoardPDF',
-      es: 'Preguntas Frecuentes (FAQ) | BoardPDF',
+      en: 'Frequently Asked Questions (FAQ) | BoardPDF',
     },
   },
   'help-security': {
     descriptions: {
-      en: 'Learn how BoardPDF protects your documents with TLS 1.3, AES-GCM-256 encryption, zero-knowledge architecture, and automated ephemeral deletion.',
-      es: 'Conoce cómo protege BoardPDF tus documentos con cifrado TLS 1.3, AES-GCM-256, arquitectura de cero conocimiento y borrado efímero automático.',
+      en: 'Learn how BoardPDF protects your documents with TLS 1.3, AES-GCM-256 encryption, zero-knowledge architecture, and automated ephemeral deletion.',
     },
     routeId: 'help-security',
     slugs: {
       de: 'sicherheit',
-      en: 'security',
-      es: 'seguridad',
+      en: 'security',
       fr: 'securite',
       it: 'sicurezza',
       pt: 'seguranca',
     },
     titles: {
-      en: 'Security Policy | BoardPDF',
-      es: 'Política de Seguridad | BoardPDF',
+      en: 'Security Policy | BoardPDF',
     },
   },
   'help-privacy': {
     descriptions: {
-      en: 'BoardPDF Privacy Policy. 100% ephemeral document processing, max 2-hour retention, zero AI training, and full GDPR & CCPA/CPRA compliance.',
-      es: 'Política de Privacidad de BoardPDF. Procesamiento 100% efímero, borrado en < 1 hora, cero entrenamiento de IA y cumplimiento GDPR y CCPA/CPRA.',
+      en: 'BoardPDF Privacy Policy. 100% ephemeral document processing, max 2-hour retention, zero AI training, and full GDPR & CCPA/CPRA compliance.',
     },
     routeId: 'help-privacy',
     slugs: {
       de: 'datenschutz',
-      en: 'privacy',
-      es: 'privacidad',
+      en: 'privacy',
       fr: 'confidentialite',
       it: 'privacy',
       pt: 'privacidade',
     },
     titles: {
-      en: 'Privacy Policy | BoardPDF',
-      es: 'Política de Privacidad | BoardPDF',
+      en: 'Privacy Policy | BoardPDF',
     },
   },
   'help-terms': {
     descriptions: {
-      en: 'Terms and conditions for using BoardPDF. Transparent guidelines, service rules, binding individual arbitration, and class action waiver.',
-      es: 'Términos y condiciones de uso de BoardPDF. Lineamientos transparentes, reglas de servicio, arbitraje individual vinculante y renuncia a demandas colectivas.',
+      en: 'Terms and conditions for using BoardPDF. Transparent guidelines, service rules, binding individual arbitration, and class action waiver.',
     },
     routeId: 'help-terms',
     slugs: {
       de: 'agb',
-      en: 'terms',
-      es: 'terminos',
+      en: 'terms',
       fr: 'conditions',
       it: 'termini',
       pt: 'termos',
     },
     titles: {
-      en: 'Terms of Service | BoardPDF',
-      es: 'Términos y Condiciones | BoardPDF',
+      en: 'Terms of Service | BoardPDF',
     },
   },
   'help-cookies': {
     descriptions: {
-      en: 'BoardPDF Cookie Policy. Detailed technical breakdown of cookies used, browser management guides, and privacy controls.',
-      es: 'Política de Cookies de BoardPDF. Desglose técnico de cookies utilizadas, guías de configuración en navegadores y control de privacidad.',
+      en: 'BoardPDF Cookie Policy. Detailed technical breakdown of cookies used, browser management guides, and privacy controls.',
     },
     routeId: 'help-cookies',
     slugs: {
       de: 'cookies',
-      en: 'cookies',
-      es: 'cookies',
+      en: 'cookies',
       fr: 'cookies',
       it: 'cookie',
       pt: 'cookies',
     },
     titles: {
-      en: 'Cookie Policy | BoardPDF',
-      es: 'Política de Cookies | BoardPDF',
+      en: 'Cookie Policy | BoardPDF',
     },
   },
 };
@@ -900,7 +779,7 @@ SLUG_TO_ROUTE_MAP.set('tarifs', 'pricing');
 SLUG_TO_ROUTE_MAP.set('prezzi', 'pricing');
 SLUG_TO_ROUTE_MAP.set('precos', 'pricing');
 
-export function getCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): string {
+function getCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): string {
   const cleanLang = (lang || '').trim().toLowerCase();
   const info = SEO_ROUTES[routeId];
   if (!info) return routeId;
@@ -920,7 +799,7 @@ export function getCanonicalSlug(routeId: string, lang = DEFAULT_LANGUAGE): stri
   );
 }
 
-export function resolveRouteFromSlug(slug: string, lang = DEFAULT_LANGUAGE): { canonicalSlug: string; isCanonical: boolean; routeId: string } | null {
+function resolveRouteFromSlug(slug: string, lang = DEFAULT_LANGUAGE): { canonicalSlug: string; isCanonical: boolean; routeId: string } | null {
   const clean = (slug || '').toLowerCase().replace(/^\/+|\/+$/g, '');
   if (!clean) {
     return {
@@ -941,7 +820,7 @@ export function resolveRouteFromSlug(slug: string, lang = DEFAULT_LANGUAGE): { c
   };
 }
 
-export function getLocalizedPath(routeId: string, lang = DEFAULT_LANGUAGE): string {
+function getLocalizedPath(routeId: string, lang = DEFAULT_LANGUAGE): string {
   const cleanLang = (lang || '').trim().toLowerCase();
   const normLang = normalizeLanguageCode(lang);
   const targetLang = cleanLang === 'es' || cleanLang === 'en' ? cleanLang : normLang;
@@ -952,7 +831,7 @@ export function getLocalizedPath(routeId: string, lang = DEFAULT_LANGUAGE): stri
   return `/${targetLang}/${slug}`;
 }
 
-export interface PageSeoResult {
+interface PageSeoResult {
   canonicalUrl: string;
   description: string;
   hreflangs: Array<{ href: string; lang: string }>;
@@ -960,12 +839,14 @@ export interface PageSeoResult {
   title: string;
 }
 
-export function getPageSeo(routeId: string, lang = DEFAULT_LANGUAGE, origin = ''): PageSeoResult {
+function getPageSeo(routeId: string, lang = DEFAULT_LANGUAGE, origin = ''): PageSeoResult {
   const normLang = normalizeLanguageCode(lang);
   const info = SEO_ROUTES[routeId] || SEO_ROUTES.home;
 
-  const title = info.titles[normLang] || info.titles.es || info.titles.en || `${info.routeId} - BoardPDF`;
-  const description = info.descriptions[normLang] || info.descriptions.es || info.descriptions.en || 'Herramientas PDF online y seguras.';
+  const tTitle = t(`seo.${info.routeId}.title`);
+  const tDesc = t(`seo.${info.routeId}.description`);
+  const title = (tTitle !== `seo.${info.routeId}.title` ? tTitle : '') || info.titles[normLang] || info.titles.en || `${info.routeId} - BoardPDF`;
+  const description = (tDesc !== `seo.${info.routeId}.description` ? tDesc : '') || info.descriptions[normLang] || info.descriptions.en || 'Online and secure PDF tools.';
 
   const canonicalPath = getLocalizedPath(info.routeId, normLang);
   const baseUrl = origin.replace(/\/+$/, '');
@@ -1013,7 +894,7 @@ export function getPageSeo(routeId: string, lang = DEFAULT_LANGUAGE, origin = ''
   };
 }
 
-export function updateDomSeo(routeId: string, lang = DEFAULT_LANGUAGE): void {
+function updateDomSeo(routeId: string, lang = DEFAULT_LANGUAGE): void {
   const origin = window.location.origin;
   const seo = getPageSeo(routeId, lang, origin);
 
@@ -1086,3 +967,6 @@ export function updateDomSeo(routeId: string, lang = DEFAULT_LANGUAGE): void {
   }
   scriptEl.textContent = JSON.stringify(seo.jsonLd);
 }
+
+export { SEO_ROUTES, getCanonicalSlug, getLocalizedPath, getPageSeo, resolveRouteFromSlug, updateDomSeo };
+export type { PageSeoResult, RouteSeoInfo };

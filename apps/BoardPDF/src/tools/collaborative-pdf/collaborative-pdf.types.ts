@@ -1,4 +1,4 @@
-export interface CollaborativeElementText {
+interface CollaborativeElementText {
   backgroundColor?: string;
   color?: string;
   fontFamily?: string;
@@ -16,7 +16,7 @@ export interface CollaborativeElementText {
   y: number;
 }
 
-export interface CollaborativeElementShape {
+interface CollaborativeElementShape {
   fillColor?: string;
   height: number;
   id: string;
@@ -33,7 +33,7 @@ export interface CollaborativeElementShape {
   y2?: number;
 }
 
-export interface CollaborativeElementDrawing {
+interface CollaborativeElementDrawing {
   color: string;
   id: string;
   opacity?: number;
@@ -43,7 +43,7 @@ export interface CollaborativeElementDrawing {
   width: number;
 }
 
-export interface CollaborativeElementImage {
+interface CollaborativeElementImage {
   height: number;
   id: string;
   name?: string;
@@ -56,7 +56,7 @@ export interface CollaborativeElementImage {
   y: number;
 }
 
-export interface CollaborativeElementTableCell {
+interface CollaborativeElementTableCell {
   align?: 'center' | 'left' | 'right';
   backgroundColor?: string;
   color?: string;
@@ -64,7 +64,7 @@ export interface CollaborativeElementTableCell {
   text: string;
 }
 
-export interface CollaborativeElementTable {
+interface CollaborativeElementTable {
   borderColor?: string;
   borderWidth?: number;
   cellPadding?: number;
@@ -86,7 +86,7 @@ export interface CollaborativeElementTable {
   y: number;
 }
 
-export type ChartType =
+type ChartType =
   | 'area-overlap'
   | 'area-stacked'
   | 'bar-grouped'
@@ -102,13 +102,13 @@ export type ChartType =
   | 'progress-ring'
   | 'scatter';
 
-export interface ChartDataSeries {
+interface ChartDataSeries {
   color?: string;
   name: string;
   values: number[];
 }
 
-export interface ChartOptions {
+interface ChartOptions {
   colorPalette?: string[];
   colorScheme?: 'amber' | 'blue' | 'emerald' | 'gray' | 'purple' | 'red';
   currencyOrUnit?: string;
@@ -134,7 +134,7 @@ export interface ChartOptions {
   yAxisTitle?: string;
 }
 
-export interface CollaborativeElementChart {
+interface CollaborativeElementChart {
   chartType: ChartType;
   height: number;
   id: string;
@@ -149,7 +149,7 @@ export interface CollaborativeElementChart {
   y: number;
 }
 
-export type CollaborativeElement =
+type CollaborativeElement =
   | CollaborativeElementChart
   | CollaborativeElementDrawing
   | CollaborativeElementImage
@@ -157,12 +157,12 @@ export type CollaborativeElement =
   | CollaborativeElementTable
   | CollaborativeElementText;
 
-export interface CollaborativePdfPageSource {
+interface CollaborativePdfPageSource {
   pageNumber: number;
   pdfUrl: string;
 }
 
-export interface CollaborativeDocumentContent {
+interface CollaborativeDocumentContent {
   elements: CollaborativeElement[];
   pageBackgrounds?: string[];
   pageCount: number;
@@ -172,7 +172,7 @@ export interface CollaborativeDocumentContent {
   pageTitles?: string[];
 }
 
-export interface CollaborativeMember {
+interface CollaborativeMember {
   avatar_url?: string | null;
   created_at?: string;
   email?: string;
@@ -182,7 +182,7 @@ export interface CollaborativeMember {
   username: string;
 }
 
-export interface CollaborativeDocumentRecord {
+interface CollaborativeDocumentRecord {
   access_level?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   created_at: string;
@@ -195,3 +195,5 @@ export interface CollaborativeDocumentRecord {
   updated_at: string;
   user_id?: number | null;
 }
+
+export type { ChartDataSeries, ChartOptions, ChartType, CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeElement, CollaborativeElementChart, CollaborativeElementDrawing, CollaborativeElementImage, CollaborativeElementShape, CollaborativeElementTable, CollaborativeElementTableCell, CollaborativeElementText, CollaborativeMember, CollaborativePdfPageSource };

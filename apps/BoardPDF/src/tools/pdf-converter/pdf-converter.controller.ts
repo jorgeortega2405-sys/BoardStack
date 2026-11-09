@@ -1,5 +1,5 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { convertPdfFile, UPLOADS_DIR } from './pdf-converter.service.js';
 import { ConversionType } from './pdf-converter.types.js';
 import { Request, Response } from 'express';
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   },
 });
 
-export const uploadPdf = multer({
+const uploadPdf = multer({
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
       cb(null, true);
@@ -38,52 +38,37 @@ const VALID_CONVERSION_TYPES: ConversionType[] = [
   'pdf-to-pdfa',
 ];
 
-export async function handleConvertPdf(req: Request, res: Response): Promise<void> {
+async function handleConvertPdf(req: Request, res: Response): Promise<void> {
   try {
-    const file = req.file;
-    if (!file) {
-      res.status(400).json({ error: 'Debes seleccionar un archivo PDF para convertir.', success: false });
-      return;
-    }
+    const file = validatePdfUpload(req, res, 'pdf-converter');
+    if (!file) return;
 
-    const userPerms = ((req as any).user?.permissions as string[]) || [];
-    const limits = getToolLimits('pdf-converter', userPerms);
-
-    if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
+    const targetType = req.body.targetType as ConversionType;
+    if (!targetType || !VALID_CONVERSION_TYPES.includes(targetType)) {
       res.status(400).json({
-        error: `El archivo supera el límite permitido de ${limits.maxFileSizeMB} MB para tu plan actual. Actualiza tu suscripción para procesar documentos de mayor tamaño.`,
+        error: `Tipo de conversión inválido. Tipos soportados: ${VALID_CONVERSION_TYPES.join(', ')}`,
         success: false,
       });
       return;
     }
 
-    const targetType = req.body.targetType as ConversionType;
-    if (!targetType || !VALID_CONVERSION_TYPES.includes(targetType)) {
-      res.status(400).json({ error: 'Tipo de conversión inválido o no especificado.', success: false });
-      return;
-    }
+    const customFilename = typeof req.body?.filename === 'string' && req.body.filename.trim()
+      ? req.body.filename.trim()
+      : undefined;
 
-    const options = {
-      allowDowngrade: req.body.allowDowngrade !== 'false' && req.body.allowDowngrade !== false,
-      excelSheets: req.body.excelSheets || 'single',
-      jpgMode: req.body.jpgMode || 'pages',
-      jpgQuality: req.body.jpgQuality || 'normal',
-      ocr: req.body.ocr || 'no',
-      pdfaLevel: req.body.pdfaLevel || '1b',
-    };
+    const result = await convertPdfFile(file, targetType);
 
-    const result = await convertPdfFile(file, targetType, options);
     res.status(200).json({
       data: result,
-      message: 'Conversión completada exitosamente.',
       success: true,
     });
   } catch (error) {
-    logger.app.error('Error durante la conversión de PDF', error);
+    logger.app.error('Error al convertir documento PDF', error);
     res.status(500).json({
-      error: 'Ha ocurrido un error al convertir el documento. Asegúrate de que el archivo no esté protegido con contraseña.',
+      error: 'Ha ocurrido un error inesperado al convertir el documento PDF. Por favor intenta más tarde.',
       success: false,
     });
   }
 }
 
+export { handleConvertPdf, uploadPdf };

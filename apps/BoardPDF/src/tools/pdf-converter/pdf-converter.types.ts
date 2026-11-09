@@ -1,17 +1,17 @@
-export type ConversionType =
+type ConversionType =
   | 'pdf-to-jpg'
   | 'pdf-to-word'
   | 'pdf-to-powerpoint'
   | 'pdf-to-excel'
   | 'pdf-to-pdfa';
 
-export type JpgConversionMode = 'pages' | 'extract';
-export type JpgQuality = 'normal' | 'high';
-export type OcrOption = 'no' | 'yes';
-export type ExcelSheetsOption = 'single' | 'multiple';
-export type PdfALevel = '1b' | '1a' | '2b' | '2u' | '2a' | '3b' | '3u' | '3a';
+type JpgConversionMode = 'pages' | 'extract';
+type JpgQuality = 'normal' | 'high';
+type OcrOption = 'no' | 'yes';
+type ExcelSheetsOption = 'single' | 'multiple';
+type PdfALevel = '1b' | '1a' | '2b' | '2u' | '2a' | '3b' | '3u' | '3a';
 
-export interface PdfConversionOptions {
+interface PdfConversionOptions {
   allowDowngrade?: boolean;
   excelSheets?: ExcelSheetsOption;
   jpgMode?: JpgConversionMode;
@@ -20,7 +20,7 @@ export interface PdfConversionOptions {
   pdfaLevel?: PdfALevel;
 }
 
-export interface ConversionTypeConfig {
+interface ConversionTypeConfig {
   actionBtnKey: string;
   badgeLabel: string;
   colorClass: string;
@@ -32,7 +32,7 @@ export interface ConversionTypeConfig {
   type: ConversionType;
 }
 
-export interface ConvertJobResult {
+interface ConvertJobResult {
   downloadToken: string;
   downloadUrl: string;
   fileSize: number;
@@ -42,7 +42,7 @@ export interface ConvertJobResult {
   success: boolean;
 }
 
-export interface StoredConversionFile {
+interface StoredConversionFile {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -52,3 +52,5 @@ export interface StoredConversionFile {
   mimeType: string;
   token: string;
 }
+
+export type { ConversionType, ConversionTypeConfig, ConvertJobResult, ExcelSheetsOption, JpgConversionMode, JpgQuality, OcrOption, PdfALevel, PdfConversionOptions, StoredConversionFile };

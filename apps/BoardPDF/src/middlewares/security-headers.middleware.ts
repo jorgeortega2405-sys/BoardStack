@@ -2,7 +2,7 @@ import { config } from '../config/env.config.js';
 import { logger } from '../services/logger.service.js';
 import type { NextFunction, Request, Response } from 'express';
 
-export function buildContentSecurityPolicy(): string {
+function buildContentSecurityPolicy(): string {
   const isDev = config.nodeEnv !== 'production';
   const scriptDirectives = [
     "'self'",
@@ -70,7 +70,7 @@ export function buildContentSecurityPolicy(): string {
     .join('; ');
 }
 
-export function securityHeaders() {
+function securityHeaders() {
   const cspHeader = buildContentSecurityPolicy();
 
   return function securityHeadersMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -90,7 +90,7 @@ export function securityHeaders() {
   };
 }
 
-export function originProtection() {
+function originProtection() {
   return function originProtectionMiddleware(req: Request, res: Response, next: NextFunction): void {
     if (!config.originProtection.enforceCloudflare) {
       return next();
@@ -130,3 +130,5 @@ export function originProtection() {
     next();
   };
 }
+
+export { buildContentSecurityPolicy, originProtection, securityHeaders };

@@ -19,11 +19,9 @@ if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-export { UPLOADS_DIR };
-
 const activeEngine: IConverterEngine = new LocalConverterEngine();
 
-export async function convertPdfFile(
+async function convertPdfFile(
   file: Express.Multer.File,
   targetType: ConversionType,
   options?: PdfConversionOptions
@@ -81,3 +79,4 @@ export async function convertPdfFile(
   }
 }
 
+export { UPLOADS_DIR, convertPdfFile };

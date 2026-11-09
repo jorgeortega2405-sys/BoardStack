@@ -1,4 +1,4 @@
-export interface RepairResultData {
+interface RepairResultData {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -7,3 +7,5 @@ export interface RepairResultData {
   repairedSize: number;
   status: string;
 }
+
+export type { RepairResultData };

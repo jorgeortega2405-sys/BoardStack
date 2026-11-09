@@ -1,9 +1,9 @@
-export interface ProtectPdfOptions {
+interface ProtectPdfOptions {
   filename?: string;
   password: string;
 }
 
-export interface ProtectPdfResponse {
+interface ProtectPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -11,7 +11,7 @@ export interface ProtectPdfResponse {
   totalPages: number;
 }
 
-export interface StoredProtectPdfResult {
+interface StoredProtectPdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -20,3 +20,5 @@ export interface StoredProtectPdfResult {
   pagesCount: number;
   size: number;
 }
+
+export type { ProtectPdfOptions, ProtectPdfResponse, StoredProtectPdfResult };

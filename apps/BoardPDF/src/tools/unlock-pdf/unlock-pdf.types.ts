@@ -1,9 +1,9 @@
-export interface UnlockPdfOptions {
+interface UnlockPdfOptions {
   filename?: string;
   password?: string;
 }
 
-export interface UnlockPdfResponse {
+interface UnlockPdfResponse {
   downloadUrl: string;
   fileId: string;
   filename: string;
@@ -11,7 +11,7 @@ export interface UnlockPdfResponse {
   totalPages: number;
 }
 
-export interface StoredUnlockPdfResult {
+interface StoredUnlockPdfResult {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -20,3 +20,5 @@ export interface StoredUnlockPdfResult {
   pagesCount: number;
   size: number;
 }
+
+export type { StoredUnlockPdfResult, UnlockPdfOptions, UnlockPdfResponse };

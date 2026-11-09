@@ -3,22 +3,22 @@ import { loadStylesheet } from '../utils/dom.util.js';
 import { isSupportedLanguage, normalizeLanguageCode } from '../utils/languages.util.js';
 import { SEO_ROUTES, getLocalizedPath, resolveRouteFromSlug } from './seo.config.js';
 
-export interface RouteContext {
+interface RouteContext {
   params: Record<string, string>;
   path: string;
   previousPath: string;
   query: URLSearchParams;
 }
 
-export type RouteHandler = (ctx: RouteContext) => Promise<HTMLElement | null>;
+type RouteHandler = (ctx: RouteContext) => Promise<HTMLElement | null>;
 
-export interface RouteDefinition {
+interface RouteDefinition {
   handler: RouteHandler;
   id: string;
   match: (path: string) => boolean | Record<string, string>;
 }
 
-export const APP_ROUTES: RouteDefinition[] = [
+const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async (ctx) => {
       const { createHomeView } = await import('../views/home.view.js');
@@ -606,7 +606,7 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
 ];
 
-export interface MatchedRoute {
+interface MatchedRoute {
   canonicalPath: string;
   hasLangPrefix: boolean;
   internalPath: string;
@@ -618,7 +618,7 @@ export interface MatchedRoute {
   routeId: string;
 }
 
-export function parseRoutePath(rawPath: string): {
+function parseRoutePath(rawPath: string): {
   hasLangPrefix: boolean;
   internalPath: string;
   lang: string;
@@ -695,7 +695,7 @@ export function parseRoutePath(rawPath: string): {
   };
 }
 
-export function findRoute(path: string): MatchedRoute | null {
+function findRoute(path: string): MatchedRoute | null {
   const parsed = parseRoutePath(path);
 
   if (parsed.resolvedRouteId) {
@@ -745,3 +745,6 @@ export function findRoute(path: string): MatchedRoute | null {
 
   return null;
 }
+
+export { APP_ROUTES, findRoute, parseRoutePath };
+export type { MatchedRoute, RouteContext, RouteDefinition, RouteHandler };

@@ -1,12 +1,11 @@
-export interface GoogleFontItem {
+interface GoogleFontItem {
   category: 'display' | 'handwriting' | 'monospace' | 'sans-serif' | 'serif';
   family: string;
   hasItalic: boolean;
   weights: number[];
 }
 
-export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
-  // Sans-Serif
+const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'sans-serif', family: 'Roboto', hasItalic: true, weights: [100, 300, 400, 500, 700, 900] },
   { category: 'sans-serif', family: 'Open Sans', hasItalic: true, weights: [300, 400, 500, 600, 700, 800] },
   { category: 'sans-serif', family: 'Montserrat', hasItalic: true, weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
@@ -37,8 +36,6 @@ export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'sans-serif', family: 'Be Vietnam Pro', hasItalic: true, weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
   { category: 'sans-serif', family: 'Kanit', hasItalic: true, weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
   { category: 'sans-serif', family: 'Lexend', hasItalic: false, weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
-
-  // Serif
   { category: 'serif', family: 'Playfair Display', hasItalic: true, weights: [400, 500, 600, 700, 800, 900] },
   { category: 'serif', family: 'Merriweather', hasItalic: true, weights: [300, 400, 700, 900] },
   { category: 'serif', family: 'Lora', hasItalic: true, weights: [400, 500, 600, 700] },
@@ -57,8 +54,6 @@ export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'serif', family: 'Alegreya', hasItalic: true, weights: [400, 500, 600, 700, 800, 900] },
   { category: 'serif', family: 'Prata', hasItalic: false, weights: [400] },
   { category: 'serif', family: 'Fraunces', hasItalic: true, weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
-
-  // Display
   { category: 'display', family: 'Bebas Neue', hasItalic: false, weights: [400] },
   { category: 'display', family: 'Lobster', hasItalic: false, weights: [400] },
   { category: 'display', family: 'Abril Fatface', hasItalic: false, weights: [400] },
@@ -81,8 +76,6 @@ export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'display', family: 'Creepster', hasItalic: false, weights: [400] },
   { category: 'display', family: 'Rye', hasItalic: false, weights: [400] },
   { category: 'display', family: 'Silkscreen', hasItalic: false, weights: [400, 700] },
-
-  // Handwriting
   { category: 'handwriting', family: 'Dancing Script', hasItalic: false, weights: [400, 500, 600, 700] },
   { category: 'handwriting', family: 'Pacifico', hasItalic: false, weights: [400] },
   { category: 'handwriting', family: 'Caveat', hasItalic: false, weights: [400, 500, 600, 700] },
@@ -102,8 +95,6 @@ export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'handwriting', family: 'Allura', hasItalic: false, weights: [400] },
   { category: 'handwriting', family: 'Homemade Apple', hasItalic: false, weights: [400] },
   { category: 'handwriting', family: 'Reenie Beanie', hasItalic: false, weights: [400] },
-
-  // Monospace
   { category: 'monospace', family: 'Fira Code', hasItalic: false, weights: [300, 400, 500, 600, 700] },
   { category: 'monospace', family: 'Roboto Mono', hasItalic: true, weights: [100, 200, 300, 400, 500, 600, 700] },
   { category: 'monospace', family: 'Source Code Pro', hasItalic: true, weights: [200, 300, 400, 500, 600, 700, 800, 900] },
@@ -118,7 +109,7 @@ export const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'monospace', family: 'Overpass Mono', hasItalic: false, weights: [300, 400, 600, 700] }
 ];
 
-export const WEIGHT_LABELS: Record<number, string> = {
+const WEIGHT_LABELS: Record<number, string> = {
   100: 'Thin',
   200: 'Extra Light',
   300: 'Light',
@@ -132,7 +123,7 @@ export const WEIGHT_LABELS: Record<number, string> = {
 
 const loadedFontHrefs = new Set<string>();
 
-export function loadGoogleFont(family: string, weights?: number[], italic?: boolean): Promise<void> {
+function loadGoogleFont(family: string, weights?: number[], italic?: boolean): Promise<void> {
   const font = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
   const actualWeights = weights && weights.length > 0 ? weights : (font ? font.weights : [400, 700]);
   const hasItalic = italic ?? (font?.hasItalic ?? false);
@@ -164,7 +155,7 @@ export function loadGoogleFont(family: string, weights?: number[], italic?: bool
   });
 }
 
-export function loadGoogleFontPreview(family: string): void {
+function loadGoogleFontPreview(family: string): void {
   const formattedFamily = family.trim().replace(/ /g, '+');
   const url = `https://fonts.googleapis.com/css2?family=${formattedFamily}:wght@400&display=swap`;
   if (loadedFontHrefs.has(url)) return;
@@ -175,3 +166,6 @@ export function loadGoogleFontPreview(family: string): void {
   link.href = url;
   document.head.appendChild(link);
 }
+
+export { GOOGLE_FONTS_CATALOG, WEIGHT_LABELS, loadGoogleFont, loadGoogleFontPreview };
+export type { GoogleFontItem };

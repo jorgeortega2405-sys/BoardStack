@@ -13,8 +13,9 @@ import { ModalInstance, ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class UnlockPdfController implements ViewController {
+class UnlockPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -35,7 +36,7 @@ export class UnlockPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Elimina la contraseña de seguridad de tu documento PDF para poder abrirlo, editarlo e imprimirlo libremente.',
+        desc: t('ui.elimina_la_contrasena_de_seguridad_de_tu'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -224,7 +225,7 @@ export class UnlockPdfController implements ViewController {
       cancelText: 'Cancelar',
       confirmClass: 'component-button--black',
       confirmText: 'Desbloquear PDF',
-      description: 'Este archivo PDF requiere una contraseña de apertura para poder desbloquearlo.',
+      description: t('ui.este_archivo_pdf_requiere_una_contrasena'),
       onConfirm: async () => {
         const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
         const password = input?.value.trim() || '';
@@ -297,14 +298,14 @@ export class UnlockPdfController implements ViewController {
           this.isPasswordRequired = true;
           if (modal) {
             modal.setConfirmLoading(false);
-            modal.showError('La contraseña introducida es incorrecta. Inténtalo de nuevo.');
+            modal.showError(t('ui.la_contrasena_introducida_es_incorrecta_'));
             return;
           }
           this.phaseManager?.setPhase('workspace');
           this.promptPasswordAndUnlock(button);
           return;
         }
-        throw new Error(result.error || 'Ocurrió un error al desbloquear el documento PDF.');
+        throw new Error(result.error || t('ui.ocurrio_un_error_al_desbloquear_el_docum'));
       }
 
       if (modal) {
@@ -312,26 +313,26 @@ export class UnlockPdfController implements ViewController {
       }
 
       const token = result.data.fileId;
-      showToast('PDF desbloqueado correctamente.', 'success');
+      showToast(t('toasts.pdf_desbloqueado_correctamente'), 'success');
       this.phaseManager?.navigateToDownload({
         downloadUrl: `/api/download/${token}`,
         fileSize: result.data.fileSize,
         filename: result.data.filename,
         returnText: 'Desbloquear otro documento PDF',
         returnUrl: '/unlock-pdf',
-        subtitle: `Se han eliminado exitosamente las restricciones del documento "${this.currentFile?.name}".`,
+        subtitle: t('tools.unlock_success_prefix') + `"${this.currentFile?.name}".`,
         title: '¡PDF desbloqueado con éxito!',
         token,
       });
     } catch {
       if (modal) {
         modal.setConfirmLoading(false);
-        modal.showError('Error al desbloquear el documento. Verifica los datos e inténtalo de nuevo.');
+        modal.showError(t('ui.error_al_desbloquear_el_documento_verifi'));
       } else {
         this.phaseManager?.showError({
-          boxText: 'Comprueba que la contraseña ingresada sea la correcta o que el archivo PDF no esté dañado.',
-          boxTitle: 'Error al desbloquear el documento',
-          desc: 'No se pudo eliminar la protección del archivo PDF. Por favor verifica los datos.',
+          boxText: t('ui.comprueba_que_la_contrasena_ingresada_se'),
+          boxTitle: t('ui.error_al_desbloquear_el_documento'),
+          desc: t('ui.no_se_pudo_eliminar_la_proteccion_del_ar'),
           retryText: 'Reintentar Desbloqueo',
           title: '¡Oh no! No hemos podido desbloquear tu archivo.',
         });
@@ -381,10 +382,12 @@ export class UnlockPdfController implements ViewController {
   }
 }
 
-export async function createUnlockPdfView(): Promise<HTMLElement> {
+async function createUnlockPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/unlock-pdf/unlock-pdf.html');
   const controller = new UnlockPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { UnlockPdfController, createUnlockPdfView };

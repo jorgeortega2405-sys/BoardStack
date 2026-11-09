@@ -1,6 +1,6 @@
-export type DiffChangeType = 'addition' | 'deletion' | 'modification' | 'unchanged';
+type DiffChangeType = 'addition' | 'deletion' | 'modification' | 'unchanged';
 
-export interface DiffChangeItem {
+interface DiffChangeItem {
   diffCount: number;
   id: string;
   newText?: string;
@@ -9,14 +9,14 @@ export interface DiffChangeItem {
   type: DiffChangeType;
 }
 
-export interface PageComparison {
+interface PageComparison {
   changes: DiffChangeItem[];
   differencesCount: number;
   hasDifferences: boolean;
   pageIndex: number;
 }
 
-export interface ComparePdfParams {
+interface ComparePdfParams {
   buffer1: Buffer;
   buffer2: Buffer;
   comparisonMode?: 'semantic' | 'overlay';
@@ -24,7 +24,7 @@ export interface ComparePdfParams {
   filename2?: string;
 }
 
-export interface ComparePdfResponse {
+interface ComparePdfResponse {
   additionsCount: number;
   deletionsCount: number;
   downloadUrl: string;
@@ -37,7 +37,7 @@ export interface ComparePdfResponse {
   totalChanges: number;
 }
 
-export interface StoredComparisonReport {
+interface StoredComparisonReport {
   buffer: Buffer;
   contentType: string;
   createdAt: number;
@@ -45,3 +45,5 @@ export interface StoredComparisonReport {
   fileSize: number;
   filename: string;
 }
+
+export type { ComparePdfParams, ComparePdfResponse, DiffChangeItem, DiffChangeType, PageComparison, StoredComparisonReport };

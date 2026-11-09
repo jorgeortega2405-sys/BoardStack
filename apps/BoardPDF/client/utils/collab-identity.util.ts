@@ -1,6 +1,6 @@
 import { t } from '../services/i18n.service.js';
 
-export interface CollabGuestIdentity {
+interface CollabGuestIdentity {
   animalKey?: string;
   avatarUrl: string;
   isGuest: true;
@@ -8,13 +8,13 @@ export interface CollabGuestIdentity {
   username: string;
 }
 
-export interface AnonymousAnimalDefinition {
+interface AnonymousAnimalDefinition {
   avatarKey: string;
   fallback: string;
   key: string;
 }
 
-export const ANONYMOUS_ANIMAL_ITEMS: AnonymousAnimalDefinition[] = [
+const ANONYMOUS_ANIMAL_ITEMS: AnonymousAnimalDefinition[] = [
   { avatarKey: 'bear', fallback: 'Ardilla Ágil', key: 'collab.animals.squirrel_agile' },
   { avatarKey: 'owl', fallback: 'Búho Sabio', key: 'collab.animals.owl_wise' },
   { avatarKey: 'frog', fallback: 'Camaleón Mágico', key: 'collab.animals.chameleon_magic' },
@@ -56,9 +56,9 @@ export const ANONYMOUS_ANIMAL_ITEMS: AnonymousAnimalDefinition[] = [
   { avatarKey: 'fox', fallback: 'Zorro Astuto', key: 'collab.animals.fox_clever' },
 ];
 
-export const ANONYMOUS_ANIMAL_NAMES: string[] = ANONYMOUS_ANIMAL_ITEMS.map((item) => t(item.key, item.fallback));
+const ANONYMOUS_ANIMAL_NAMES: string[] = ANONYMOUS_ANIMAL_ITEMS.map((item) => t(item.key, item.fallback));
 
-export const ANONYMOUS_ANIMAL_AVATARS: Record<string, string> = {
+const ANONYMOUS_ANIMAL_AVATARS: Record<string, string> = {
   bear: '/images/avatars/animals/bear.svg',
   cat: '/images/avatars/animals/cat.svg',
   dog: '/images/avatars/animals/dog.svg',
@@ -79,7 +79,7 @@ export const ANONYMOUS_ANIMAL_AVATARS: Record<string, string> = {
 
 const STORAGE_KEY = 'boardpdf_collab_guest_identity';
 
-export function getOrCreateGuestIdentity(): CollabGuestIdentity {
+function getOrCreateGuestIdentity(): CollabGuestIdentity {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -114,3 +114,6 @@ export function getOrCreateGuestIdentity(): CollabGuestIdentity {
 
   return identity;
 }
+
+export { ANONYMOUS_ANIMAL_AVATARS, ANONYMOUS_ANIMAL_ITEMS, ANONYMOUS_ANIMAL_NAMES, getOrCreateGuestIdentity };
+export type { AnonymousAnimalDefinition, CollabGuestIdentity };

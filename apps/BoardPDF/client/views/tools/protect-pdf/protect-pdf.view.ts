@@ -12,8 +12,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ProtectPdfResponseData } from './protect-pdf.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class ProtectPdfController implements ViewController {
+class ProtectPdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentFile: File | null = null;
@@ -33,7 +34,7 @@ export class ProtectPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: 'Seleccionar PDF',
-        desc: 'Añade una contraseña robusta y cifra tu documento PDF con tecnología AES-256.',
+        desc: t('ui.anade_una_contrasena_robusta_y_cifra_tu_'),
         hint: 'o arrastra y suelta el PDF aquí',
         multiselect: false,
         onFilesSelected: (files) => {
@@ -218,7 +219,7 @@ export class ProtectPdfController implements ViewController {
     const confirm = confirmInput?.value ?? '';
 
     if (!password) {
-      this.showError('Introduce una contraseña para proteger el documento.');
+      this.showError(t('ui.introduce_una_contrasena_para_proteger_e'));
       return;
     }
 
@@ -250,26 +251,26 @@ export class ProtectPdfController implements ViewController {
         };
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Ocurrió un error al proteger el documento PDF.');
+          throw new Error(result.error || t('ui.ocurrio_un_error_al_proteger_el_document'));
         }
 
         const token = result.data.fileId;
-        showToast('PDF protegido correctamente.', 'success');
+        showToast(t('toasts.pdf_protegido_correctamente'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
           returnText: 'Proteger otro documento PDF',
           returnUrl: '/protect-pdf',
-          subtitle: `Se ha protegido y cifrado exitosamente el documento "${this.currentFile?.name}".`,
+          subtitle: t('tools.protect_success_prefix') + `"${this.currentFile?.name}".`,
           title: '¡PDF protegido con éxito!',
           token,
         });
       } catch {
         this.phaseManager?.showError({
           boxText: 'Comprueba que el archivo PDF no esté protegido o dañado y vuelve a intentarlo.',
-          boxTitle: 'Error al cifrar el documento',
-          desc: 'No se pudo aplicar el cifrado de seguridad al documento PDF. Por favor intenta más tarde.',
+          boxTitle: t('ui.error_al_cifrar_el_documento'),
+          desc: t('ui.no_se_pudo_aplicar_el_cifrado_de_segurid'),
           retryText: 'Reintentar Protección',
           title: '¡Oh no! No hemos podido proteger tu archivo.',
         });
@@ -321,10 +322,12 @@ export class ProtectPdfController implements ViewController {
   }
 }
 
-export async function createProtectPdfView(): Promise<HTMLElement> {
+async function createProtectPdfView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/protect-pdf/protect-pdf.html');
   const controller = new ProtectPdfController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { ProtectPdfController, createProtectPdfView };

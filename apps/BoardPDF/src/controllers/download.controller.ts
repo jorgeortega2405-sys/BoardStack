@@ -10,7 +10,7 @@ function extractRawToken(req: Request): string {
   return shard ? `${token}/${shard}` : token;
 }
 
-export async function handleDownloadFile(req: Request, res: Response): Promise<void> {
+async function handleDownloadFile(req: Request, res: Response): Promise<void> {
   try {
     const rawToken = extractRawToken(req);
     if (!rawToken) {
@@ -68,7 +68,7 @@ export async function handleDownloadFile(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleDownloadInfo(req: Request, res: Response): Promise<void> {
+async function handleDownloadInfo(req: Request, res: Response): Promise<void> {
   try {
     const rawToken = extractRawToken(req);
     if (!rawToken) {
@@ -117,7 +117,7 @@ export async function handleDownloadInfo(req: Request, res: Response): Promise<v
   }
 }
 
-export async function handleDeleteDownloadFile(req: Request, res: Response): Promise<void> {
+async function handleDeleteDownloadFile(req: Request, res: Response): Promise<void> {
   try {
     const rawToken = extractRawToken(req);
     if (!rawToken) {
@@ -143,7 +143,7 @@ export async function handleDeleteDownloadFile(req: Request, res: Response): Pro
   }
 }
 
-export async function handleToolDownload(req: Request, res: Response): Promise<void> {
+async function handleToolDownload(req: Request, res: Response): Promise<void> {
   try {
     const fileId = req.params.fileId || req.params.token;
     if (!fileId) {
@@ -198,3 +198,5 @@ export async function handleToolDownload(req: Request, res: Response): Promise<v
     });
   }
 }
+
+export { handleDeleteDownloadFile, handleDownloadFile, handleDownloadInfo, handleToolDownload };

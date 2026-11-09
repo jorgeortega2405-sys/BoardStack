@@ -1,6 +1,6 @@
 import { Language } from '../types/common.types.js';
 
-export const AVAILABLE_LANGUAGES: Language[] = [
+const AVAILABLE_LANGUAGES: Language[] = [
   { code: 'es', name: 'Español' },
   { code: 'en', name: 'English' },
   { code: 'af', name: 'Afrikaans' },
@@ -94,17 +94,17 @@ export const AVAILABLE_LANGUAGES: Language[] = [
   { code: 'zu', name: 'IsiZulu' },
 ];
 
-export const SUPPORTED_LANG_CODES = new Set<string>(
+const SUPPORTED_LANG_CODES = new Set<string>(
   AVAILABLE_LANGUAGES.map((l) => l.code.toLowerCase())
 );
 
-export const LANGUAGE_MAP = new Map<string, string>(
+const LANGUAGE_MAP = new Map<string, string>(
   AVAILABLE_LANGUAGES.map((l) => [l.code.toLowerCase(), l.name])
 );
 
-export const DEFAULT_LANGUAGE = 'es';
+const DEFAULT_LANGUAGE = 'es';
 
-export function isSupportedLanguage(code: string | null | undefined): boolean {
+function isSupportedLanguage(code: string | null | undefined): boolean {
   if (!code) return false;
   const clean = String(code).trim().toLowerCase().replace('_', '-');
   if (clean === 'us') return true;
@@ -122,7 +122,7 @@ export function isSupportedLanguage(code: string | null | undefined): boolean {
   return SUPPORTED_LANG_CODES.has(base);
 }
 
-export function normalizeLanguageCode(code: string | null | undefined): string {
+function normalizeLanguageCode(code: string | null | undefined): string {
   if (!code) return DEFAULT_LANGUAGE;
   const clean = String(code).trim().toLowerCase().replace('_', '-');
 
@@ -166,12 +166,12 @@ export function normalizeLanguageCode(code: string | null | undefined): string {
   return DEFAULT_LANGUAGE;
 }
 
-export function getLanguageName(code: string | null | undefined): string {
+function getLanguageName(code: string | null | undefined): string {
   const norm = normalizeLanguageCode(code);
   return LANGUAGE_MAP.get(norm) || 'Español';
 }
 
-export function detectBrowserLanguage(): string {
+function detectBrowserLanguage(): string {
   const browserLangs = navigator.languages || [navigator.language || ''];
   for (const bl of browserLangs) {
     if (!bl) continue;
@@ -191,3 +191,5 @@ export function detectBrowserLanguage(): string {
   }
   return DEFAULT_LANGUAGE;
 }
+
+export { AVAILABLE_LANGUAGES, DEFAULT_LANGUAGE, LANGUAGE_MAP, SUPPORTED_LANG_CODES, detectBrowserLanguage, getLanguageName, isSupportedLanguage, normalizeLanguageCode };

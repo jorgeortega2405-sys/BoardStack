@@ -8,7 +8,7 @@ import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { applyAvatarTier, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
-export class PricingController implements ViewController {
+class PricingController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private currentCycle = 'monthly';
@@ -216,10 +216,12 @@ export class PricingController implements ViewController {
   }
 }
 
-export async function createPricingView(): Promise<HTMLElement> {
+async function createPricingView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/pricing/pricing.html');
   const controller = new PricingController(container);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { PricingController, createPricingView };

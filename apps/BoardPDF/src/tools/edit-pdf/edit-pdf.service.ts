@@ -6,7 +6,7 @@ import { EditPdfModifications, EditPdfResult } from './edit-pdf.types.js';
 import crypto from 'crypto';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-export async function editPdfDocument(
+async function editPdfDocument(
   pdfBuffer: Buffer,
   originalFilename: string,
   modifications: EditPdfModifications,
@@ -257,3 +257,5 @@ export async function editPdfDocument(
     pageCount,
   };
 }
+
+export { editPdfDocument };

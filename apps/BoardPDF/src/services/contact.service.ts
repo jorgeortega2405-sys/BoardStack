@@ -3,7 +3,7 @@ import { RowDataPacket } from 'mysql2';
 import { getDbPool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 
-export interface CreateContactSubmissionInput {
+interface CreateContactSubmissionInput {
   email: string;
   ipAddress?: string;
   message: string;
@@ -12,7 +12,7 @@ export interface CreateContactSubmissionInput {
   userAgent?: string;
 }
 
-export interface ContactSubmissionRecord {
+interface ContactSubmissionRecord {
   createdAt: string;
   email: string;
   id: number;
@@ -26,7 +26,7 @@ export interface ContactSubmissionRecord {
   updatedAt: string;
 }
 
-export interface ContactMessageRecord {
+interface ContactMessageRecord {
   createdAt: string;
   id: number;
   message: string;
@@ -35,7 +35,7 @@ export interface ContactMessageRecord {
   submissionId: number;
 }
 
-export interface TicketDetailsResponse {
+interface TicketDetailsResponse {
   category: string;
   createdAt: string;
   email: string;
@@ -61,7 +61,7 @@ function generateTicketNumber(): string {
   return `TK-${timestamp}-${randomPart}`;
 }
 
-export async function createContactSubmission(
+async function createContactSubmission(
   input: CreateContactSubmissionInput
 ): Promise<{ ticketNumber: string; trackingToken: string }> {
   const pool = getDbPool();
@@ -107,7 +107,7 @@ export async function createContactSubmission(
   }
 }
 
-export async function getTicketByTrackingToken(
+async function getTicketByTrackingToken(
   token: string
 ): Promise<TicketDetailsResponse | null> {
   const pool = getDbPool();
@@ -173,7 +173,7 @@ export async function getTicketByTrackingToken(
   }
 }
 
-export async function addTicketReply(
+async function addTicketReply(
   token: string,
   message: string,
   senderName: string,
@@ -230,3 +230,6 @@ export async function addTicketReply(
     throw error;
   }
 }
+
+export { addTicketReply, createContactSubmission, getTicketByTrackingToken };
+export type { ContactMessageRecord, ContactSubmissionRecord, CreateContactSubmissionInput, TicketDetailsResponse };

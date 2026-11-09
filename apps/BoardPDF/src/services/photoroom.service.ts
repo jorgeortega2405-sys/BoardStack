@@ -1,7 +1,7 @@
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 
-export async function removeBackground(
+async function removeBackground(
   imageBuffer: Buffer,
   mimeType = 'image/png',
   filename = 'image.png'
@@ -35,3 +35,5 @@ export async function removeBackground(
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
+
+export { removeBackground };

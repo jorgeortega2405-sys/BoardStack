@@ -23,14 +23,14 @@ def repair_pdf(input_pdf, output_pdf):
 
 def main():
     if len(sys.argv) < 3:
-        print(json.dumps({'error': 'Uso: python repair_worker.py <input> <output>', 'success': False}))
+        print(json.dumps({'error': 'Usage: python repair_worker.py <input> <output>', 'success': False}))
         sys.exit(1)
 
     input_pdf = sys.argv[1]
     output_pdf = sys.argv[2]
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({'error': 'Archivo de entrada no existe', 'success': False}))
+        print(json.dumps({'error': 'Input file does not exist', 'success': False}))
         sys.exit(1)
 
     try:

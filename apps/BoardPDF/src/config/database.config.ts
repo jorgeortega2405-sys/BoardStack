@@ -4,7 +4,7 @@ import { config } from './env.config.js';
 
 let dbPool: Pool | null = null;
 
-export function getDbPool(): Pool {
+function getDbPool(): Pool {
   if (!dbPool) {
     dbPool = mysql.createPool({
       connectionLimit: 10,
@@ -19,7 +19,7 @@ export function getDbPool(): Pool {
   return dbPool;
 }
 
-export async function checkDatabaseConnection(retries = 2, delayMs = 500): Promise<boolean> {
+async function checkDatabaseConnection(retries = 2, delayMs = 500): Promise<boolean> {
   const pool = getDbPool();
   for (let i = 1; i <= retries; i++) {
     try {
@@ -38,3 +38,5 @@ export async function checkDatabaseConnection(retries = 2, delayMs = 500): Promi
   }
   return false;
 }
+
+export { checkDatabaseConnection, getDbPool };

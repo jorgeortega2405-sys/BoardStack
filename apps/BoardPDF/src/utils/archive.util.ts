@@ -1,6 +1,6 @@
 import { ZipArchive } from 'archiver';
 
-export function createZipBuffer(files: Array<{ buffer: Buffer; name: string }>): Promise<Buffer> {
+function createZipBuffer(files: Array<{ buffer: Buffer; name: string }>): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const archive = new ZipArchive({ zlib: { level: 9 } });
     const chunks: Buffer[] = [];
@@ -16,3 +16,5 @@ export function createZipBuffer(files: Array<{ buffer: Buffer; name: string }>):
     void archive.finalize();
   });
 }
+
+export { createZipBuffer };

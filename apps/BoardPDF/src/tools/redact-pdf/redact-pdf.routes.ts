@@ -16,4 +16,3 @@ router.post('/tools/redact-pdf/redact', optionalAuth, redactPdfLimiter, uploadMi
 router.get('/tools/redact-pdf/download/:fileId', handleToolDownload);
 
 export default router;
-

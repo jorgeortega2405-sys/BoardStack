@@ -1,4 +1,4 @@
-export interface UserPayload {
+interface UserPayload {
   ai_tokens_balance?: number;
   ai_tokens_reset_at?: string;
   avatar_url?: string | null;
@@ -19,7 +19,7 @@ export interface UserPayload {
   username: string;
 }
 
-export interface SessionAccount {
+interface SessionAccount {
   ai_tokens_balance?: number;
   ai_tokens_reset_at?: string;
   avatar_url?: string | null;
@@ -40,10 +40,12 @@ export interface SessionAccount {
   username: string;
 }
 
-export interface MultiAccountSessionPayload {
+interface MultiAccountSessionPayload {
   accounts: SessionAccount[];
   activeId: number;
   exp?: number;
   iat?: number;
   sessionId?: string;
 }
+
+export type { MultiAccountSessionPayload, SessionAccount, UserPayload };

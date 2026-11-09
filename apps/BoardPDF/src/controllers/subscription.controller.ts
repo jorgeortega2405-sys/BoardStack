@@ -24,7 +24,7 @@ function isSafeClientError(msg: string): boolean {
   );
 }
 
-export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
+async function getSubscriptions(_req: Request, res: Response): Promise<void> {
   try {
     const subscriptions = Object.values(PLAN_TIER_CONFIGS);
     sendSuccess(res, { subscriptions });
@@ -33,7 +33,7 @@ export async function getSubscriptions(_req: Request, res: Response): Promise<vo
   }
 }
 
-export async function createCheckout(req: Request, res: Response): Promise<void> {
+async function createCheckout(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -74,7 +74,7 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
   }
 }
 
-export async function verifySession(req: Request, res: Response): Promise<void> {
+async function verifySession(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -105,7 +105,7 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function handleWebhook(req: Request, res: Response): Promise<void> {
+async function handleWebhook(req: Request, res: Response): Promise<void> {
   try {
     const sig = req.headers['stripe-signature'];
     if (!sig || typeof sig !== 'string') {
@@ -131,7 +131,7 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
   }
 }
 
-export async function getBillingDetails(req: Request, res: Response): Promise<void> {
+async function getBillingDetails(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -146,7 +146,7 @@ export async function getBillingDetails(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function getPurchaseHistory(req: Request, res: Response): Promise<void> {
+async function getPurchaseHistory(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -161,7 +161,7 @@ export async function getPurchaseHistory(req: Request, res: Response): Promise<v
   }
 }
 
-export async function downloadPurchaseInvoice(req: Request, res: Response): Promise<void> {
+async function downloadPurchaseInvoice(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -196,7 +196,7 @@ export async function downloadPurchaseInvoice(req: Request, res: Response): Prom
   }
 }
 
-export async function updateAutoRenewal(req: Request, res: Response): Promise<void> {
+async function updateAutoRenewal(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -220,7 +220,7 @@ export async function updateAutoRenewal(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function cancelSubscriptionImmediate(req: Request, res: Response): Promise<void> {
+async function cancelSubscriptionImmediate(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -244,7 +244,7 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
   }
 }
 
-export async function getPaymentMethods(req: Request, res: Response): Promise<void> {
+async function getPaymentMethods(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -259,7 +259,7 @@ export async function getPaymentMethods(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function createSetupIntent(req: Request, res: Response): Promise<void> {
+async function createSetupIntent(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -274,7 +274,7 @@ export async function createSetupIntent(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function setDefaultPaymentMethod(req: Request, res: Response): Promise<void> {
+async function setDefaultPaymentMethod(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -295,7 +295,7 @@ export async function setDefaultPaymentMethod(req: Request, res: Response): Prom
   }
 }
 
-export async function deletePaymentMethod(req: Request, res: Response): Promise<void> {
+async function deletePaymentMethod(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -316,7 +316,7 @@ export async function deletePaymentMethod(req: Request, res: Response): Promise<
   }
 }
 
-export async function createSubscriptionIntent(req: Request, res: Response): Promise<void> {
+async function createSubscriptionIntent(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -354,7 +354,7 @@ export async function createSubscriptionIntent(req: Request, res: Response): Pro
   }
 }
 
-export async function confirmSubscriptionPayment(req: Request, res: Response): Promise<void> {
+async function confirmSubscriptionPayment(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -388,7 +388,7 @@ export async function confirmSubscriptionPayment(req: Request, res: Response): P
   }
 }
 
-export async function createOneTimeIntent(req: Request, res: Response): Promise<void> {
+async function createOneTimeIntent(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -426,7 +426,7 @@ export async function createOneTimeIntent(req: Request, res: Response): Promise<
   }
 }
 
-export async function confirmOneTimePayment(req: Request, res: Response): Promise<void> {
+async function confirmOneTimePayment(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
@@ -455,3 +455,5 @@ export async function confirmOneTimePayment(req: Request, res: Response): Promis
     sendInternalError(res, 'Error al confirmar activación de pago único', error, 'No se pudo confirmar el pago.');
   }
 }
+
+export { cancelSubscriptionImmediate, confirmOneTimePayment, confirmSubscriptionPayment, createCheckout, createOneTimeIntent, createSetupIntent, createSubscriptionIntent, deletePaymentMethod, downloadPurchaseInvoice, getBillingDetails, getPaymentMethods, getPurchaseHistory, getSubscriptions, handleWebhook, setDefaultPaymentMethod, updateAutoRenewal, verifySession };

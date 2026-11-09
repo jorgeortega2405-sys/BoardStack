@@ -80,7 +80,7 @@ def apply_forensic_redactions(input_pdf, output_pdf, redactions_spec, sanitize_m
 
 def main():
     if len(sys.argv) < 4:
-        print(json.dumps({'error': 'Uso: python redact_worker.py <input> <output> <redactions_json> [sanitize_meta]', 'success': False}))
+        print(json.dumps({'error': 'Usage: python redact_worker.py <input> <output> <redactions_json> [sanitize_meta]', 'success': False}))
         sys.exit(1)
 
     input_pdf = sys.argv[1]
@@ -89,7 +89,7 @@ def main():
     sanitize_meta = sys.argv[4] != "0" if len(sys.argv) > 4 else True
 
     if not os.path.exists(input_pdf):
-        print(json.dumps({'error': 'Archivo de entrada no existe', 'success': False}))
+        print(json.dumps({'error': 'Input file does not exist', 'success': False}))
         sys.exit(1)
 
     try:

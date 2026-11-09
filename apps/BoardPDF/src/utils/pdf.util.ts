@@ -4,7 +4,7 @@ import path from 'path';
 
 let resolvedGsCommand: string | null = null;
 
-export function isPdfBuffer(buffer: Buffer): boolean {
+function isPdfBuffer(buffer: Buffer): boolean {
   if (!buffer || buffer.length < 5) return false;
   return (
     buffer[0] === 0x25 &&
@@ -15,7 +15,7 @@ export function isPdfBuffer(buffer: Buffer): boolean {
   );
 }
 
-export function sanitizePdfFilename(rawName?: string, defaultName = 'document.pdf'): string {
+function sanitizePdfFilename(rawName?: string, defaultName = 'document.pdf'): string {
   if (!rawName || typeof rawName !== 'string') {
     return defaultName;
   }
@@ -27,7 +27,7 @@ export function sanitizePdfFilename(rawName?: string, defaultName = 'document.pd
   return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
 }
 
-export async function extractPdfText(buffer: Buffer): Promise<{ fullText: string; pages: string[] }> {
+async function extractPdfText(buffer: Buffer): Promise<{ fullText: string; pages: string[] }> {
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), verbosity: 0 }).promise;
@@ -50,7 +50,7 @@ export async function extractPdfText(buffer: Buffer): Promise<{ fullText: string
   }
 }
 
-export async function getPdfPageCount(buffer: Buffer): Promise<number> {
+async function getPdfPageCount(buffer: Buffer): Promise<number> {
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), verbosity: 0 }).promise;
@@ -60,7 +60,7 @@ export async function getPdfPageCount(buffer: Buffer): Promise<number> {
   }
 }
 
-export function cleanTextForWinAnsi(text: string): string {
+function cleanTextForWinAnsi(text: string): string {
   if (!text || typeof text !== 'string') return '';
   const str = text.replace(/\uFFFD/g, '');
   let result = '';
@@ -81,7 +81,7 @@ export function cleanTextForWinAnsi(text: string): string {
   return result;
 }
 
-export function parseHexColor(hex?: string): { b: number; g: number; r: number } {
+function parseHexColor(hex?: string): { b: number; g: number; r: number } {
   if (!hex || typeof hex !== 'string' || hex === 'transparent' || hex === 'none') {
     return { b: 0, g: 0, r: 0 };
   }
@@ -109,7 +109,7 @@ export function parseHexColor(hex?: string): { b: number; g: number; r: number }
   return { b: 0, g: 0, r: 0 };
 }
 
-export function getGhostscriptCommand(): string {
+function getGhostscriptCommand(): string {
   if (resolvedGsCommand) return resolvedGsCommand;
   const candidates = process.platform === 'win32'
     ? ['gswin64c', 'gswin32c', 'gs']
@@ -128,3 +128,5 @@ export function getGhostscriptCommand(): string {
   resolvedGsCommand = 'gs';
   return resolvedGsCommand;
 }
+
+export { cleanTextForWinAnsi, extractPdfText, getGhostscriptCommand, getPdfPageCount, isPdfBuffer, parseHexColor, sanitizePdfFilename };

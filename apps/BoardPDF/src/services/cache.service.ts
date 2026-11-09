@@ -1,7 +1,7 @@
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
-export const CACHE_KEYS = {
+const CACHE_KEYS = {
   userBilling: (userId: string) => `cache:user:billing:${userId}`,
   userById: (userId: string) => `cache:user:id:${userId}`,
   userEmail: (email: string) => `cache:user:email:${email.toLowerCase().trim()}`,
@@ -11,7 +11,7 @@ export const CACHE_KEYS = {
   userUsername: (username: string) => `cache:user:username:${username.toLowerCase().trim()}`,
 };
 
-export const CACHE_TTL = {
+const CACHE_TTL = {
   userBilling: 300,
   userById: 300,
   userEmail: 300,
@@ -20,7 +20,7 @@ export const CACHE_TTL = {
   userUsername: 300,
 };
 
-export async function get<T>(key: string): Promise<T | null | undefined> {
+async function get<T>(key: string): Promise<T | null | undefined> {
   try {
     const raw = await redis.get(key);
     if (raw === null || raw === undefined) {
@@ -39,7 +39,7 @@ export async function get<T>(key: string): Promise<T | null | undefined> {
   }
 }
 
-export async function set(key: string, value: unknown, ttlSeconds = 300): Promise<boolean> {
+async function set(key: string, value: unknown, ttlSeconds = 300): Promise<boolean> {
   try {
     const serialized = value === null || value === undefined ? 'null' : JSON.stringify(value);
     await redis.setex(key, ttlSeconds, serialized);
@@ -53,7 +53,7 @@ export async function set(key: string, value: unknown, ttlSeconds = 300): Promis
   }
 }
 
-export async function del(...keys: string[]): Promise<boolean> {
+async function del(...keys: string[]): Promise<boolean> {
   const validKeys = keys.filter(Boolean);
   if (validKeys.length === 0) {
     return false;
@@ -70,7 +70,7 @@ export async function del(...keys: string[]): Promise<boolean> {
   }
 }
 
-export async function remember<T>(
+async function remember<T>(
   key: string,
   ttlSeconds: number,
   fetcher: () => Promise<T | null>,
@@ -86,7 +86,7 @@ export async function remember<T>(
   return fresh;
 }
 
-export async function invalidateUser(
+async function invalidateUser(
   userId: string,
   email?: string,
   username?: string
@@ -108,18 +108,18 @@ export async function invalidateUser(
   await del(...keys);
 }
 
-export async function invalidateUserCache(
+async function invalidateUserCache(
   userId: string,
   identifiers?: { email?: string; username?: string }
 ): Promise<void> {
   await invalidateUser(userId, identifiers?.email, identifiers?.username);
 }
 
-export async function invalidateUserPrefs(userId: string): Promise<void> {
+async function invalidateUserPrefs(userId: string): Promise<void> {
   await del(CACHE_KEYS.userPrefs(userId));
 }
 
-export const cacheService = {
+const cacheService = {
   CACHE_KEYS,
   CACHE_TTL,
   del,
@@ -130,3 +130,5 @@ export const cacheService = {
   remember,
   set,
 };
+
+export { CACHE_KEYS, CACHE_TTL, cacheService, del, get, invalidateUser, invalidateUserCache, invalidateUserPrefs, remember, set };

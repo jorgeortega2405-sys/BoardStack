@@ -1,67 +1,60 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="summarize-pdf-wrapper">
-  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-
-    <div class="tool-top-bar__right" data-ref="tool-top-right">
-      <input class="collaborative-title-input" data-ref="input-doc-title" type="text" placeholder="Nombre del documento" value="" autocomplete="off" />
-      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Ver resumen IA" aria-label="Ver resumen IA">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-        <span class="component-button__text">Resumen IA</span>
-      </button>
-
-      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-        <span class="component-button__text">Resumir PDF</span>
-      </button>
-    </div>
-  </header>
-
-  <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="summarize-pdf-layout">
-    <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="summarize-pdf-workspace">
-      <div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
-        <div class="pdf-viewer-main-layout">
-          <div class="pdf-viewer-canvas-container" data-ref="viewer-scroll-container">
-            <div class="pdf-viewer-pages-wrapper" data-ref="pages-wrapper"></div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-
-    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="summarize-pdf-sidebar">
-      <div class="tool-sidebar__header">
-        <div class="tool-sidebar__header-left">
-          <svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-          <h2 class="tool-sidebar__title">Resumen IA</h2>
-        </div>
-        <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-
-      <div class="tool-sidebar__body">
-        <div class="tool-sidebar__section">
-          <div class="ai-summary-result-panel ai-summary-result-panel--full" data-ref="section-summary-result">
-            <div class="ai-summary-content" data-ref="summary-rendered-text">
-              <p class="tool-sidebar__hint-text">Sube un documento PDF para generar y leer el resumen con IA.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </aside>
-  </div>
-  </div>
-
-  <footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
-    <div class="collaborative-footer__right" data-ref="footer-right">
-      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
-      <div class="collaborative-footer__divider"></div>
-      <input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" aria-label="Nivel de zoom" />
-      <button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom" aria-label="Restablecer zoom">
-        <span data-ref="txt-zoom-level">100%</span>
-      </button>
-    </div>
-  </footer>
+<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+<div class="tool-top-bar__right" data-ref="tool-top-right">
+<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
+<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Ver resumen IA" aria-label="Ver resumen IA">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+<span class="component-button__text" >Resumen IA</span>
+</button>
+<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+<span class="component-button__text" >Resumir PDF</span>
+</button>
 </div>
+</header>
+<div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="summarize-pdf-layout">
+<main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="summarize-pdf-workspace">
+<div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
+<div class="pdf-viewer-main-layout" >
+<div class="pdf-viewer-canvas-container" data-ref="viewer-scroll-container">
+<div class="pdf-viewer-pages-wrapper" data-ref="pages-wrapper"></div>
+</div>
+</div>
+</div>
+</main>
+<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="summarize-pdf-sidebar">
+<div class="tool-sidebar__header" >
+<div class="tool-sidebar__header-left" >
+<svg class="component-icon tool-sidebar__header-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+<h2 class="tool-sidebar__title" >Resumen IA</h2>
+</div>
+<button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
+<div class="tool-sidebar__body" >
+<div class="tool-sidebar__section" >
+<div class="ai-summary-result-panel ai-summary-result-panel--full" data-ref="section-summary-result">
+<div class="ai-summary-content" data-ref="summary-rendered-text">
+<p class="tool-sidebar__hint-text" >Sube un documento PDF para generar y leer el resumen con IA.</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+<footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
+<div class="collaborative-footer__right" data-ref="footer-right">
+<span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
+<div class="collaborative-footer__divider" ></div>
+<input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" aria-label="Nivel de zoom" />
+<button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom" aria-label="Restablecer zoom">
+<span data-ref="txt-zoom-level">100%</span>
+</button>
+</div>
+</footer>
+</div> 

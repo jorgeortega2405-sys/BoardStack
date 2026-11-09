@@ -13,8 +13,9 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { HtmlMargin, HtmlOrientation, HtmlScreenSize, JpgOrientation, JpgPageMargin, JpgPageSize, TO_PDF_CONFIGS, ToPdfRouteConfig, ToPdfSourceType } from './to-pdf-converter.types.js';
+import { t } from '../../../services/i18n.service.js';
 
-export class ToPdfConverterController implements ViewController {
+class ToPdfConverterController implements ViewController {
   private abortController: AbortController | null = null;
   private config: ToPdfRouteConfig;
   private container: HTMLElement;
@@ -382,7 +383,7 @@ export class ToPdfConverterController implements ViewController {
           this.jpgPageSize = val as JpgPageSize;
           const labels: Record<JpgPageSize, string> = {
             a4: 'A4 297x210 mm',
-            fit: 'Ajustado (mismo tamaño de pagina de la imagen)',
+            fit: t('ui.ajustado_mismo_tamano_de_pagina_de_la_im'),
             letter: 'US Letter 215x279.4mm',
           };
           if (jpgSizeText) {
@@ -429,7 +430,7 @@ export class ToPdfConverterController implements ViewController {
     const handleRefresh = () => {
       const targetUrl = this.htmlUrl || this.currentUrl;
       if (!targetUrl) {
-        this.showError('Debes ingresar la dirección URL de una página web.');
+        this.showError(t('ui.debes_ingresar_la_direccion_url_de_una_p'));
         return;
       }
       void this.fetchUrlPreview(targetUrl, this.htmlScreen);
@@ -532,12 +533,12 @@ export class ToPdfConverterController implements ViewController {
       cancelText: 'Cancelar',
       confirmClass: 'component-button--black',
       confirmText: 'Añadir URL',
-      description: 'Escribe la URL de la página web que deseas convertir a PDF.',
+      description: t('ui.escribe_la_url_de_la_pagina_web_que_dese'),
       onConfirm: async (m) => {
         const input = m.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
         let raw = (input?.value || '').trim();
         if (!raw) {
-          m.showError('Debes ingresar la URL de una página web.');
+          m.showError(t('ui.debes_ingresar_la_url_de_una_pagina_web'));
           return false;
         }
         if (!/^https?:\/\//i.test(raw)) {
@@ -600,7 +601,7 @@ export class ToPdfConverterController implements ViewController {
     if (this.config.sourceType === 'jpg-to-pdf') {
       const validImages = files.filter((f) => f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(f.name));
       if (validImages.length === 0) {
-        this.showError('Por favor selecciona archivos de imagen válidos (JPG, JPEG, PNG, WEBP).');
+        this.showError(t('ui.por_favor_selecciona_archivos_de_imagen_'));
         return;
       }
       this.imageFiles.push(...validImages);
@@ -749,7 +750,7 @@ export class ToPdfConverterController implements ViewController {
           if (this.imageFiles.length === 0 && this.currentFile) {
             this.imageFiles = [this.currentFile];
           }
-          if (this.imageFiles.length === 0) throw new Error('Debes seleccionar al menos una imagen.');
+          if (this.imageFiles.length === 0) throw new Error(t('ui.debes_seleccionar_al_menos_una_imagen'));
           for (const img of this.imageFiles) {
             formData.append('files', img, img.name);
           }
@@ -758,7 +759,7 @@ export class ToPdfConverterController implements ViewController {
           formData.append('margin', this.jpgMargin);
           formData.append('merge', this.jpgMerge ? 'true' : 'false');
         } else {
-          if (!this.currentFile) throw new Error('Debes seleccionar un archivo para convertir.');
+          if (!this.currentFile) throw new Error(t('ui.debes_seleccionar_un_archivo_para_conver'));
           formData.append('file', this.currentFile as Blob, this.currentFile.name);
         }
 
@@ -784,11 +785,11 @@ export class ToPdfConverterController implements ViewController {
         };
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
-          throw new Error(result.error || 'Error procesando la conversión.');
+          throw new Error(result.error || t('ui.error_procesando_la_conversion'));
         }
 
         const data = result.data;
-        showToast('Documento convertido exitosamente', 'success');
+        showToast(t('toasts.documento_convertido_exitosamente'), 'success');
         this.phaseManager?.navigateToDownload({
           downloadUrl: data.downloadUrl,
           fileSize: data.fileSize,
@@ -796,8 +797,8 @@ export class ToPdfConverterController implements ViewController {
           returnText: this.config.title,
           returnUrl: window.location.pathname,
           subtitle: this.currentUrl || this.config.sourceType === 'html-to-pdf'
-            ? 'La página web ha sido transformada en un documento PDF con la máxima calidad y fidelidad.'
-            : 'Tu archivo ha sido transformado en PDF con la máxima calidad y fidelidad.',
+            ? t('ui.la_pagina_web_ha_sido_transformada_en_un')
+            : t('ui.tu_archivo_ha_sido_transformado_en_pdf_c'),
           title: `¡${this.config.title} completada con éxito!`,
           token: data.downloadToken,
         });
@@ -805,10 +806,10 @@ export class ToPdfConverterController implements ViewController {
         const errorDetail = err instanceof Error ? err.message : '';
         this.phaseManager?.showError({
           boxText: errorDetail || (this.currentUrl
-            ? 'Comprueba que la dirección URL sea accesible públicamente y no requiera inicio de sesión. Si el problema continúa, contacta a soporte.'
-            : 'Comprueba el formato del documento seleccionado o intenta con un archivo más ligero. Si el problema continúa, contacta a soporte.'),
+            ? t('ui.comprueba_que_la_direccion_url_sea_acces')
+            : t('ui.comprueba_el_formato_del_documento_selec')),
           boxTitle: 'Error en la conversión a PDF',
-          desc: 'Ha ocurrido un error inesperado al procesar la conversión. Por favor intenta más tarde.',
+          desc: t('ui.ha_ocurrido_un_error_inesperado_al_proce'),
           retryText: 'Reintentar Conversión',
           title: '¡Oh no! No hemos podido convertir tu archivo.',
         });
@@ -864,7 +865,7 @@ export class ToPdfConverterController implements ViewController {
       };
 
       if (!response.ok || !result.success || !result.data?.previewImage) {
-        throw new Error(result.error || 'No se pudo generar la vista previa');
+        throw new Error(result.error || t('ui.no_se_pudo_generar_la_vista_previa'));
       }
 
       if (img) {
@@ -872,17 +873,19 @@ export class ToPdfConverterController implements ViewController {
         showElement(img);
       }
     } catch {
-      showToast('No se pudo generar la vista previa de la página web.', 'warning');
+      showToast(t('toasts.no_se_pudo_generar_la_vista_previa_de_la'), 'warning');
     } finally {
       hideElement(loader);
     }
   }
 }
 
-export async function createToPdfConverterView(sourceType?: ToPdfSourceType): Promise<HTMLElement> {
+async function createToPdfConverterView(sourceType?: ToPdfSourceType): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/to-pdf-converter/to-pdf-converter.html');
   const controller = new ToPdfConverterController(container, sourceType);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
+
+export { ToPdfConverterController, createToPdfConverterView };

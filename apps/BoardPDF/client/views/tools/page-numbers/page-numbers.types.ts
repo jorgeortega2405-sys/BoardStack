@@ -1,4 +1,4 @@
-export type PageNumberPosition =
+type PageNumberPosition =
   | 'bottom-center'
   | 'bottom-left'
   | 'bottom-right'
@@ -6,20 +6,22 @@ export type PageNumberPosition =
   | 'top-left'
   | 'top-right';
 
-export type PageNumberMargin = 'large' | 'recommended' | 'small';
+type PageNumberMargin = 'large' | 'recommended' | 'small';
 
-export type PageNumberMode = 'double' | 'single';
+type PageNumberMode = 'double' | 'single';
 
-export interface PageThumbnailItem {
+interface PageThumbnailItem {
   id: string;
   originalIndex: number;
   pageNum: number;
 }
 
-export interface PageNumberResponseData {
+interface PageNumberResponseData {
   downloadUrl: string;
   fileId: string;
   filename: string;
   fileSize: number;
   totalPages: number;
 }
+
+export type { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem };

@@ -2,7 +2,7 @@ import { escapeHtml } from '../../services/api.service.js';
 import { hideElement, showElement } from '../../utils/dom.util.js';
 import { CHART_PALETTES, ChartType, ElementChart, ElementChartDataSeries, ElementChartOptions } from './collaborative-pdf.types.js';
 
-export function switchChartInspectorTab(
+function switchChartInspectorTab(
   tab: 'customize' | 'data',
   queryPanel: <T extends HTMLElement>(selector: string) => T | null
 ): void {
@@ -27,7 +27,7 @@ export function switchChartInspectorTab(
   }
 }
 
-export function renderChartSpreadsheet(
+function renderChartSpreadsheet(
   el: ElementChart,
   queryPanel: <T extends HTMLElement>(selector: string) => T | null,
   onUpdateChartSvg: (el: ElementChart) => void
@@ -94,7 +94,7 @@ export function renderChartSpreadsheet(
   });
 }
 
-export function syncChartInspector(
+function syncChartInspector(
   el: ElementChart,
   queryPanel: <T extends HTMLElement>(selector: string) => T | null,
   queryPanelAll: <T extends HTMLElement>(selector: string) => NodeListOf<T>,
@@ -157,7 +157,7 @@ export function syncChartInspector(
   renderChartSpreadsheet(el, queryPanel, onUpdateChartSvg);
 }
 
-export function bindChartInspectorEvents(
+function bindChartInspectorEvents(
   signal: AbortSignal | undefined,
   restoreElementsMain: () => void,
   queryPanel: <T extends HTMLElement>(selector: string) => T | null,
@@ -313,3 +313,5 @@ export function bindChartInspectorEvents(
   bindOptSwitch('input-chart-ylabels', 'showYLabels');
   bindOptSwitch('input-chart-gridlines', 'showGridLines');
 }
+
+export { bindChartInspectorEvents, renderChartSpreadsheet, switchChartInspectorTab, syncChartInspector };

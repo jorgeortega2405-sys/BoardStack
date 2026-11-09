@@ -1,35 +1,19 @@
-import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { isPdfBuffer } from '../../utils/pdf.util.js';
 import { createPdfUploadMiddleware } from '../../utils/upload.util.js';
+import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { splitPdfFile } from './split-pdf.service.js';
 import { SplitPdfOptions } from './split-pdf.types.js';
 import { Request, Response } from 'express';
 
-export const handleSplitUploadMiddleware = createPdfUploadMiddleware({
+const handleSplitUploadMiddleware = createPdfUploadMiddleware({
   fieldName: 'pdf',
   maxFileSizeMB: 1000,
   maxFiles: 1,
 });
 
-export async function handleSplitPdf(req: Request, res: Response): Promise<void> {
-  const file = req.file;
-
-  if (!file) {
-    res.status(400).json({
-      error: 'Debes seleccionar un archivo PDF para poder dividirlo.',
-      success: false,
-    });
-    return;
-  }
-
-  if (!isPdfBuffer(file.buffer)) {
-    res.status(400).json({
-      error: 'El archivo enviado no corresponde a un documento PDF válido.',
-      success: false,
-    });
-    return;
-  }
+async function handleSplitPdf(req: Request, res: Response): Promise<void> {
+  const file = validatePdfUpload(req, res, 'split-pdf');
+  if (!file) return;
 
   let options: SplitPdfOptions;
   try {
@@ -57,21 +41,8 @@ export async function handleSplitPdf(req: Request, res: Response): Promise<void>
     return;
   }
 
-  const userPerms = ((req as any).user?.permissions as string[]) || [];
-  const limits = getToolLimits('split-pdf', userPerms);
-  const maxBytes = limits.maxFileSizeMB * 1024 * 1024;
-
-  if (file.buffer.length > maxBytes) {
-    res.status(400).json({
-      error: `El archivo seleccionado supera el límite permitido de ${limits.maxFileSizeMB} MB.`,
-      success: false,
-    });
-    return;
-  }
-
   try {
     const result = await splitPdfFile(file.buffer, file.originalname, options);
-
     res.status(200).json({
       data: result,
       success: true,
@@ -87,3 +58,5 @@ export async function handleSplitPdf(req: Request, res: Response): Promise<void>
     });
   }
 }
+
+export { handleSplitPdf, handleSplitUploadMiddleware };

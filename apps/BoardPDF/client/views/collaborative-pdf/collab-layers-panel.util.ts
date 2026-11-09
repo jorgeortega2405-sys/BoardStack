@@ -1,6 +1,7 @@
 import { EditorElement } from './collaborative-pdf.types.js';
+import { t } from '../../services/i18n.service.js';
 
-export interface CollabLayersPanelOptions {
+interface CollabLayersPanelOptions {
   container: HTMLElement;
   elements: EditorElement[];
   isLayersPanelOpen: boolean;
@@ -12,7 +13,7 @@ export interface CollabLayersPanelOptions {
   selectedPageIndex: number | null;
 }
 
-export function renderLayersList(options: CollabLayersPanelOptions): void {
+function renderLayersList(options: CollabLayersPanelOptions): void {
   const {
     container,
     elements,
@@ -47,7 +48,7 @@ export function renderLayersList(options: CollabLayersPanelOptions): void {
   if (pageElements.length === 0) {
     const emptyDiv = document.createElement('div');
     emptyDiv.className = 'collab-layers-empty';
-    emptyDiv.textContent = 'No hay elementos en esta página';
+    emptyDiv.textContent = t('ui.no_hay_elementos_en_esta_pagina');
     listEl.appendChild(emptyDiv);
     return;
   }
@@ -172,3 +173,6 @@ export function renderLayersList(options: CollabLayersPanelOptions): void {
     listEl.appendChild(item);
   });
 }
+
+export { renderLayersList };
+export type { CollabLayersPanelOptions };

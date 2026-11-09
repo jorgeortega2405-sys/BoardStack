@@ -2,7 +2,7 @@ import { generateAvatarSvg } from '../services/avatar.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
-export function handleAvatarRequest(req: Request, res: Response): void {
+function handleAvatarRequest(req: Request, res: Response): void {
   try {
     const name = String(req.query.name || req.query.username || 'User').trim();
     const size = Number(req.query.size) || 80;
@@ -19,3 +19,5 @@ export function handleAvatarRequest(req: Request, res: Response): void {
     res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
+
+export { handleAvatarRequest };

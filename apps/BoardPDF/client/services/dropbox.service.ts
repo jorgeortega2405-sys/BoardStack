@@ -1,12 +1,13 @@
 import { showToast } from './toast.service.js';
+import { t } from './i18n.service.js';
 
-export const DROPBOX_APP_KEY = (import.meta as any).env?.VITE_DROPBOX_APP_KEY || 'btnm84g2xk1h2qr';
+const DROPBOX_APP_KEY = (import.meta as any).env?.VITE_DROPBOX_APP_KEY || 'btnm84g2xk1h2qr';
 
 declare const window: any;
 
 let dropboxLoadingPromise: Promise<void> | null = null;
 
-export function loadDropboxScript(): Promise<void> {
+function loadDropboxScript(): Promise<void> {
   if (typeof window !== 'undefined' && window.Dropbox && typeof window.Dropbox.choose === 'function') {
     return Promise.resolve();
   }
@@ -24,7 +25,7 @@ export function loadDropboxScript(): Promise<void> {
         }
         resolve();
       });
-      existing.addEventListener('error', () => reject(new Error('No se pudo cargar el componente de Dropbox.')));
+      existing.addEventListener('error', () => reject(new Error(t('ui.no_se_pudo_cargar_el_componente_de_dropb'))));
       return;
     }
 
@@ -40,26 +41,26 @@ export function loadDropboxScript(): Promise<void> {
       }
       resolve();
     };
-    script.onerror = () => reject(new Error('No se pudo cargar el componente de Dropbox.'));
+    script.onerror = () => reject(new Error(t('ui.no_se_pudo_cargar_el_componente_de_dropb')));
     document.head.appendChild(script);
   });
 
   return dropboxLoadingPromise;
 }
 
-export async function pickDropboxFiles(options: {
+async function pickDropboxFiles(options: {
   extensions?: string[];
   multiselect?: boolean;
 } = {}): Promise<File[]> {
   try {
     await loadDropboxScript();
   } catch {
-    showToast('No se pudo inicializar la conexión con Dropbox.', 'danger');
+    showToast(t('ui.no_se_pudo_inicializar_la_conexion_con_d'), 'danger');
     return [];
   }
 
   if (!window.Dropbox || typeof window.Dropbox.choose !== 'function') {
-    showToast('El selector de Dropbox no está disponible en este momento.', 'danger');
+    showToast(t('ui.el_selector_de_dropbox_no_esta_disponibl'), 'danger');
     return [];
   }
 
@@ -94,7 +95,7 @@ export async function pickDropboxFiles(options: {
               try {
                 const directRes = await fetch(item.link);
                 if (!directRes.ok) {
-                  throw new Error(`Direct download error: ${directRes.status}`);
+                  throw new Error(t('ui.direct_download_error'));
                 }
                 blob = await directRes.blob();
               } catch {
@@ -130,17 +131,17 @@ export async function pickDropboxFiles(options: {
         },
       });
     } catch {
-      showToast('Error al abrir la ventana de Dropbox.', 'danger');
+      showToast(t('ui.error_al_abrir_la_ventana_de_dropbox'), 'danger');
       resolve([]);
     }
   });
 }
 
-export async function exportToDropbox(downloadUrl: string, filename: string): Promise<void> {
+async function exportToDropbox(downloadUrl: string, filename: string): Promise<void> {
   try {
     await loadDropboxScript();
   } catch {
-    showToast('No se pudo inicializar la conexión con Dropbox.', 'danger');
+    showToast(t('ui.no_se_pudo_inicializar_la_conexion_con_d'), 'danger');
     return;
   }
 
@@ -150,10 +151,10 @@ export async function exportToDropbox(downloadUrl: string, filename: string): Pr
     window.Dropbox.save(absoluteUrl, filename, {
       cancel: () => {},
       error: () => {
-        showToast('No se pudo guardar el archivo en Dropbox.', 'danger');
+        showToast(t('ui.no_se_pudo_guardar_el_archivo_en_dropbox'), 'danger');
       },
       success: () => {
-        showToast('Archivo guardado en Dropbox con éxito.', 'success');
+        showToast(t('toasts.dropbox_saved'), 'success');
       },
     });
   } else {
@@ -161,3 +162,4 @@ export async function exportToDropbox(downloadUrl: string, filename: string): Pr
   }
 }
 
+export { DROPBOX_APP_KEY, exportToDropbox, loadDropboxScript, pickDropboxFiles };

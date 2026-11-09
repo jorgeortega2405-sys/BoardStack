@@ -2,7 +2,7 @@ import { getDbPool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
-export async function getUserPermissions(
+async function getUserPermissions(
   userId: number,
   tier?: string,
   subStatus?: string
@@ -67,7 +67,7 @@ export async function getUserPermissions(
   return permsList;
 }
 
-export async function invalidateUserPermissions(userId: number): Promise<void> {
+async function invalidateUserPermissions(userId: number): Promise<void> {
   try {
     await redis.del(`user:permissions:${userId}`, `cache:user:perms:${userId}`);
   } catch (err) {
@@ -75,7 +75,9 @@ export async function invalidateUserPermissions(userId: number): Promise<void> {
   }
 }
 
-export const permissionService = {
+const permissionService = {
   getUserPermissions,
   invalidateUserPermissions,
 };
+
+export { getUserPermissions, invalidateUserPermissions, permissionService };

@@ -1,6 +1,6 @@
 let stripePromise: Promise<any> | null = null;
 
-export function loadStripeSdk(publishableKey: string): Promise<any> {
+function loadStripeSdk(publishableKey: string): Promise<any> {
   const win = window as any;
   if (win.Stripe && publishableKey) {
     return Promise.resolve(win.Stripe(publishableKey));
@@ -46,7 +46,7 @@ export function loadStripeSdk(publishableKey: string): Promise<any> {
   return stripePromise;
 }
 
-export function getStripeAppearance(): any {
+function getStripeAppearance(): any {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
     document.documentElement.classList.contains('dark-theme');
 
@@ -118,3 +118,5 @@ export function getStripeAppearance(): any {
     },
   };
 }
+
+export { getStripeAppearance, loadStripeSdk };

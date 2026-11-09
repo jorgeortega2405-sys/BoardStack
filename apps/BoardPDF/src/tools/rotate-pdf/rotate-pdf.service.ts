@@ -5,7 +5,7 @@ import { RotatePdfOptions, RotatePdfResponse, StoredRotatePdfResult } from './ro
 import crypto from 'crypto';
 import { degrees, PDFDocument } from 'pdf-lib';
 
-export async function rotatePdf(
+async function rotatePdf(
   fileBuffer: Buffer,
   originalFilename: string,
   options: RotatePdfOptions
@@ -70,3 +70,5 @@ export async function rotatePdf(
     totalPages,
   };
 }
+
+export { rotatePdf };
