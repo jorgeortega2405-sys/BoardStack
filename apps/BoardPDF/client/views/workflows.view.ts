@@ -1,3 +1,4 @@
+import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { openModal } from '../components/modal.component.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
@@ -13,6 +14,7 @@ import { hideElement, setupDropdown, showElement, toggleElement } from '../utils
 export class WorkflowsController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private footerController: { destroy: () => void } | null = null;
   private workflows: UserWorkflow[] = [];
 
   constructor(container: HTMLElement) {
@@ -24,6 +26,7 @@ export class WorkflowsController {
     this.loadWorkflows();
     this.renderWorkflows();
     this.bindEvents();
+    this.renderFooter();
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('new') === '1') {
@@ -37,6 +40,10 @@ export class WorkflowsController {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.footerController) {
+      this.footerController.destroy();
+      this.footerController = null;
+    }
   }
 
   private loadWorkflows(): void {
@@ -49,8 +56,14 @@ export class WorkflowsController {
 
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow">
-        <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crear flujo de trabajo')}</h3>
-        <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Automatiza tus tareas recurrentes combinando herramientas PDF en un solo proceso.')}</p>
+        <div class="tool-card__content" data-ref="create-workflow-content">
+          <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crea un flujo de trabajo')}</h3>
+          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', 'Crea flujos de trabajo personalizados con tus herramientas favoritas y automatiza tareas para reutilizarlas en cualquier momento.')}</p>
+        </div>
+        <div class="tool-card__action-link" data-ref="link-create-workflow">
+          <span data-ref="txt-action-create-workflow" data-i18n="workflows.create_action">${t('workflows.create_action', 'Crear un flujo de trabajo')}</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_outward"></use></svg>
+        </div>
       </div>
     `;
 
@@ -125,6 +138,14 @@ export class WorkflowsController {
         if (id) navigate(`/workflow/${id}`);
       }
     });
+  }
+
+  private renderFooter(): void {
+    const footerContainer = this.container.querySelector<HTMLElement>('[data-ref="footer-section"], [data-ref="workflows-footer-section"]');
+    if (!footerContainer) return;
+
+    footerContainer.innerHTML = getFooterHtml();
+    this.footerController = mountSiteFooter(footerContainer, this.abortController?.signal);
   }
 
   private openWorkflowModal(workflow?: UserWorkflow): void {

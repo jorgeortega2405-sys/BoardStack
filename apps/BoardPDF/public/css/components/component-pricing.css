@@ -59,6 +59,7 @@
   justify-content: center;
   width: 100%;
   box-sizing: border-box;
+  margin-top: 28px;
   margin-bottom: 0;
 }
 
@@ -73,7 +74,7 @@
 
 .component-pricing-grid {
   display: flex;
-  gap: 24px;
+  gap: 18px;
   flex-wrap: wrap;
   justify-content: center;
   width: 100%;
@@ -89,7 +90,7 @@
   gap: 24px;
   position: relative;
   box-sizing: border-box;
-  border-radius: var(--radius-xl);
+  border-radius: 24px;
   background-color: var(--bg-surface);
   transition: transform var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
 }
@@ -242,6 +243,15 @@ html.dark-theme .component-card-popular-badge {
 
 .component-card-price--custom {
   font-size: 26px;
+}
+
+.component-card-price-value {
+  transition: opacity 0.15s ease;
+}
+
+.component-card-price-value.is-fading,
+.component-card-period.is-fading {
+  opacity: 0;
 }
 
 .component-card-period {
@@ -405,40 +415,52 @@ html.dark-theme .component-card-feature-icon {
   line-height: 1.45;
 }
 
-.component-disclaimer {
+.pricing-notice-card {
+  align-items: flex-start;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.05));
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 24px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  text-align: center;
-  max-width: 1173px;
-  width: 100%;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-
-.component-disclaimer__text {
+  gap: 14px;
   margin: 0;
-  color: var(--text-secondary);
+  overflow: hidden;
+  padding: 32px 36px;
+  position: relative;
+  width: 100%;
 }
 
-.component-disclaimer .link {
-  color: var(--text-primary);
+.pricing-notice-card__text {
+  color: var(--text-secondary, #64748b);
+  font-size: 13.5px;
+  line-height: 1.65;
+  margin: 0;
+  text-align: left;
+}
+
+.pricing-notice-card__text .link {
+  color: var(--text-primary, #0f172a);
+  font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 2px;
-  font-weight: 500;
+  text-underline-offset: 3px;
   transition: color var(--sl-transition-fast);
 }
 
-.component-disclaimer .link:hover {
-  color: var(--action-primary);
+.pricing-notice-card__text .link:hover {
+  color: var(--action-primary, #2563eb);
 }
 
 .pricing-footer-section {
   width: 100%;
+}
+
+@media (max-width: 860px) {
+  .pricing-notice-card {
+    border-radius: 18px;
+    padding: 24px 20px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -447,11 +469,18 @@ html.dark-theme .component-card-feature-icon {
   }
 
   .component-pricing-grid {
+    gap: 14px;
     padding: 0;
   }
 
   .component-card--plan {
     flex: 1 1 100%;
     max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .component-pricing-grid {
+    gap: 12px;
   }
 }

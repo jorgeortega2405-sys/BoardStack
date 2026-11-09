@@ -1,5 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { getApi, postApi } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -145,25 +146,25 @@ export class ContactController implements ViewController {
         const message = (messageInput?.value || '').trim();
 
         if (name.length < 2) {
-          showError('Por favor ingresa tu nombre completo.');
+          showError(t('contact.error_name'));
           nameInput?.focus();
           return;
         }
 
         const emailValidation = validateEmail(email);
         if (!emailValidation.valid) {
-          showError(emailValidation.error || 'Ingresa un correo electrónico válido.');
+          showError(emailValidation.error || t('contact.error_email'));
           emailInput?.focus();
           return;
         }
 
         if (!subject) {
-          showError('Por favor selecciona el asunto de tu consulta.');
+          showError(t('contact.error_subject'));
           return;
         }
 
         if (message.length < 10) {
-          showError('Por favor escribe un mensaje de al menos 10 caracteres para entender tu consulta.');
+          showError(t('contact.error_message'));
           messageInput?.focus();
           return;
         }
@@ -171,26 +172,26 @@ export class ContactController implements ViewController {
         if (this.turnstileContainer && isTurnstileEnabled()) {
           const turnstileToken = getTurnstileResponse(this.turnstileContainer);
           if (!turnstileToken) {
-            showError('Por favor completa la verificación de seguridad antes de continuar.');
+            showError(t('contact.error_turnstile'));
             return;
           }
         }
 
         hideElement(errorBanner);
 
-        await withButtonLoading(submitBtn, 'Enviando mensaje...', async () => {
+        await withButtonLoading(submitBtn, t('contact.sending'), async () => {
           form.reset();
           if (this.turnstileContainer) {
             resetTurnstile(this.turnstileContainer);
           }
           if (subjectInput) subjectInput.value = '';
-          if (subjectText) subjectText.textContent = 'Selecciona un asunto';
+          if (subjectText) subjectText.textContent = t('contact.subject_placeholder');
           const triggerIconUse = subjectDropdown?.querySelector('[data-ref="icon-contact-subject"] use');
           if (triggerIconUse) {
             triggerIconUse.setAttribute('href', '/icons.svg#help');
           }
-          showSuccess('¡Tu mensaje ha sido enviado correctamente! Te responderemos a la brevedad posible.');
-          showToast('Mensaje enviado con éxito', 'success');
+          showSuccess(t('contact.success_message'));
+          showToast(t('contact.toast_success'), 'success');
         });
       },
       { signal: this.abortController?.signal }
@@ -216,7 +217,7 @@ export class ContactController implements ViewController {
         const message = (replyTextarea?.value || '').trim();
         if (message.length < 2) {
           if (replyError) {
-            replyError.textContent = 'Por favor escribe tu mensaje antes de enviar.';
+            replyError.textContent = t('contact.error_reply_empty');
             showElement(replyError);
           }
           return;
@@ -224,7 +225,7 @@ export class ContactController implements ViewController {
 
         hideElement(replyError);
 
-        await withButtonLoading(replyBtn, 'Enviando respuesta...', async () => {
+        await withButtonLoading(replyBtn, t('contact.sending_reply'), async () => {
           const res = await postApi(`/api/support/tickets/${encodeURIComponent(this.currentTrackingToken!)}/reply`, {
             message,
           });
@@ -232,7 +233,7 @@ export class ContactController implements ViewController {
           const data = (await res.json().catch(() => ({}))) as { error?: string; message?: TicketMessageData };
           if (!res.ok || !data.message) {
             if (replyError) {
-              replyError.textContent = data.error || 'No se pudo enviar la respuesta.';
+              replyError.textContent = data.error || t('contact.error_reply_send');
               showElement(replyError);
             }
             return;
@@ -240,7 +241,7 @@ export class ContactController implements ViewController {
 
           if (replyTextarea) replyTextarea.value = '';
           if (replySuccess) {
-            replySuccess.textContent = 'Tu respuesta ha sido registrada y notificada a soporte.';
+            replySuccess.textContent = t('contact.success_reply');
             showElement(replySuccess);
             setTimeout(() => {
               hideElement(replySuccess);
@@ -251,7 +252,7 @@ export class ContactController implements ViewController {
             this.appendTicketMessage(data.message, messagesList);
             messagesList.scrollTop = messagesList.scrollHeight;
           }
-          showToast('Respuesta enviada', 'success');
+          showToast(t('contact.toast_reply_success'), 'success');
         });
       },
       { signal: this.abortController?.signal }
@@ -276,15 +277,15 @@ export class ContactController implements ViewController {
       const res = await getApi(`/api/support/tickets/${encodeURIComponent(token)}`);
 
       if (!res.ok) {
-        if (titleEl) titleEl.textContent = 'Incidencia no encontrada';
+        if (titleEl) titleEl.textContent = t('contact.ticket_not_found');
         if (numberEl) numberEl.textContent = '#ERROR';
         if (badgeEl) {
-          badgeEl.textContent = 'Inválido';
+          badgeEl.textContent = t('contact.status_invalid');
           badgeEl.className = 'contact-ticket-status-badge contact-ticket-status-badge--closed';
         }
         hideElement(replyForm);
         if (closedNotice) {
-          closedNotice.textContent = 'El enlace de seguimiento no es válido o ha expirado.';
+          closedNotice.textContent = t('contact.ticket_invalid_token');
           showElement(closedNotice);
         }
         return;
@@ -298,11 +299,11 @@ export class ContactController implements ViewController {
 
       if (badgeEl) {
         const statusMap: Record<string, { label: string; modifier: string }> = {
-          closed: { label: 'Cerrado', modifier: 'closed' },
-          in_progress: { label: 'En progreso', modifier: 'waiting' },
-          open: { label: 'Abierto', modifier: 'open' },
-          resolved: { label: 'Resuelto', modifier: 'resolved' },
-          waiting_customer: { label: 'Esperando respuesta', modifier: 'waiting' },
+          closed: { label: t('contact.status_closed'), modifier: 'closed' },
+          in_progress: { label: t('contact.status_in_progress'), modifier: 'waiting' },
+          open: { label: t('contact.status_open'), modifier: 'open' },
+          resolved: { label: t('contact.status_resolved'), modifier: 'resolved' },
+          waiting_customer: { label: t('contact.status_waiting'), modifier: 'waiting' },
         };
         const mapped = statusMap[ticket.status] || { label: ticket.status, modifier: 'open' };
         badgeEl.textContent = mapped.label;
@@ -327,7 +328,7 @@ export class ContactController implements ViewController {
 
       renderIcons(ticketCard || this.container);
     } catch {
-      if (titleEl) titleEl.textContent = 'Error al cargar la incidencia';
+      if (titleEl) titleEl.textContent = t('contact.ticket_load_error');
       hideElement(replyForm);
     }
   }
@@ -343,13 +344,13 @@ export class ContactController implements ViewController {
 
     const author = document.createElement('span');
     author.className = 'contact-ticket-msg__author';
-    author.textContent = isCustomer ? msg.senderName : msg.senderName || 'Soporte BoardPDF';
+    author.textContent = isCustomer ? msg.senderName : msg.senderName || t('contact.support_team');
     meta.appendChild(author);
 
     if (!isCustomer) {
       const badge = document.createElement('span');
       badge.className = 'contact-ticket-msg__badge';
-      badge.textContent = 'Agente';
+      badge.textContent = t('contact.badge_agent');
       meta.appendChild(badge);
     }
 

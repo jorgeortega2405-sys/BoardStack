@@ -144,7 +144,7 @@ export class HelpFaqController implements ViewController {
     this.abortController = new AbortController();
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-faq-search"]');
     if (searchInput) {
-      searchInput.placeholder = t('help.faq.search_placeholder') || 'Buscar preguntas frecuentes...';
+      searchInput.placeholder = t('help.faq.search_placeholder');
     }
     this.renderFaqItems();
     this.renderFooter();
@@ -181,8 +181,8 @@ export class HelpFaqController implements ViewController {
     if (filteredItems.length === 0) {
       itemsContainer.innerHTML = `
         <div class="faq-group faq-group--empty" data-ref="faq-empty-state">
-          <h3 class="faq-group__title faq-group__title--empty" data-ref="faq-empty-title">${t('help.faq.empty_title') || 'No se encontraron resultados'}</h3>
-          <p class="settings-subtitle" data-ref="faq-empty-desc">${t('help.faq.empty_desc') || 'Intenta buscar con otras palabras o selecciona otra categoría.'}</p>
+          <h3 class="faq-group__title faq-group__title--empty" data-ref="faq-empty-title">${t('help.faq.empty_title')}</h3>
+          <p class="settings-subtitle" data-ref="faq-empty-desc">${t('help.faq.empty_desc')}</p>
         </div>
       `;
       return;

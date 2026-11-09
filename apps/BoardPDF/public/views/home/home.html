@@ -2,81 +2,82 @@
   <div class="view-backdrop view-backdrop--dots" data-ref="home-gradient-backdrop"></div>
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="home-scrollable">
     <div class="view-body" data-ref="home-container">
-      <header class="home-top-bar" data-ref="home-top-bar">
-        <a class="home-brand" data-ref="home-brand-logo" href="/" aria-label="BoardPDF">
-          <span class="home-brand__wordmark" data-ref="home-brand-wordmark">Board<span class="home-brand__accent" data-ref="home-brand-accent">PDF</span></span>
-        </a>
+      <header class="view-section view-section--header" data-ref="header-section">
+        <div class="header-bar" data-ref="header-bar">
+          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+          </a>
+        </div>
       </header>
 
-      <div class="view-hero" data-ref="home-hero">
-        <div class="view-hero__content" data-ref="home-hero-content">
-          <h1 class="view-hero__title" data-ref="hero-title" data-i18n="home.title"></h1>
-          <p class="view-hero__subtitle" data-ref="hero-subtitle" data-i18n="home.subtitle"></p>
-        </div>
+      <section class="view-section view-section--hero" data-ref="hero-section">
+        <div class="view-hero" data-ref="hero-block">
+          <div class="view-hero__content" data-ref="hero-content">
+            <h1 class="view-hero__title" data-ref="hero-title" data-i18n="home.title"></h1>
+            <p class="view-hero__subtitle" data-ref="hero-subtitle" data-i18n="home.subtitle"></p>
+          </div>
 
-        <div class="categories-bar" data-ref="categories-bar">
-          <button type="button" class="category-pill is-active" data-ref="pill-cat-all" data-i18n="home.cat_all" data-category="all"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-workflows" data-i18n="home.cat_workflows" data-category="workflows"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-organize" data-i18n="home.cat_organize" data-category="organize"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-optimize" data-i18n="home.cat_optimize" data-category="optimize"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-convert-to-pdf" data-i18n="home.cat_convert_to_pdf" data-category="convert-to-pdf"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-convert-from-pdf" data-i18n="home.cat_convert_from_pdf" data-category="convert-from-pdf"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-edit" data-i18n="home.cat_edit" data-category="edit"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-security" data-i18n="home.cat_security" data-category="security"></button>
-          <button type="button" class="category-pill" data-ref="pill-cat-pdf-intelligence" data-i18n="home.cat_pdf_intelligence" data-category="pdf-intelligence"></button>
+          <div class="categories-bar" data-ref="categories-bar">
+            <button type="button" class="category-pill is-active" data-ref="pill-cat-all" data-i18n="home.cat_all" data-category="all"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-workflows" data-i18n="home.cat_workflows" data-category="workflows"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-organize" data-i18n="home.cat_organize" data-category="organize"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-optimize" data-i18n="home.cat_optimize" data-category="optimize"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-convert-to-pdf" data-i18n="home.cat_convert_to_pdf" data-category="convert-to-pdf"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-convert-from-pdf" data-i18n="home.cat_convert_from_pdf" data-category="convert-from-pdf"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-edit" data-i18n="home.cat_edit" data-category="edit"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-security" data-i18n="home.cat_security" data-category="security"></button>
+            <button type="button" class="category-pill" data-ref="pill-cat-pdf-intelligence" data-i18n="home.cat_pdf_intelligence" data-category="pdf-intelligence"></button>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <section class="tools-section" data-ref="tools-section">
+      <section class="view-section view-section--tools" data-ref="tools-section">
         <div class="tools-grid" data-ref="tools-grid"></div>
       </section>
 
-      <section class="home-feature-section" data-ref="home-design-pdf-section">
-        <div class="home-design-pdf-card" data-ref="home-design-pdf-card">
-          <div class="home-design-pdf__inner" data-ref="home-design-pdf-inner">
-            <div class="home-design-pdf__content" data-ref="home-design-pdf-content">
-              <div class="home-design-pdf__badge" data-ref="home-design-pdf-badge">
-                <svg class="component-icon home-design-pdf__badge-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                <span class="home-design-pdf__badge-text" data-ref="txt-home-design-badge" data-i18n="home.design_pdf_badge"></span>
-              </div>
-              <h2 class="home-design-pdf__title" data-ref="home-design-pdf-title" data-i18n="home.design_pdf_title"></h2>
-              <p class="home-design-pdf__desc" data-ref="home-design-pdf-desc" data-i18n="home.design_pdf_desc"></p>
-              <div class="home-design-pdf__actions" data-ref="home-design-pdf-actions">
-                <button type="button" class="component-button component-button--black component-button--h48 home-design-pdf__cta" data-ref="btn-home-design-pdf" data-i18n="home.design_pdf_cta"></button>
+      <section class="view-section view-section--feature" data-ref="feature-section">
+        <div class="feature-banner-card" data-ref="feature-banner-card">
+          <div class="feature-banner__inner" data-ref="feature-banner-inner">
+            <div class="feature-banner__content" data-ref="feature-banner-content">
+              <span class="category-pill" data-ref="feature-banner-badge" data-i18n="home.design_pdf_badge"></span>
+              <h2 class="feature-banner__title" data-ref="feature-banner-title" data-i18n="home.design_pdf_title"></h2>
+              <p class="feature-banner__desc" data-ref="feature-banner-desc" data-i18n="home.design_pdf_desc"></p>
+              <div class="feature-banner__actions" data-ref="feature-banner-actions">
+                <button type="button" class="component-button component-button--black component-button--h48 feature-banner__cta" data-ref="btn-feature-banner" data-i18n="home.design_pdf_cta"></button>
               </div>
             </div>
-            <div class="home-design-pdf__media" data-ref="home-design-pdf-media">
-              <img class="home-design-pdf__img" data-ref="img-home-design-pdf" src="/images/collaborative-banner.webp" alt="BoardPDF Collaborative Studio" loading="lazy" />
+            <div class="feature-banner__media" data-ref="feature-banner-media">
+              <img class="feature-banner__img" data-ref="img-feature-banner" src="/images/collaborative-banner.webp" alt="BoardPDF Collaborative Studio" loading="lazy" />
             </div>
           </div>
         </div>
       </section>
 
-      <section class="home-feature-section" data-ref="home-trust-section">
-        <div class="home-trust-card" data-ref="home-trust-card">
-          <div class="home-trust-container" data-ref="home-trust-container">
-            <h2 class="home-trust__title" data-ref="home-trust-title" data-i18n="home.trust_title"></h2>
-            <p class="home-trust__subtitle" data-ref="home-trust-subtitle" data-i18n="home.trust_desc"></p>
-            <div class="home-trust__badges" data-ref="home-trust-badges">
-              <div class="home-trust__badge-item" data-ref="trust-badge-iso">
-                <svg class="component-icon home-trust__badge-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
-                <div class="home-trust__badge-text" data-ref="trust-badge-text-iso">
-                  <span class="home-trust__badge-strong">ISO 27001</span>
-                  <span class="home-trust__badge-sub" data-ref="trust-badge-sub-iso" data-i18n="home.trust_security_info"></span>
+      <section class="view-section view-section--trust" data-ref="trust-section">
+        <div class="trust-card" data-ref="trust-card">
+          <div class="trust-container" data-ref="trust-container">
+            <h2 class="trust-card__title" data-ref="trust-title" data-i18n="home.trust_title"></h2>
+            <p class="trust-card__subtitle" data-ref="trust-subtitle" data-i18n="home.trust_desc"></p>
+            <div class="trust-card__badges" data-ref="trust-badges">
+              <div class="trust-badge-item" data-ref="trust-badge-iso">
+                <svg class="component-icon trust-badge-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+                <div class="trust-badge-text" data-ref="trust-badge-text-iso">
+                  <span class="trust-badge-strong">ISO 27001</span>
+                  <span class="trust-badge-sub" data-ref="trust-badge-sub-iso" data-i18n="home.trust_security_info"></span>
                 </div>
               </div>
-              <div class="home-trust__badge-item" data-ref="trust-badge-ssl">
-                <svg class="component-icon home-trust__badge-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-                <div class="home-trust__badge-text" data-ref="trust-badge-text-ssl">
-                  <span class="home-trust__badge-strong">SECURE SSL</span>
-                  <span class="home-trust__badge-sub" data-ref="trust-badge-sub-ssl" data-i18n="home.trust_encryption"></span>
+              <div class="trust-badge-item" data-ref="trust-badge-ssl">
+                <svg class="component-icon trust-badge-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                <div class="trust-badge-text" data-ref="trust-badge-text-ssl">
+                  <span class="trust-badge-strong">SECURE SSL</span>
+                  <span class="trust-badge-sub" data-ref="trust-badge-sub-ssl" data-i18n="home.trust_encryption"></span>
                 </div>
               </div>
-              <div class="home-trust__badge-item" data-ref="trust-badge-association">
-                <svg class="component-icon home-trust__badge-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-                <div class="home-trust__badge-text" data-ref="trust-badge-text-association">
-                  <span class="home-trust__badge-strong">PDF Association</span>
-                  <span class="home-trust__badge-sub" data-ref="trust-badge-sub-association" data-i18n="home.trust_standard"></span>
+              <div class="trust-badge-item" data-ref="trust-badge-association">
+                <svg class="component-icon trust-badge-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+                <div class="trust-badge-text" data-ref="trust-badge-text-association">
+                  <span class="trust-badge-strong">PDF Association</span>
+                  <span class="trust-badge-sub" data-ref="trust-badge-sub-association" data-i18n="home.trust_standard"></span>
                 </div>
               </div>
             </div>
@@ -84,7 +85,7 @@
         </div>
       </section>
 
-      <div class="home-footer-section" data-ref="home-footer-section"></div>
+      <footer class="view-section view-section--footer" data-ref="footer-section"></footer>
     </div>
   </div>
 </div>

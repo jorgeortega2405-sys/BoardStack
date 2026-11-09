@@ -186,12 +186,7 @@ class LoginViewController implements ViewController {
     }, { signal });
 
     const stepMain = this.container.querySelector<HTMLElement>('[data-ref="login-step-main"]');
-    const stepSso = this.container.querySelector<HTMLElement>('[data-ref="login-step-sso"]');
     const step2fa = this.container.querySelector<HTMLElement>('[data-ref="login-step-2fa"]');
-    const ssoEmailInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-sso-email"]');
-    const submitSsoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-sso"]');
-    const backFromSsoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-from-sso"]');
-    const bannersSso = createBannerManager(this.container, { errorRef: 'login-sso-error' });
 
     const input2faCode = this.container.querySelector<HTMLInputElement>('[data-ref="input-login-2fa-code"]');
     const submit2faBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-2fa"]');
@@ -200,25 +195,10 @@ class LoginViewController implements ViewController {
 
     let currentTempToken = '';
 
-    const showSsoStep = () => {
-      banners.hideAll();
-      bannersSso.hideAll();
-      banners2fa.hideAll();
-      if (emailInput?.value.trim() && ssoEmailInput) {
-        ssoEmailInput.value = emailInput.value.trim();
-      }
-      if (stepMain) stepMain.style.display = 'none';
-      if (step2fa) step2fa.style.display = 'none';
-      if (stepSso) stepSso.style.display = '';
-      ssoEmailInput?.focus();
-    };
-
     const showMainStep = () => {
       banners.hideAll();
-      bannersSso.hideAll();
       banners2fa.hideAll();
       currentTempToken = '';
-      if (stepSso) stepSso.style.display = 'none';
       if (step2fa) step2fa.style.display = 'none';
       if (stepMain) stepMain.style.display = '';
       emailInput?.focus();
@@ -226,11 +206,9 @@ class LoginViewController implements ViewController {
 
     const show2faStep = (token: string) => {
       banners.hideAll();
-      bannersSso.hideAll();
       banners2fa.hideAll();
       currentTempToken = token;
       if (stepMain) stepMain.style.display = 'none';
-      if (stepSso) stepSso.style.display = 'none';
       if (step2fa) step2fa.style.display = '';
       if (input2faCode) {
         input2faCode.value = '';
@@ -288,40 +266,7 @@ class LoginViewController implements ViewController {
       showMainStep();
     }, { signal });
 
-    const ssoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-sso-login"]');
-    ssoBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      showSsoStep();
-    }, { signal });
 
-    backFromSsoBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      showMainStep();
-    }, { signal });
-
-    const executeSso = () => {
-      bannersSso.hideAll();
-      const email = ssoEmailInput?.value.trim() || '';
-      const emailValidation = validateEmail(email);
-      if (!emailValidation.valid) {
-        bannersSso.showError(emailValidation.error || 'Ingresa un correo corporativo válido.');
-        ssoEmailInput?.focus();
-        return;
-      }
-      window.location.href = `/api/sso/saml/login?email=${encodeURIComponent(email)}`;
-    };
-
-    submitSsoBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      executeSso();
-    }, { signal });
-
-    ssoEmailInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        executeSso();
-      }
-    }, { signal });
 
     const btnGoogleLogin = this.container.querySelector<HTMLElement>('[data-ref="btn-google-login"]');
     btnGoogleLogin?.addEventListener('click', (e) => {
@@ -340,19 +285,7 @@ class LoginViewController implements ViewController {
       const urlParams = new URLSearchParams(window.location.search);
       const err = urlParams.get('error');
       if (err) {
-        if (err === 'sso_not_configured') {
-          showSsoStep();
-          bannersSso.showError('La organización para este dominio no tiene SSO configurado o habilitado.');
-        } else if (err === 'invalid_saml_assertion') {
-          showSsoStep();
-          bannersSso.showError('La respuesta SAML no pudo ser validada. Verifica el certificado o proveedor.');
-        } else if (err === 'missing_saml_response') {
-          showSsoStep();
-          bannersSso.showError('No se recibió respuesta válida del proveedor de identidad SAML.');
-        } else if (err === 'sso_failed') {
-          showSsoStep();
-          bannersSso.showError('Error al iniciar sesión mediante SSO.');
-        } else if (err === 'google_denied' || err === 'google_cancelled') {
+        if (err === 'google_denied' || err === 'google_cancelled') {
           banners.showError('Se canceló el inicio de sesión con Google.');
         } else if (err === 'google_token_failed' || err === 'google_profile_failed' || err === 'google_failed') {
           banners.showError('No se pudo completar el inicio de sesión con Google. Intenta nuevamente.');

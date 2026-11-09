@@ -2,16 +2,28 @@
   <div class="view-backdrop view-backdrop--dots" data-ref="workflows-gradient-backdrop"></div>
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="workflows-scrollable">
     <div class="view-body" data-ref="workflows-container">
-      <div class="view-hero" data-ref="workflows-hero">
-        <div class="view-hero__content" data-ref="workflows-hero-content">
-          <h1 class="view-hero__title" data-ref="hero-title" data-i18n="workflows.title">Flujos de trabajo</h1>
-          <p class="view-hero__subtitle" data-ref="hero-subtitle" data-i18n="workflows.subtitle">Automatiza y optimiza tus tareas recurrentes combinando herramientas inteligentes de PDF en un solo proceso.</p>
+      <header class="view-section view-section--header" data-ref="header-section">
+        <div class="header-bar" data-ref="header-bar">
+          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+          </a>
         </div>
-      </div>
+      </header>
 
-      <section class="tools-section" data-ref="workflows-section">
+      <section class="view-section view-section--hero" data-ref="workflows-hero-section">
+        <div class="view-hero" data-ref="workflows-hero">
+          <div class="view-hero__content" data-ref="workflows-hero-content">
+            <h1 class="view-hero__title" data-ref="hero-title" data-i18n="workflows.title"></h1>
+            <p class="view-hero__subtitle" data-ref="hero-subtitle" data-i18n="workflows.subtitle"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="view-section view-section--tools" data-ref="workflows-section">
         <div class="tools-grid" data-ref="workflows-grid"></div>
       </section>
+
+      <footer class="view-section view-section--footer" data-ref="footer-section"></footer>
     </div>
   </div>
 </div>

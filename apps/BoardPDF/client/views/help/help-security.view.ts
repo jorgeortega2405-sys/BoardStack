@@ -34,7 +34,7 @@ export class HelpSecurityController implements ViewController {
     if (!footerContainer) return;
 
     footerContainer.innerHTML = getFooterHtml();
-    this.footerController = mountSiteFooter(this.container, this.abortController?.signal);
+    this.footerController = mountSiteFooter(footerContainer, this.abortController?.signal);
   }
 }
 

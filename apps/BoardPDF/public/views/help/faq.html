@@ -1,35 +1,49 @@
-<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="help-faq-wrapper">
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="help-faq-wrapper">
   <div class="view-backdrop view-backdrop--dots" data-ref="help-faq-backdrop"></div>
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="help-faq-scrollable">
-    <div class="faq-view" data-ref="help-faq-view">
-      <div class="view-hero" data-ref="faq-hero">
-        <div class="component-badge component-badge--sm" data-ref="faq-badge">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
-          <span data-ref="faq-badge-text" data-i18n="help.faq.badge">Centro de Ayuda</span>
+    <div class="view-body" data-ref="help-faq-view">
+      <header class="view-section view-section--header" data-ref="header-section">
+        <div class="header-bar" data-ref="header-bar">
+          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+          </a>
         </div>
-        <h1 class="view-hero__title" data-ref="faq-title" data-i18n="help.faq.title">Preguntas Frecuentes</h1>
-        <p class="view-hero__subtitle" data-ref="faq-subtitle" data-i18n="help.faq.subtitle">Encuentra respuestas claras y detalladas a las consultas más habituales sobre BoardPDF, nuestras herramientas, seguridad y cuentas.</p>
+      </header>
 
-        <div class="faq-search-wrapper" data-ref="faq-search-wrapper">
-          <svg class="component-icon faq-search-icon" data-ref="faq-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="faq-search-input" data-ref="input-faq-search" data-i18n-placeholder="help.faq.search_placeholder" type="text" placeholder="Buscar preguntas frecuentes..." maxlength="100" autocomplete="off" />
+      <section class="view-section view-section--hero" data-ref="faq-hero-section">
+        <div class="view-hero" data-ref="faq-hero">
+          <div class="view-hero__content" data-ref="faq-hero-content">
+            <div class="component-badge component-badge--sm" data-ref="faq-badge">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+              <span data-ref="faq-badge-text" data-i18n="help.faq.badge"></span>
+            </div>
+            <h1 class="view-hero__title" data-ref="faq-title" data-i18n="help.faq.title"></h1>
+            <p class="view-hero__subtitle" data-ref="faq-subtitle" data-i18n="help.faq.subtitle"></p>
+          </div>
+
+          <div class="faq-search-wrapper" data-ref="faq-search-wrapper">
+            <svg class="component-icon faq-search-icon" data-ref="faq-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="faq-search-input" data-ref="input-faq-search" data-i18n-placeholder="help.faq.search_placeholder" type="text" placeholder=" " maxlength="100" autocomplete="off" />
+          </div>
+
+          <div class="categories-bar" data-ref="faq-pills">
+            <button type="button" class="category-pill is-active" data-ref="btn-faq-cat-all" data-i18n="help.faq.cat_all" data-category="all"></button>
+            <button type="button" class="category-pill" data-ref="btn-faq-cat-security" data-i18n="help.faq.cat_security" data-category="security"></button>
+            <button type="button" class="category-pill" data-ref="btn-faq-cat-limits" data-i18n="help.faq.cat_limits" data-category="limits"></button>
+            <button type="button" class="category-pill" data-ref="btn-faq-cat-tools" data-i18n="help.faq.cat_tools" data-category="tools"></button>
+            <button type="button" class="category-pill" data-ref="btn-faq-cat-ai" data-i18n="help.faq.cat_ai" data-category="ai"></button>
+            <button type="button" class="category-pill" data-ref="btn-faq-cat-billing" data-i18n="help.faq.cat_billing" data-category="billing"></button>
+          </div>
         </div>
+      </section>
 
-        <div class="categories-bar" data-ref="faq-pills">
-          <button type="button" class="category-pill is-active" data-ref="btn-faq-cat-all" data-category="all" data-i18n="help.faq.cat_all">Todas</button>
-          <button type="button" class="category-pill" data-ref="btn-faq-cat-security" data-category="security" data-i18n="help.faq.cat_security">Seguridad y Privacidad</button>
-          <button type="button" class="category-pill" data-ref="btn-faq-cat-limits" data-category="limits" data-i18n="help.faq.cat_limits">Archivos y Límites</button>
-          <button type="button" class="category-pill" data-ref="btn-faq-cat-tools" data-category="tools" data-i18n="help.faq.cat_tools">Herramientas y Calidad</button>
-          <button type="button" class="category-pill" data-ref="btn-faq-cat-ai" data-category="ai" data-i18n="help.faq.cat_ai">PDF Intelligence (IA)</button>
-          <button type="button" class="category-pill" data-ref="btn-faq-cat-billing" data-category="billing" data-i18n="help.faq.cat_billing">Planes y Facturación</button>
+      <section class="view-section view-section--content" data-ref="faq-content-section">
+        <div class="faq-container" data-ref="faq-container">
+          <div class="faq-items-container" data-ref="faq-items-container"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="faq-container" data-ref="faq-container">
-        <div class="faq-items-container" data-ref="faq-items-container"></div>
-      </div>
-
-      <div class="faq-footer-section" data-ref="faq-footer-section"></div>
+      <footer class="view-section view-section--footer" data-ref="faq-footer-section"></footer>
     </div>
   </div>
 </div>

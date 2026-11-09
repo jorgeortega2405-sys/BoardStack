@@ -1,149 +1,158 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="projects-wrapper">
   <div class="view-backdrop view-backdrop--dots" data-ref="projects-gradient-backdrop"></div>
 
-  <div class="projects-quick-actions" data-ref="projects-quick-actions">
-    <div class="projects-hero__folder-actions is-hidden" data-ref="folder-header-actions">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-      </button>
-      <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-      </button>
-    </div>
-
-    <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-sort" data-tooltip="Invertir orden" aria-label="Invertir orden">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-    </button>
-
-    <button type="button" class="component-button component-button--h40 component-button--icon-only is-hidden" data-ref="btn-upload-direct" data-tooltip="Subir archivos" aria-label="Subir archivos">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
-    </button>
-
-    <div class="dropdown" data-ref="dropdown-new-action">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-plus-create" data-tooltip="Crear nuevo" aria-label="Crear nuevo">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-      </button>
-      <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-plus-create">
-        <div class="menu-panel__list">
-          <button type="button" class="menu-item" data-ref="item-new-doc" data-action="new-doc">
-            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-            <span class="menu-item__text">Nuevo PDF</span>
-          </button>
-          <button type="button" class="menu-item" data-ref="item-new-folder" data-action="new-folder">
-            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-            <span class="menu-item__text">Nueva carpeta</span>
-          </button>
-          <button type="button" class="menu-item" data-ref="item-upload-files" data-action="upload-files">
-            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
-            <span class="menu-item__text">Subir archivos</span>
-          </button>
-        </div>
-      </div>
-    </div>
-    <input class="is-hidden" data-ref="input-project-upload" type="file" accept="image/*,.pdf,application/pdf" multiple />
-  </div>
-
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="projects-scrollable">
     <div class="view-body projects-body" data-ref="projects-container">
-      
-      <div class="projects-hero" data-ref="projects-hero">
-        <div class="projects-hero__header" data-ref="projects-hero-header">
-          <h1 class="projects-hero__title" data-ref="projects-main-title">Todos los proyectos</h1>
-        </div>
+      <header class="view-section view-section--header" data-ref="header-section">
+        <div class="header-bar projects-header-bar" data-ref="header-bar">
+          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+          </a>
 
-        <div class="projects-search-wrap" data-ref="projects-search-wrap">
-          <div class="projects-search-bar" data-ref="projects-search-bar">
-            <svg class="component-icon projects-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-            <input class="projects-search-input" data-ref="input-project-search" type="text" placeholder="Buscar diseños, carpetas y archivos subidos" autocomplete="off" />
-            <button type="button" class="projects-search-clear is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          <div class="projects-quick-actions" data-ref="projects-quick-actions">
+            <div class="projects-hero__folder-actions is-hidden" data-ref="folder-header-actions">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-folder-rename" data-i18n-aria="projects.rename_folder" data-tooltip="Renombrar carpeta" aria-label=" ">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              </button>
+              <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger" data-ref="btn-folder-delete" data-i18n-aria="projects.delete_folder" data-tooltip="Eliminar carpeta" aria-label=" ">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              </button>
+            </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-sort" data-i18n-aria="projects.toggle_sort" data-tooltip="Invertir orden" aria-label=" ">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
             </button>
-          </div>
 
-          <div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
-            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
-              <button type="button" class="category-pill" data-ref="btn-filter-type">
-                <span data-ref="label-filter-type">Tipo</span>
-                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only is-hidden" data-ref="btn-upload-direct" data-i18n-aria="projects.upload_files" data-tooltip="Subir archivos" aria-label=" ">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+            </button>
+
+            <div class="dropdown" data-ref="dropdown-new-action">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-plus-create" data-i18n-aria="projects.create_new" data-tooltip="Crear nuevo" aria-label=" ">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
               </button>
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-plus-create">
                 <div class="menu-panel__list">
-                  <button type="button" class="menu-item is-active" data-ref="item-type-all" data-type="all">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-                    <span class="menu-item__text">Todos los tipos</span>
-                  </button>
-                  <button type="button" class="menu-item" data-ref="item-type-docs" data-type="docs">
+                  <button type="button" class="menu-item" data-ref="item-new-doc" data-action="new-doc">
                     <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-                    <span class="menu-item__text">Documentos PDF</span>
+                    <span class="menu-item__text" data-i18n="projects.new_pdf"></span>
                   </button>
-                  <button type="button" class="menu-item" data-ref="item-type-folders" data-type="folders">
+                  <button type="button" class="menu-item" data-ref="item-new-folder" data-action="new-folder">
                     <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                    <span class="menu-item__text">Carpetas</span>
+                    <span class="menu-item__text" data-i18n="projects.new_folder"></span>
                   </button>
-                  <button type="button" class="menu-item" data-ref="item-type-uploads" data-type="uploads">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-                    <span class="menu-item__text">Archivos subidos</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
-              <button type="button" class="category-pill" data-ref="btn-filter-category">
-                <span data-ref="label-filter-category">Categoría</span>
-                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-              </button>
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-category">
-                <div class="menu-panel__list" data-ref="list-filter-category">
-                  <button type="button" class="menu-item is-active" data-ref="item-cat-all" data-category="all">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
-                    <span class="menu-item__text">Todas las categorías</span>
-                  </button>
-                  <button type="button" class="menu-item" data-ref="item-cat-root" data-category="root">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-                    <span class="menu-item__text">Sin carpeta (Raíz)</span>
+                  <button type="button" class="menu-item" data-ref="item-upload-files" data-action="upload-files">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+                    <span class="menu-item__text" data-i18n="projects.upload_files"></span>
                   </button>
                 </div>
               </div>
             </div>
+            <input class="is-hidden" data-ref="input-project-upload" type="file" accept="image/*,.pdf,application/pdf" multiple />
+          </div>
+        </div>
+      </header>
 
-            <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-date">
-              <button type="button" class="category-pill" data-ref="btn-filter-date">
-                <span data-ref="label-filter-date">Fecha de modificación</span>
-                <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+      <section class="view-section view-section--hero" data-ref="projects-hero-section">
+        <div class="view-hero projects-hero" data-ref="projects-hero">
+          <div class="view-hero__content projects-hero__header" data-ref="projects-hero-header">
+            <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
+          </div>
+
+          <div class="projects-search-wrap" data-ref="projects-search-wrap">
+            <div class="projects-search-bar" data-ref="projects-search-bar">
+              <svg class="component-icon projects-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="projects-search-input" data-ref="input-project-search" data-i18n-placeholder="projects.search_placeholder" type="text" placeholder=" " autocomplete="off" />
+              <button type="button" class="projects-search-clear is-hidden" data-ref="btn-clear-search" data-i18n-aria="projects.clear_search" aria-label=" ">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
-                <div class="menu-panel__list">
-                  <button type="button" class="menu-item is-active" data-ref="item-date-recent" data-sort="recent">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                    <span class="menu-item__text">Editado recientemente</span>
-                  </button>
-                  <button type="button" class="menu-item" data-ref="item-date-oldest" data-sort="oldest">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-                    <span class="menu-item__text">Más antiguo</span>
-                  </button>
-                  <button type="button" class="menu-item" data-ref="item-date-az" data-sort="az">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#uppercase"></use></svg>
-                    <span class="menu-item__text">Nombre (A - Z)</span>
-                  </button>
-                  <button type="button" class="menu-item" data-ref="item-date-za" data-sort="za">
-                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
-                    <span class="menu-item__text">Nombre (Z - A)</span>
-                  </button>
+            </div>
+
+            <div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
+              <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
+                <button type="button" class="category-pill" data-ref="btn-filter-type">
+                  <span data-ref="label-filter-type" data-i18n="projects.filter_type"></span>
+                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="item-type-all" data-type="all">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.type_all"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-type-docs" data-type="docs">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.type_docs"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-type-folders" data-type="folders">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.type_folders"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-type-uploads" data-type="uploads">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.type_uploads"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
+                <button type="button" class="category-pill" data-ref="btn-filter-category">
+                  <span data-ref="label-filter-category" data-i18n="projects.filter_category"></span>
+                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-category">
+                  <div class="menu-panel__list" data-ref="list-filter-category">
+                    <button type="button" class="menu-item is-active" data-ref="item-cat-all" data-category="all">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.cat_all"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-cat-root" data-category="root">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.cat_root"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-date">
+                <button type="button" class="category-pill" data-ref="btn-filter-date">
+                  <span data-ref="label-filter-date" data-i18n="projects.filter_date"></span>
+                  <svg class="component-icon category-pill__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="item-date-recent" data-sort="recent">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.sort_recent"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-date-oldest" data-sort="oldest">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.sort_oldest"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-date-az" data-sort="az">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#uppercase"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.sort_az"></span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="item-date-za" data-sort="za">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+                      <span class="menu-item__text" data-i18n="projects.sort_za"></span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="component-tabs is-hidden" data-ref="uploads-filter-tabs">
-          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+          <div class="component-tabs is-hidden" data-ref="uploads-filter-tabs">
+            <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all" data-i18n="projects.tab_all"></button>
+            <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images" data-i18n="projects.tab_images"></button>
+            <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs" data-i18n="projects.tab_pdfs"></button>
+          </div>
         </div>
-      </div>
+      </section>
 
-            <section class="projects-section" data-ref="section-documents">
+      <section class="view-section view-section--documents" data-ref="section-documents">
         <div class="projects-section__content" data-ref="content-documents">
           <div class="tools-grid projects-grid" data-ref="grid-projects-unified">
             <div class="projects-folders-stream" data-ref="grid-folders"></div>
@@ -153,33 +162,34 @@
             <div class="projects-empty__icon-box">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
             </div>
-            <h3 class="projects-empty__title" data-ref="empty-docs-title">No hay diseños creados</h3>
-            <p class="projects-empty__desc" data-ref="empty-docs-desc">Crea un diseño desde cero o continúa editando en tiempo real.</p>
+            <h3 class="projects-empty__title" data-ref="empty-docs-title" data-i18n="projects.empty_docs_title"></h3>
+            <p class="projects-empty__desc" data-ref="empty-docs-desc" data-i18n="projects.empty_docs_desc"></p>
             <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-empty-create-pdf">
               <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Crear nuevo PDF</span>
+              <span data-i18n="projects.empty_create_pdf"></span>
             </button>
           </div>
         </div>
       </section>
 
-      <section class="projects-section is-hidden" data-ref="section-uploads">
+      <section class="view-section view-section--uploads is-hidden" data-ref="section-uploads">
         <div class="projects-section__content" data-ref="content-uploads">
           <div class="projects-uploads-grid" data-ref="grid-uploads"></div>
           <div class="projects-empty is-hidden" data-ref="empty-uploads">
             <div class="projects-empty__icon-box">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
             </div>
-            <h3 class="projects-empty__title">Sin archivos subidos</h3>
-            <p class="projects-empty__desc" data-ref="offline_upload.desc">Sube fotos, imágenes y archivos PDF para usarlos en tus diseños.</p>
+            <h3 class="projects-empty__title" data-i18n="projects.empty_uploads_title"></h3>
+            <p class="projects-empty__desc" data-ref="offline_upload.desc" data-i18n="projects.empty_uploads_desc"></p>
             <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-empty-upload">
               <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
-              <span>Subir archivos</span>
+              <span data-i18n="projects.empty_upload_btn"></span>
             </button>
           </div>
         </div>
       </section>
 
+      <footer class="view-section view-section--footer" data-ref="projects-footer-section"></footer>
     </div>
   </div>
 </div>

@@ -1,50 +1,63 @@
-<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper pricing-wrapper" data-ref="pricing-wrapper">
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="pricing-wrapper">
+  <div class="view-backdrop view-backdrop--dots" data-ref="pricing-gradient-backdrop"></div>
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="pricing-scrollable">
-    <div class="pricing-view" data-ref="pricing-view">
-      <div class="component-pricing-section" data-ref="pricing-section">
-        <div class="component-pricing-header" data-ref="pricing-header">
-          <h1 class="component-pricing-title" data-ref="pricing-title">Planes y precios</h1>
-          <p class="component-pricing-desc" data-ref="pricing-desc">Elige el plan ideal para optimizar tu productividad y desbloquear el máximo poder documental de BoardPDF</p>
+    <div class="view-body" data-ref="pricing-container">
+      <header class="view-section view-section--header" data-ref="header-section">
+        <div class="header-bar" data-ref="header-bar">
+          <a class="brand-logo" data-ref="brand-logo" href="/" aria-label="BoardPDF">
+            <span class="brand-wordmark" data-ref="brand-wordmark">Board<span class="brand-accent" data-ref="brand-accent">PDF</span></span>
+          </a>
         </div>
+      </header>
 
-        <div class="pricing-cycle-bar" data-ref="pricing-cycle-bar">
-          <div class="component-toggle-pill" data-ref="billing-toggle-pill" data-cycle="monthly">
-            <div class="component-toggle-pill-glider" data-ref="billing-glider"></div>
-            <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-cycle-monthly" data-action="setBillingCycle" data-value="monthly">
-              <span>Mensual</span>
-            </button>
-            <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-cycle-yearly" data-action="setBillingCycle" data-value="yearly">
-              <span>Anual</span>
-            </button>
+      <section class="view-section view-section--hero" data-ref="pricing-hero-section">
+        <div class="view-hero" data-ref="pricing-hero">
+          <div class="view-hero__content" data-ref="pricing-hero-content">
+            <h1 class="view-hero__title" data-ref="pricing-title" data-i18n="pricing.title"></h1>
+            <p class="view-hero__subtitle" data-ref="pricing-desc" data-i18n="pricing.subtitle"></p>
+          </div>
+
+          <div class="pricing-cycle-bar" data-ref="pricing-cycle-bar">
+            <div class="component-toggle-pill" data-ref="billing-toggle-pill" data-cycle="monthly">
+              <div class="component-toggle-pill-glider" data-ref="billing-glider"></div>
+              <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-cycle-monthly" data-action="setBillingCycle" data-value="monthly">
+                <span class="billing-cycle-text" data-ref="txt-cycle-monthly" data-i18n="pricing.billing_monthly"></span>
+              </button>
+              <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-cycle-yearly" data-action="setBillingCycle" data-value="yearly">
+                <span class="billing-cycle-text" data-ref="txt-cycle-yearly" data-i18n="pricing.billing_yearly"></span>
+              </button>
+            </div>
           </div>
         </div>
+      </section>
 
+      <section class="view-section view-section--pricing" data-ref="pricing-cards-section">
         <div class="component-pricing-grid" data-ref="pricing-grid-general">
           <div class="component-card component-card--grouped component-card--plan component-card--featured" data-ref="plan-card-pro" data-tier="pro">
             <div class="component-card-section component-card-section--header" data-ref="card-header-pro">
-              <div class="component-card-popular-badge" data-ref="popular-badge-pro">Más Popular</div>
-              <h2 class="component-card-title" data-ref="card-title-pro">BoardPDF Pro</h2>
-              <p class="component-card-desc" data-ref="card-desc-pro">El plan más equilibrado para profesionales, investigadores y creadores independientes.</p>
+              <div class="component-card-popular-badge" data-ref="popular-badge-pro" data-i18n="pricing.badge_pro"></div>
+              <h2 class="component-card-title" data-ref="card-title-pro" data-i18n="pricing.plan_pro_title"></h2>
+              <p class="component-card-desc" data-ref="card-desc-pro" data-i18n="pricing.plan_pro_desc"></p>
               <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-pro">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-                <span>100 GB de almacenamiento</span>
+                <span data-i18n="pricing.storage_pro"></span>
               </span>
             </div>
 
             <div class="component-card-section component-card-section--price" data-ref="card-price-pro">
-              <div class="component-card-price-label">Desde</div>
+              <div class="component-card-price-label" data-i18n="pricing.price_from"></div>
               <div class="component-card-price-container">
                 <span class="component-card-price">
                   USD $<span class="component-card-price-value" data-ref="plan-price-pro" data-monthly="9.99" data-yearly="7.99">9.99</span>
                 </span>
-                <span class="component-card-period" data-ref="plan-period-pro" data-period-monthly="/ mes" data-period-yearly="/ mes facturado anualmente">/ mes</span>
+                <span class="component-card-period" data-ref="plan-period-pro" data-i18n="pricing.period_monthly"></span>
               </div>
             </div>
 
             <div class="component-card-section component-card-section--action" data-ref="card-action-pro">
               <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button component-card-button--featured" data-ref="btn-subscribe-pro" data-action="subscribe" data-tier="pro">
-                <span class="component-button__default-text">Obtén BoardPDF Pro</span>
-                <span class="component-button__hover-text">Mejorar plan</span>
+                <span class="component-button__default-text" data-i18n="pricing.cta_get_pro"></span>
+                <span class="component-button__hover-text" data-i18n="pricing.cta_upgrade"></span>
               </button>
             </div>
 
@@ -53,36 +66,36 @@
                 <div class="component-card-feature-item" data-ref="feature-pro-1">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Procesamiento masivo por lotes</span>
-                    <span class="component-card-feature-desc">Convierte, une y organiza hasta 500 archivos por tarea sin límites de espera.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_pro_batch_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_pro_batch_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-2">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Archivos de gran capacidad (1,000 MB)</span>
-                    <span class="component-card-feature-desc">Procesa documentos extensos con soporte de alta fidelidad y máxima compresión.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_pro_size_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_pro_size_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-3">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">100 GB de almacenamiento en nube</span>
-                    <span class="component-card-feature-desc">Sincronización instantánea, respaldo seguro y acceso desde cualquier dispositivo.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_pro_storage_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_pro_storage_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-4">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">OCR y herramientas de Inteligencia Artificial</span>
-                    <span class="component-card-feature-desc">Reconocimiento óptico de texto, resumen inteligente y traducción con IA.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_pro_ai_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_pro_ai_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-pro-5">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">50 flujos de trabajo avanzados</span>
-                    <span class="component-card-feature-desc">Guarda y encadena automatizaciones personalizadas para optimizar tu tiempo.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_pro_wf_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_pro_wf_desc"></span>
                   </div>
                 </div>
               </div>
@@ -91,88 +104,90 @@
 
           <div class="component-card component-card--grouped component-card--plan component-card--standard" data-ref="plan-card-business" data-tier="business">
             <div class="component-card-section component-card-section--header" data-ref="card-header-business">
-              <div class="component-card-popular-badge" data-ref="popular-badge-business">Para Equipos</div>
-              <h2 class="component-card-title" data-ref="card-title-business">Negocios</h2>
-              <p class="component-card-desc" data-ref="card-desc-business">Máxima potencia, automatización y colaboración avanzada para despachos y equipos en crecimiento.</p>
+              <div class="component-card-popular-badge" data-ref="popular-badge-business" data-i18n="pricing.badge_business"></div>
+              <h2 class="component-card-title" data-ref="card-title-business" data-i18n="pricing.plan_business_title"></h2>
+              <p class="component-card-desc" data-ref="card-desc-business" data-i18n="pricing.plan_business_desc"></p>
               <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-business">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-                <span>500 GB de almacenamiento</span>
+                <span data-i18n="pricing.storage_business"></span>
               </span>
             </div>
 
             <div class="component-card-section component-card-section--price" data-ref="card-price-business">
-              <div class="component-card-price-label">Desde</div>
+              <div class="component-card-price-label" data-i18n="pricing.price_from"></div>
               <div class="component-card-price-container">
                 <span class="component-card-price">
                   USD $<span class="component-card-price-value" data-ref="plan-price-business" data-monthly="19.99" data-yearly="15.99">19.99</span>
                 </span>
-                <span class="component-card-period" data-ref="plan-period-business" data-period-monthly="/ mes" data-period-yearly="/ mes facturado anualmente">/ mes</span>
+                <span class="component-card-period" data-ref="plan-period-business" data-i18n="pricing.period_monthly"></span>
               </div>
             </div>
 
             <div class="component-card-section component-card-section--action" data-ref="card-action-business">
               <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-business" data-action="subscribe" data-tier="business">
-                <span class="component-button__default-text">Obtén Negocios</span>
-                <span class="component-button__hover-text">Comenzar ahora</span>
+                <span class="component-button__default-text" data-i18n="pricing.cta_get_business"></span>
+                <span class="component-button__hover-text" data-i18n="pricing.cta_start_now"></span>
               </button>
             </div>
 
             <div class="component-card-section component-card-section--features" data-ref="card-features-business">
               <div class="component-card-features" data-ref="features-container-business">
                 <div class="component-card-feature-divider-container" data-ref="feature-divider-business">
-                  <p class="component-card-feature-divider-text">Todo lo del plan anterior, más:</p>
+                  <p class="component-card-feature-divider-text" data-i18n="pricing.feat_divider_business"></p>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-1">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">500 GB de almacenamiento para equipos</span>
-                    <span class="component-card-feature-desc">Espacio ampliado en la nube para centralizar y compartir archivos con tu grupo.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_business_storage_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_business_storage_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-2">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Capacidad ultra alta de procesamiento</span>
-                    <span class="component-card-feature-desc">Lotes de hasta 500 archivos simultáneos y soporte total de archivos hasta 1,000 MB.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_business_capacity_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_business_capacity_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-3">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Colaboración en tiempo real</span>
-                    <span class="component-card-feature-desc">Edición conjunta de documentos interactivos con control y trazabilidad de cambios.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_business_collab_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_business_collab_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-4">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Flujos de trabajo compartidos</span>
-                    <span class="component-card-feature-desc">Crea, estandariza y distribuye cadenas de automatización entre miembros del equipo.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_business_wf_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_business_wf_desc"></span>
                   </div>
                 </div>
                 <div class="component-card-feature-item" data-ref="feature-business-5">
                   <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                   <div class="component-card-feature-text-container">
-                    <span class="component-card-feature-title">Panel de control y gestión de licencias</span>
-                    <span class="component-card-feature-desc">Administración centralizada de integrantes, consumo de recursos y permisos.</span>
+                    <span class="component-card-feature-title" data-i18n="pricing.feat_business_admin_title"></span>
+                    <span class="component-card-feature-desc" data-i18n="pricing.feat_business_admin_desc"></span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="component-disclaimer" data-ref="pricing-disclaimer">
-          <p class="component-disclaimer__text" data-ref="disclaimer-text-geo">
-            La disponibilidad de funciones avanzadas, ventajas premium y motores de procesamiento puede variar según tu país, territorio o región geográfica de residencia, así como de las normativas de telecomunicaciones y servicios digitales en la nube aplicables. Te recomendamos revisar detalladamente nuestros <a class="link" data-ref="link-disclaimer-terms" href="/help/terms">Términos del servicio</a> y las condiciones aplicables antes de contratar.
+      <section class="view-section view-section--notice" data-ref="pricing-notice-section">
+        <div class="pricing-notice-card" data-ref="pricing-notice-card">
+          <p class="pricing-notice-card__text" data-ref="disclaimer-text-geo">
+            <span class="pricing-notice-text" data-ref="txt-disclaimer-geo-1" data-i18n="pricing.disclaimer_geo_1"></span> <a class="link" data-ref="link-disclaimer-terms" data-i18n="pricing.disclaimer_terms_link" href="/help/terms"></a> <span class="pricing-notice-text" data-ref="txt-disclaimer-geo-2" data-i18n="pricing.disclaimer_geo_2"></span>
           </p>
-          <p class="component-disclaimer__text" data-ref="disclaimer-text-age">
-            Debes tener al menos 18 años de edad y contar con la debida capacidad jurídica y autorización para contratar una suscripción de pago. Las tarifas mostradas no incluyen los tributos ni impuestos locales aplicables, los cuales se calcularán y detallarán de forma transparente al momento de procesar la transacción. Para más detalles sobre nuestras garantías y privacidad, revisa la <a class="link" data-ref="link-disclaimer-privacy" href="/help/privacy">Política de privacidad</a>.
+          <p class="pricing-notice-card__text" data-ref="disclaimer-text-age">
+            <span class="pricing-notice-text" data-ref="txt-disclaimer-age-1" data-i18n="pricing.disclaimer_age_1"></span> <a class="link" data-ref="link-disclaimer-privacy" data-i18n="pricing.disclaimer_privacy_link" href="/help/privacy"></a><span class="pricing-notice-text" data-ref="txt-disclaimer-age-2" data-i18n="pricing.disclaimer_age_2"></span>
           </p>
         </div>
-      </div>
+      </section>
 
-      <section class="pricing-footer-section" data-ref="pricing-footer-section"></section>
+      <footer class="view-section view-section--footer" data-ref="pricing-footer-section"></footer>
     </div>
   </div>
 </div>

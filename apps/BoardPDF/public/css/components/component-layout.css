@@ -177,7 +177,6 @@ html, body {
 }
 
 .layout-content:has(.layout-nav) .view-wrapper,
-.layout-content:has(.layout-nav) .home-wrapper,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
   position: sticky !important;
   top: 6px !important;
@@ -201,11 +200,9 @@ html, body {
   max-height: calc(100dvh - 6px) !important;
 }
 
+.layout-content:has(.layout-nav) .view-wrapper .layout-body--scrollable,
 .layout-content:has(.layout-nav) .view-wrapper .layout-scrollable,
-.layout-content:has(.layout-nav) .view-wrapper .view-scrollable,
-.layout-content:has(.layout-nav) .home-wrapper .layout-body--scrollable,
-.layout-content:has(.layout-nav) .home-wrapper .layout-scrollable,
-.layout-content:has(.layout-nav) .home-wrapper .home-scrollable {
+.layout-content:has(.layout-nav) .view-wrapper .view-scrollable {
   overflow-y: hidden !important;
   overflow-x: hidden;
   height: 100% !important;
@@ -214,8 +211,7 @@ html, body {
   touch-action: pan-y;
 }
 
-.layout-content:has(.layout-nav) .view-wrapper .component-bottom:not(.tool-layout):not(.tool-bottom),
-.layout-content:has(.layout-nav) .home-wrapper .component-bottom {
+.layout-content:has(.layout-nav) .view-wrapper .component-bottom:not(.tool-layout):not(.tool-bottom) {
   overflow: hidden !important;
   height: 100% !important;
   flex: 1 1 auto;
@@ -224,8 +220,7 @@ html, body {
   flex-direction: column;
 }
 
-.layout-content:has(.layout-nav) .view-wrapper .component-table-wrapper,
-.layout-content:has(.layout-nav) .home-wrapper .component-table-wrapper {
+.layout-content:has(.layout-nav) .view-wrapper .component-table-wrapper {
   overflow-y: hidden !important;
   overflow-x: auto;
   height: 100% !important;
@@ -234,8 +229,7 @@ html, body {
   touch-action: pan-y;
 }
 
-.layout-content:has(.layout-nav) .view-wrapper > .component-top,
-.layout-content:has(.layout-nav) .home-wrapper > .component-top {
+.layout-content:has(.layout-nav) .view-wrapper > .component-top {
   position: relative;
   border-top-left-radius: 15px;
   border-top-right-radius: 15px;

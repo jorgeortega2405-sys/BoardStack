@@ -1,3 +1,4 @@
+import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
@@ -53,6 +54,7 @@ interface UploadFileItem {
 export class ProjectsController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
+  private footerController: { destroy: () => void } | null = null;
   private currentFolder: ProjectFolder | null = null;
   private currentFolderId: string | null = null;
   private documents: DocItem[] = [];
@@ -79,6 +81,7 @@ export class ProjectsController implements ViewController {
     this.abortController = new AbortController();
     await this.loadData();
     this.renderView();
+    this.renderFooter();
     renderIcons(this.container);
     this.bindEvents();
   }
@@ -88,6 +91,18 @@ export class ProjectsController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.footerController) {
+      this.footerController.destroy();
+      this.footerController = null;
+    }
+  }
+
+  private renderFooter(): void {
+    const footerContainer = this.container.querySelector<HTMLElement>('[data-ref="projects-footer-section"]');
+    if (!footerContainer) return;
+
+    footerContainer.innerHTML = getFooterHtml();
+    this.footerController = mountSiteFooter(footerContainer, this.abortController?.signal);
   }
 
   private async loadData(): Promise<void> {
@@ -264,7 +279,7 @@ export class ProjectsController implements ViewController {
     btnFilterDate?.classList.toggle('is-active', this.sortOption !== 'recent');
 
     if (!this.currentFolderId || !this.currentFolder) {
-      if (mainTitle) mainTitle.textContent = 'Todos los proyectos';
+      if (mainTitle) mainTitle.textContent = t('projects.title');
       folderHeaderActions?.classList.add('is-hidden');
       uploadsFilterTabs?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
@@ -287,7 +302,7 @@ export class ProjectsController implements ViewController {
 
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
-      if (mainTitle) mainTitle.textContent = 'Subidos';
+      if (mainTitle) mainTitle.textContent = t('projects.uploads_title');
       folderHeaderActions?.classList.add('is-hidden');
       uploadsFilterTabs?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');

@@ -6,7 +6,7 @@ import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
+import { applyAvatarTier, getTierWeight, normalizeTier } from '../utils/tier.util.js';
 
 export class PricingController implements ViewController {
   private abortController: AbortController | null = null;
@@ -32,7 +32,7 @@ export class PricingController implements ViewController {
     if (paymentStatus === 'success' && sessionId) {
       void this.handlePaymentReturn(sessionId);
     } else if (paymentStatus === 'cancelled') {
-      showToast(t('upgrade.cancelled', 'El proceso de pago fue cancelado.'), 'info');
+      showToast(t('pricing.cancelled'), 'info');
       window.history.replaceState({}, '', window.location.pathname);
     }
   }
@@ -108,20 +108,20 @@ export class PricingController implements ViewController {
     const periodEl = this.container.querySelector<HTMLElement>(`[data-ref="plan-period-${tierId}"]`);
 
     if (priceEl && periodEl) {
-      priceEl.style.opacity = '0';
-      periodEl.style.opacity = '0';
+      priceEl.classList.add('is-fading');
+      periodEl.classList.add('is-fading');
 
       setTimeout(() => {
         const monthlyPrice = priceEl.getAttribute('data-monthly') || '0.00';
         const yearlyPrice = priceEl.getAttribute('data-yearly') || '0.00';
-        const monthlyPeriod = priceEl.getAttribute('data-period-monthly') || '/ mes';
-        const yearlyPeriod = priceEl.getAttribute('data-period-yearly') || '/ mes facturado anualmente';
+        const monthlyPeriod = t('pricing.period_monthly');
+        const yearlyPeriod = t('pricing.period_yearly');
 
         priceEl.textContent = isYearly ? yearlyPrice : monthlyPrice;
         periodEl.textContent = isYearly ? yearlyPeriod : monthlyPeriod;
 
-        priceEl.style.opacity = '1';
-        periodEl.style.opacity = '1';
+        priceEl.classList.remove('is-fading');
+        periodEl.classList.remove('is-fading');
       }, 150);
     }
   }
@@ -139,11 +139,11 @@ export class PricingController implements ViewController {
       if (userWeight === 1) {
         btnPro.classList.add('component-button--disabled');
         btnPro.disabled = true;
-        btnPro.innerHTML = '<span>Tu plan actual</span>';
+        btnPro.innerHTML = `<span>${t('pricing.current_plan')}</span>`;
       } else if (userWeight > 1) {
         btnPro.classList.add('component-button--disabled');
         btnPro.disabled = true;
-        btnPro.innerHTML = '<span>Incluido en tu plan</span>';
+        btnPro.innerHTML = `<span>${t('pricing.included_in_plan')}</span>`;
       }
     }
 
@@ -151,19 +151,19 @@ export class PricingController implements ViewController {
       if (userWeight === 2) {
         btnBusiness.classList.add('component-button--disabled');
         btnBusiness.disabled = true;
-        btnBusiness.innerHTML = '<span>Tu plan actual</span>';
+        btnBusiness.innerHTML = `<span>${t('pricing.current_plan')}</span>`;
       } else if (userWeight === 1) {
         const defaultText = btnBusiness.querySelector<HTMLElement>('.component-button__default-text');
         const hoverText = btnBusiness.querySelector<HTMLElement>('.component-button__hover-text');
-        if (defaultText) defaultText.textContent = 'Mejorar a Negocios';
-        if (hoverText) hoverText.textContent = 'Mejorar ahora';
+        if (defaultText) defaultText.textContent = t('pricing.upgrade_to_business');
+        if (hoverText) hoverText.textContent = t('pricing.upgrade_now');
       }
     }
   }
 
   private handlePlanAction(tierId: string): void {
     if (!currentUser) {
-      showToast(t('upgrade.login_required', 'Inicia sesión para seleccionar un plan.'), 'info');
+      showToast(t('pricing.login_required'), 'info');
       navigate('/login');
       return;
     }
@@ -177,12 +177,12 @@ export class PricingController implements ViewController {
     const targetWeight = getTierWeight(tierId);
 
     if (userWeight === targetWeight) {
-      showToast(`Ya cuentas con el plan ${tierId === 'business' ? 'Negocios' : 'Pro'} activo.`, 'info');
+      showToast(t('pricing.already_active'), 'info');
       return;
     }
 
     if (userWeight > targetWeight) {
-      showToast(`Tu plan actual ${getTierDisplayName(userTier)} ya incluye todas las ventajas de este plan.`, 'info');
+      showToast(t('pricing.already_included'), 'info');
       return;
     }
 
@@ -196,12 +196,12 @@ export class PricingController implements ViewController {
         updateUserSubscriptionTier(res.tier);
         const avatarEl = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
         applyAvatarTier(avatarEl, res.tier);
-        showToast(t('upgrade.success', '¡Tu suscripción ha sido activada con éxito!'), 'success');
+        showToast(t('pricing.success'), 'success');
       } else {
-        showToast(res.error || 'No se pudo verificar el estado de la suscripción.', 'danger');
+        showToast(res.error || t('pricing.verify_error'), 'danger');
       }
     } catch {
-      showToast('Error al confirmar tu suscripción.', 'danger');
+      showToast(t('pricing.confirm_error'), 'danger');
     } finally {
       window.history.replaceState({}, '', window.location.pathname);
     }
