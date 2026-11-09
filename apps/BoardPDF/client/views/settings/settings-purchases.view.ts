@@ -16,6 +16,9 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   const tableWrapper = container.querySelector<HTMLElement>('[data-ref="purchases-table-wrapper"]');
   const searchInput = container.querySelector<HTMLInputElement>('[data-ref="purchases-search-input"]');
   const btnClearSearch = container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+  const btnToggleSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
+  const btnCloseSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-close-search"]');
+  const searchToolbar = container.querySelector<HTMLElement>('[data-ref="purchases-search-toolbar"]');
   const btnActionDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-action-download-invoice"]');
 
   let allPurchases: PurchaseRecord[] = [];
@@ -30,6 +33,37 @@ export async function createPurchasesView(): Promise<HTMLElement> {
     }
   };
 
+  btnToggleSearch?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!searchToolbar) return;
+    const isClosed = searchToolbar.classList.contains('is-hidden');
+    searchToolbar.classList.toggle('is-hidden', !isClosed);
+    if (isClosed && searchInput) {
+      setTimeout(() => searchInput.focus(), 50);
+    }
+  });
+
+  const hideSearchToolbar = () => {
+    if (!searchToolbar) return;
+    searchToolbar.classList.add('is-hidden');
+    if (searchInput && searchInput.value) {
+      searchInput.value = '';
+      btnClearSearch?.classList.add('is-hidden');
+      renderRows(allPurchases);
+    }
+  };
+
+  btnCloseSearch?.addEventListener('click', (e) => {
+    e.preventDefault();
+    hideSearchToolbar();
+  });
+
+  container.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+      hideSearchToolbar();
+    }
+  });
+
   btnActionDownloadInvoice?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!selectedPurchaseId) return;
@@ -39,7 +73,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
       if (res.success && res.blob) {
         const url = window.URL.createObjectURL(res.blob);
         const a = document.createElement('a');
-        a.style.display = 'none';
+        a.className = 'is-hidden';
         a.href = url;
         a.download = res.filename || `Factura-BoardPDF-${selectedPurchaseId}.pdf`;
         document.body.appendChild(a);
@@ -106,7 +140,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
     if (!tbody) return;
 
     if (purchases.length === 0) {
-      if (tableEl) tableEl.style.display = 'none';
+      tableEl?.classList.add('is-hidden');
       if (tableWrapper) {
         renderEmptyState({
           container: tableWrapper,
@@ -126,7 +160,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
       return;
     }
 
-    if (tableEl) tableEl.style.display = 'table';
+    tableEl?.classList.remove('is-hidden');
     if (tableWrapper) {
       removeEmptyState(tableWrapper, 'purchases-empty-state');
     }
@@ -189,26 +223,26 @@ export async function createPurchasesView(): Promise<HTMLElement> {
       const shortRef = refId.length > 20 ? `${refId.slice(0, 10)}...${refId.slice(-6)}` : refId;
 
       row.innerHTML = `
-        <td class="component-table__cell" style="padding-left: 20px;" data-ref="cell-plan-${p.id}">
-          <div style="align-items: center; display: flex; gap: 8px;">
-            <svg class="component-icon" aria-hidden="true" style="color: var(--action-primary);"><use href="/icons.svg#star"></use></svg>
-            <span style="color: var(--text-primary); font-weight: 600;" data-ref="text-plan-${p.id}">BoardPDF ${escapeHtml(planName)}</span>
+        <td class="component-table__cell component-table__cell--pl20" data-ref="cell-plan-${p.id}">
+          <div class="purchases-plan-cell">
+            <svg class="component-icon purchases-star-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+            <span class="purchases-plan-name" data-ref="text-plan-${p.id}">BoardPDF ${escapeHtml(planName)}</span>
           </div>
         </td>
         <td class="component-table__cell" data-ref="cell-period-${p.id}">
-          <span style="color: var(--text-secondary);">${escapeHtml(periodName)}</span>
+          <span class="purchases-text-secondary">${escapeHtml(periodName)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-amount-${p.id}">
-          <span style="color: var(--text-primary); font-weight: 600;">$${escapeHtml(amount)} <small style="color: var(--text-secondary); font-size: 11px; font-weight: normal;">${escapeHtml(currency)}</small></span>
+          <span class="purchases-plan-name">$${escapeHtml(amount)} <small class="purchases-currency">${escapeHtml(currency)}</small></span>
         </td>
         <td class="component-table__cell" data-ref="cell-status-${p.id}">
           <span class="component-badge component-badge--sm ${statusBadgeClass}">${escapeHtml(statusText || '')}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-date-${p.id}">
-          <span style="color: var(--text-secondary);">${escapeHtml(dateFormatted)}</span>
+          <span class="purchases-text-secondary">${escapeHtml(dateFormatted)}</span>
         </td>
-        <td class="component-table__cell" style="padding-right: 20px;" data-ref="cell-ref-${p.id}">
-          <span style="color: var(--text-tertiary); font-family: monospace; font-size: 12px;" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
+        <td class="component-table__cell component-table__cell--pr20" data-ref="cell-ref-${p.id}">
+          <span class="purchases-text-ref" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
         </td>
       `;
 

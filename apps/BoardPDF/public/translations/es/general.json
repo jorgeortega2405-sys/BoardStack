@@ -116,6 +116,8 @@
     "drop_file_hint": "Suelta tus archivos aquí para subirlos a tu cuenta",
     "drop_file_overlay": "Soltar archivo",
     "save": "Guardar",
+    "search": "Buscar",
+    "clear_search": "Limpiar búsqueda",
     "search_tools": "Buscar herramienta...",
     "loading": "Cargando..."
   },

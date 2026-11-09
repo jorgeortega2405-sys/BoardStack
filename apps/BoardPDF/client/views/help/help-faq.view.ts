@@ -11,19 +11,6 @@ interface FaqItem {
   questionKey: string;
 }
 
-interface FaqGroup {
-  id: string;
-  titleKey: string;
-}
-
-const FAQ_GROUPS: FaqGroup[] = [
-  { id: 'security', titleKey: 'help.faq.cat_security' },
-  { id: 'limits', titleKey: 'help.faq.cat_limits' },
-  { id: 'tools', titleKey: 'help.faq.cat_tools' },
-  { id: 'ai', titleKey: 'help.faq.cat_ai' },
-  { id: 'billing', titleKey: 'help.faq.cat_billing' },
-];
-
 const FAQ_ITEMS: FaqItem[] = [
   {
     answerKey: 'help.faq.item_sec_1_a',
@@ -134,7 +121,6 @@ export class HelpFaqController implements ViewController {
   private activeCategory = 'all';
   private container: HTMLElement;
   private footerController: { destroy: () => void } | null = null;
-  private searchQuery = '';
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -142,10 +128,6 @@ export class HelpFaqController implements ViewController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
-    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-faq-search"]');
-    if (searchInput) {
-      searchInput.placeholder = t('help.faq.search_placeholder');
-    }
     this.renderFaqItems();
     this.renderFooter();
     this.bindEvents();
@@ -167,15 +149,11 @@ export class HelpFaqController implements ViewController {
     const itemsContainer = this.container.querySelector<HTMLElement>('[data-ref="faq-items-container"]');
     if (!itemsContainer) return;
 
-    const query = this.searchQuery.toLowerCase().trim();
     const filteredItems = FAQ_ITEMS.filter((item) => {
       if (this.activeCategory !== 'all' && item.category !== this.activeCategory) {
         return false;
       }
-      if (!query) return true;
-      const q = t(item.questionKey).toLowerCase();
-      const a = t(item.answerKey).toLowerCase();
-      return q.includes(query) || a.includes(query);
+      return true;
     });
 
     if (filteredItems.length === 0) {
@@ -207,11 +185,11 @@ export class HelpFaqController implements ViewController {
       `;
     }).join('');
 
-    itemsContainer.innerHTML = `
+    itemsHtml && (itemsContainer.innerHTML = `
       <div class="faq-accordion" data-ref="faq-accordion">
         ${itemsHtml}
       </div>
-    `;
+    `);
 
     renderIcons(itemsContainer);
   }
@@ -225,16 +203,6 @@ export class HelpFaqController implements ViewController {
   }
 
   private bindEvents(): void {
-    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-faq-search"]');
-    searchInput?.addEventListener(
-      'input',
-      (e: Event) => {
-        this.searchQuery = (e.target as HTMLInputElement).value;
-        this.renderFaqItems();
-      },
-      { signal: this.abortController?.signal }
-    );
-
     const pills = this.container.querySelectorAll<HTMLButtonElement>('.category-pill');
     pills.forEach((pill) => {
       pill.addEventListener(
