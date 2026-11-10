@@ -631,6 +631,12 @@ html, body {
   border-width: 1px !important;
 }
 
+.menu-item:hover .icon-outline,
+.drawer-tool-item:hover .icon-outline {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  border-color: #000000 !important;
+}
+
 .menu-item .icon-outline svg,
 .drawer-tool-item .icon-outline svg {
   width: 14px !important;
@@ -1098,8 +1104,8 @@ html, body {
 }
 
 .home-floating-top--gradient {
-  background: linear-gradient(90deg, #6366F1 0%, #A8C0FF 100%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+  background: #000000 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
 .home-floating-top--gradient .section-floating-title,

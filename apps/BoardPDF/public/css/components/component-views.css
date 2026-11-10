@@ -115,18 +115,28 @@ header.view-section {
 }
 
 .brand-wordmark {
+  align-items: center;
   color: var(--text-primary, #111827);
+  display: inline-flex;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 24px;
   font-weight: 700;
+  gap: 3px;
   letter-spacing: -0.6px;
   line-height: 1;
   user-select: none;
 }
 
 .brand-accent {
-  color: #e11d48;
+  background-color: #000000;
+  border-radius: 6px;
+  color: #ffffff;
+  display: inline-block;
+  font-size: 0.72em;
   font-weight: 900;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  padding: 3px 6px;
 }
 
 @media (max-width: 768px) {
@@ -348,8 +358,8 @@ header.view-section {
 }
 
 .icon-outline {
-  --c: #ef4444;
-  --bg: color-mix(in srgb, var(--c) 8%, #ffffff);
+  --c: #000000;
+  --bg: rgba(0, 0, 0, 0.05);
   align-items: center;
   background-color: var(--bg);
   border: 1.5px solid var(--c);
@@ -371,76 +381,37 @@ header.view-section {
   width: 26px;
 }
 
-.icon-outline--red {
-  --c: #ef4444;
-}
-
-.icon-outline--orange {
-  --c: #f97316;
-}
-
-.icon-outline--crimson {
-  --c: #e11d48;
-}
-
-.icon-outline--green {
-  --c: #10b981;
-}
-
-.icon-outline--blue {
-  --c: #3b82f6;
-}
-
-.icon-outline--purple {
-  --c: #a855f7;
-}
-
-.icon-outline--indigo {
-  --c: #6366f1;
-}
-
+.icon-outline--red,
+.icon-outline--orange,
+.icon-outline--crimson,
+.icon-outline--green,
+.icon-outline--blue,
+.icon-outline--purple,
+.icon-outline--indigo,
 .icon-outline--cyan {
-  --c: #06b6d4;
+  --c: #000000;
+}
+
+.tool-card:hover .icon-outline {
+  background-color: rgba(0, 0, 0, 0.09);
+  border-color: #000000;
 }
 
 .tool-card__icon {
+  color: #000000;
   height: 22px;
   width: 22px;
 }
 
-.tool-card__icon-box--red {
-  background-color: #fee2e2;
-  color: #ef4444;
-}
-
-.tool-card__icon-box--crimson {
-  background-color: #ffe4e6;
-  color: #e11d48;
-}
-
-.tool-card__icon-box--orange {
-  background-color: #ffedd5;
-  color: #f97316;
-}
-
-.tool-card__icon-box--green {
-  background-color: #dcfce7;
-  color: #10b981;
-}
-
-.tool-card__icon-box--blue {
-  background-color: #dbeafe;
-  color: #3b82f6;
-}
-
-.tool-card__icon-box--purple {
-  background-color: #f3e8ff;
-  color: #a855f7;
-}
-
+.tool-card__icon-box--red,
+.tool-card__icon-box--crimson,
+.tool-card__icon-box--orange,
+.tool-card__icon-box--green,
+.tool-card__icon-box--blue,
+.tool-card__icon-box--purple,
 .tool-card__icon-box--cyan {
-  background-color: #cffafe;
-  color: #06b6d4;
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #000000;
 }
 
 .tool-card__title {
@@ -961,9 +932,11 @@ header.view-section {
 .feature-banner__img {
   display: block;
   height: auto;
-  max-height: 380px;
+  max-height: 420px;
   max-width: 100%;
   object-fit: contain;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .trust-container {
@@ -2679,7 +2652,7 @@ body[data-theme="dark"] .login-logo-img {
 }
 
 .link--primary {
-  color: var(--color-brand, #e11d48);
+  color: var(--color-brand, #111827);
   font-weight: 600;
   text-decoration: none;
 }
