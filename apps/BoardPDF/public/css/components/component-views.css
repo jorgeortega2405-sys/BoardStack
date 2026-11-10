@@ -4247,108 +4247,6 @@ body[data-theme="dark"] .view-backdrop--dots {
   display: flex;
 }
 
-.checkout-mock-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.checkout-mock-row {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-}
-
-.social-badges-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-}
-
-.social-badge-btn {
-  align-items: center;
-  background-color: var(--bg-hover);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 10px);
-  color: var(--text-primary);
-  cursor: pointer;
-  display: flex;
-  font-size: 13px;
-  font-weight: 500;
-  gap: 8px;
-  justify-content: center;
-  padding: 10px 14px;
-  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast);
-}
-
-.social-badge-btn:hover {
-  background-color: var(--bg-surface-elevated, var(--border-color));
-}
-
-.social-badge-btn .component-icon {
-  font-size: 18px;
-  height: 18px;
-  width: 18px;
-}
-
-.mock-qr-box {
-  align-items: center;
-  background-color: #ffffff;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 12px);
-  display: flex;
-  height: 180px;
-  justify-content: center;
-  margin: 0 auto;
-  padding: 12px;
-  width: 180px;
-}
-
-.mock-qr-svg {
-  height: 100%;
-  width: 100%;
-}
-
-.collab-local-auth-icon-wrap {
-  align-items: center;
-  background-color: var(--bg-hover);
-  border-radius: 50%;
-  display: flex;
-  height: 56px;
-  justify-content: center;
-  margin: 0 auto 16px auto;
-  width: 56px;
-}
-
-.collab-local-auth-icon {
-  color: var(--primary, #2563eb);
-  font-size: 28px;
-  height: 28px;
-  width: 28px;
-}
-
-.collab-local-auth-body {
-  padding: 12px 4px 20px 4px;
-  text-align: center;
-}
-
-.collab-local-auth-text {
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 20px 0;
-}
-
-.collab-local-auth-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-}
-
 @media (max-width: 768px) {
   .modaltest-stage .modal-card {
     border: 1px solid var(--border-color);
@@ -4368,8 +4266,6 @@ body[data-theme="dark"] .view-backdrop--dots {
     font-size: 24px;
   }
 
-  .checkout-mock-row,
-  .social-badges-grid,
   .workflow-modal-columns {
     grid-template-columns: 1fr;
   }

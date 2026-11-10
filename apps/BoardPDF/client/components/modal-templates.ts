@@ -146,7 +146,7 @@ function renderUnlockPdfModalBody(): string {
     <div class="modal-form-stack" data-ref="modal-form-unlock-pdf">
       <label class="field" data-ref="field-unlock-password">
         <input class="field__input field__input--has-action" data-ref="input-unlock-password" type="password" placeholder=" " autocomplete="current-password" />
-        <span class="field__label" data-ref="label-unlock-password" data-i18n="tools.unlock_pdf.password_label">${t('tools.unlock_pdf.password_label') || 'Introduce la contraseña del PDF'}</span>
+        <span class="field__label" data-ref="label-unlock-password" data-i18n="tools.unlock_pdf.password_label">${t('tools.unlock_pdf.password_label')}</span>
         <button type="button" class="field__action" data-ref="btn-toggle-unlock-pwd" data-i18n-aria="common.show_password" aria-label="${t('common.show_password')}">
           <svg class="component-icon" data-ref="icon-unlock-closed" aria-hidden="true"><use href="/icons.svg#visibility_off"></use></svg>
           <svg class="component-icon is-hidden" data-ref="icon-unlock-open" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
@@ -161,7 +161,7 @@ function renderAddWebUrlModalBody(currentUrl = ''): string {
     <div class="modal-form-stack" data-ref="modal-form-add-url">
       <label class="field" data-ref="field-web-url">
         <input class="field__input" data-ref="input-web-url" type="url" placeholder="https://ejemplo.com" autocomplete="off" value="${escapeHtml(currentUrl)}" />
-        <span class="field__label" data-ref="label-web-url" data-i18n="ui.url_de_la_pagina_web">${t('ui.url_de_la_pagina_web') || 'URL de la página web'}</span>
+        <span class="field__label" data-ref="label-web-url" data-i18n="ui.url_de_la_pagina_web">${t('ui.url_de_la_pagina_web')}</span>
       </label>
     </div>
   `;
@@ -172,11 +172,11 @@ function renderCollabLocalAuthModalBody(): string {
     <div class="modal-local-auth" data-ref="modal-local-auth">
       <button type="button" class="component-button component-button--primary component-button--black component-button--w-full" data-ref="btn-auth-register">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
-        <span data-i18n="modals_catalog.sample_local_auth_register">${t('modals_catalog.sample_local_auth_register') || 'Crear cuenta gratis y guardar'}</span>
+        <span data-i18n="modals_catalog.sample_local_auth_register">${t('modals_catalog.sample_local_auth_register')}</span>
       </button>
       <button type="button" class="component-button component-button--secondary component-button--w-full" data-ref="btn-auth-login">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#login"></use></svg>
-        <span data-i18n="modals_catalog.sample_local_auth_login">${t('modals_catalog.sample_local_auth_login') || 'Ya tengo cuenta, iniciar sesión'}</span>
+        <span data-i18n="modals_catalog.sample_local_auth_login">${t('modals_catalog.sample_local_auth_login')}</span>
       </button>
     </div>
   `;
@@ -247,7 +247,7 @@ function renderCollabPageSizeModalBody(
 
   return `
     <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size">
-      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" aria-label="${t('ui.seleccionar_tamano_de_papel') || 'Seleccionar tamaño de papel'}">
+      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" aria-label="${t('ui.seleccionar_tamano_de_papel')}">
         <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size">
           <svg class="component-icon dropdown-trigger__icon" data-ref="icon-paper-size" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
           <span class="dropdown-trigger__text" data-ref="txt-selected-paper-size">${escapeHtml(initialPreset.name)} (${escapeHtml(initialPreset.description)})</span>
@@ -266,7 +266,7 @@ function renderCollabPageSizeModalBody(
     <div class="collab-page-size-checkbox-wrap" data-ref="wrap-apply-all">
       <label class="collab-resize-checkbox-label" data-ref="label-apply-all">
         <input class="checkbox" data-ref="chk-apply-all" type="checkbox" />
-        <span data-i18n="collab.apply_to_all_pages">${t('collab.apply_to_all_pages') || 'Aplicar a todas las páginas'}</span>
+        <span data-i18n="collab.apply_to_all_pages">${t('collab.apply_to_all_pages')}</span>
       </label>
     </div>
   `;
@@ -383,18 +383,18 @@ function renderWorkflowBuilderModalBody(workflowName = ''): string {
   return `
     <div class="workflow-modal-columns" data-ref="modal-columns">
       <div class="modal-col-left" data-ref="modal-col-left">
-        <div class="workflow-modal-section-title" data-i18n="modals_catalog.sample_workflow_tool_select_title">${t('modals_catalog.sample_workflow_tool_select_title') || 'Selección de herramienta'}</div>
+        <div class="workflow-modal-section-title" data-i18n="modals_catalog.sample_workflow_tool_select_title">${t('modals_catalog.sample_workflow_tool_select_title')}</div>
 
         <label class="field" data-ref="field-workflow-name">
           <input class="field__input" data-ref="input-workflow-name" type="text" placeholder=" " autocomplete="off" value="${escapeHtml(workflowName)}" />
-          <span class="field__label" data-ref="label-workflow-name" data-i18n="modals_catalog.sample_workflow_name_label">${t('modals_catalog.sample_workflow_name_label') || 'Nombre del flujo de trabajo'}</span>
+          <span class="field__label" data-ref="label-workflow-name" data-i18n="modals_catalog.sample_workflow_name_label">${t('modals_catalog.sample_workflow_name_label')}</span>
         </label>
 
         <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-workflow-tool">
-          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-workflow-tool" aria-label="${t('ui.seleccionar_herramienta') || 'Seleccionar herramienta'}">
+          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-workflow-tool" aria-label="${t('ui.seleccionar_herramienta')}">
             <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-tool">
               <svg class="component-icon dropdown-trigger__icon is-hidden" data-ref="icon-selected-tool" aria-hidden="true"><use href="/icons.svg#widgets"></use></svg>
-              <span class="dropdown-trigger__text" data-ref="txt-selected-tool" data-i18n="modals_catalog.sample_workflow_tool_placeholder">${t('modals_catalog.sample_workflow_tool_placeholder') || 'Selecciona una herramienta...'}</span>
+              <span class="dropdown-trigger__text" data-ref="txt-selected-tool" data-i18n="modals_catalog.sample_workflow_tool_placeholder">${t('modals_catalog.sample_workflow_tool_placeholder')}</span>
             </div>
             <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </button>
@@ -411,22 +411,22 @@ function renderWorkflowBuilderModalBody(workflowName = ''): string {
         <div class="workflow-modal-tool-options is-hidden" data-ref="workflow-modal-tool-options"></div>
 
         <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-modal-add-step">
-          <span data-i18n="modals_catalog.sample_workflow_add_step">${t('modals_catalog.sample_workflow_add_step') || 'Añadir paso'}</span>
+          <span data-i18n="modals_catalog.sample_workflow_add_step">${t('modals_catalog.sample_workflow_add_step')}</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
         </button>
       </div>
 
       <div class="modal-col-right modal-col-right--workflow" data-ref="modal-col-right">
         <div class="workflow-modal-header-row">
-          <div class="workflow-modal-section-title" data-i18n="modals_catalog.sample_workflow_sequence_title">${t('modals_catalog.sample_workflow_sequence_title') || 'Secuencia del flujo'}</div>
-          <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-modal-clear-pipeline" data-i18n="modals_catalog.sample_workflow_clear">${t('modals_catalog.sample_workflow_clear') || 'Borrar todo'}</button>
+          <div class="workflow-modal-section-title" data-i18n="modals_catalog.sample_workflow_sequence_title">${t('modals_catalog.sample_workflow_sequence_title')}</div>
+          <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-modal-clear-pipeline" data-i18n="modals_catalog.sample_workflow_clear">${t('modals_catalog.sample_workflow_clear')}</button>
         </div>
 
         <div class="workflow-modal-steps-list" data-ref="workflow-modal-steps-list"></div>
 
         <div class="banner banner--danger modal-terminal-alert is-hidden" data-ref="modal-terminal-alert">
           <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
-          <span class="banner__text" data-i18n="ui.no_es_posible_anadir_herramientas_desp">${t('ui.no_es_posible_anadir_herramientas_desp') || 'No es posible añadir herramientas después de una conversión terminal.'}</span>
+          <span class="banner__text" data-i18n="ui.no_es_posible_anadir_herramientas_desp">${t('ui.no_es_posible_anadir_herramientas_desp')}</span>
         </div>
       </div>
     </div>
@@ -441,7 +441,7 @@ function renderWorkflowPipelineStepItem(index: number, toolName: string, toolIco
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${escapeHtml(toolIcon)}"></use></svg>
         <span class="pipeline-step-item__title">${escapeHtml(toolName)}</span>
       </div>
-      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-modal-remove-step-${escapeHtml(stepId)}" data-id="${escapeHtml(stepId)}" aria-label="${t('common.delete_file') || 'Quitar paso'}">
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-modal-remove-step-${escapeHtml(stepId)}" data-id="${escapeHtml(stepId)}" aria-label="${t('common.delete_file')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
     </div>
@@ -452,7 +452,7 @@ function renderWorkflowEmptyStepsState(): string {
   return `
     <div class="workflow-empty-state">
       <svg class="component-icon workflow-empty-state__icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
-      <span class="workflow-empty-state__text" data-i18n="ui.anade_herramientas_a_la_secuencia_des">${t('ui.anade_herramientas_a_la_secuencia_des') || 'Añade herramientas a la secuencia desde el panel izquierdo.'}</span>
+      <span class="workflow-empty-state__text" data-i18n="ui.anade_herramientas_a_la_secuencia_des">${t('ui.anade_herramientas_a_la_secuencia_des')}</span>
     </div>
   `;
 }

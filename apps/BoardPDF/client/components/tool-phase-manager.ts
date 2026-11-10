@@ -352,8 +352,8 @@ class ToolPhaseManager {
       const isLastStep = session.currentStepIndex >= session.steps.length - 1;
       if (!isLastStep) {
         this.showProcessing(
-          t('workflows.advancing_step_title', 'Avanzando al siguiente paso...'),
-          t('workflows.advancing_step_subtitle', 'Preparando el documento para la siguiente herramienta')
+          t('workflows.advancing_step_title'),
+          t('workflows.advancing_step_subtitle')
         );
         try {
           const downloadUrl = payload.downloadUrl || (payload.token ? `/api/download/${payload.token}` : '');
@@ -537,13 +537,13 @@ class ToolPhaseManager {
           <span data-ref="workflow-name-txt">${this.escape(session.workflowName)}</span>
         </span>
         <span class="workflow-active-banner__step" data-ref="workflow-step-txt">
-          ${t('workflows.step_indicator', `Paso ${currentStepNum} de ${totalSteps}`).replace('{step}', String(currentStepNum)).replace('{total}', String(totalSteps))}: <strong>${this.escape(this.options.toolName)}</strong>
+          ${t('workflows.step_indicator', { step: String(currentStepNum), total: String(totalSteps) })}: <strong>${this.escape(this.options.toolName)}</strong>
         </span>
       </div>
       <div class="workflow-active-banner__actions" data-ref="workflow-active-actions">
         <button type="button" class="component-button component-button--ghost component-button--sm component-button--danger" data-ref="btn-cancel-workflow">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-          <span data-ref="txt-cancel-workflow" data-i18n="workflows.cancel_workflow">${t('workflows.cancel_workflow', 'Cancelar flujo')}</span>
+          <span data-ref="txt-cancel-workflow" data-i18n="workflows.cancel_workflow">${t('workflows.cancel_workflow')}</span>
         </button>
       </div>
     `;

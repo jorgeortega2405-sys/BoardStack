@@ -437,7 +437,7 @@ class CollaborativePdfDashboardController implements ViewController {
     const limits = resolveToolLimits('collaborative-pdf', currentUser?.permissions || []);
     const ownedDocsCount = this.documents.length;
     if (ownedDocsCount >= limits.maxFiles) {
-      showToast(t('toasts.has_alcanzado_el_limite_de_documentos_colaborativos') || 'Has alcanzado el límite de documentos para tu plan actual.', 'error');
+      showToast(t('toasts.has_alcanzado_el_limite_de_documentos_colaborativos'), 'error');
       return;
     }
 
