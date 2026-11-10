@@ -8,6 +8,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { startWorkflowSession } from '../services/workflow-session.service.js';
 import { MAX_WORKFLOWS_LIMIT, deleteWorkflow, getWorkflows, saveWorkflow } from '../services/workflow-storage.service.js';
 import { ToolDefinition, UserWorkflow, WorkflowStep } from '../types/workflow.types.js';
 import { hideElement, setupDropdown, showElement, toggleElement } from '../utils/dom.util.js';
@@ -70,23 +71,34 @@ class WorkflowsController {
 
       return `
         <div class="tool-card tool-card--workflow" data-ref="card-workflow-${wf.id}" data-workflow-id="${wf.id}">
+          <div class="pdf-card__actions" data-ref="actions-workflow-${wf.id}">
+            <div class="dropdown" data-ref="dropdown-workflow-${wf.id}">
+              <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-wf-${wf.id}" data-id="${wf.id}" data-name="${this.escape(wf.name)}" data-tooltip="${t('ui.mas_opciones', 'Más opciones')}" aria-label="${t('ui.mas_opciones', 'Más opciones')}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+              </button>
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-workflow-${wf.id}">
+                <div class="menu-panel__list">
+                  <button type="button" class="menu-item" data-action="edit-workflow" data-id="${wf.id}">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                    <span class="menu-item__text" data-i18n="ui.editar">${t('ui.editar', 'Editar')}</span>
+                  </button>
+                  <div class="menu-divider"></div>
+                  <button type="button" class="menu-item menu-item--danger" data-action="delete-workflow" data-id="${wf.id}">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                    <span class="menu-item__text" data-i18n="ui.eliminar">${t('ui.eliminar', 'Eliminar')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="tool-card__icon-box" data-ref="icon-box-workflow-${wf.id}">
             ${SVG_TOOL_WORKFLOW}
           </div>
-          <div class="tool-card__actions" data-ref="actions-workflow-${wf.id}">
-            <span class="component-badge component-badge--sm" data-ref="badge-workflow-${wf.id}">${wf.steps.length} pasos</span>
-            <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-edit-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Editar flujo" aria-label="Editar flujo">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-            </button>
-            <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-delete-wf-${wf.id}" data-id="${wf.id}" data-tooltip="Eliminar flujo" aria-label="Eliminar flujo">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-            </button>
-          </div>
           <h3 class="tool-card__title" data-ref="title-workflow-${wf.id}">${this.escape(wf.name)}</h3>
           <p class="tool-card__desc" data-ref="desc-workflow-${wf.id}">${this.escape(stepNames || 'Sin pasos')}</p>
-          <div class="tool-card__footer" data-ref="footer-workflow-${wf.id}">
-            <span class="tool-card__footer-note">Guardado localmente</span>
-            <span class="tool-card__action-link">Ejecutar flujo →</span>
+          <div class="tool-card__action-link" data-ref="link-workflow-${wf.id}">
+            <span data-ref="txt-action-workflow-${wf.id}" data-i18n="workflows.execute_workflow">${t('workflows.execute_workflow', 'Ejecutar flujo')}</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_outward"></use></svg>
           </div>
         </div>
       `;
@@ -94,6 +106,22 @@ class WorkflowsController {
 
     grid.innerHTML = createWorkflowCardHtml + userWorkflowsHtml;
     renderIcons(grid);
+    this.setupDropdowns(grid);
+  }
+
+  private setupDropdowns(grid: HTMLElement): void {
+    const dropdowns = grid.querySelectorAll<HTMLElement>('.dropdown');
+    dropdowns.forEach((dd) => {
+      const card = dd.closest<HTMLElement>('.tool-card--workflow');
+      setupDropdown(dd, {
+        onClose: () => {
+          if (card) card.classList.remove('has-open-dropdown');
+        },
+        onOpen: () => {
+          if (card) card.classList.add('has-open-dropdown');
+        },
+      });
+    });
   }
 
   private bindEvents(): void {
@@ -103,7 +131,7 @@ class WorkflowsController {
     grid.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
 
-      const editBtn = target.closest<HTMLElement>('[data-ref^="btn-edit-wf-"]');
+      const editBtn = target.closest<HTMLElement>('[data-action="edit-workflow"]');
       if (editBtn) {
         e.stopPropagation();
         const id = editBtn.getAttribute('data-id');
@@ -112,12 +140,16 @@ class WorkflowsController {
         return;
       }
 
-      const deleteBtn = target.closest<HTMLElement>('[data-ref^="btn-delete-wf-"]');
+      const deleteBtn = target.closest<HTMLElement>('[data-action="delete-workflow"]');
       if (deleteBtn) {
         e.stopPropagation();
         const id = deleteBtn.getAttribute('data-id');
         const wf = this.workflows.find((w) => w.id === id);
         if (wf) this.confirmDeleteWorkflow(wf);
+        return;
+      }
+
+      if (target.closest('.dropdown')) {
         return;
       }
 
@@ -130,7 +162,13 @@ class WorkflowsController {
       const wfCard = target.closest<HTMLElement>('[data-workflow-id]');
       if (wfCard) {
         const id = wfCard.getAttribute('data-workflow-id');
-        if (id) navigate(`/workflow/${id}`);
+        const wf = this.workflows.find((w) => w.id === id);
+        if (wf && wf.steps.length > 0) {
+          const firstRoute = startWorkflowSession(wf);
+          navigate(firstRoute);
+        } else {
+          showToast(t('workflows.workflow_not_found', 'Flujo de trabajo no encontrado o sin pasos'), 'warning');
+        }
       }
     });
   }

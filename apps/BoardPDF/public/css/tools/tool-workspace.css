@@ -10235,3 +10235,42 @@ body.is-marquee-selecting * {
   color: #000000;
   transform: none;
 }
+
+.workflow-active-banner {
+  align-items: center;
+  background-color: var(--bg-surface-elevated, #ffffff);
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 24px;
+  width: 100%;
+  z-index: 10;
+}
+
+[data-theme='dark'] .workflow-active-banner {
+  background-color: var(--bg-surface-elevated, #1a1c20);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.workflow-active-banner__info {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.workflow-active-banner__step {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.workflow-active-banner__step strong {
+  color: var(--text-primary);
+}
+
+.workflow-active-banner__actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}

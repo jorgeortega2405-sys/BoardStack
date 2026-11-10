@@ -1,11 +1,15 @@
+import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
+import { t } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
+import { navigate } from '../services/navigation.service.js';
+import { loadTemplate } from '../services/template.service.js';
+import { showToast } from '../services/toast.service.js';
+import { saveDownloadPayloadAndNavigate, ToolDownloadPayload } from '../services/tool-flow.service.js';
+import { advanceWorkflowSession, clearWorkflowSession, getActiveWorkflowSession, getWorkflowIntermediateFile } from '../services/workflow-session.service.js';
+import { hideElement, showElement } from '../utils/dom.util.js';
 import { ToolDropzoneComponent, ToolDropzoneOptions } from './tool-dropzone.component.js';
 import { ToolStatusManager } from './tool-status.component.js';
 import { isLimitErrorMessage, showUpgradeLimitModal } from './upgrade-limit-modal.component.js';
-import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
-import { renderIcons } from '../services/icon.service.js';
-import { loadTemplate } from '../services/template.service.js';
-import { saveDownloadPayloadAndNavigate, ToolDownloadPayload } from '../services/tool-flow.service.js';
-import { hideElement, showElement } from '../utils/dom.util.js';
 
 type ToolPhase = 'download' | 'dropzone' | 'processing' | 'workspace';
 
@@ -32,6 +36,7 @@ class ToolPhaseManager {
   private originalQuerySelectorAll: ((selectors: string) => NodeListOf<Element>) | null = null;
   private processingElement: HTMLElement | null = null;
   public statusManager: ToolStatusManager;
+  private workflowBannerElement: HTMLElement | null = null;
   private workspaceElements: HTMLElement[] = [];
 
   constructor(options: ToolPhaseManagerOptions) {
@@ -79,6 +84,19 @@ class ToolPhaseManager {
       this.processingElement = await loadTemplate('/views/components/tool-processing.html');
       hideElement(this.processingElement);
     } catch {}
+
+    const session = getActiveWorkflowSession();
+    if (session) {
+      this.renderWorkflowBanner();
+      const intermediate = getWorkflowIntermediateFile();
+      if (intermediate && this.options.dropzone?.onFilesSelected) {
+        setTimeout(() => {
+          if (this.options.dropzone?.onFilesSelected) {
+            void this.options.dropzone.onFilesSelected([intermediate]);
+          }
+        }, 80);
+      }
+    }
 
     queueMicrotask(() => {
       if (this.currentPhase === 'dropzone') {
@@ -322,9 +340,42 @@ class ToolPhaseManager {
         }
       });
     }
+
+    if (this.workflowBannerElement && !this.container.contains(this.workflowBannerElement)) {
+      this.container.prepend(this.workflowBannerElement);
+    }
   }
 
   public async navigateToDownload(payload: ToolDownloadPayload): Promise<void> {
+    const session = getActiveWorkflowSession();
+    if (session) {
+      const isLastStep = session.currentStepIndex >= session.steps.length - 1;
+      if (!isLastStep) {
+        this.showProcessing(
+          t('workflows.advancing_step_title', 'Avanzando al siguiente paso...'),
+          t('workflows.advancing_step_subtitle', 'Preparando el documento para la siguiente herramienta')
+        );
+        try {
+          const downloadUrl = payload.downloadUrl || (payload.token ? `/api/download/${payload.token}` : '');
+          if (downloadUrl) {
+            const res = await fetch(downloadUrl);
+            const blob = await res.blob();
+            const nextName = payload.filename || 'workflow-step-output.pdf';
+            const intermediateFile = new File([blob], nextName, { type: blob.type || 'application/pdf' });
+            const { isComplete, nextRoute } = advanceWorkflowSession(intermediateFile);
+            if (!isComplete && nextRoute) {
+              navigate(nextRoute);
+              return;
+            }
+          }
+        } catch {
+          clearWorkflowSession();
+        }
+      } else {
+        clearWorkflowSession();
+      }
+    }
+
     await this.statusManager.complete(payload.title, payload.subtitle);
     this.setPhase('download');
     saveDownloadPayloadAndNavigate(payload);
@@ -454,9 +505,69 @@ class ToolPhaseManager {
       this.processingElement.remove();
       this.processingElement = null;
     }
+    if (this.workflowBannerElement) {
+      this.workflowBannerElement.remove();
+      this.workflowBannerElement = null;
+    }
     this.statusManager.destroy();
     this.dropzoneElement = null;
     this.workspaceElements = [];
+  }
+
+  private renderWorkflowBanner(): void {
+    const session = getActiveWorkflowSession();
+    if (!session) return;
+
+    if (this.workflowBannerElement) {
+      this.workflowBannerElement.remove();
+      this.workflowBannerElement = null;
+    }
+
+    const currentStepNum = session.currentStepIndex + 1;
+    const totalSteps = session.steps.length;
+
+    const banner = document.createElement('div');
+    banner.className = 'workflow-active-banner';
+    banner.setAttribute('data-ref', 'workflow-active-banner');
+
+    banner.innerHTML = `
+      <div class="workflow-active-banner__info" data-ref="workflow-active-info">
+        <span class="component-badge component-badge--brand" data-ref="workflow-badge">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
+          <span data-ref="workflow-name-txt">${this.escape(session.workflowName)}</span>
+        </span>
+        <span class="workflow-active-banner__step" data-ref="workflow-step-txt">
+          ${t('workflows.step_indicator', `Paso ${currentStepNum} de ${totalSteps}`).replace('{step}', String(currentStepNum)).replace('{total}', String(totalSteps))}: <strong>${this.escape(this.options.toolName)}</strong>
+        </span>
+      </div>
+      <div class="workflow-active-banner__actions" data-ref="workflow-active-actions">
+        <button type="button" class="component-button component-button--ghost component-button--sm component-button--danger" data-ref="btn-cancel-workflow">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          <span data-ref="txt-cancel-workflow" data-i18n="workflows.cancel_workflow">${t('workflows.cancel_workflow', 'Cancelar flujo')}</span>
+        </button>
+      </div>
+    `;
+
+    const cancelBtn = banner.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-workflow"]');
+    cancelBtn?.addEventListener('click', () => {
+      clearWorkflowSession();
+      banner.remove();
+      this.workflowBannerElement = null;
+      showToast(t('workflows.workflow_cancelled', 'Flujo de trabajo cancelado'), 'info');
+    });
+
+    this.workflowBannerElement = banner;
+    this.container.prepend(banner);
+    renderIcons(banner);
+  }
+
+  private escape(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }
 

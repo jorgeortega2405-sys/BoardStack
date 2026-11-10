@@ -121,22 +121,14 @@ header.view-section {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 24px;
   font-weight: 700;
-  gap: 3px;
   letter-spacing: -0.6px;
   line-height: 1;
   user-select: none;
 }
 
 .brand-accent {
-  background-color: #000000;
-  border-radius: 6px;
-  color: #ffffff;
-  display: inline-block;
-  font-size: 0.72em;
+  color: #71717a;
   font-weight: 900;
-  letter-spacing: 0.4px;
-  line-height: 1;
-  padding: 3px 6px;
 }
 
 @media (max-width: 768px) {
@@ -430,13 +422,16 @@ header.view-section {
   margin: 0;
 }
 
-.tool-card--create-workflow {
+.tool-card--create-workflow,
+.tool-card--workflow {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative;
 }
 
-.tool-card--create-workflow .tool-card__title {
+.tool-card--create-workflow .tool-card__title,
+.tool-card--workflow .tool-card__title {
   margin-top: 0;
 }
 
@@ -457,7 +452,8 @@ header.view-section {
   width: 16px;
 }
 
-.tool-card--create-workflow:hover .tool-card__action-link .component-icon {
+.tool-card--create-workflow:hover .tool-card__action-link .component-icon,
+.tool-card--workflow:hover .tool-card__action-link .component-icon {
   transform: translate(2px, -2px);
 }
 
@@ -468,6 +464,68 @@ header.view-section {
   position: absolute;
   right: 20px;
   top: 20px;
+}
+
+.pdf-card__actions {
+  align-items: center;
+  background-color: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  opacity: 0;
+  padding: 2px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+}
+
+[data-theme='dark'] .pdf-card__actions {
+  background-color: var(--bg-surface, #1e2024);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.pdf-card:hover .pdf-card__actions,
+.pdf-card:focus-within .pdf-card__actions,
+.tool-card:hover .pdf-card__actions,
+.tool-card:focus-within .pdf-card__actions,
+.tool-card.has-open-dropdown .pdf-card__actions {
+  opacity: 1;
+}
+
+.pdf-card__actions .dropdown {
+  display: flex;
+  position: relative;
+}
+
+.pdf-card__btn-action {
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  width: 28px;
+}
+
+.pdf-card__btn-action:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .pdf-card__btn-action:hover {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.08));
 }
 
 .tool-card__footer {
