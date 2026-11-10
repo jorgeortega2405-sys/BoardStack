@@ -257,6 +257,7 @@ async fn handle_connection(
                                     JoinResult::Success {
                                         peer: self_peer,
                                         existing_peers,
+                                        ai_lock,
                                     } => {
                                         current_doc_id = Some(doc_id);
                                         current_client_id = Some(self_peer.client_id.clone());
@@ -268,6 +269,17 @@ async fn handle_connection(
                                         };
                                         if let Ok(json_str) = serde_json::to_string(&joined_msg) {
                                             let _ = tx.try_send(Message::Text(json_str.into()));
+                                        }
+
+                                        if let Some(active_lock) = ai_lock {
+                                            let lock_msg = ServerMessage::AiLock {
+                                                locked: true,
+                                                locked_by: Some(active_lock.locked_by),
+                                                locked_by_client_id: Some(active_lock.locked_by_client_id),
+                                            };
+                                            if let Ok(lock_json) = serde_json::to_string(&lock_msg) {
+                                                let _ = tx.try_send(Message::Text(lock_json.into()));
+                                            }
                                         }
                                     }
                                     JoinResult::RoomFull { max_collaborators } => {
@@ -314,6 +326,10 @@ async fn handle_connection(
                                 if let (Some(doc_id), Some(client_id)) =
                                     (&current_doc_id, &current_client_id)
                                 {
+                                    let hub_read = hub.read().await;
+                                    if hub_read.is_ai_locked(doc_id) {
+                                        continue;
+                                    }
                                     let broadcast_msg = ServerMessage::ElementChange {
                                         sender_client_id: client_id.clone(),
                                         action,
@@ -321,7 +337,6 @@ async fn handle_connection(
                                         page_index,
                                     };
                                     if let Ok(json_str) = serde_json::to_string(&broadcast_msg) {
-                                        let hub_read = hub.read().await;
                                         hub_read.broadcast_to_room(doc_id, client_id, &json_str, false);
                                     }
                                 }
@@ -331,20 +346,29 @@ async fn handle_connection(
                                 elements,
                                 page_backgrounds,
                                 page_count,
+                                page_size,
+                                page_sizes,
+                                page_titles,
                                 title,
                             } => {
                                 if let (Some(doc_id), Some(client_id)) =
                                     (&current_doc_id, &current_client_id)
                                 {
+                                    let hub_read = hub.read().await;
+                                    if !hub_read.can_broadcast_doc_sync(doc_id, client_id) {
+                                        continue;
+                                    }
                                     let broadcast_msg = ServerMessage::DocSync {
                                         sender_client_id: client_id.clone(),
                                         elements,
                                         page_backgrounds,
                                         page_count,
+                                        page_size,
+                                        page_sizes,
+                                        page_titles,
                                         title,
                                     };
                                     if let Ok(json_str) = serde_json::to_string(&broadcast_msg) {
-                                        let hub_read = hub.read().await;
                                         hub_read.broadcast_to_room(doc_id, client_id, &json_str, false);
                                     }
                                 }
@@ -354,13 +378,58 @@ async fn handle_connection(
                                 if let (Some(doc_id), Some(client_id)) =
                                     (&current_doc_id, &current_client_id)
                                 {
+                                    let hub_read = hub.read().await;
+                                    if hub_read.is_ai_locked(doc_id) {
+                                        continue;
+                                    }
                                     let broadcast_msg = ServerMessage::TitleChange {
                                         sender_client_id: client_id.clone(),
                                         title,
                                     };
                                     if let Ok(json_str) = serde_json::to_string(&broadcast_msg) {
-                                        let hub_read = hub.read().await;
                                         hub_read.broadcast_to_room(doc_id, client_id, &json_str, false);
+                                    }
+                                }
+                            }
+
+                            ClientMessage::AiLock { locked, locked_by } => {
+                                if let (Some(doc_id), Some(client_id)) =
+                                    (&current_doc_id, &current_client_id)
+                                {
+                                    let mut hub_write = hub.write().await;
+                                    match hub_write.set_ai_lock(doc_id, client_id, locked, locked_by) {
+                                        Ok(Some(lock_state)) => {
+                                            let lock_msg = ServerMessage::AiLock {
+                                                locked: true,
+                                                locked_by: Some(lock_state.locked_by),
+                                                locked_by_client_id: Some(lock_state.locked_by_client_id),
+                                            };
+                                            if let Ok(json_str) = serde_json::to_string(&lock_msg) {
+                                                hub_write.broadcast_to_room(doc_id, client_id, &json_str, false);
+                                            }
+                                        }
+                                        Ok(None) => {
+                                            if !locked {
+                                                let unlock_msg = ServerMessage::AiLock {
+                                                    locked: false,
+                                                    locked_by: None,
+                                                    locked_by_client_id: None,
+                                                };
+                                                if let Ok(json_str) = serde_json::to_string(&unlock_msg) {
+                                                    hub_write.broadcast_to_room(doc_id, client_id, &json_str, false);
+                                                }
+                                            }
+                                        }
+                                        Err(existing) => {
+                                            let lock_msg = ServerMessage::AiLock {
+                                                locked: true,
+                                                locked_by: Some(existing.locked_by),
+                                                locked_by_client_id: Some(existing.locked_by_client_id),
+                                            };
+                                            if let Ok(json_str) = serde_json::to_string(&lock_msg) {
+                                                let _ = tx.try_send(Message::Text(json_str.into()));
+                                            }
+                                        }
                                     }
                                 }
                             }

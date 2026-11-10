@@ -1,12 +1,15 @@
 import { getDbPool } from '../../config/database.config.js';
-import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
+import { S3_BUCKET_NAME, isS3Configured, s3Client } from '../../config/s3.config.js';
 import { resolveToolLimits } from '../../config/subscription-plans.config.js';
 import { getCurrentUser, hasSubscriptionFeature } from '../../middlewares/auth.middleware.js';
-import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
+import { MIN_AI_GENERATE_COST, calculateAiGenerateCost, calculatePdfCost, consumeAiTokens, consumeCustomAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
+import { permissionService } from '../../services/permission.service.js';
 import { removeBackground } from '../../services/photoroom.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
 import { validatePdfUpload } from '../../utils/tool-handler.util.js';
+import { generateCollaborativeDocumentWithAi } from './collaborative-pdf-ai.service.js';
+import { acquireCollaborativeAiLock, getCollaborativeAiLock, releaseCollaborativeAiLock } from './collaborative-pdf-lock.service.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
@@ -15,12 +18,54 @@ import fs from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 
+interface CollaborativeAiControllerDeps {
+  acquireLock?: typeof acquireCollaborativeAiLock;
+  checkDocQuota?: (userId: number, permissions: string[]) => Promise<boolean>;
+  consumeTokens?: typeof consumeCustomAiTokens;
+  generateWithAi?: typeof generateCollaborativeDocumentWithAi;
+  getDocument?: typeof getCollaborativeDocument;
+  getTokenBalance?: typeof getUserTokenBalance;
+  releaseLock?: typeof releaseCollaborativeAiLock;
+  saveDocument?: typeof saveCollaborativeDocument;
+}
+
 const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative');
 
 function ensureUploadsDir(): void {
   if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
+}
+
+async function resolveRequestUserPermissions(req: Request, user: any, allowDbLookup = true): Promise<string[]> {
+  if (user && Array.isArray(user.permissions) && user.permissions.length > 0) {
+    return user.permissions as string[];
+  }
+  if (Array.isArray((req as any).userPermissions) && (req as any).userPermissions.length > 0) {
+    return (req as any).userPermissions as string[];
+  }
+  if (allowDbLookup && user?.id) {
+    try {
+      const perms = await permissionService.getUserPermissions(
+        Number(user.id),
+        user.subscription_tier,
+        user.subscription_status
+      );
+      if (user) {
+        user.permissions = perms;
+      }
+      return perms;
+    } catch {
+      return [];
+    }
+  }
+  if (user && Array.isArray(user.permissions)) {
+    return user.permissions as string[];
+  }
+  if (Array.isArray((req as any).userPermissions)) {
+    return (req as any).userPermissions as string[];
+  }
+  return [];
 }
 
 async function listCollaborativeDocsHandler(req: Request, res: Response): Promise<void> {
@@ -107,8 +152,10 @@ async function getCollaborativeDocHandler(req: Request, res: Response): Promise<
     }
 
     const canEdit = isOwner || document.access_level === 'anyone_with_link' || document.members?.some((m) => user?.id != null && String(m.user_id) === String(user.id) && m.role === 'editor');
+    const aiLock = await getCollaborativeAiLock(id);
 
     res.json({
+      aiLock,
       canEdit: !!canEdit,
       document,
       isOwner: !!isOwner,
@@ -127,6 +174,18 @@ async function saveCollaborativeDocHandler(req: Request, res: Response): Promise
   try {
     const user = getCurrentUser(req);
     const id = req.params.id || req.body.id || (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `doc_${crypto.randomBytes(8).toString('hex')}`);
+
+    const aiLock = await getCollaborativeAiLock(id);
+    if (aiLock.locked) {
+      res.status(423).json({
+        aiLock,
+        code: 'AI_GENERATION_LOCKED',
+        error: 'El documento está bloqueado temporalmente mientras la IA genera el contenido.',
+        success: false,
+      });
+      return;
+    }
+
     const existingDoc = await getCollaborativeDocument(id);
 
     if (!existingDoc) {
@@ -139,7 +198,7 @@ async function saveCollaborativeDocHandler(req: Request, res: Response): Promise
         return;
       }
 
-      const userPermissions = (req as any).userPermissions || [];
+      const userPermissions = await resolveRequestUserPermissions(req, user);
       const limits = resolveToolLimits('collaborative-pdf', userPermissions);
       const pool = getDbPool();
       const [countRows] = await pool.query<any[]>('SELECT COUNT(*) as total FROM collaborative_documents WHERE user_id = ?', [user.id]);
@@ -230,7 +289,7 @@ async function addCollaborativeDocMemberHandler(req: Request, res: Response): Pr
       return;
     }
 
-    const userPermissions = (req as any).userPermissions || [];
+    const userPermissions = await resolveRequestUserPermissions(req, user);
     const limits = resolveToolLimits('collaborative-pdf', userPermissions);
     const currentMembers = doc?.members || await getCollaborativeDocMembers(id);
     const isAlreadyMember = currentMembers.some((m) => m.user_id === userId);
@@ -288,6 +347,16 @@ async function updateCollaborativeDocAccessLevelHandler(req: Request, res: Respo
       res.status(400).json({ error: 'Nivel de acceso no válido.', success: false });
       return;
     }
+    const aiLock = await getCollaborativeAiLock(id);
+    if (aiLock.locked) {
+      res.status(423).json({
+        aiLock,
+        code: 'AI_GENERATION_LOCKED',
+        error: 'El documento está bloqueado temporalmente mientras la IA genera el contenido.',
+        success: false,
+      });
+      return;
+    }
     const user = getCurrentUser(req);
     const doc = await getCollaborativeDocument(id);
     if (doc?.user_id && (!user?.id || String(doc.user_id) !== String(user.id))) {
@@ -334,6 +403,16 @@ async function deleteCollaborativeDocHandler(req: Request, res: Response): Promi
     if (!user || !user.id) {
       res.status(401).json({
         error: 'Debes iniciar sesión para realizar esta acción.',
+        success: false,
+      });
+      return;
+    }
+    const aiLock = await getCollaborativeAiLock(id);
+    if (aiLock.locked) {
+      res.status(423).json({
+        aiLock,
+        code: 'AI_GENERATION_LOCKED',
+        error: 'El documento está bloqueado temporalmente mientras la IA genera el contenido.',
         success: false,
       });
       return;
@@ -481,7 +560,7 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
       targetUserId = ownerId;
       targetDocId = doc.id;
     } else {
-      const userPermissions = (req as any).userPermissions || [];
+      const userPermissions = await resolveRequestUserPermissions(req, user);
       const limits = resolveToolLimits('collaborative-pdf', userPermissions);
       const maxFileBytes = limits.maxFileSizeMB * 1024 * 1024;
       const oversizedFile = targetFiles.find((f) => (f.size || f.buffer?.length || 0) > maxFileBytes);
@@ -829,4 +908,217 @@ async function removeBackgroundHandler(req: Request, res: Response): Promise<voi
   }
 }
 
-export { addCollaborativeDocMemberHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler };
+function createAiGenerateCollaborativeDocHandler(deps: CollaborativeAiControllerDeps = {}) {
+  const acquireLock = deps.acquireLock || acquireCollaborativeAiLock;
+  const consumeTokens = deps.consumeTokens || consumeCustomAiTokens;
+  const generateWithAi = deps.generateWithAi || generateCollaborativeDocumentWithAi;
+  const getDocument = deps.getDocument || getCollaborativeDocument;
+  const getTokenBalance = deps.getTokenBalance || getUserTokenBalance;
+  const releaseLock = deps.releaseLock || releaseCollaborativeAiLock;
+  const saveDocument = deps.saveDocument || saveCollaborativeDocument;
+
+  return async function aiGenerateCollaborativeDocHandler(req: Request, res: Response): Promise<void> {
+    const user = getCurrentUser(req);
+    if (!user || !user.id) {
+      res.status(401).json({
+        error: 'Debes iniciar sesión para generar contenido con IA.',
+        requireLogin: true,
+        success: false,
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json({
+        error: 'Identificador de documento no válido.',
+        success: false,
+      });
+      return;
+    }
+
+    const rawPrompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    if (!rawPrompt) {
+      res.status(400).json({
+        error: 'Debes escribir una descripción de lo que deseas generar.',
+        success: false,
+      });
+      return;
+    }
+
+    if (rawPrompt.length > 4000) {
+      res.status(400).json({
+        error: 'La descripción no puede superar los 4000 caracteres.',
+        success: false,
+      });
+      return;
+    }
+
+    const mode: 'append' | 'replace' = req.body?.mode === 'append' ? 'append' : 'replace';
+
+    try {
+      const hasMockedDeps = Boolean(deps.getTokenBalance || deps.checkDocQuota || deps.consumeTokens);
+      const userPermissions = await resolveRequestUserPermissions(req, user, !hasMockedDeps);
+
+      const existingDoc = await getDocument(id);
+      if (!existingDoc) {
+        if (deps.checkDocQuota) {
+          const allowed = await deps.checkDocQuota(Number(user.id), userPermissions);
+          if (!allowed) {
+            res.status(403).json({
+              error: 'Has alcanzado el límite de documentos colaborativos permitido para tu plan actual.',
+              success: false,
+            });
+            return;
+          }
+        } else {
+          const limits = resolveToolLimits('collaborative-pdf', userPermissions);
+          const pool = getDbPool();
+          const [countRows] = await pool.query<any[]>('SELECT COUNT(*) as total FROM collaborative_documents WHERE user_id = ?', [user.id]);
+          const currentDocCount = countRows?.[0]?.total || 0;
+          if (currentDocCount >= limits.maxFiles) {
+            res.status(403).json({
+              error: 'Has alcanzado el límite de documentos colaborativos permitido para tu plan actual.',
+              success: false,
+            });
+            return;
+          }
+        }
+      } else {
+        const isOwner = existingDoc.user_id != null && String(existingDoc.user_id) === String(user.id);
+        const isMemberEditor = existingDoc.members?.some((m) => String(m.user_id) === String(user.id) && m.role === 'editor');
+        const isPublicLink = existingDoc.access_level === 'anyone_with_link';
+
+        if (!isOwner && !isMemberEditor && !isPublicLink) {
+          res.status(403).json({
+            error: 'No tienes permisos para modificar este documento.',
+            success: false,
+          });
+          return;
+        }
+      }
+
+      const initialBalance = await getTokenBalance(Number(user.id), userPermissions);
+      if (initialBalance.balance < MIN_AI_GENERATE_COST) {
+        res.status(402).json({
+          currentBalance: initialBalance.balance,
+          error: `Saldo insuficiente de tokens IA. Esta operación requiere al menos ${MIN_AI_GENERATE_COST} tokens y dispones de ${initialBalance.balance} tokens.`,
+          requiredTokens: MIN_AI_GENERATE_COST,
+          success: false,
+          userTokens: initialBalance.balance,
+        });
+        return;
+      }
+
+      const lockResult = await acquireLock(id, Number(user.id), user.username);
+      if (!lockResult.acquired) {
+        res.status(423).json({
+          aiLock: lockResult.lock,
+          code: 'AI_GENERATION_LOCKED',
+          error: 'El documento está bloqueado temporalmente mientras la IA genera el contenido.',
+          success: false,
+        });
+        return;
+      }
+
+      try {
+        const bodyContent = req.body?.currentContent && typeof req.body.currentContent === 'object' ? req.body.currentContent : null;
+        const effectiveContent = bodyContent && Array.isArray(bodyContent.elements) ? bodyContent : existingDoc?.content;
+
+        const requestedTitle = typeof req.body?.currentTitle === 'string' && req.body.currentTitle.trim().length > 0
+          ? req.body.currentTitle.trim()
+          : undefined;
+        const effectiveTitle = requestedTitle || existingDoc?.title;
+
+        const aiResult = await generateWithAi({
+          authorName: user.username || undefined,
+          currentContent: effectiveContent,
+          currentTitle: effectiveTitle,
+          mode,
+          prompt: rawPrompt,
+        });
+
+        const requiredTokens = calculateAiGenerateCost(aiResult.geminiTokens, aiResult.generatedPageCount);
+        const currentBalanceInfo = await getTokenBalance(Number(user.id), userPermissions);
+        if (currentBalanceInfo.balance < requiredTokens) {
+          res.status(402).json({
+            currentBalance: currentBalanceInfo.balance,
+            error: `Saldo insuficiente de tokens IA. Esta generación de ${aiResult.generatedPageCount} página(s) requiere ${requiredTokens} tokens y dispones de ${currentBalanceInfo.balance} tokens.`,
+            requiredTokens,
+            success: false,
+            userTokens: currentBalanceInfo.balance,
+          });
+          return;
+        }
+
+        const contentBytes = Buffer.byteLength(JSON.stringify(aiResult.content), 'utf8');
+        const consumeRes = await consumeTokens({
+          fileSizeBytes: contentBytes,
+          pageCount: aiResult.generatedPageCount,
+          permissions: userPermissions,
+          requiredTokens,
+          toolId: 'collaborative-ai-generate',
+          userId: Number(user.id),
+        });
+
+        if (!consumeRes.success) {
+          res.status(402).json({
+            currentBalance: consumeRes.balance,
+            error: `Saldo insuficiente de tokens IA. Esta generación requiere ${consumeRes.required} tokens y dispones de ${consumeRes.balance} tokens.`,
+            requiredTokens: consumeRes.required,
+            success: false,
+            userTokens: consumeRes.balance,
+          });
+          return;
+        }
+
+        const savedDoc = await saveDocument({
+          accessLevel: existingDoc?.access_level || 'restricted',
+          content: aiResult.content,
+          id,
+          title: aiResult.title,
+          userId: existingDoc?.user_id ?? Number(user.id),
+        });
+
+        res.status(200).json({
+          aiTokens: {
+            balance: consumeRes.balance,
+            consumed: consumeRes.consumed,
+            geminiTokens: aiResult.geminiTokens,
+            limit: consumeRes.limit,
+          },
+          document: savedDoc,
+          generated: {
+            addedCount: aiResult.addedCount,
+            generatedPageCount: aiResult.generatedPageCount,
+            mode,
+            model: aiResult.model,
+            pageCount: aiResult.pageCount,
+          },
+          success: true,
+        });
+      } finally {
+        await releaseLock(id, lockResult.lockToken);
+      }
+    } catch (err: any) {
+      if (err?.message === 'CONFIG_GEMINI_KEY_MISSING' || err?.message === 'GEMINI_UNAVAILABLE') {
+        res.status(503).json({
+          error: 'El servicio de generación con IA no está disponible temporalmente. Por favor intenta más tarde.',
+          success: false,
+        });
+        return;
+      }
+
+      logger.app.error('Error al generar documento colaborativo con IA', err);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  };
+}
+
+const aiGenerateCollaborativeDocHandler = createAiGenerateCollaborativeDocHandler();
+
+export { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, createAiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler };
+export type { CollaborativeAiControllerDeps };

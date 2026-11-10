@@ -1,29 +1,48 @@
 interface CollaborativeElementText {
+  align?: 'center' | 'justify' | 'left' | 'right';
+  authorName?: string;
   backgroundColor?: string;
   color?: string;
   fontFamily?: string;
   fontSize: number;
+  fontStyle?: 'italic' | 'normal';
+  fontWeight?: number | string;
   height?: number;
   id: string;
   isBold?: boolean;
+  isItalic?: boolean;
   isStickyNote?: boolean;
+  isStrikethrough?: boolean;
+  isUnderline?: boolean;
+  isUppercase?: boolean;
+  letterSpacing?: number;
+  lineHeight?: number;
+  listType?: 'bullet' | 'none' | 'numbered';
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   text: string;
   type: 'text';
+  verticalAlign?: 'bottom' | 'middle' | 'top';
   width?: number;
   x: number;
   y: number;
 }
 
 interface CollaborativeElementShape {
+  borderRadius?: number;
   fillColor?: string;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
   height: number;
   id: string;
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   shapeType: string;
+  sides?: number;
   strokeColor: string;
+  strokeStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
   strokeWidth: number;
   type: 'shape';
   width: number;
@@ -44,9 +63,16 @@ interface CollaborativeElementDrawing {
 }
 
 interface CollaborativeElementImage {
+  borderColor?: string;
+  borderRadius?: number;
+  borderStyle?: 'dashed' | 'dotted' | 'long-dash' | 'none' | 'solid';
+  borderWidth?: number;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
   height: number;
   id: string;
   name?: string;
+  opacity?: number;
   pageIndex: number;
   rotation?: number;
   type: 'image';
@@ -182,6 +208,13 @@ interface CollaborativeMember {
   username: string;
 }
 
+interface CollaborativeAiLockInfo {
+  locked: boolean;
+  lockedBy?: string;
+  lockedByUserId?: number;
+  startedAt?: string;
+}
+
 interface CollaborativeDocumentRecord {
   access_level?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
@@ -196,4 +229,4 @@ interface CollaborativeDocumentRecord {
   user_id?: number | null;
 }
 
-export type { ChartDataSeries, ChartOptions, ChartType, CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeElement, CollaborativeElementChart, CollaborativeElementDrawing, CollaborativeElementImage, CollaborativeElementShape, CollaborativeElementTable, CollaborativeElementTableCell, CollaborativeElementText, CollaborativeMember, CollaborativePdfPageSource };
+export type { ChartDataSeries, ChartOptions, ChartType, CollaborativeAiLockInfo, CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeElement, CollaborativeElementChart, CollaborativeElementDrawing, CollaborativeElementImage, CollaborativeElementShape, CollaborativeElementTable, CollaborativeElementTableCell, CollaborativeElementText, CollaborativeMember, CollaborativePdfPageSource };

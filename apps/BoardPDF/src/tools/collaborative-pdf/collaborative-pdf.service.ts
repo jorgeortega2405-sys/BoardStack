@@ -20,6 +20,59 @@ function readPublicAsset(relPath: string): Buffer | null {
   return null;
 }
 
+function wrapPdfTextLines(
+  text: string,
+  font: any,
+  fontSize: number,
+  maxWidth: number
+): string[] {
+  const safeMaxW = Math.max(12, maxWidth);
+  const rawParagraphs = String(text || '').replace(/\r/g, '').split('\n');
+  const lines: string[] = [];
+
+  for (const para of rawParagraphs) {
+    if (!para.trim()) {
+      lines.push('');
+      continue;
+    }
+
+    const words = para.split(/\s+/).filter(Boolean);
+    let currentLine = '';
+
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, fontSize) <= safeMaxW) {
+        currentLine = candidate;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = '';
+        }
+        if (font.widthOfTextAtSize(word, fontSize) <= safeMaxW) {
+          currentLine = word;
+        } else {
+          let chunk = '';
+          for (const ch of word) {
+            if (font.widthOfTextAtSize(chunk + ch, fontSize) > safeMaxW && chunk) {
+              lines.push(chunk);
+              chunk = ch;
+            } else {
+              chunk += ch;
+            }
+          }
+          currentLine = chunk;
+        }
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  }
+
+  return lines.length > 0 ? lines : [];
+}
+
 async function renderCollaborativePdf(
   title: string,
   content: CollaborativeDocumentContent
@@ -30,15 +83,30 @@ async function renderCollaborativePdf(
 
   const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontHelveticaOblique = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+  const fontHelveticaBoldOblique = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
   const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontTimesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const fontTimesItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
   const fontCourier = await pdfDoc.embedFont(StandardFonts.Courier);
+  const fontCourierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
+  const fontCourierOblique = await pdfDoc.embedFont(StandardFonts.CourierOblique);
 
-  const resolveFont = (fontFamily?: string, isBold?: boolean) => {
+  const resolveFont = (fontFamily?: string, isBold?: boolean, isItalic?: boolean) => {
+    const lower = (fontFamily || '').toLowerCase();
+    if (lower.includes('times') || lower.includes('serif')) {
+      if (isBold) return fontTimesBold;
+      if (isItalic) return fontTimesItalic;
+      return fontTimes;
+    }
+    if (lower.includes('courier') || lower.includes('mono')) {
+      if (isBold) return fontCourierBold;
+      if (isItalic) return fontCourierOblique;
+      return fontCourier;
+    }
+    if (isBold && isItalic) return fontHelveticaBoldOblique;
     if (isBold) return fontHelveticaBold;
-    if (!fontFamily) return fontHelvetica;
-    const lower = fontFamily.toLowerCase();
-    if (lower.includes('times') || lower.includes('serif')) return fontTimes;
-    if (lower.includes('courier') || lower.includes('mono')) return fontCourier;
+    if (isItalic) return fontHelveticaOblique;
     return fontHelvetica;
   };
 
@@ -99,17 +167,20 @@ async function renderCollaborativePdf(
     const targetHeight = pageHeights[pageIndex] || (defaultH / 96) * 72;
 
     if (el.type === 'text') {
-      const clean = cleanTextForWinAnsi(el.text || '');
-      const scaledW = (el.width || 140) * scale;
+      const rawText = el.isUppercase ? String(el.text || '').toUpperCase() : String(el.text || '');
+      const clean = cleanTextForWinAnsi(rawText);
+      const scaledW = (el.width || 240) * scale;
       const scaledH = (el.height || 140) * scale;
       const scaledX = el.x * scale;
       const scaledY = el.y * scale;
+      const opacity = typeof el.opacity === 'number' ? Math.max(0, Math.min(1, el.opacity)) : 1;
 
       if (el.isStickyNote && el.backgroundColor) {
         const bg = parseHexColor(el.backgroundColor);
         page.drawRectangle({
           color: rgb(bg.r, bg.g, bg.b),
           height: scaledH,
+          opacity,
           width: scaledW,
           x: scaledX,
           y: targetHeight - scaledY - scaledH,
@@ -117,17 +188,42 @@ async function renderCollaborativePdf(
       }
       if (!clean.trim()) continue;
       const { r, g, b } = parseHexColor(el.color || '#000000');
-      const font = resolveFont(el.fontFamily, el.isBold);
+      const isBold = !!el.isBold || Number(el.fontWeight) >= 600 || el.fontWeight === 'bold';
+      const isItalic = !!el.isItalic || el.fontStyle === 'italic';
+      const font = resolveFont(el.fontFamily, isBold, isItalic);
       const fontSize = Math.max(6, (el.fontSize || 16) * scale);
-      const pdfX = Math.max(0, el.isStickyNote ? scaledX + 8 * scale : scaledX);
-      const pdfY = Math.max(0, targetHeight - scaledY - (el.isStickyNote ? 24 * scale : fontSize));
-      page.drawText(clean, {
-        color: rgb(r, g, b),
-        font,
-        size: fontSize,
-        x: pdfX,
-        y: pdfY,
-      });
+      const lineMultiplier = typeof el.lineHeight === 'number' && el.lineHeight > 0.6 ? el.lineHeight : 1.2;
+      const lineStep = fontSize * lineMultiplier;
+
+      const padX = el.isStickyNote ? 12 * scale : 0;
+      const padTop = el.isStickyNote ? 14 * scale : 0;
+      const boxWidth = Math.max(20, scaledW - padX * 2);
+      const wrappedLines = el.width ? wrapPdfTextLines(clean, font, fontSize, boxWidth) : clean.split('\n');
+
+      let lineY = targetHeight - scaledY - padTop - fontSize;
+      for (const line of wrappedLines) {
+        if (lineY < 10) break;
+        if (line.length > 0) {
+          let drawX = Math.max(0, scaledX + padX);
+          if (el.align === 'center' || el.align === 'right') {
+            const lineWidth = font.widthOfTextAtSize(line, fontSize);
+            if (el.align === 'center') {
+              drawX = Math.max(0, scaledX + padX + (boxWidth - lineWidth) / 2);
+            } else {
+              drawX = Math.max(0, scaledX + padX + (boxWidth - lineWidth));
+            }
+          }
+          page.drawText(line, {
+            color: rgb(r, g, b),
+            font,
+            opacity,
+            size: fontSize,
+            x: drawX,
+            y: lineY,
+          });
+        }
+        lineY -= lineStep;
+      }
     } else if (el.type === 'shape') {
       const stroke = parseHexColor(el.strokeColor || '#000000');
       const strokeRgb = rgb(stroke.r, stroke.g, stroke.b);
@@ -283,16 +379,35 @@ async function renderCollaborativePdf(
           if (text) {
             const isHead = r === 0;
             const font = resolveFont('Helvetica', isHead || cell?.isBold);
-            const fontSize = Math.max(6, 12 * scale);
+            const fontSize = Math.max(6, 11.5 * scale);
             const txtHex = cell?.color || (isHead && el.tableStyle !== 'grid' ? '#ffffff' : '#1e293b');
             const txtColor = parseHexColor(txtHex);
-            page.drawText(text, {
-              color: rgb(txtColor.r, txtColor.g, txtColor.b),
-              font,
-              size: fontSize,
-              x: cellX + cellPad,
-              y: cellY + rowH / 2 - fontSize / 3,
-            });
+            const availCellW = Math.max(12, colW - cellPad * 2);
+            const cellLines = wrapPdfTextLines(text, font, fontSize, availCellW);
+            const lineStep = fontSize * 1.3;
+            const totalLinesH = cellLines.length * lineStep;
+            let textY = cellY + rowH - Math.max(cellPad + fontSize, (rowH - totalLinesH) / 2 + fontSize * 0.85);
+
+            for (const cLine of cellLines) {
+              if (textY < cellY + 2) break;
+              if (cLine.length > 0) {
+                let textX = cellX + cellPad;
+                if (cell?.align === 'center' || cell?.align === 'right') {
+                  const lw = font.widthOfTextAtSize(cLine, fontSize);
+                  textX = cell.align === 'center'
+                    ? cellX + cellPad + Math.max(0, (availCellW - lw) / 2)
+                    : cellX + cellPad + Math.max(0, availCellW - lw);
+                }
+                page.drawText(cLine, {
+                  color: rgb(txtColor.r, txtColor.g, txtColor.b),
+                  font,
+                  size: fontSize,
+                  x: textX,
+                  y: textY,
+                });
+              }
+              textY -= lineStep;
+            }
           }
         }
         curY += rowH + spacing;

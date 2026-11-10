@@ -32,6 +32,8 @@ interface ConsumeAiTokenResult {
   success: boolean;
 }
 
+const MIN_AI_GENERATE_COST = 3;
+
 function getMonthlyQuotaByPermissions(permissions: string[] = []): number {
   if (permissions.includes('subscription:feature:business')) {
     return 5000;
@@ -61,6 +63,15 @@ function calculatePdfCost(toolId: string, pageCount: number, fileSizeBytes: numb
   const baseCost = 2;
   const sizeFactor = Math.ceil(safeBytes / (5 * 1024 * 1024));
   return Math.max(1, baseCost + (safePages * costPerPage) + sizeFactor);
+}
+
+function calculateAiGenerateCost(geminiTotalTokens: number, generatedPageCount: number): number {
+  const safePages = Math.max(1, Math.floor(generatedPageCount || 1));
+  const safeGeminiTokens = Math.max(0, Math.floor(geminiTotalTokens || 0));
+  const baseCost = 2;
+  const pageCost = safePages;
+  const geminiFactor = safeGeminiTokens > 0 ? Math.ceil(safeGeminiTokens / 800) : 0;
+  return Math.max(MIN_AI_GENERATE_COST, baseCost + pageCost + geminiFactor);
 }
 
 async function getUserTokenBalance(userId: number, permissions?: string[]): Promise<AiTokenBalanceInfo> {
@@ -225,5 +236,79 @@ async function consumeAiTokens(params: {
   };
 }
 
-export { calculatePdfCost, consumeAiTokens, estimateAiTokenCost, getMonthlyQuotaByPermissions, getUserTokenBalance };
+async function consumeCustomAiTokens(params: {
+  fileSizeBytes?: number;
+  pageCount: number;
+  permissions?: string[];
+  requiredTokens: number;
+  toolId: string;
+  userId: number;
+}): Promise<ConsumeAiTokenResult> {
+  const pool = getDbPool();
+  let perms = params.permissions;
+  if (!perms) {
+    perms = await permissionService.getUserPermissions(params.userId);
+  }
+
+  const tokenInfo = await getUserTokenBalance(params.userId, perms);
+  const required = Math.max(1, Math.floor(params.requiredTokens || 1));
+
+  if (tokenInfo.balance < required) {
+    return {
+      balance: tokenInfo.balance,
+      consumed: 0,
+      limit: tokenInfo.limit,
+      required,
+      resetAt: tokenInfo.resetAt,
+      success: false,
+    };
+  }
+
+  const [updateResult] = await pool.query<ResultSetHeader>(
+    'UPDATE users SET ai_tokens_balance = ai_tokens_balance - ? WHERE id = ? AND ai_tokens_balance >= ?',
+    [required, params.userId, required]
+  );
+
+  if (updateResult.affectedRows === 0) {
+    const freshInfo = await getUserTokenBalance(params.userId, perms);
+    return {
+      balance: freshInfo.balance,
+      consumed: 0,
+      limit: freshInfo.limit,
+      required,
+      resetAt: freshInfo.resetAt,
+      success: false,
+    };
+  }
+
+  const newBalance = Math.max(0, tokenInfo.balance - required);
+  await cacheService.invalidateUser(String(params.userId));
+
+  try {
+    await pool.query(
+      'INSERT INTO ai_token_logs (user_id, tool_id, tokens_consumed, pdf_pages, pdf_bytes) VALUES (?, ?, ?, ?, ?)',
+      [params.userId, params.toolId, required, Math.max(1, params.pageCount || 1), Math.max(0, params.fileSizeBytes || 0)]
+    );
+  } catch (err) {
+    logger.db.warn('No se pudo registrar log transaccional de tokens IA', { error: err, userId: params.userId });
+  }
+
+  logger.app.info('Tokens IA consumidos exitosamente', {
+    consumed: required,
+    newBalance,
+    toolId: params.toolId,
+    userId: params.userId,
+  });
+
+  return {
+    balance: newBalance,
+    consumed: required,
+    limit: tokenInfo.limit,
+    required,
+    resetAt: tokenInfo.resetAt,
+    success: true,
+  };
+}
+
+export { MIN_AI_GENERATE_COST, calculateAiGenerateCost, calculatePdfCost, consumeAiTokens, consumeCustomAiTokens, estimateAiTokenCost, getMonthlyQuotaByPermissions, getUserTokenBalance };
 export type { AiTokenBalanceInfo, AiTokenEstimateResult, ConsumeAiTokenResult, UserTokenRecord };

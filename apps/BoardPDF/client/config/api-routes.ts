@@ -18,6 +18,7 @@ const API_ROUTES = {
   avatarBase: '/api/avatar',
   collaborativeDocs: {
     accessLevel: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/access-level`,
+    aiGenerate: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/ai-generate`,
     base: '/api/collaborative-docs',
     byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
     memberDelete: (id: string, userId: number) => `/api/collaborative-docs/${encodeURIComponent(id)}/members/${userId}`,

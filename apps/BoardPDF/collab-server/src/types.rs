@@ -11,6 +11,13 @@ pub const MAX_MESSAGE_BYTES: usize = 1024 * 1024;
 pub const RATE_LIMIT_CAPACITY: f64 = 60.0;
 pub const RATE_LIMIT_REFILL_PER_SEC: f64 = 45.0;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiLockState {
+    pub locked_by: String,
+    pub locked_by_client_id: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeerInfo {
@@ -58,11 +65,23 @@ pub enum ClientMessage {
         #[serde(default)]
         page_count: Option<usize>,
         #[serde(default)]
+        page_size: Option<Value>,
+        #[serde(default)]
+        page_sizes: Option<Vec<Value>>,
+        #[serde(default)]
+        page_titles: Option<Vec<String>>,
+        #[serde(default)]
         title: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     TitleChange {
         title: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    AiLock {
+        locked: bool,
+        #[serde(default)]
+        locked_by: Option<String>,
     },
     Ping,
     Leave,
@@ -107,12 +126,22 @@ pub enum ServerMessage {
         elements: Vec<Value>,
         page_backgrounds: Option<Vec<String>>,
         page_count: Option<usize>,
+        page_size: Option<Value>,
+        page_sizes: Option<Vec<Value>>,
+        page_titles: Option<Vec<String>>,
         title: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     TitleChange {
         sender_client_id: String,
         title: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    AiLock {
+        locked: bool,
+        locked_by: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        locked_by_client_id: Option<String>,
     },
     Pong,
     #[serde(rename_all = "camelCase")]

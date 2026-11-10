@@ -111,6 +111,10 @@
 <div class="collaborative-top-bar__right" >
 <div class="collab-presence-container" data-ref="collab-presence-container"></div>
 <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " />
+<button type="button" class="component-button component-button--h40 collaborative-ai-btn" data-ref="btn-top-ai-generate" data-i18n-tooltip="collaborative.ai_btn_tooltip" data-i18n-aria="collaborative.ai_btn_aria">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.ai_btn_label"></span>
+</button>
 <button type="button" class="component-button component-button--h40 collaborative-share-btn" data-ref="btn-share-link">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
 <span class="component-button__text" >Compartir</span>
@@ -622,6 +626,12 @@
 </div>
 </div>
 <div class="collaborative-workspace-container" data-ref="collaborative-workspace-container">
+<div class="collab-ai-lock-banner is-hidden" data-ref="collab-ai-lock-banner" role="status" aria-live="polite">
+<span class="collab-ai-lock-banner__spinner" aria-hidden="true"></span>
+<svg class="component-icon collab-ai-lock-banner__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+<span class="collab-ai-lock-banner__text" data-ref="txt-ai-lock-message"></span>
+</div>
+<div class="collab-ai-lock-shield is-hidden" data-ref="collab-ai-lock-shield" aria-hidden="true"></div>
 <div class="collab-rulers-wrapper is-hidden" data-ref="collab-rulers-wrapper">
 <div class="collab-ruler-corner" data-ref="ruler-corner"></div>
 <canvas class="collab-ruler-top" data-ref="ruler-top" height="20"></canvas>
