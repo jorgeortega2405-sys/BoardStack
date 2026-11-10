@@ -711,7 +711,8 @@
     "cannot_delete_all_pages": "Cannot delete all pages. At least one page must remain.",
     "pages_deleted_success": "Pages deleted successfully.",
     "summary_generated_success": "Summary generated successfully.",
-    "select_watermark_image": "Please select an image to use as watermark."
+    "select_watermark_image": "Please select an image to use as watermark.",
+    "has_alcanzado_el_limite_de_documentos_colaborativos": "You have reached the maximum document limit for your plan."
   },
   "workflows": {
     "title": "Flujos de trabajo",

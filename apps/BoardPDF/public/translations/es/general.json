@@ -711,7 +711,8 @@
     "cannot_delete_all_pages": "No puedes eliminar todas las páginas del documento. Debe quedar al menos una página.",
     "pages_deleted_success": "Páginas eliminadas con éxito.",
     "summary_generated_success": "Resumen generado exitosamente.",
-    "select_watermark_image": "Por favor selecciona una imagen para usarla como marca de agua."
+    "select_watermark_image": "Por favor selecciona una imagen para usarla como marca de agua.",
+    "has_alcanzado_el_limite_de_documentos_colaborativos": "Has alcanzado el límite de documentos para tu plan actual."
   },
   "workflows": {
     "title": "Flujos de trabajo",

@@ -1,5 +1,6 @@
 import { getDbPool } from '../../config/database.config.js';
 import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
+import { resolveToolLimits } from '../../config/subscription-plans.config.js';
 import { getCurrentUser, hasSubscriptionFeature } from '../../middlewares/auth.middleware.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
@@ -137,6 +138,19 @@ async function saveCollaborativeDocHandler(req: Request, res: Response): Promise
         });
         return;
       }
+
+      const userPermissions = (req as any).userPermissions || [];
+      const limits = resolveToolLimits('collaborative-pdf', userPermissions);
+      const pool = getDbPool();
+      const [countRows] = await pool.query<any[]>('SELECT COUNT(*) as total FROM collaborative_documents WHERE user_id = ?', [user.id]);
+      const currentDocCount = countRows?.[0]?.total || 0;
+      if (currentDocCount >= limits.maxFiles) {
+        res.status(403).json({
+          error: 'Has alcanzado el límite de documentos colaborativos permitido para tu plan actual.',
+          success: false,
+        });
+        return;
+      }
     } else {
       const isOwner = user?.id != null && existingDoc.user_id != null && String(existingDoc.user_id) === String(user.id);
       const isMemberEditor = existingDoc.members?.some((m) => user?.id != null && String(m.user_id) === String(user.id) && m.role === 'editor');
@@ -215,6 +229,19 @@ async function addCollaborativeDocMemberHandler(req: Request, res: Response): Pr
       res.status(403).json({ error: 'Solo el propietario del documento puede agregar miembros.', success: false });
       return;
     }
+
+    const userPermissions = (req as any).userPermissions || [];
+    const limits = resolveToolLimits('collaborative-pdf', userPermissions);
+    const currentMembers = doc?.members || await getCollaborativeDocMembers(id);
+    const isAlreadyMember = currentMembers.some((m) => m.user_id === userId);
+    if (!isAlreadyMember && limits.maxCollaborators && currentMembers.length >= limits.maxCollaborators) {
+      res.status(403).json({
+        error: 'Has alcanzado el límite máximo de colaboradores permitido para tu plan actual.',
+        success: false,
+      });
+      return;
+    }
+
     const member = await addCollaborativeDocMember(id, userId, role === 'viewer' ? 'viewer' : 'editor', user?.id);
     res.json({ member, success: true });
   } catch (err) {
@@ -454,6 +481,18 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
       targetUserId = ownerId;
       targetDocId = doc.id;
     } else {
+      const userPermissions = (req as any).userPermissions || [];
+      const limits = resolveToolLimits('collaborative-pdf', userPermissions);
+      const maxFileBytes = limits.maxFileSizeMB * 1024 * 1024;
+      const oversizedFile = targetFiles.find((f) => (f.size || f.buffer?.length || 0) > maxFileBytes);
+      if (oversizedFile) {
+        res.status(400).json({
+          error: `El archivo supera el tamaño máximo permitido de ${limits.maxFileSizeMB} MB para tu plan.`,
+          success: false,
+        });
+        return;
+      }
+
       const { allowed } = await canUserAllocateStorage(targetUserId, totalIncomingBytes);
       if (!allowed) {
         res.status(413).json({

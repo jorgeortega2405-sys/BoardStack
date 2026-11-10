@@ -1,5 +1,5 @@
 import { navigate } from '../../app-router.js';
-import { openModal } from '../../components/modal.component.js';
+import { openCancelSubscriptionModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { checkAuthSession, currentUser, fetchAiTokenBalance, getApi, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
@@ -207,12 +207,9 @@ async function createBillingView(): Promise<HTMLElement> {
 
   const handleToggleSubscription = (cancelAtPeriodEnd: boolean, dateFormatted = '') => {
     if (cancelAtPeriodEnd) {
-      openModal({
-        confirmClass: 'component-button--black',
-        confirmText: t('settings.billing.btn_confirm_cancel_sub') || 'Confirmar cancelación',
-        description: (t('settings.billing.modal_cancel_sub_desc') || t('ui.tu_suscripcion_no_se_renovara_al_conclui')).replace('{date}', dateFormatted),
-        title: t('settings.billing.modal_cancel_sub_title') || '¿Cancelar suscripción?',
-        onConfirm: async (inst) => {
+      openCancelSubscriptionModal({
+        dateFormatted,
+        onConfirm: async (inst: any) => {
           inst.setConfirmLoading(true);
           try {
             const res = await updateAutoRenewalApi(true);

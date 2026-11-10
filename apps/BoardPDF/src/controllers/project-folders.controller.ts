@@ -17,6 +17,7 @@ const KNOWN_SAFE_MESSAGES = new Set([
   'Debes proporcionar un nombre para la carpeta.',
   'Debes proporcionar un nombre válido.',
   'El nombre de la carpeta no puede estar vacío.',
+  'Has alcanzado el límite máximo de carpetas permitido para tu plan actual.',
   'Identificador de archivo no válido.',
   'Identificador de carpeta no válido.',
   'Identificador de documento no válido.',
@@ -156,6 +157,7 @@ async function createProjectFolderHandler(req: Request, res: Response): Promise<
       name: name.trim(),
       parentId: parentId || null,
       userId: user?.id ?? null,
+      userPermissions: user?.permissions || [],
     });
 
     res.json({ folder, success: true });

@@ -1,6 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
 import { setupLayoutScrollSync } from '../components/layout.component.js';
-import { openModal } from '../components/modal.component.js';
+import { openDeleteWorkflowModal } from '../components/modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
 import { TOOLS_REGISTRY, isToolNew } from '../config/tools.registry.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
@@ -258,11 +258,7 @@ class HomeController {
     const wf = this.workflows.find((w) => w.id === id);
     if (!wf) return;
 
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar flujo',
-      description: `¿Estás seguro de que deseas eliminar permanentemente el flujo de trabajo "${wf.name}"? Esta acción no se puede deshacer.`,
+    openDeleteWorkflowModal({
       onConfirm: async () => {
         deleteWorkflow(id);
         showToast(t('toasts.flujo_de_trabajo_eliminado_exitosamente'), 'info');
@@ -270,10 +266,7 @@ class HomeController {
         this.renderTools();
         return true;
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Eliminar flujo de trabajo',
+      workflowName: wf.name,
     });
   }
 

@@ -1,4 +1,4 @@
-import { openModal } from '../../components/modal.component.js';
+import { openDeleteDocModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, PageDimension, PagePreset, inToPx, mmToPx } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, hasSubscriptionFeature, onAuthChange, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
@@ -7503,14 +7503,11 @@ class CollaborativePdfEditorController implements ViewController {
   }
 
   private confirmDeleteDocument(): void {
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar',
-      description: `¿Estás seguro de que deseas eliminar permanentemente "${this.docTitle}"? Esta acción no se puede deshacer.`,
+    openDeleteDocModal({
+      docTitle: this.docTitle,
       onConfirm: async () => {
         if (!currentUser || !this.isDocOwner) {
-          showToast('Solo el creador del documento puede eliminarlo', 'danger');
+          showToast(t('ui.solo_el_creador_del_documento_puede_eliminarlo') || 'Solo el creador del documento puede eliminarlo', 'danger');
           return true;
         }
         try {
@@ -7522,12 +7519,10 @@ class CollaborativePdfEditorController implements ViewController {
             showToast(t('ui.no_se_pudo_eliminar_el_documento'), 'danger');
           }
         } catch {
-          showToast('Error de red al eliminar documento', 'danger');
+          showToast(t('errors.network_error') || 'Error de red al eliminar documento', 'danger');
         }
         return true;
-        return true;
       },
-      title: 'Eliminar documento',
     });
   }
 

@@ -1,5 +1,5 @@
 import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
-import { openModal } from '../../components/modal.component.js';
+import { openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi, putApi } from '../../services/api.service.js';
@@ -1121,26 +1121,8 @@ class ProjectsController implements ViewController {
     const folderType = isUploadsContext ? 'upload_folder' : 'project';
     const parentId = isUploadsContext ? this.currentFolder?.id : null;
 
-    openModal({
-      bodyHtml: `
-        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
-          <label class="field" data-ref="field-folder-name">
-            <input class="field__input" data-ref="input-folder-name" type="text" placeholder=" " />
-            <span class="field__label">Nombre de la carpeta</span>
-          </label>
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--primary',
-      confirmText: 'Crear carpeta',
-      onConfirm: async () => {
-        const input = document.querySelector<HTMLInputElement>('[data-ref="input-folder-name"]');
-        const name = (input?.value || '').trim();
-        if (!name) {
-          showToast(t('toasts.debes_ingresar_un_nombre_para_la_carpeta'), 'warning');
-          return false;
-        }
-
+    openCreateFolderModal({
+      onConfirm: async (name: string) => {
         try {
           const res = await postApi(API_ROUTES.projectFolders.base, {
             folderType,
@@ -1157,43 +1139,17 @@ class ProjectsController implements ViewController {
           this.renderView();
           return true;
         } catch {
-          showToast('Error al crear la carpeta', 'danger');
+          showToast(t('ui.no_se_pudo_crear_la_carpeta') || 'Error al crear la carpeta', 'danger');
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Nueva carpeta',
     });
-
-    setTimeout(() => {
-      const input = document.querySelector<HTMLInputElement>('[data-ref="input-folder-name"]');
-      input?.focus();
-    }, 100);
   }
 
   private async promptRenameFolder(folderId: string, currentName: string): Promise<void> {
-    openModal({
-      bodyHtml: `
-        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
-          <label class="field" data-ref="field-rename-name">
-            <input class="field__input" data-ref="input-rename-name" type="text" value="${this.escapeHtml(currentName)}" placeholder=" " />
-            <span class="field__label">Nombre de la carpeta</span>
-          </label>
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--primary',
-      confirmText: 'Guardar cambios',
-      onConfirm: async () => {
-        const input = document.querySelector<HTMLInputElement>('[data-ref="input-rename-name"]');
-        const newName = (input?.value || '').trim();
-        if (!newName) {
-          showToast(t('toasts.name_cannot_be_empty'), 'warning');
-          return false;
-        }
-
+    openRenameFolderModal({
+      currentName,
+      onConfirm: async (newName: string) => {
         try {
           const res = await patchApi(API_ROUTES.projectFolders.byId(folderId), { name: newName });
           if (!res.ok) {
@@ -1206,28 +1162,15 @@ class ProjectsController implements ViewController {
           this.renderView();
           return true;
         } catch {
-          showToast('Error al renombrar carpeta', 'danger');
+          showToast(t('ui.no_se_pudo_renombrar_la_carpeta') || 'Error al renombrar carpeta', 'danger');
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Renombrar carpeta',
     });
-
-    setTimeout(() => {
-      const input = document.querySelector<HTMLInputElement>('[data-ref="input-rename-name"]');
-      input?.focus();
-    }, 100);
   }
 
   private async promptDeleteFolder(folderId: string): Promise<void> {
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar carpeta',
-      description: '¿Estás seguro de que deseas eliminar esta carpeta? Los archivos y documentos dentro se moverán a la sección principal.',
+    openDeleteFolderModal({
       onConfirm: async () => {
         try {
           const res = await deleteApi(API_ROUTES.projectFolders.byId(folderId));
@@ -1249,10 +1192,6 @@ class ProjectsController implements ViewController {
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Eliminar carpeta',
     });
   }
 
@@ -1269,38 +1208,10 @@ class ProjectsController implements ViewController {
     const currentDoc = this.documents.find((d) => d.id === docId);
     const activeFolderId = currentDoc?.folder_id || this.currentFolderId || null;
 
-    let folderOptionsHtml = `
-      <label class="project-move-option" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-subtle);">
-        <input type="radio" name="target-folder" value="" ${!activeFolderId ? 'checked' : ''} />
-        <svg class="component-icon" style="width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-        <span style="font-weight: 500;">Sin carpeta (Proyectos raíz)</span>
-      </label>
-    `;
-
-    availableFolders.forEach((f) => {
-      const isSelected = activeFolderId === f.id;
-      folderOptionsHtml += `
-        <label class="project-move-option" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-subtle);">
-          <input type="radio" name="target-folder" value="${f.id}" ${isSelected ? 'checked' : ''} />
-          <svg class="component-icon" style="width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          <span style="font-weight: 500;">${this.escapeHtml(f.name)}</span>
-        </label>
-      `;
-    });
-
-    openModal({
-      bodyHtml: `
-        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-top: 8px;">
-          ${folderOptionsHtml}
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--primary',
-      confirmText: 'Mover documento',
-      onConfirm: async () => {
-        const selectedRadio = document.querySelector<HTMLInputElement>('input[name="target-folder"]:checked');
-        const targetId = selectedRadio ? selectedRadio.value || null : null;
-
+    openMoveDocModal({
+      activeFolderId,
+      folders: availableFolders.map((f) => ({ id: f.id, name: f.name })),
+      onConfirm: async (targetId: string | null) => {
         try {
           const res = await patchApi(API_ROUTES.projectFolders.docFolder(docId), { folderId: targetId });
           if (!res.ok) {
@@ -1313,14 +1224,10 @@ class ProjectsController implements ViewController {
           this.renderView();
           return true;
         } catch {
-          showToast('Error al mover documento', 'danger');
+          showToast(t('ui.no_se_pudo_mover_el_documento') || 'Error al mover documento', 'danger');
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Mover a carpeta',
     });
   }
 
@@ -1340,38 +1247,10 @@ class ProjectsController implements ViewController {
     const currentFile = this.files.find((f) => f.id === uploadId);
     const activeFolderId = currentFile?.folderId || null;
 
-    let folderOptionsHtml = `
-      <label class="project-move-option" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-subtle);">
-        <input type="radio" name="target-upload-folder" value="" ${!activeFolderId || activeFolderId === uploadsFldId ? 'checked' : ''} />
-        <svg class="component-icon" style="width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-        <span style="font-weight: 500;">Subidos (Raíz)</span>
-      </label>
-    `;
-
-    availableSubfolders.forEach((f) => {
-      const isSelected = activeFolderId === f.id;
-      folderOptionsHtml += `
-        <label class="project-move-option" style="display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-subtle);">
-          <input type="radio" name="target-upload-folder" value="${f.id}" ${isSelected ? 'checked' : ''} />
-          <svg class="component-icon" style="width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          <span style="font-weight: 500;">${this.escapeHtml(f.name)}</span>
-        </label>
-      `;
-    });
-
-    openModal({
-      bodyHtml: `
-        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-top: 8px;">
-          ${folderOptionsHtml}
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--primary',
-      confirmText: 'Mover archivo',
-      onConfirm: async () => {
-        const selectedRadio = document.querySelector<HTMLInputElement>('input[name="target-upload-folder"]:checked');
-        const targetId = selectedRadio ? selectedRadio.value || null : null;
-
+    openMoveUploadModal({
+      activeFolderId,
+      folders: availableSubfolders.map((f) => ({ id: f.id, name: f.name })),
+      onConfirm: async (targetId: string | null) => {
         try {
           const res = await patchApi(API_ROUTES.projectFolders.uploadFolder(uploadId), { folderId: targetId });
           if (!res.ok) {
@@ -1384,23 +1263,15 @@ class ProjectsController implements ViewController {
           this.renderView();
           return true;
         } catch {
-          showToast('Error al mover archivo', 'danger');
+          showToast(t('ui.no_se_pudo_mover_el_archivo') || 'Error al mover archivo', 'danger');
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Mover archivo subido',
     });
   }
 
   private async promptDeleteUpload(uploadId: string): Promise<void> {
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar archivo',
-      description: '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
+    openDeleteUploadModal({
       onConfirm: async () => {
         try {
           const res = await deleteApi(API_ROUTES.projectFolders.uploadDelete(uploadId));
@@ -1414,14 +1285,10 @@ class ProjectsController implements ViewController {
           this.renderView();
           return true;
         } catch {
-          showToast('Error al eliminar archivo', 'danger');
+          showToast(t('ui.no_se_pudo_eliminar_el_archivo') || 'Error al eliminar archivo', 'danger');
           return false;
         }
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Eliminar archivo',
     });
   }
 
@@ -1523,11 +1390,8 @@ class ProjectsController implements ViewController {
     const doc = this.documents.find((d) => d.id === docId);
     const docTitle = doc?.title || 'este documento';
 
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar',
-      description: `¿Estás seguro de que deseas eliminar permanentemente "${docTitle}"? Esta acción no se puede deshacer.`,
+    openDeleteDocModal({
+      docTitle,
       onConfirm: async () => {
         try {
           await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
@@ -1537,10 +1401,6 @@ class ProjectsController implements ViewController {
         this.renderView();
         return true;
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Eliminar documento',
     });
   }
 

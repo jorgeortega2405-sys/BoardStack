@@ -1,6 +1,7 @@
-import { openModal } from '../../components/modal.component.js';
+import { openDeleteDocModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
+import { resolveToolLimits } from '../../config/subscription-plans.config.js';
 import { currentUser, deleteApi, getApi, putApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -433,6 +434,13 @@ class CollaborativePdfDashboardController implements ViewController {
       }
     }
 
+    const limits = resolveToolLimits('collaborative-pdf', currentUser?.permissions || []);
+    const ownedDocsCount = this.documents.length;
+    if (ownedDocsCount >= limits.maxFiles) {
+      showToast(t('toasts.has_alcanzado_el_limite_de_documentos_colaborativos') || 'Has alcanzado el límite de documentos para tu plan actual.', 'error');
+      return;
+    }
+
     const titleVal = 'Documento sin título';
     const dimensions = { ...COLLAB_DOCUMENT_DEFAULT_SIZE };
     const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -469,11 +477,11 @@ class CollaborativePdfDashboardController implements ViewController {
   }
 
   private async handleDelete(id: string, isLocal = false): Promise<void> {
-    openModal({
-      cancelText: t('common.cancel'),
-      confirmClass: 'component-button--danger',
-      confirmText: t('common.delete'),
-      description: t('ui.deseas_eliminar_este_documento_pdf'),
+    const doc = this.documents.find((d) => d.id === id);
+    const docTitle = doc?.title || t('common.document') || 'Documento';
+
+    openDeleteDocModal({
+      docTitle,
       onConfirm: async () => {
         if (isLocal) {
           removeLocalDraft(id);
@@ -495,7 +503,6 @@ class CollaborativePdfDashboardController implements ViewController {
           showToast(t('toasts.error_de_conexion_al_eliminar_documento'), 'error');
         }
       },
-      title: t('common.delete'),
     });
   }
 

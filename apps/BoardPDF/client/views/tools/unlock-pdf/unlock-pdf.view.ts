@@ -1,4 +1,4 @@
-import { openModal } from '../../../components/modal.component.js';
+import { openUnlockPdfPasswordModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
@@ -210,49 +210,14 @@ class UnlockPdfController implements ViewController {
   }
 
   private promptPasswordAndUnlock(button: HTMLButtonElement): void {
-    const modal = openModal({
-      bodyHtml: `
-        <div class="modal-form-stack" style="display: flex; flex-direction: column; gap: 16px;">
-          <label class="field">
-            <input class="field__input field__input--has-action" data-ref="modal-input-password" type="password" placeholder=" " autocomplete="current-password" autofocus />
-            <span class="field__label">Introduce la contraseña del PDF</span>
-            <button type="button" class="field__action" data-ref="btn-modal-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            </button>
-          </label>
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--black',
-      confirmText: 'Desbloquear PDF',
-      description: t('ui.este_archivo_pdf_requiere_una_contrasena'),
-      onConfirm: async () => {
-        const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
-        const password = input?.value.trim() || '';
-        if (!password) {
-          modal.showError('Debes ingresar la contraseña del archivo PDF.');
-          return false;
-        }
-        await this.processUnlock(password, button, modal);
+    const modal = openUnlockPdfPasswordModal({
+      onConfirm: async (password: string, inst: any) => {
+        await this.processUnlock(password, button, inst);
         return false;
       },
-      size: 'sm',
-      title: 'Contraseña requerida',
     });
 
-    const toggleBtn = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-toggle-password"]');
     const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
-
-    toggleBtn?.addEventListener('click', () => {
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      const useEl = toggleBtn.querySelector('use');
-      if (useEl) {
-        useEl.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-      }
-    });
-
     input?.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         modal.confirmBtn?.click();

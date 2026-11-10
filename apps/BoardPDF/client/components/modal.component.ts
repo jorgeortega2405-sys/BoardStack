@@ -1,11 +1,11 @@
 import { API_ROUTES } from '../config/api-routes.js';
-import { MODAL_2FA_SHIELD_SVG } from '../graphics/modal-illustrations.graphics.js';
 import { postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
 import { hideElement, showElement, toggleElement } from '../utils/dom.util.js';
+import { renderTwoFactorModalContent } from './modal-templates.js';
 
 let activeModals: ModalInstance[] = [];
 let active2FAModal: any = null;
@@ -366,110 +366,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-2fa-backdrop');
 
-  backdrop.innerHTML = `
-    <div class="modal-container" data-ref="modal-2fa-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-      </button>
-      <div class="modal-card modal-card--split" data-ref="modal-card-2fa">
-        <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone" aria-hidden="true">
-          <div class="modal-card__drag-handle"></div>
-        </div>
-        <div class="modal-split__left" data-ref="modal-split-left">
-          <div class="modal-split__stage" data-ref="stage-1-container">
-            <div class="modal-split__header" data-ref="stage-1-header">
-              <h2 class="modal-split__title" data-ref="stage-1-title" data-i18n="settings.security.two_factor_modal_title">
-                ${t('settings.security.two_factor_modal_title')}
-              </h2>
-              <p class="modal-split__desc" data-ref="stage-1-desc" data-i18n="settings.security.two_factor_modal_desc">
-                ${t('settings.security.two_factor_modal_desc')}
-              </p>
-            </div>
-
-            <div class="modal-split__form" data-ref="stage-1-form">
-              <label class="field" data-ref="field-modal-2fa-code">
-                <input class="field__input field__input--code" data-ref="input-modal-2fa-code" type="text" maxlength="6" placeholder=" " autocomplete="one-time-code" inputmode="numeric" />
-                <span class="field__label" data-ref="label-modal-2fa-code" data-i18n="settings.security.two_factor_modal_code_label">
-                  ${t('settings.security.two_factor_modal_code_label')}
-                </span>
-              </label>
-
-              <button type="button" class="modal-split__link-toggle" data-ref="btn-toggle-secret">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
-                <span data-ref="toggle-secret-text" data-i18n="settings.security.two_factor_view_secret">
-                  ${t('settings.security.two_factor_view_secret')}
-                </span>
-              </button>
-
-              <div class="modal-split__secret-box" data-ref="box-secret-key" style="display: none;">
-                <span class="modal-split__secret-value" data-ref="text-secret-value"></span>
-                <button type="button" class="modal-split__secret-copy" data-ref="btn-copy-secret" data-tooltip="${t('common.copy') || 'Copiar'}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-                </button>
-              </div>
-
-              <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-continue-2fa">
-                ${t('common.continue')}
-              </button>
-
-              <div class="banner banner--danger" data-ref="modal-2fa-error" style="display: none;"></div>
-            </div>
-          </div>
-
-          <div class="modal-split__stage" data-ref="stage-2-container" style="display: none;">
-            <div class="modal-split__header" data-ref="stage-2-header">
-              <h2 class="modal-split__title" data-ref="stage-2-title" data-i18n="settings.security.two_factor_backup_title">
-                ${t('settings.security.two_factor_backup_title')}
-              </h2>
-              <p class="modal-split__desc" data-ref="stage-2-desc" data-i18n="settings.security.two_factor_backup_desc">
-                ${t('settings.security.two_factor_backup_desc')}
-              </p>
-            </div>
-
-            <div class="modal-split__backup-section" data-ref="stage-2-codes">
-              <div class="backup-codes-grid" data-ref="backup-codes-grid"></div>
-
-              <div class="modal-split__backup-actions" data-ref="stage-2-actions">
-                <button type="button" class="component-button component-button--h38" data-ref="btn-copy-backup-codes">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-                  <span data-ref="btn-copy-text">${t('settings.security.two_factor_copy_all')}</span>
-                </button>
-                <button type="button" class="component-button component-button--h38 component-button--black" data-ref="btn-finish-2fa">
-                  ${t('settings.security.two_factor_finish')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-split__right" data-ref="modal-split-right">
-          <div class="modal-split__visual-stage" data-ref="visual-stage-1">
-            <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
-              <div class="modal-split__qr-canvas" data-ref="qr-container"></div>
-            </div>
-            <div class="modal-split__right-hint" data-ref="qr-hint">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
-              <span data-i18n="settings.security.two_factor_qr_hint">${t('settings.security.two_factor_qr_hint')}</span>
-            </div>
-          </div>
-
-          <div class="modal-split__visual-stage" data-ref="visual-stage-2" style="display: none;">
-            <div class="modal-split__svg-wrapper" data-ref="svg-wrapper">
-              ${MODAL_2FA_SHIELD_SVG}
-            </div>
-            <div class="modal-split__right-status" data-ref="status-badge">
-              <span class="modal-split__badge-check">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
-              </span>
-              <span class="modal-split__badge-text" data-i18n="settings.security.two_factor_active_badge">
-                ${t('settings.security.two_factor_active_badge')}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  backdrop.innerHTML = renderTwoFactorModalContent();
 
   translateElement(backdrop);
   renderIcons(backdrop);
@@ -574,9 +471,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
 
   toggleSecretBtn?.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
-    if (!secretBox) return;
-    const isHidden = secretBox.style.display === 'none';
-    secretBox.style.display = isHidden ? 'flex' : 'none';
+    secretBox?.classList.toggle('is-hidden');
   });
 
   copySecretBtn?.addEventListener('click', async (e: MouseEvent) => {
@@ -725,10 +620,10 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
         });
       }
 
-      if (stage1Container) stage1Container.style.display = 'none';
-      if (visualStage1) visualStage1.style.display = 'none';
-      if (stage2Container) stage2Container.style.display = 'flex';
-      if (visualStage2) visualStage2.style.display = 'flex';
+      if (stage1Container) hideElement(stage1Container);
+      if (visualStage1) hideElement(visualStage1);
+      if (stage2Container) showElement(stage2Container);
+      if (visualStage2) showElement(visualStage2);
 
       showToast(
         t('settings.security.two_factor_enabled_toast') || 'Autenticación en dos pasos activada.',
@@ -752,4 +647,11 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
   return modalInstance;
 }
 
-export { closeAllModals, open2FAModal, openModal, setupSheetDragToDismiss };
+export {
+  closeAllModals,
+  open2FAModal,
+  openModal,
+  setupSheetDragToDismiss,
+};
+export * from './modal-dialogs.js';
+export * from './modal-templates.js';

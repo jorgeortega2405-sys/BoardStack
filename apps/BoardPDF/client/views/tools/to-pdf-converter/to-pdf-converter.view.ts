@@ -1,4 +1,4 @@
-import { openModal } from '../../../components/modal.component.js';
+import { openAddWebUrlModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
@@ -523,50 +523,30 @@ class ToPdfConverterController implements ViewController {
 
   private openUrlModal(): void {
     const currentVal = this.currentUrl || '';
-    const modal = openModal({
-      bodyHtml: `
-        <label class="field" data-ref="field-web-url">
-          <input class="field__input" data-ref="input-web-url" type="url" placeholder=" " value="${escapeHtml(currentVal)}" autocomplete="off" spellcheck="false" />
-          <span class="field__label">URL de la página web (ej. https://ejemplo.com)</span>
-        </label>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--black',
-      confirmText: 'Añadir URL',
-      description: t('ui.escribe_la_url_de_la_pagina_web_que_dese'),
-      onConfirm: async (m) => {
-        const input = m.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
-        let raw = (input?.value || '').trim();
-        if (!raw) {
-          m.showError(t('ui.debes_ingresar_la_url_de_una_pagina_web'));
-          return false;
-        }
-        if (!/^https?:\/\//i.test(raw)) {
-          raw = `https://${raw}`;
-        }
+    const modal = openAddWebUrlModal({
+      currentUrl: currentVal,
+      onConfirm: async (raw: string, m: any) => {
         try {
           const parsed = new URL(raw);
           if (!parsed.hostname || !parsed.hostname.includes('.')) {
-            m.showError('Por favor ingresa una URL válida (ej. https://ejemplo.com).');
+            m.showError(t('validation.invalid_url') || 'Por favor ingresa una URL válida (ej. https://ejemplo.com).');
             return false;
           }
         } catch {
-          m.showError('Por favor ingresa una URL válida con formato https://...');
+          m.showError(t('validation.invalid_url') || 'Por favor ingresa una URL válida con formato https://...');
           return false;
         }
 
         this.handleUrlSelected(raw);
         return true;
       },
-      size: 'sm',
-      title: 'Añadir URL',
     });
 
     setTimeout(() => {
       const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
       if (input) {
         input.focus();
-        input.addEventListener('keydown', (e) => {
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             modal.confirmBtn?.click();

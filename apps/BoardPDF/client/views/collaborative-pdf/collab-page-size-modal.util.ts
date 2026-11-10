@@ -1,8 +1,9 @@
+import { renderCollabPageSizeModalBody } from '../../components/modal-templates.js';
 import { openModal } from '../../components/modal.component.js';
 import { COLLAB_PAGE_PRESETS, PageDimension } from '../../config/collab-page-presets.config.js';
+import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { setupDropdown } from '../../utils/dom.util.js';
-import { t } from '../../services/i18n.service.js';
 
 interface CollabPageSizeResult {
   applyToAll?: boolean;
@@ -27,48 +28,11 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
   });
 
   let selectedPresetId = matchingPreset?.id || 'a4';
-  const initialPreset = COLLAB_PAGE_PRESETS.find((p) => p.id === selectedPresetId) || COLLAB_PAGE_PRESETS[0];
 
   const modalBody = document.createElement('div');
   modalBody.className = 'collab-page-size-form';
   modalBody.setAttribute('data-ref', 'collab-page-size-form');
-
-  modalBody.innerHTML = `
-    <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size">
-      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" aria-label=t('ui.seleccionar_tamano_de_papel')>
-        <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size">
-          <svg class="component-icon dropdown-trigger__icon" data-ref="icon-paper-size" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-          <span class="dropdown-trigger__text" data-ref="txt-selected-paper-size">${initialPreset.name} (${initialPreset.description})</span>
-        </div>
-        <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-paper-size-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-      </button>
-
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-paper-size"></div>
-      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-paper-size">
-        <div class="menu-panel__list" data-ref="list-paper-size">
-          ${COLLAB_PAGE_PRESETS.map((p) => `
-            <button type="button" class="menu-item ${p.id === selectedPresetId ? 'is-selected' : ''}" data-ref="item-size-${p.id}" data-preset-id="${p.id}">
-              <div class="menu-item__icon-wrapper">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-              </div>
-              <div class="menu-item__text-group">
-                <span class="menu-item__title">${p.name}</span>
-                <span class="menu-item__subtitle">${p.description}</span>
-              </div>
-              <svg class="component-icon menu-item__check ${p.id === selectedPresetId ? '' : 'is-hidden'}" data-ref="check-size-${p.id}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-
-    <div class="collab-page-size-checkbox-wrap" data-ref="wrap-apply-all">
-      <label class="collab-resize-checkbox-label" data-ref="label-apply-all">
-        <input class="checkbox" data-ref="chk-apply-all" type="checkbox" />
-        <span>Aplicar a todas las páginas</span>
-      </label>
-    </div>
-  `;
+  modalBody.innerHTML = renderCollabPageSizeModalBody(selectedPresetId, COLLAB_PAGE_PRESETS);
 
   renderIcons(modalBody);
 
@@ -103,9 +67,9 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
   const pageNum = (options.pageIndex ?? 0) + 1;
   openModal({
     bodyHtml: modalBody,
-    cancelText: 'Cancelar',
+    cancelText: t('common.cancel'),
     confirmClass: 'component-button--black',
-    confirmText: 'Aplicar tamaño',
+    confirmText: t('ui.aplicar_tamano') || t('modals_catalog.sample_collab_size_btn') || 'Aplicar tamaño',
     description: t('ui.selecciona_el_formato_de_papel_estandar_'),
     onClose: () => {
       dropdownCtrl.destroy();
@@ -127,7 +91,7 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: `Tamaño de página (Página ${pageNum})`,
+    title: `${t('modals_catalog.item_08_name') || 'Tamaño de página'} (${t('common.pages') || 'Página'} ${pageNum})`,
   });
 }
 

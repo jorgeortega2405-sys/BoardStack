@@ -1,5 +1,5 @@
 import { currentUser } from '../services/api.service.js';
-import { ALL_TOOLS_LIMITS, resolveToolLimits, ToolLimitTierConfig, ToolTierLimits, WORKFLOW_LIMITS as MASTER_WORKFLOW_LIMITS } from './subscription-plans.config.js';
+import { ALL_TOOLS_LIMITS, FOLDER_LIMITS, PLATFORM_LIMITS, resolveToolLimits, ToolLimitTierConfig, ToolTierLimits, WORKFLOW_LIMITS as MASTER_WORKFLOW_LIMITS } from './subscription-plans.config.js';
 
 interface ToolLimitDefinition {
   free: {
@@ -35,9 +35,19 @@ function getCurrentUserToolLimits(toolId: string): { isPremium: boolean; maxFile
 
 const WORKFLOW_LIMITS = MASTER_WORKFLOW_LIMITS;
 
-function getMaxWorkflows(_user?: any): number {
-  return 100;
+function getMaxWorkflows(user = currentUser): number {
+  const perms = user?.permissions || [];
+  if (perms.includes('subscription:feature:business')) return WORKFLOW_LIMITS.business;
+  if (perms.includes('subscription:feature:pro')) return WORKFLOW_LIMITS.pro;
+  return WORKFLOW_LIMITS.free;
 }
 
-export { TOOLS_LIMITS, WORKFLOW_LIMITS, getCurrentUserToolLimits, getMaxWorkflows };
+function getMaxFolders(user = currentUser): number {
+  const perms = user?.permissions || [];
+  if (perms.includes('subscription:feature:business')) return FOLDER_LIMITS.business;
+  if (perms.includes('subscription:feature:pro')) return FOLDER_LIMITS.pro;
+  return FOLDER_LIMITS.free;
+}
+
+export { FOLDER_LIMITS, PLATFORM_LIMITS, TOOLS_LIMITS, WORKFLOW_LIMITS, getCurrentUserToolLimits, getMaxFolders, getMaxWorkflows };
 export type { ToolLimitDefinition };

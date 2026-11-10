@@ -1,8 +1,9 @@
-import { getDbPool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { getDbPool } from '../config/database.config.js';
+import { FOLDER_LIMITS } from '../config/subscription-plans.config.js';
+import { logger } from './logger.service.js';
 
 interface ProjectFolderRecord {
   color?: string | null;
@@ -178,6 +179,7 @@ async function createProjectFolder(payload: {
   name: string;
   parentId?: string | null;
   userId: number | null;
+  userPermissions?: string[];
 }): Promise<ProjectFolderRecord> {
   const cleanName = (payload.name || '').trim();
   if (!cleanName) {
@@ -185,6 +187,25 @@ async function createProjectFolder(payload: {
   }
 
   const pool = getDbPool();
+
+  if (payload.userId) {
+    const [countRows] = await pool.query<any[]>(
+      'SELECT COUNT(*) AS total FROM project_folders WHERE user_id <=> ? AND folder_type != "uploads"',
+      [payload.userId]
+    );
+    const currentCount = Number(countRows?.[0]?.total || 0);
+    const perms = payload.userPermissions || [];
+    const maxFolders = perms.includes('subscription:feature:business')
+      ? FOLDER_LIMITS.business
+      : perms.includes('subscription:feature:pro')
+      ? FOLDER_LIMITS.pro
+      : FOLDER_LIMITS.free;
+
+    if (currentCount >= maxFolders) {
+      throw new Error('Has alcanzado el límite máximo de carpetas permitido para tu plan actual.');
+    }
+  }
+
   const folderId = crypto.randomUUID();
   const folderType = payload.folderType || (payload.parentId ? 'upload_folder' : 'project');
 

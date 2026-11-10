@@ -1,5 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
-import { openModal } from '../components/modal.component.js';
+import { renderWorkflowBuilderModalBody, renderWorkflowEmptyStepsState, renderWorkflowPipelineStepItem } from '../components/modal-templates.js';
+import { openDeleteWorkflowModal, openModal } from '../components/modal.component.js';
 import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
 import { t } from '../services/i18n.service.js';
@@ -157,57 +158,7 @@ class WorkflowsController {
     modalBody.className = 'workflow-builder-modal';
     modalBody.setAttribute('data-ref', 'workflow-builder-modal');
 
-    modalBody.innerHTML = `
-      <div class="workflow-modal-columns" data-ref="modal-columns">
-        <div class="modal-col-left" data-ref="modal-col-left">
-          <div class="workflow-modal-section-title">Selección de herramienta</div>
-
-          <label class="field" data-ref="field-workflow-name">
-            <input class="field__input" data-ref="input-workflow-name" type="text" placeholder=" " autocomplete="off" value="${workflow ? this.escape(workflow.name) : ''}" />
-            <span class="field__label" data-ref="label-workflow-name">Nombre del flujo de trabajo</span>
-          </label>
-
-          <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-workflow-tool">
-            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-workflow-tool" aria-label="Seleccionar herramienta">
-              <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-tool">
-                <svg class="component-icon dropdown-trigger__icon is-hidden" data-ref="icon-selected-tool" aria-hidden="true"><use href="/icons.svg#widgets"></use></svg>
-                <span class="dropdown-trigger__text" data-ref="txt-selected-tool">Selecciona una herramienta...</span>
-              </div>
-              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-            </button>
-            <div class="dropdown-backdrop" data-ref="backdrop-workflow-tool">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-workflow-tool">
-                <div class="menu-panel__drag-zone" data-ref="drag-zone-workflow-tool" aria-hidden="true">
-                  <div class="menu-panel__drag-handle"></div>
-                </div>
-                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-workflow-tool"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="workflow-modal-tool-options is-hidden" data-ref="workflow-modal-tool-options"></div>
-
-          <button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-modal-add-step">
-            <span>Añadir paso</span>
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-          </button>
-        </div>
-
-        <div class="modal-col-right modal-col-right--workflow" data-ref="modal-col-right">
-          <div class="workflow-modal-header-row">
-            <div class="workflow-modal-section-title">Secuencia del flujo</div>
-            <button type="button" class="component-button component-button--ghost component-button--danger" data-ref="btn-modal-clear-pipeline">Borrar todo</button>
-          </div>
-
-          <div class="workflow-modal-steps-list" data-ref="workflow-modal-steps-list"></div>
-
-          <div class="banner banner--danger modal-terminal-alert is-hidden" data-ref="modal-terminal-alert">
-            <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
-            <span class="banner__text">No es posible añadir herramientas después de una conversión terminal.</span>
-          </div>
-        </div>
-      </div>
-    `;
+    modalBody.innerHTML = renderWorkflowBuilderModalBody(workflow ? this.escape(workflow.name) : '');
 
     const listEl = modalBody.querySelector<HTMLElement>('[data-ref="list-workflow-tool"]');
     const toolWrapper = modalBody.querySelector<HTMLElement>('[data-ref="field-workflow-tool"]');
@@ -230,29 +181,13 @@ class WorkflowsController {
     const renderPipelineSteps = () => {
       if (!stepsListEl) return;
       if (currentSteps.length === 0) {
-        stepsListEl.innerHTML = `
-          <div class="workflow-empty-state">
-            <svg class="component-icon workflow-empty-state__icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
-            <span class="workflow-empty-state__text">Añade herramientas a la secuencia desde el panel izquierdo.</span>
-          </div>
-        `;
+        stepsListEl.innerHTML = renderWorkflowEmptyStepsState();
       } else {
         stepsListEl.innerHTML = currentSteps.map((step, idx) => {
           const tool = WORKFLOW_TOOLS.find((t) => t.id === step.tool);
           const toolName = tool ? tool.name : step.tool;
           const toolIcon = tool ? tool.icon : 'widgets';
-          return `
-            <div class="pipeline-step-item" data-ref="modal-step-${step.id}">
-              <div class="pipeline-step-item__left">
-                <span class="pipeline-step-item__number">${idx + 1}</span>
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${toolIcon}"></use></svg>
-                <span class="pipeline-step-item__title">${this.escape(toolName)}</span>
-              </div>
-              <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h28" data-ref="btn-modal-remove-step-${step.id}" data-id="${step.id}" data-tooltip="Quitar paso" aria-label="Quitar paso">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-              </button>
-            </div>
-          `;
+          return renderWorkflowPipelineStepItem(idx + 1, toolName, toolIcon, step.id);
         }).join('');
       }
 
@@ -401,9 +336,9 @@ class WorkflowsController {
 
     openModal({
       bodyHtml: modalBody,
-      cancelText: 'Cancelar',
+      cancelText: t('common.cancel'),
       confirmClass: 'component-button--primary component-button--black',
-      confirmText: workflow ? 'Guardar cambios' : 'Crear flujo',
+      confirmText: workflow ? (t('common.save_changes') || 'Guardar cambios') : (t('modals_catalog.sample_workflow_save') || 'Crear flujo'),
       description: t('ui.configura_las_herramientas_y_el_orden_de'),
       onClose: () => {
         toolDropdownCtrl?.destroy();
@@ -450,11 +385,7 @@ class WorkflowsController {
   }
 
   private confirmDeleteWorkflow(workflow: UserWorkflow): void {
-    openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Eliminar flujo',
-      description: `¿Estás seguro de que deseas eliminar permanentemente el flujo de trabajo "${workflow.name}"? Esta acción no se puede deshacer.`,
+    openDeleteWorkflowModal({
       onConfirm: async () => {
         const deleted = deleteWorkflow(workflow.id);
         if (deleted) {
@@ -466,10 +397,7 @@ class WorkflowsController {
         showToast(t('ui.no_se_pudo_eliminar_el_flujo_de_trabajo'), 'danger');
         return false;
       },
-      showCancel: true,
-      showConfirm: true,
-      size: 'sm',
-      title: 'Eliminar flujo de trabajo',
+      workflowName: workflow.name,
     });
   }
 

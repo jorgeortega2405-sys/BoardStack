@@ -1,4 +1,4 @@
-import { openModal } from '../../components/modal.component.js';
+import { openVerifyEmailCodeModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { checkAuthSession, currentUser, deleteApi, getApi, postApi, postFormApi, setCurrentUser } from '../../services/api.service.js';
 import { connectGoogleDrive, disconnectGoogleDrive } from '../../services/google-drive.service.js';
@@ -413,48 +413,29 @@ class SettingsAccountController implements ViewController {
 
           showToast(t('settings.your_account.email_code_sent_toast') || 'Código de verificación enviado a tu correo.', 'info');
 
-          openModal({
-            cancelText: t('common.cancel'),
-            confirmText: t('common.continue'),
-            description: t('settings.your_account.modal_email_verify_desc', { email: currentUser?.email || '' }),
-            title: t('settings.your_account.modal_email_verify_title'),
-            bodyHtml: `
-              <label class="field" data-ref="field-email-code">
-                <input class="field__input field__input--code" data-ref="modal-input-code" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder=" " autocomplete="one-time-code" />
-                <span class="field__label" data-ref="modal-label-code">${t('settings.your_account.modal_email_code_placeholder')}</span>
-              </label>
-            `,
-            onConfirm: async (inst) => {
-              const inputCodeEl = inst.body.querySelector<HTMLInputElement>('[data-ref="modal-input-code"]');
-              const inputCode = inputCodeEl?.value?.trim() || '';
-
-              if (!inputCode) {
-                inst.showError(t('validation.code_required') || t('ui.ingresa_el_codigo_de_6_digitos'));
-                return;
-              }
-              if (inputCode.length !== 6 || !/^\d+$/.test(inputCode)) {
-                inst.showError(t('validation.code_invalid') || 'El código debe contener exactamente 6 dígitos.');
-                return;
-              }
-
+          openVerifyEmailCodeModal({
+            email: currentUser?.email || '',
+            onConfirm: async (code: string, inst: any) => {
               inst.clearError();
               inst.setConfirmLoading(true);
 
               try {
-                const verifyRes = await postApi(API_ROUTES.settings.emailVerifyCode, { code: inputCode });
+                const verifyRes = await postApi(API_ROUTES.settings.emailVerifyCode, { code });
                 const verifyData = await verifyRes.json();
 
                 if (!verifyRes.ok || !verifyData.ok) {
                   inst.setConfirmLoading(false);
                   inst.showError(verifyData.error || t('common.error_occurred'));
-                  return;
+                  return false;
                 }
 
                 inst.close();
                 activateEmailEditMode();
+                return true;
               } catch (_) {
                 inst.setConfirmLoading(false);
                 inst.showError(t('common.error_occurred'));
+                return false;
               }
             },
           });

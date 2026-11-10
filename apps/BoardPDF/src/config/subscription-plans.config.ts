@@ -1,6 +1,7 @@
 type SubscriptionTierKey = 'business' | 'free' | 'pro';
 
 interface ToolLimitTierConfig {
+  maxCollaborators?: number;
   maxFiles: number;
   maxFileSizeMB: number;
   maxTotalSizeMB: number;
@@ -45,177 +46,193 @@ interface PlanBenefitsDefinition {
   tagline: string;
 }
 
+const FOLDER_LIMITS: Record<SubscriptionTierKey, number> = {
+  business: 1000,
+  free: 5,
+  pro: 100,
+};
+
 const WORKFLOW_LIMITS: Record<SubscriptionTierKey, number> = {
   business: 200,
   free: 5,
   pro: 50,
 };
 
+const PLATFORM_LIMITS = {
+  'collaborative-pdf': {
+    business: { maxCollaborators: 50, maxFiles: 50, maxFileSizeMB: 1000 },
+    free: { maxCollaborators: 2, maxFiles: 1, maxFileSizeMB: 50 },
+    pro: { maxCollaborators: 10, maxFiles: 10, maxFileSizeMB: 500 },
+  },
+  folders: FOLDER_LIMITS,
+  workflows: WORKFLOW_LIMITS,
+};
+
 const ALL_TOOLS_LIMITS: AllPdfToolsLimits = {
   'collaborative-pdf': {
-    business: { maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'subscription:feature:business' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'subscription:feature:pro' },
+    business: { maxCollaborators: 50, maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'subscription:feature:business' },
+    free: { maxCollaborators: 2, maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
+    pro: { maxCollaborators: 10, maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'subscription:feature:pro' },
   },
   'compare-pdf': {
-    business: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 2, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 2, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 2, maxFileSizeMB: 400, maxTotalSizeMB: 400, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 400, maxTotalSizeMB: 400 },
+    pro: { maxFiles: 2, maxFileSizeMB: 400, maxTotalSizeMB: 400, requiredPermission: 'tools:high_size_limit' },
   },
   'compress-pdf': {
-    business: { maxFiles: 25, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 200, maxTotalSizeMB: 400 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'crop-pdf': {
-    business: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
     free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 5, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    pro: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'edit-pdf': {
-    business: { maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 1, maxFileSizeMB: 200, maxTotalSizeMB: 200, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
+    pro: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100, requiredPermission: 'tools:high_size_limit' },
   },
   'excel-to-pdf': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'extract-pdf-pages': {
-    business: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:split:by_size' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:split:by_size' },
+    business: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:split:by_size' },
+    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
+    pro: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:split:by_size' },
   },
   'html-to-pdf': {
-    business: { maxFiles: 50, maxFileSizeMB: 200, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 20, maxFileSizeMB: 200, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'jpg-to-pdf': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 1000, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 20, maxFileSizeMB: 40, maxTotalSizeMB: 80 },
+    pro: { maxFiles: 500, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'merge-pdf': {
-    business: { maxFiles: 500, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:merge:batch_500' },
-    free: { maxFiles: 25, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 500, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:merge:batch_500' },
+    business: { maxFiles: 1000, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:merge:batch_500' },
+    free: { maxFiles: 25, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 500, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:merge:batch_500' },
   },
   'ocr-pdf': {
-    business: { maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'organize-pdf': {
-    business: { maxFiles: 500, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:merge:batch_500' },
-    free: { maxFiles: 25, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 500, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'tools:merge:batch_500' },
+    business: { maxFiles: 50, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:merge:batch_500' },
+    free: { maxFiles: 5, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 20, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:merge:batch_500' },
   },
   'page-numbers': {
-    business: { maxFiles: 25, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 50, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-converter': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-excel': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-jpg': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 25, maxTotalSizeMB: 50 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-markdown': {
-    business: { maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 1, maxFileSizeMB: 200, maxTotalSizeMB: 200, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-pdfa': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-powerpoint': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'pdf-to-word': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'powerpoint-to-pdf': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'protect-pdf': {
-    business: { maxFiles: 25, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 200, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 80, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'redact-pdf': {
-    business: { maxFiles: 10, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 5, maxFileSizeMB: 500, maxTotalSizeMB: 500, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 1, maxFileSizeMB: 400, maxTotalSizeMB: 400, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 400, maxTotalSizeMB: 400 },
+    pro: { maxFiles: 1, maxFileSizeMB: 400, maxTotalSizeMB: 400, requiredPermission: 'tools:high_size_limit' },
   },
   'remove-pdf-pages': {
-    business: { maxFiles: 5, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
     free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 1, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    pro: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'repair-pdf': {
-    business: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 20, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
     free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 5, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'rotate-pdf': {
-    business: { maxFiles: 50, maxFileSizeMB: 1000, maxTotalSizeMB: 1500, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 20, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 200, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 20, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 80, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'split-pdf': {
-    business: { maxFiles: 5, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:split:by_size' },
+    business: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:split:by_size' },
     free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 1, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:split:by_size' },
+    pro: { maxFiles: 1, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:split:by_size' },
   },
   'summarize-pdf': {
-    business: { maxFiles: 3, maxFileSizeMB: 200, maxTotalSizeMB: 300, requiredPermission: 'tools:ai:advanced' },
+    business: { maxFiles: 1, maxFileSizeMB: 200, maxTotalSizeMB: 200, requiredPermission: 'tools:ai:advanced' },
     free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
-    pro: { maxFiles: 1, maxFileSizeMB: 200, maxTotalSizeMB: 200, requiredPermission: 'tools:ai:advanced' },
+    pro: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50, requiredPermission: 'tools:ai:advanced' },
   },
   'to-pdf-converter': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'translate-pdf': {
-    business: { maxFiles: 3, maxFileSizeMB: 200, maxTotalSizeMB: 300, requiredPermission: 'tools:ai:advanced' },
-    free: { maxFiles: 1, maxFileSizeMB: 50, maxTotalSizeMB: 50 },
+    business: { maxFiles: 1, maxFileSizeMB: 400, maxTotalSizeMB: 400, requiredPermission: 'tools:ai:advanced' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
     pro: { maxFiles: 1, maxFileSizeMB: 200, maxTotalSizeMB: 200, requiredPermission: 'tools:ai:advanced' },
   },
   'unlock-pdf': {
-    business: { maxFiles: 25, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 50, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'watermark-pdf': {
-    business: { maxFiles: 25, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 1, maxFileSizeMB: 100, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 10, maxFileSizeMB: 1000, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 50, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 2, maxFileSizeMB: 100, maxTotalSizeMB: 200 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'word-to-pdf': {
-    business: { maxFiles: 100, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
-    free: { maxFiles: 5, maxFileSizeMB: 50, maxTotalSizeMB: 100 },
-    pro: { maxFiles: 50, maxFileSizeMB: 500, maxTotalSizeMB: 1000, requiredPermission: 'tools:high_size_limit' },
+    business: { maxFiles: 25, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
+    free: { maxFiles: 1, maxFileSizeMB: 15, maxTotalSizeMB: 15 },
+    pro: { maxFiles: 10, maxFileSizeMB: 4096, maxTotalSizeMB: 4096, requiredPermission: 'tools:high_size_limit' },
   },
   'workflows': {
     business: { maxFiles: 200, maxFileSizeMB: 1000, maxTotalSizeMB: 2000, requiredPermission: 'subscription:feature:business' },
@@ -403,5 +420,5 @@ function resolveToolLimits(toolId: string, permissions: string[] = []): ToolLimi
   return tool.free;
 }
 
-export { ALL_TOOLS_LIMITS, PLAN_TIER_BENEFITS, WORKFLOW_LIMITS, getPlanBenefits, getToolTierLimits, normalizeTierKey, resolveToolLimits };
+export { ALL_TOOLS_LIMITS, FOLDER_LIMITS, PLAN_TIER_BENEFITS, PLATFORM_LIMITS, WORKFLOW_LIMITS, getPlanBenefits, getToolTierLimits, normalizeTierKey, resolveToolLimits };
 export type { AllPdfToolsLimits, PlanBenefitsDefinition, PlanFeatureItem, SubscriptionTierKey, ToolLimitTierConfig, ToolTierLimits };

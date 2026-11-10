@@ -1,5 +1,5 @@
 import { navigate } from '../../app-router.js';
-import { open2FAModal, openModal } from '../../components/modal.component.js';
+import { open2FAModal, openDeleteAccountModal, openDisable2FAModal, openVerifyPasswordModal, setupNewPasswordModalStep } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { clearUserState, currentUser, getApi, postApi, setCurrentUser } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
@@ -99,29 +99,8 @@ class SettingsSecurityController implements ViewController {
   }
 
   private openPasswordFlow(): void {
-    const modal = openModal({
-      cancelText: t('common.cancel'),
-      confirmText: t('common.continue'),
-      description: t('settings.security.modal_verify_password_desc') || t('ui.por_motivos_de_seguridad_ingresa_tu_cont'),
-      title: t('settings.security.modal_verify_password_title') || 'Verifica tu contraseña actual',
-      bodyHtml: `
-        <label class="field" data-ref="field-current-password">
-          <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="modal-label-current-password">${t('settings.security.modal_current_password_label') || 'Contraseña actual'}</span>
-          <button type="button" class="field__action" data-ref="toggle-modal-current-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-          </button>
-        </label>
-      `,
-      onConfirm: async (inst) => {
-        const inputPass = inst.body.querySelector<HTMLInputElement>('[data-ref="modal-input-current-password"]');
-        const currentPassword = inputPass?.value || '';
-
-        if (!currentPassword) {
-          inst.showError(t('validation.password_required') || 'Ingresa tu contraseña actual.');
-          return;
-        }
-
+    openVerifyPasswordModal({
+      onConfirm: async (currentPassword: string, inst: any) => {
         inst.clearError();
         inst.setConfirmLoading(true);
 
@@ -132,117 +111,51 @@ class SettingsSecurityController implements ViewController {
           if (!verifyRes.ok || !verifyData.ok) {
             inst.setConfirmLoading(false);
             inst.showError(verifyData.error || t('settings.security.current_password_incorrect') || 'La contraseña actual es incorrecta.');
-            return;
+            return false;
           }
 
           this.showStep2NewPassword(inst);
+          return false;
         } catch (_) {
           inst.setConfirmLoading(false);
           inst.showError(t('common.error_occurred'));
+          return false;
         }
       },
     });
-
-    const currentPassInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-current-password"]');
-    const togglePassBtn = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-current-password"]');
-    setupPasswordToggle(togglePassBtn, currentPassInput);
   }
 
   private showStep2NewPassword(modal: ModalInstance): void {
-    modal.setTitle(t('settings.security.modal_new_password_title') || 'Crear nueva contraseña');
-    modal.setDescription(t('settings.security.modal_new_password_desc') || 'Tu nueva contraseña debe tener al menos 8 caracteres.');
-    modal.clearError();
-    modal.setConfirmLoading(false);
-    modal.setConfirmVisible(true);
-    modal.setConfirmText(t('common.save') || 'Guardar');
+    setupNewPasswordModalStep(modal, {
+      onConfirm: async (newPass: string, inst: any) => {
+        inst.clearError();
+        inst.setConfirmLoading(true);
 
-    modal.setBody(`
-      <div class="form-group-modal" data-ref="group-new-passwords">
-        <label class="field" data-ref="field-new-password">
-          <input class="field__input field__input--has-action" data-ref="modal-input-new-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
-          <span class="field__label" data-ref="modal-label-new-password">${t('settings.security.modal_new_password_label') || 'Nueva contraseña'}</span>
-          <button type="button" class="field__action" data-ref="toggle-modal-new-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-          </button>
-        </label>
-        <label class="field" data-ref="field-confirm-new-password" style="margin-top: 14px;">
-          <input class="field__input field__input--has-action" data-ref="modal-input-confirm-new-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
-          <span class="field__label" data-ref="modal-label-confirm-new-password">${t('settings.security.modal_confirm_new_password_label') || 'Confirmar nueva contraseña'}</span>
-          <button type="button" class="field__action" data-ref="toggle-modal-confirm-new-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-          </button>
-        </label>
-      </div>
-    `);
+        try {
+          const updateRes = await postApi(API_ROUTES.settings.password, { newPassword: newPass });
+          const updateData = await updateRes.json();
 
-    const inputNewPass = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-new-password"]');
-    const inputConfirmPass = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-confirm-new-password"]');
-    const toggleNewPass = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-new-password"]');
-    const toggleConfirmPass = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-confirm-new-password"]');
+          if (!updateRes.ok || !updateData.ok) {
+            inst.setConfirmLoading(false);
+            inst.showError(updateData.error || t('common.error_occurred'));
+            return false;
+          }
 
-    setupPasswordToggle(toggleNewPass, inputNewPass);
-    setupPasswordToggle(toggleConfirmPass, inputConfirmPass);
-
-    inputNewPass?.focus();
-
-    modal.setOnConfirm(async (inst) => {
-      const newPass = inputNewPass?.value || '';
-      const confirmPass = inputConfirmPass?.value || '';
-
-      const validation = validatePassword(newPass);
-      if (!validation.valid) {
-        inst.showError(validation.error || t('validation.password_min'));
-        return;
-      }
-
-      if (newPass !== confirmPass) {
-        inst.showError(t('validation.passwords_not_match') || 'Las contraseñas no coinciden.');
-        return;
-      }
-
-      inst.clearError();
-      inst.setConfirmLoading(true);
-
-      try {
-        const updateRes = await postApi(API_ROUTES.settings.password, { newPassword: newPass });
-        const updateData = await updateRes.json();
-
-        if (!updateRes.ok || !updateData.ok) {
+          inst.close();
+          showToast(t('settings.security.password_updated_toast') || 'Contraseña actualizada exitosamente.', 'success');
+          return true;
+        } catch (_) {
           inst.setConfirmLoading(false);
-          inst.showError(updateData.error || t('common.error_occurred'));
-          return;
+          inst.showError(t('common.error_occurred'));
+          return false;
         }
-
-        inst.close();
-        showToast(t('settings.security.password_updated_toast') || 'Contraseña actualizada exitosamente.', 'success');
-      } catch (_) {
-        inst.setConfirmLoading(false);
-        inst.showError(t('common.error_occurred'));
-      }
+      },
     });
   }
 
   private openDisable2FAModal(): void {
-    const modal = openModal({
-      cancelText: t('common.cancel'),
-      confirmClass: 'component-button--danger',
-      confirmText: t('settings.security.btn_disable_2fa') || 'Desactivar',
-      description: t('settings.security.two_factor_disable_confirm') || t('ui.ingresa_tu_contrasena_actual_o_un_codigo'),
-      title: t('settings.security.two_factor_disable_title') || t('ui.desactivar_autenticacion_en_dos_pasos'),
-      bodyHtml: `
-        <label class="field" data-ref="field-disable-2fa-password" style="margin-top: 14px;">
-          <input class="field__input" data-ref="input-disable-2fa-password" type="password" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="label-disable-2fa-password">${t('settings.security.current_password_label') || t('ui.contrasena_o_codigo_de_6_digitos')}</span>
-        </label>
-      `,
-      onConfirm: async (inst) => {
-        const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-disable-2fa-password"]');
-        const val = input ? input.value.trim() : '';
-        if (!val) {
-          inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_o_codigo_de_verifi'));
-          return;
-        }
-
+    openDisable2FAModal({
+      onConfirm: async (val: string, inst: any) => {
         inst.clearError();
         inst.setConfirmLoading(true);
 
@@ -258,40 +171,23 @@ class SettingsSecurityController implements ViewController {
               setCurrentUser(currentUser);
             }
             showToast(t('settings.security.two_factor_disabled_toast') || 'Autenticación en dos pasos desactivada exitosamente.', 'success');
-          } else {
-            inst.setConfirmLoading(false);
-            inst.showError(data.error || t('common.error_occurred'));
+            return true;
           }
+          inst.setConfirmLoading(false);
+          inst.showError(data.error || t('common.error_occurred'));
+          return false;
         } catch (_) {
           inst.setConfirmLoading(false);
           inst.showError(t('common.error_occurred'));
+          return false;
         }
       },
     });
   }
 
   private openDeleteAccountModal(): void {
-    openModal({
-      cancelText: t('common.cancel'),
-      confirmClass: 'component-button--danger',
-      confirmText: t('settings.security.btn_delete_account') || 'Eliminar cuenta',
-      description: t('settings.security.delete_account_modal_desc') || 'Esta acción es irreversible. Se eliminarán permanentemente todos tus archivos y datos asociados.',
-      title: t('settings.security.delete_account_modal_title') || '¿Eliminar tu cuenta definitivamente?',
-      bodyHtml: `
-        <label class="field" data-ref="field-delete-password" style="margin-top: 14px;">
-          <input class="field__input" data-ref="input-delete-password" type="password" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="label-delete-password">${t('settings.security.modal_current_password_label') || 'Contraseña actual'}</span>
-        </label>
-      `,
-      onConfirm: async (inst) => {
-        const inputPwd = inst.body.querySelector<HTMLInputElement>('[data-ref="input-delete-password"]');
-        const password = inputPwd?.value?.trim() || '';
-
-        if (!password) {
-          inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_actual_para_confir'));
-          return;
-        }
-
+    openDeleteAccountModal({
+      onConfirm: async (password: string, inst: any) => {
         inst.clearError();
         inst.setConfirmLoading(true);
 
@@ -304,13 +200,15 @@ class SettingsSecurityController implements ViewController {
             clearUserState();
             showToast(t('settings.security.delete_account_toast') || 'Tu cuenta y todos sus datos han sido eliminados permanentemente.', 'success');
             navigate('/login');
-          } else {
-            inst.setConfirmLoading(false);
-            inst.showError(data.error || t('common.error_occurred'));
+            return true;
           }
+          inst.setConfirmLoading(false);
+          inst.showError(data.error || t('settings.security.modal_current_password_error') || 'Contraseña incorrecta.');
+          return false;
         } catch (_) {
           inst.setConfirmLoading(false);
           inst.showError(t('common.error_occurred'));
+          return false;
         }
       },
     });
