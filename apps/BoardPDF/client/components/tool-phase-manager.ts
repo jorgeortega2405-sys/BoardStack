@@ -1,5 +1,5 @@
 import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
-import { t } from '../services/i18n.service.js';
+import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -53,6 +53,7 @@ class ToolPhaseManager {
           this.setPhase('dropzone');
         }
       },
+      toolId: options.toolId,
       toolName: options.toolName,
     });
   }
@@ -348,7 +349,9 @@ class ToolPhaseManager {
 
   public async navigateToDownload(payload: ToolDownloadPayload): Promise<void> {
     const session = getActiveWorkflowSession();
+    let effectivePayload = payload;
     if (session) {
+      const workflowReturnUrl = `/${getCurrentLanguage()}/workflow/${session.workflowId}`;
       const isLastStep = session.currentStepIndex >= session.steps.length - 1;
       if (!isLastStep) {
         this.showProcessing(
@@ -364,7 +367,7 @@ class ToolPhaseManager {
             const intermediateFile = new File([blob], nextName, { type: blob.type || 'application/pdf' });
             const { isComplete, nextRoute } = advanceWorkflowSession(intermediateFile);
             if (!isComplete && nextRoute) {
-              navigate(nextRoute);
+              navigate(nextRoute, true);
               return;
             }
           }
@@ -372,13 +375,14 @@ class ToolPhaseManager {
           clearWorkflowSession();
         }
       } else {
+        effectivePayload = { ...payload, returnUrl: workflowReturnUrl };
         clearWorkflowSession();
       }
     }
 
-    await this.statusManager.complete(payload.title, payload.subtitle);
+    await this.statusManager.complete(effectivePayload.title, effectivePayload.subtitle);
     this.setPhase('download');
-    saveDownloadPayloadAndNavigate(payload);
+    saveDownloadPayloadAndNavigate(effectivePayload);
   }
 
   public showUploading(currentFileIndex = 1, totalFiles = 1): void {
@@ -553,7 +557,7 @@ class ToolPhaseManager {
       clearWorkflowSession();
       banner.remove();
       this.workflowBannerElement = null;
-      showToast(t('workflows.workflow_cancelled', 'Flujo de trabajo cancelado'), 'info');
+      showToast(t('workflows.workflow_cancelled'), 'info');
     });
 
     this.workflowBannerElement = banner;

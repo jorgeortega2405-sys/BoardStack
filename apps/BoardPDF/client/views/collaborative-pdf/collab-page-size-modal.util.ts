@@ -50,7 +50,8 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
       selectedPresetId = pid;
       const p = COLLAB_PAGE_PRESETS.find((x) => x.id === pid) || COLLAB_PAGE_PRESETS[0];
       if (txtSelectedSize) {
-        txtSelectedSize.textContent = `${p.name} (${p.description})`;
+        const presetLabel = `${p.name} (${p.description})`;
+        txtSelectedSize.textContent = presetLabel;
       }
       const items = modalBody.querySelectorAll<HTMLElement>('[data-preset-id]');
       items.forEach((it) => {
@@ -69,8 +70,8 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
     bodyHtml: modalBody,
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--black',
-    confirmText: t('ui.aplicar_tamano') || t('modals_catalog.sample_collab_size_btn') || 'Aplicar tamaño',
-    description: t('ui.selecciona_el_formato_de_papel_estandar_'),
+    confirmText: t('collab.apply_size_btn'),
+    description: t('collab.page_size_desc'),
     onClose: () => {
       dropdownCtrl.destroy();
     },
@@ -80,18 +81,17 @@ function openCollabPageSizeModal(options: CollabPageSizeModalOptions): void {
       const width = isLandscape ? preset.height : preset.width;
       const height = isLandscape ? preset.width : preset.height;
 
-      dropdownCtrl.destroy();
       await options.onConfirm({
         applyToAll: Boolean(chkApplyAll?.checked),
         dimensions: { height, width },
-        title: options.initialTitle || 'Documento sin título',
+        title: options.initialTitle || t('collab.untitled_document'),
       });
       return true;
     },
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: `${t('modals_catalog.item_08_name') || 'Tamaño de página'} (${t('common.pages') || 'Página'} ${pageNum})`,
+    title: `${t('collab.page_size_title')} (${t('common.page')} ${pageNum})`,
   });
 }
 

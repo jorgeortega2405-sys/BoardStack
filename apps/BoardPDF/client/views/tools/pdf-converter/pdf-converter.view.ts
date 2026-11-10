@@ -65,7 +65,7 @@ class PdfConverterController implements ViewController {
         title: this.config.title,
       },
       sidebarRef: 'pdf-converter-sidebar',
-      toolId: 'pdf-converter',
+      toolId: this.config.targetType,
       toolName: this.config.title,
       topHeaderRef: 'component-top',
       workspaceCardRef: 'converter-selected-card',
@@ -255,13 +255,13 @@ class PdfConverterController implements ViewController {
   }
 
   private handleFileSelected(file: File): void {
-    const limits = getCurrentUserToolLimits('pdf-converter');
+    const limits = getCurrentUserToolLimits(this.config.targetType);
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolId: 'pdf-converter',
-        toolName: 'Conversor de PDF',
+        toolId: this.config.targetType,
+        toolName: this.config.title,
         type: 'file_size',
       });
       return;

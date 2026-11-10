@@ -1,4 +1,3 @@
-import { setupSheetDragToDismiss } from './modal.component.js';
 import { getLocalizedPath } from '../config/seo.config.js';
 import { ALL_TOOLS_LIMITS } from '../config/subscription-plans.config.js';
 import { currentUser } from '../services/api.service.js';
@@ -7,6 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { ModalInstance } from '../types/common.types.js';
 import { getTierWeight, normalizeTier } from '../utils/tier.util.js';
+import { setupSheetDragToDismiss } from './modal.component.js';
 
 interface UpgradeLimitModalOptions {
   currentCount?: number;
@@ -138,10 +138,10 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
   }
 
   const title = isMaxTier
-    ? t('pricing.limit_modal_title_max', 'Límite máximo alcanzado')
+    ? t('pricing.limit_modal_title_max')
     : targetTier === 'business'
-      ? t('pricing.limit_modal_title_business', 'Mejora a Negocios')
-      : t('pricing.limit_modal_title_pro', 'Mejora a Pro');
+      ? t('pricing.limit_modal_title_business')
+      : t('pricing.limit_modal_title_pro');
 
   let currentNotice = '';
   if (options.type === 'files_count') {
@@ -198,31 +198,31 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
     }
   }
 
-  const feat1 = t('pricing.limit_modal_feat_speed', t('ui.procesamiento_prioritario_ultrarrapido_e'));
+  const feat1 = t('pricing.limit_modal_feat_speed');
   const feat2 = targetTier === 'business'
-    ? t('pricing.limit_modal_feat_team', 'Espacios colaborativos y gestión centralizada')
-    : t('pricing.limit_modal_feat_tools', 'Acceso ilimitado a herramientas avanzadas y de IA');
-  const feat3 = t('pricing.limit_modal_feat_limits', 'Sin colas de espera ni restricciones diarias');
+    ? t('pricing.limit_modal_feat_team')
+    : t('pricing.limit_modal_feat_tools');
+  const feat3 = t('pricing.limit_modal_feat_limits');
 
   const pillHtml = isMaxTier
-    ? `<div class="component-badge component-badge--warning modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg><span>${t('pricing.current_plan', 'Tu plan actual')}</span></div>`
+    ? `<div class="component-badge component-badge--warning modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg><span data-i18n="pricing.current_plan">${t('pricing.current_plan')}</span></div>`
     : targetTier === 'business'
-      ? `<div class="component-badge component-badge--success modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg><span>BoardPDF Negocios</span></div>`
-      : `<div class="component-badge component-badge--primary modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg><span>BoardPDF Pro</span></div>`;
+      ? `<div class="component-badge modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg><span data-i18n="pricing.plan_business_label">${t('pricing.plan_business_label')}</span></div>`
+      : `<div class="component-badge modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg><span data-i18n="pricing.plan_pro_label">${t('pricing.plan_pro_label')}</span></div>`;
 
   const actionText = !isLoggedIn
-    ? t('auth.login.submit_btn', 'Iniciar sesión')
+    ? t('nav.login')
     : isMaxTier
-      ? (t('common.close') || 'Entendido')
+      ? t('common.close')
       : targetTier === 'business'
-        ? t('pricing.upgrade_to_business', 'Mejorar a Negocios')
-        : t('pricing.upgrade_to_pro', 'Mejorar a Pro');
+        ? t('pricing.upgrade_to_business')
+        : t('pricing.upgrade_to_pro');
 
   const footnoteHtml = !isLoggedIn
-    ? `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_login_hint_text', '¿No tienes cuenta?')} <a class="link" data-ref="btn-upgrade-register" href="/register">${t('pricing.limit_modal_login_register_link', 'Regístrate gratis')}</a></p>`
+    ? `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_login_hint_text')} <a class="link" data-ref="btn-upgrade-register" href="/register">${t('pricing.limit_modal_login_register_link')}</a></p>`
     : isMaxTier
       ? ''
-      : `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_cancel_hint', t('ui.cancela_o_cambia_de_plan_en_cualquier_mo'))}</p>`;
+      : `<p class="modal-split__footnote" data-ref="upgrade-footnote">${t('pricing.limit_modal_cancel_hint')}</p>`;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -233,49 +233,51 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
       <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
-      <div class="modal-card modal-card--split modal-card--upgrade" data-ref="modal-card-upgrade">
+      <div class="modal-card modal-card--split" data-ref="modal-card-upgrade">
         <div class="modal-card__drag-zone" data-ref="modal-upgrade-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="modal-split__left" data-ref="modal-split-left">
-          <div class="modal-split__header modal-split__header--upgrade" data-ref="upgrade-header">
-            ${pillHtml}
-            <h2 class="modal-split__title modal-split__title--upgrade" data-ref="upgrade-title">${title}</h2>
-          </div>
-          <div class="modal-split__limit-body" data-ref="upgrade-body">
-            <p class="modal-split__limit-notice" data-ref="limit-notice">${currentNotice}</p>
-            ${benefitNotice ? `<p class="modal-split__limit-benefit" data-ref="limit-benefit">${benefitNotice}</p>` : ''}
-            <ul class="modal-split__benefits-list" data-ref="upgrade-benefits-list">
-              <li class="modal-split__benefit-item">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                <span>${feat1}</span>
-              </li>
-              <li class="modal-split__benefit-item">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                <span>${feat2}</span>
-              </li>
-              <li class="modal-split__benefit-item">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-                <span>${feat3}</span>
-              </li>
-            </ul>
-          </div>
-          <div class="modal-split__actions modal-split__actions--upgrade" data-ref="upgrade-actions">
-            <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-upgrade-submit">
-              ${actionText}
-            </button>
-            ${footnoteHtml}
+        <div class="modal-split__top modal-split__top--upgrade" data-ref="modal-split-top">
+          <div class="modal-split__visual-stage" data-ref="upgrade-visual-stage">
+            <div class="modal-split__media-wrapper" data-ref="media-wrapper">
+              <img class="modal-split__media-img" data-ref="upgrade-banner-img" src="/images/pro-banner.webp" alt="BoardPDF" />
+            </div>
+            <div class="modal-split__top-status" data-ref="status-badge">
+              <span class="modal-split__badge-check">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+              </span>
+              <span class="modal-split__badge-text" data-ref="badge-text" data-i18n="pricing.limit_modal_status_badge">${t('pricing.limit_modal_status_badge')}</span>
+            </div>
           </div>
         </div>
-        <div class="modal-split__right modal-split__right--upgrade" data-ref="modal-split-right">
-          <div class="modal-split__media-wrapper" data-ref="media-wrapper">
-            <img class="modal-split__media-img" data-ref="upgrade-banner-img" src="/images/pro-banner.webp" alt="BoardPDF Plan" />
+        <div class="modal-split__bottom" data-ref="modal-split-bottom">
+          <div class="modal-split__content" data-ref="upgrade-content">
+            <div class="modal-split__header" data-ref="upgrade-header">
+              ${pillHtml}
+              <h2 class="modal-split__title modal-split__title--upgrade" data-ref="upgrade-title">${title}</h2>
+            </div>
+            <div class="modal-split__limit-body" data-ref="upgrade-body">
+              <p class="modal-split__limit-notice" data-ref="limit-notice">${currentNotice}</p>
+              ${benefitNotice ? `<p class="modal-split__limit-benefit" data-ref="limit-benefit">${benefitNotice}</p>` : ''}
+              <ul class="modal-split__benefits-list" data-ref="upgrade-benefits-list">
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${feat1}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${feat2}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${feat3}</span>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div class="modal-split__right-status" data-ref="status-badge">
-            <span class="modal-split__badge-check">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            </span>
-            <span class="modal-split__badge-text" data-ref="badge-text">${t('pricing.limit_modal_status_badge', t('ui.potencia_tu_flujo_de_trabajo'))}</span>
+          <div class="modal-split__actions" data-ref="upgrade-actions">
+            <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-upgrade-submit">${actionText}</button>
+            ${footnoteHtml}
           </div>
         </div>
       </div>
@@ -296,11 +298,16 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
     if (isClosing) return;
     isClosing = true;
     window.removeEventListener('keydown', handleKeyDown);
-    backdrop.classList.add('is-closing');
+    backdrop.classList.remove('is-visible');
     setTimeout(() => {
-      backdrop.remove();
+      if (backdrop.parentNode) {
+        backdrop.parentNode.removeChild(backdrop);
+      }
       if (activeUpgradeModal === modalInstance) {
         activeUpgradeModal = null;
+      }
+      if (document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
+        document.body.classList.remove('modal-open');
       }
       if (typeof options.onClose === 'function') {
         options.onClose();
@@ -375,6 +382,12 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
 
   activeUpgradeModal = modalInstance;
   document.body.appendChild(backdrop);
+  document.body.classList.add('modal-open');
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+  });
+
   return modalInstance;
 }
 

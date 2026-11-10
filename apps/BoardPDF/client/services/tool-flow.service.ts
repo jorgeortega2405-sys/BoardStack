@@ -63,7 +63,7 @@ function setupToolFileFlow(options: ToolFileFlowOptions): void {
   const { container, multiselect = false, onFile, onFiles, signal, toolId } = options;
 
   const validateIncoming = (file: File): { error?: string; valid: boolean } => {
-    if (toolId === 'to-pdf-converter') {
+    if (toolId === 'to-pdf-converter' || toolId.endsWith('-to-pdf')) {
       const limits = getCurrentUserToolLimits(toolId);
       if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
         return { error: t('ui.el_archivo_seleccionado_supera_el_limite'), valid: false };

@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_email (email),
   INDEX idx_user_username (username),
-  INDEX idx_user_storage (storage_used_bytes)
+  INDEX idx_user_storage (storage_used_bytes),
+  INDEX idx_users_tokens_reset (ai_tokens_reset_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (

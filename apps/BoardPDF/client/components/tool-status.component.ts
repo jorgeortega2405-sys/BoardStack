@@ -1,11 +1,12 @@
 import { UploadProgressInfo } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
-import { t } from '../services/i18n.service.js';
 
 interface ToolStatusOptions {
   container: HTMLElement;
   onRetry?: () => void;
+  toolId?: string;
   toolName: string;
 }
 
@@ -18,18 +19,30 @@ class ToolStatusManager {
   private errorScreen: HTMLElement | null = null;
   private onRetry?: () => void;
   private processingInterval: number | null = null;
+  private toolId: string;
   private toolName: string;
   private uploadScreen: HTMLElement | null = null;
 
   constructor(options: ToolStatusOptions | HTMLElement) {
     if (options instanceof HTMLElement) {
       this.container = options;
-      this.toolName = 'Herramienta PDF';
+      this.toolId = 'default';
+      this.toolName = t('tool_status.default_tool_name');
     } else {
       this.container = options.container;
-      this.toolName = options.toolName || 'Herramienta PDF';
+      this.toolId = options.toolId || 'default';
+      this.toolName = options.toolName || t('tool_status.default_tool_name');
       this.onRetry = options.onRetry;
     }
+  }
+
+  private resolveStageText(field: string): string {
+    const toolKey = `tool_status.stages.${this.toolId}.${field}`;
+    const value = t(toolKey);
+    if (value !== toolKey) {
+      return value;
+    }
+    return t(`tool_status.stages.default.${field}`);
   }
 
   private getOrCreateUploadScreen(): HTMLElement {
@@ -41,18 +54,18 @@ class ToolStatusManager {
       hideElement(uploadEl);
       uploadEl.innerHTML = `
         <div class="tool-upload-screen__content" data-ref="upload-screen-content">
-          <h2 class="tool-upload-screen__title" data-ref="upload-screen-title">Subiendo tus archivos...</h2>
-          <p class="tool-upload-screen__subtitle" data-ref="upload-screen-subtitle">Subiendo...</p>
+          <h2 class="tool-upload-screen__title" data-ref="upload-screen-title">${t('tool_status.uploading_title')}</h2>
+          <p class="tool-upload-screen__subtitle" data-ref="upload-screen-subtitle">${t('tool_status.uploading_subtitle')}</p>
           <div class="tool-upload-screen__meta" data-ref="upload-screen-meta">
-            <span data-ref="upload-screen-eta">Tiempo restante: calculando...</span>
+            <span data-ref="upload-screen-eta">${t('tool_status.eta_calculating')}</span>
             <span class="tool-upload-screen__meta-sep">·</span>
-            <span data-ref="upload-screen-speed">Velocidad: -- MB/s</span>
+            <span data-ref="upload-screen-speed">${t('tool_status.speed_calculating')}</span>
           </div>
           <div class="tool-upload-screen__progress-wrapper" data-ref="upload-screen-progress">
             <div class="tool-upload-screen__fill" data-ref="upload-screen-fill"></div>
           </div>
           <div class="tool-upload-screen__percentage" data-ref="upload-screen-percent">0%</div>
-          <span class="tool-upload-screen__badge" data-ref="upload-screen-badge">SUBIENDO</span>
+          <span class="tool-upload-screen__badge" data-ref="upload-screen-badge">${t('tool_status.badge_uploading')}</span>
         </div>
       `;
       this.container.appendChild(uploadEl);
@@ -71,19 +84,19 @@ class ToolStatusManager {
       errorEl.innerHTML = `
         <div class="tool-error-screen__body" data-ref="error-screen-body">
           <div class="tool-error-screen__content" data-ref="error-screen-content">
-            <h2 class="tool-error-screen__title" data-ref="error-screen-title">¡Oh no! No hemos podido procesar tus archivos.</h2>
-            <p class="tool-error-screen__desc" data-ref="error-screen-desc">El archivo no se ha procesado porque estaba dañado o era ilegible.</p>
+            <h2 class="tool-error-screen__title" data-ref="error-screen-title">${t('tool_status.error_title')}</h2>
+            <p class="tool-error-screen__desc" data-ref="error-screen-desc">${t('tool_status.error_desc')}</p>
             <div class="tool-error-screen__card" data-ref="error-screen-card">
               <div class="tool-error-screen__card-header" data-ref="error-screen-card-header">
                 <svg class="component-icon tool-error-screen__card-icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
-                <span class="tool-error-screen__card-title" data-ref="error-screen-box-title">Archivo dañado/corrupto</span>
+                <span class="tool-error-screen__card-title" data-ref="error-screen-box-title">${t('tool_status.error_box_title')}</span>
               </div>
-              <p class="tool-error-screen__card-text" data-ref="error-screen-box-text">No podemos procesar archivos dañados o corruptos. Comprueba que si tu archivo está dañado abriéndolo con tu software de PDF. Si no consigues abrirlo, repáralo y prueba con BoardPDF otra vez.</p>
+              <p class="tool-error-screen__card-text" data-ref="error-screen-box-text">${t('tool_status.error_box_text')}</p>
             </div>
             <div class="tool-error-screen__actions" data-ref="error-screen-actions">
               <button type="button" class="component-button component-button--black component-button--h48 tool-error-screen__btn-retry" data-ref="btn-retry-tool">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-                <span data-ref="txt-retry-btn">Reintentar ${this.toolName}</span>
+                <span data-ref="txt-retry-btn">${t('tool_status.error_retry', { toolName: this.toolName })}</span>
               </button>
             </div>
           </div>
@@ -167,18 +180,18 @@ class ToolStatusManager {
 
     if (titleEl) {
       titleEl.textContent = totalFiles > 1
-        ? t('ui.subiendo_archivo_de')
-        : 'Subiendo archivo al servidor...';
+        ? t('tool_status.uploading_file_of', { current: String(currentFileIndex), total: String(totalFiles) })
+        : t('tool_status.uploading_title');
     }
-    if (subEl) subEl.textContent = 'Transfiriendo datos...';
-    if (etaEl) etaEl.textContent = 'Tiempo restante: calculando...';
-    if (speedEl) speedEl.textContent = 'Velocidad de subida: calculando...';
+    if (subEl) subEl.textContent = t('tool_status.uploading_subtitle');
+    if (etaEl) etaEl.textContent = t('tool_status.eta_calculating');
+    if (speedEl) speedEl.textContent = t('tool_status.speed_calculating');
     if (fillEl) {
       fillEl.classList.remove('is-processing');
       fillEl.style.setProperty('--progress', '0%');
     }
     if (percentEl) percentEl.textContent = '0%';
-    if (badgeEl) badgeEl.textContent = 'SUBIENDO';
+    if (badgeEl) badgeEl.textContent = t('tool_status.badge_uploading');
   }
 
   public updateUploadProgress(info: UploadProgressInfo | number, totalOrFileIndex = 1): void {
@@ -213,36 +226,40 @@ class ToolStatusManager {
     this.currentPercent = mappedPercent;
 
     if (titleEl && this.currentTotalFiles > 1) {
-      titleEl.textContent = t('ui.subiendo_archivo_de');
+      const currentIdx = typeof totalOrFileIndex === 'number' && totalOrFileIndex > 0 ? totalOrFileIndex : 1;
+      titleEl.textContent = t('tool_status.uploading_file_of', {
+        current: String(currentIdx),
+        total: String(this.currentTotalFiles),
+      });
     }
     if (fillEl) fillEl.style.setProperty('--progress', `${mappedPercent}%`);
     if (percentEl) percentEl.textContent = `${mappedPercent}%`;
 
     if (etaEl) {
       etaEl.textContent = info.etaSeconds > 0
-        ? `Tiempo restante: ~${info.etaSeconds} s`
-        : 'Tiempo restante: calculando...';
+        ? t('tool_status.eta_remaining', { seconds: String(info.etaSeconds) })
+        : t('tool_status.eta_calculating');
     }
 
     if (speedEl && info.speedBytesPerSec > 0) {
       const mbps = (info.speedBytesPerSec / (1024 * 1024)).toFixed(1);
-      speedEl.textContent = `Velocidad de subida: ${mbps} MB/s`;
+      speedEl.textContent = t('tool_status.speed_value', { mbps });
     }
   }
 
-  public showProcessing(title = 'Procesando documento...', subtitle = t('ui.por_favor_espera_mientras_finaliza_la_ta')): void {
+  public showProcessing(title?: string, subtitle?: string): void {
     this.startProcessingProgress(title, subtitle);
   }
 
   public showProcessingState(opts?: { subtitle?: string; title?: string } | string, subtitle?: string): void {
     if (typeof opts === 'object' && opts !== null) {
-      this.showProcessing(opts.title || 'Procesando documento...', opts.subtitle || t('ui.por_favor_espera_mientras_finaliza_la_ta'));
+      this.showProcessing(opts.title, opts.subtitle);
     } else {
-      this.showProcessing(opts || 'Procesando documento...', subtitle || t('ui.por_favor_espera_mientras_finaliza_la_ta'));
+      this.showProcessing(opts, subtitle);
     }
   }
 
-  private startProcessingProgress(title = 'Procesando documento...', subtitle?: string): void {
+  private startProcessingProgress(title?: string, subtitle?: string): void {
     if (this.currentStage === 'processing' || this.currentStage === 'completing') return;
     this.currentStage = 'processing';
     this.stopProcessingInterval();
@@ -261,11 +278,11 @@ class ToolStatusManager {
     const percentEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
     const badgeEl = uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
 
-    if (titleEl) titleEl.textContent = title;
-    if (subEl) subEl.textContent = subtitle || 'Analizando estructura y contenido del documento...';
-    if (etaEl) etaEl.textContent = 'Procesando en servidor...';
-    if (speedEl) speedEl.textContent = 'Optimizando salida';
-    if (badgeEl) badgeEl.textContent = 'PROCESANDO';
+    if (titleEl) titleEl.textContent = title || this.resolveStageText('title');
+    if (subEl) subEl.textContent = subtitle || this.resolveStageText('s1_sub');
+    if (etaEl) etaEl.textContent = this.resolveStageText('s1_eta');
+    if (speedEl) speedEl.textContent = this.resolveStageText('s1_speed');
+    if (badgeEl) badgeEl.textContent = t('tool_status.badge_processing');
     if (fillEl) fillEl.classList.add('is-processing');
 
     this.currentPercent = Math.max(30, this.currentPercent);
@@ -280,23 +297,24 @@ class ToolStatusManager {
 
       if (this.currentPercent < 52) {
         this.currentPercent += 0.85;
-        if (subEl) subEl.textContent = 'Analizando estructura y contenido del documento...';
-        if (etaEl) etaEl.textContent = 'Verificando páginas...';
-        if (speedEl) speedEl.textContent = 'Motor PDF activo';
+        if (subEl) subEl.textContent = this.resolveStageText('s1_sub');
+        if (etaEl) etaEl.textContent = this.resolveStageText('s1_eta');
+        if (speedEl) speedEl.textContent = this.resolveStageText('s1_speed');
       } else if (this.currentPercent < 76) {
         this.currentPercent += 0.45;
-        if (subEl) subEl.textContent = 'Optimizando páginas y aplicando transformaciones...';
-        if (etaEl) etaEl.textContent = 'Procesando contenido...';
-        if (speedEl) speedEl.textContent = 'Optimizando salida';
+        if (subEl) subEl.textContent = this.resolveStageText('s2_sub');
+        if (etaEl) etaEl.textContent = this.resolveStageText('s2_eta');
+        if (speedEl) speedEl.textContent = this.resolveStageText('s2_speed');
       } else if (this.currentPercent < 90) {
         this.currentPercent += 0.22;
-        if (subEl) subEl.textContent = 'Ensamblando y verificando archivo final...';
-        if (etaEl) etaEl.textContent = 'Casi listo...';
-        if (speedEl) speedEl.textContent = 'Finalizando';
+        if (subEl) subEl.textContent = this.resolveStageText('s3_sub');
+        if (etaEl) etaEl.textContent = this.resolveStageText('s3_eta');
+        if (speedEl) speedEl.textContent = this.resolveStageText('s3_speed');
       } else if (this.currentPercent < 93) {
         this.currentPercent += 0.04;
-        if (subEl) subEl.textContent = t('ui.preparando_archivo_para_descarga');
-        if (etaEl) etaEl.textContent = 'Últimos detalles...';
+        if (subEl) subEl.textContent = this.resolveStageText('s4_sub');
+        if (etaEl) etaEl.textContent = this.resolveStageText('s4_eta');
+        if (speedEl) speedEl.textContent = this.resolveStageText('s4_speed');
       }
 
       const displayPercent = Math.min(93, Math.floor(this.currentPercent));
@@ -305,7 +323,7 @@ class ToolStatusManager {
     }, 60);
   }
 
-  public async complete(successTitle = '¡Documento procesado con éxito!', successSubtitle = 'Descarga lista para comenzar'): Promise<void> {
+  public async complete(successTitle?: string, successSubtitle?: string): Promise<void> {
     this.stopProcessingInterval();
     this.currentStage = 'completing';
     this.currentPercent = 100;
@@ -320,11 +338,11 @@ class ToolStatusManager {
     const percentEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-percent"]');
     const badgeEl = this.uploadScreen.querySelector<HTMLElement>('[data-ref="upload-screen-badge"]');
 
-    if (titleEl) titleEl.textContent = successTitle;
-    if (subEl) subEl.textContent = successSubtitle;
-    if (badgeEl) badgeEl.textContent = 'COMPLETADO';
-    if (etaEl) etaEl.textContent = 'Listo para descargar';
-    if (speedEl) speedEl.textContent = '100% completado';
+    if (titleEl) titleEl.textContent = successTitle || t('tool_status.complete_title');
+    if (subEl) subEl.textContent = successSubtitle || t('tool_status.complete_subtitle');
+    if (badgeEl) badgeEl.textContent = t('tool_status.badge_completed');
+    if (etaEl) etaEl.textContent = t('tool_status.complete_eta');
+    if (speedEl) speedEl.textContent = t('tool_status.complete_speed');
     if (fillEl) {
       fillEl.classList.remove('is-processing');
       fillEl.style.setProperty('--progress', '100%');
@@ -359,13 +377,11 @@ class ToolStatusManager {
     const boxTextEl = errorScreen.querySelector<HTMLElement>('[data-ref="error-screen-box-text"]');
     const retryTextEl = errorScreen.querySelector<HTMLElement>('[data-ref="txt-retry-btn"]');
 
-    if (titleEl) titleEl.textContent = opt.title || '¡Oh no! No hemos podido procesar tus archivos.';
-    if (descEl) descEl.textContent = opt.desc || t('ui.el_archivo_no_se_ha_procesado_porque_ocu');
-    if (boxTitleEl) boxTitleEl.textContent = opt.boxTitle || 'Archivo dañado o no compatible';
-    if (boxTextEl) {
-      boxTextEl.textContent = opt.boxText || t('ui.no_podemos_procesar_archivos_danados_pro');
-    }
-    if (retryTextEl) retryTextEl.textContent = opt.retryText || `Reintentar ${this.toolName}`;
+    if (titleEl) titleEl.textContent = opt.title || t('tool_status.error_title');
+    if (descEl) descEl.textContent = opt.desc || t('tool_status.error_desc');
+    if (boxTitleEl) boxTitleEl.textContent = opt.boxTitle || t('tool_status.error_box_title');
+    if (boxTextEl) boxTextEl.textContent = opt.boxText || t('tool_status.error_box_text');
+    if (retryTextEl) retryTextEl.textContent = opt.retryText || t('tool_status.error_retry', { toolName: this.toolName });
   }
 
   public hide(): void {

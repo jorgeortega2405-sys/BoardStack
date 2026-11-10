@@ -1,4 +1,5 @@
 import { UserWorkflow, WorkflowStep } from '../types/workflow.types.js';
+import { getCurrentLanguage } from './i18n.service.js';
 
 interface WorkflowSession {
   currentStepIndex: number;
@@ -41,8 +42,7 @@ function startWorkflowSession(workflow: UserWorkflow): string {
     workflowId: workflow.id,
     workflowName: workflow.name,
   };
-  const firstTool = workflow.steps[0]?.tool || '';
-  return getWorkflowStepRoute(firstTool);
+  return `/${getCurrentLanguage()}/workflow/${workflow.id}`;
 }
 
 function getActiveWorkflowSession(): WorkflowSession | null {
@@ -72,10 +72,9 @@ function advanceWorkflowSession(outputFile: File): { isComplete: boolean; nextRo
     clearWorkflowSession();
     return { isComplete: true, nextRoute: null };
   }
-  const nextStep = activeSession.steps[activeSession.currentStepIndex];
   return {
     isComplete: false,
-    nextRoute: getWorkflowStepRoute(nextStep.tool),
+    nextRoute: `/${getCurrentLanguage()}/workflow/${activeSession.workflowId}`,
   };
 }
 

@@ -174,11 +174,11 @@ function openModal(options: ModalOptions = {}): ModalInstance {
         </div>
         <div class="modal-card__body" data-ref="modal-body"></div>
         <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="banner banner--danger is-hidden" data-ref="modal-error"></div>
           <div class="modal-card__actions" data-ref="modal-actions">
             ${showCancel ? `<button type="button" class="component-button component-button--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
             ${showConfirm ? `<button type="button" class="component-button component-button--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
           </div>
-          <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
         </div>
       </div>
     </div>
@@ -232,7 +232,7 @@ function openModal(options: ModalOptions = {}): ModalInstance {
           backdrop.parentNode.removeChild(backdrop);
         }
         activeModals = activeModals.filter((m) => m !== modalInstance);
-        if (activeModals.length === 0) {
+        if (activeModals.length === 0 && document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
           document.body.classList.remove('modal-open');
         }
         if (onClose) {
@@ -254,7 +254,7 @@ function openModal(options: ModalOptions = {}): ModalInstance {
       translateElement(bodyContainer);
       renderIcons(bodyContainer);
     },
-    setConfirmLoading(isLoading: boolean, loadingText = t('common.loading') || 'Cargando...') {
+    setConfirmLoading(isLoading: boolean, loadingText = t('common.loading')) {
       if (!confirmBtn) return;
       if (isLoading) {
         confirmBtn.disabled = true;
@@ -405,7 +405,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
     }
   };
 
-  const setButtonLoading = (btn: HTMLButtonElement | null, isLoading: boolean, loadingText = t('common.loading') || 'Cargando...') => {
+  const setButtonLoading = (btn: HTMLButtonElement | null, isLoading: boolean, loadingText = t('common.loading')) => {
     if (!btn) return;
     if (isLoading) {
       btn.disabled = true;
@@ -433,7 +433,9 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
         if (active2FAModal === modalInstance) {
           active2FAModal = null;
         }
-        document.body.classList.remove('modal-open');
+        if (document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
+          document.body.classList.remove('modal-open');
+        }
         if (onClose) onClose();
       }, 200);
     },
@@ -480,7 +482,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
     if (secretText) {
       try {
         await navigator.clipboard.writeText(secretText);
-        showToast(t('common.copied') || 'Copiado al portapapeles', 'success');
+        showToast(t('common.copied'), 'success');
       } catch (_) {}
     }
   });
@@ -491,12 +493,9 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
       const textToCopy = `BoardPDF - 2FA Backup Codes:\n\n${currentBackupCodes.join('\n')}\n\nKeep these backup codes in a safe place. Each code can only be used once.`;
       try {
         await navigator.clipboard.writeText(textToCopy);
-        showToast(
-          t('settings.security.two_factor_copied_toast') || 'Códigos de respaldo copiados al portapapeles.',
-          'success'
-        );
+        showToast(t('settings.security.two_factor_copied_toast'), 'success');
       } catch (_) {
-        showToast(t('common.copied') || 'Copiado al portapapeles', 'success');
+        showToast(t('common.copied'), 'success');
       }
     }
   });
@@ -551,10 +550,10 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
             color: '#000000',
             type: 'rounded',
           },
-          height: 200,
+          height: 196,
           margin: 2,
           type: 'svg',
-          width: 200,
+          width: 196,
           data: qrUri,
         });
         qrCode.append(qrContainer);
@@ -578,9 +577,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
     const code = rawCode.replace(/[\s-]+/g, '').trim();
 
     if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
-      showError(
-        t('settings.security.two_factor_invalid_code') || t('ui.ingresa_un_codigo_valido_de_6_digitos')
-      );
+      showError(t('settings.security.two_factor_invalid_code'));
       return;
     }
 
@@ -592,9 +589,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
 
       if (!res.ok || !data.ok) {
         setButtonLoading(continueBtn, false);
-        showError(
-          data.error || t('settings.security.two_factor_invalid_code') || 'Código incorrecto o expirado.'
-        );
+        showError(data.error || t('settings.security.two_factor_invalid_code'));
         return;
       }
 
@@ -609,11 +604,11 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
           badge.className = 'code-badge';
           badge.setAttribute('data-ref', 'code-badge-item');
           badge.textContent = bCode;
-          badge.title = t('common.copy') || 'Copiar';
+          badge.title = t('common.copy');
           badge.addEventListener('click', async () => {
             try {
               await navigator.clipboard.writeText(bCode);
-              showToast(`${t('common.copied') || 'Copiado'}: ${bCode}`, 'success');
+              showToast(`${t('common.copied')}: ${bCode}`, 'success');
             } catch (_) {}
           });
           backupCodesGrid.appendChild(badge);
@@ -625,10 +620,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
       if (stage2Container) showElement(stage2Container);
       if (visualStage2) showElement(visualStage2);
 
-      showToast(
-        t('settings.security.two_factor_enabled_toast') || 'Autenticación en dos pasos activada.',
-        'success'
-      );
+      showToast(t('settings.security.two_factor_enabled_toast'), 'success');
     } catch (_) {
       setButtonLoading(continueBtn, false);
       showError(t('common.error_occurred'));

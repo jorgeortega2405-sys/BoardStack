@@ -14,6 +14,7 @@ let isDrawerOpen = false;
 let currentDrawerMode: 'apps' | 'help' | 'settings' | 'workflows' = 'workflows';
 let activeResizeObserver: ResizeObserver | null = null;
 let activeMutationObserver: MutationObserver | null = null;
+let scrollSyncAbortController: AbortController | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 let sidebarInitPromise: Promise<HTMLElement> | null = null;
 let sidebarInstance: HTMLElement | null = null;
@@ -739,6 +740,10 @@ function setupLayoutScrollSync(): void {
     activeMutationObserver.disconnect();
     activeMutationObserver = null;
   }
+  if (scrollSyncAbortController) {
+    scrollSyncAbortController.abort();
+    scrollSyncAbortController = null;
+  }
   if (!layoutContent) return;
 
   const scrollableBody = layoutContent.querySelector<HTMLElement>(
@@ -749,7 +754,11 @@ function setupLayoutScrollSync(): void {
     return;
   }
 
+  scrollSyncAbortController = new AbortController();
+  const { signal } = scrollSyncAbortController;
+
   const updateScrollHeight = () => {
+    if (!scrollableBody.isConnected || !layoutContent.isConnected) return;
     const maxScroll = Math.max(0, Math.ceil(scrollableBody.scrollHeight - scrollableBody.clientHeight));
     if (maxScroll <= 0) {
       layoutContent.style.removeProperty('--layout-scroll-height');
@@ -760,6 +769,11 @@ function setupLayoutScrollSync(): void {
   };
 
   updateScrollHeight();
+  requestAnimationFrame(() => updateScrollHeight());
+  window.setTimeout(() => updateScrollHeight(), 120);
+  if (document.fonts && document.fonts.ready) {
+    void document.fonts.ready.then(() => updateScrollHeight());
+  }
 
   activeResizeObserver = new ResizeObserver(() => {
     updateScrollHeight();
@@ -769,9 +783,21 @@ function setupLayoutScrollSync(): void {
   activeResizeObserver.observe(layoutContent);
   for (const child of scrollableBody.children) {
     activeResizeObserver.observe(child);
+    if (child.classList.contains('view-body')) {
+      for (const grandChild of child.children) {
+        activeResizeObserver.observe(grandChild);
+      }
+    }
   }
 
-  activeMutationObserver = new MutationObserver(() => {
+  activeMutationObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach((node) => {
+        if (node instanceof HTMLElement && activeResizeObserver) {
+          activeResizeObserver.observe(node);
+        }
+      });
+    }
     updateScrollHeight();
   });
   activeMutationObserver.observe(scrollableBody, {
@@ -780,6 +806,16 @@ function setupLayoutScrollSync(): void {
     childList: true,
     subtree: true,
   });
+
+  scrollableBody.addEventListener(
+    'load',
+    (e) => {
+      if ((e.target as HTMLElement)?.tagName === 'IMG') {
+        updateScrollHeight();
+      }
+    },
+    { capture: true, signal }
+  );
 }
 
 export { createSidebar, currentDrawerMode, ensureSidebarMounted, hasDesignatedMenuItems, isDrawerOpen, populateDrawerContent, setupLayoutScrollSync, toggleDrawer, updateDynamicDrawer, updateSidebarActiveState, updateSidebarAuthState };

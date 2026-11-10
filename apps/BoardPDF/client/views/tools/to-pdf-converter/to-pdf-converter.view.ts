@@ -6,6 +6,7 @@ import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js
 import { escapeHtml, postApi, postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -13,7 +14,6 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { HtmlMargin, HtmlOrientation, HtmlScreenSize, JpgOrientation, JpgPageMargin, JpgPageSize, TO_PDF_CONFIGS, ToPdfRouteConfig, ToPdfSourceType } from './to-pdf-converter.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class ToPdfConverterController implements ViewController {
   private abortController: AbortController | null = null;
@@ -74,7 +74,7 @@ class ToPdfConverterController implements ViewController {
         if (convertBtn) void this.handleConvert(convertBtn);
       },
       sidebarRef: (this.config.sourceType === 'jpg-to-pdf' || this.config.sourceType === 'html-to-pdf') ? 'to-pdf-converter-sidebar' : undefined,
-      toolId: 'to-pdf-converter',
+      toolId: this.config.sourceType,
       toolName: this.config.title,
       topHeaderRef: 'component-top',
       workspaceCardRef: 'converter-selected-card',
@@ -529,11 +529,11 @@ class ToPdfConverterController implements ViewController {
         try {
           const parsed = new URL(raw);
           if (!parsed.hostname || !parsed.hostname.includes('.')) {
-            m.showError(t('validation.invalid_url') || 'Por favor ingresa una URL válida (ej. https://ejemplo.com).');
+            m.showError(t('validation.invalid_url'));
             return false;
           }
         } catch {
-          m.showError(t('validation.invalid_url') || 'Por favor ingresa una URL válida con formato https://...');
+          m.showError(t('validation.invalid_url'));
           return false;
         }
 
@@ -595,12 +595,13 @@ class ToPdfConverterController implements ViewController {
 
   private handleFileSelected(file: File): void {
     this.hideError();
-    const limits = getCurrentUserToolLimits('to-pdf-converter');
+    const limits = getCurrentUserToolLimits(this.config.sourceType);
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Conversor a PDF',
+        toolId: this.config.sourceType,
+        toolName: this.config.title,
         type: 'file_size',
       });
       return;

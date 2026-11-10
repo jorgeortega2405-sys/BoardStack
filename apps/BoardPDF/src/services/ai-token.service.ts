@@ -1,4 +1,5 @@
 import { getDbPool } from '../config/database.config.js';
+import { cacheService } from './cache.service.js';
 import { logger } from './logger.service.js';
 import { permissionService } from './permission.service.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -95,6 +96,7 @@ async function getUserTokenBalance(userId: number, permissions?: string[]): Prom
       'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = ? WHERE id = ?',
       [maxLimit, nextResetDate, userId]
     );
+    await cacheService.invalidateUser(String(userId));
 
     currentBalance = maxLimit;
     resetAt = nextResetDate;
@@ -113,6 +115,7 @@ async function getUserTokenBalance(userId: number, permissions?: string[]): Prom
           'UPDATE users SET ai_tokens_balance = ? WHERE id = ?',
           [expectedBalance, userId]
         );
+        await cacheService.invalidateUser(String(userId));
         currentBalance = expectedBalance;
         logger.db.info('Balance de tokens ajustado a la cuota del plan activo', { balance: expectedBalance, maxLimit, userId });
       }
@@ -194,6 +197,7 @@ async function consumeAiTokens(params: {
   }
 
   const newBalance = Math.max(0, tokenInfo.balance - required);
+  await cacheService.invalidateUser(String(params.userId));
 
   try {
     await pool.query(

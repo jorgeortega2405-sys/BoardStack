@@ -1447,6 +1447,42 @@ html, body {
   padding-right: 20px !important;
 }
 
+.component-group--between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.component-text--sm {
+  font-size: 12px;
+}
+
+.component-text--bold {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.component-text--muted {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.component-link--subtle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.component-link--subtle:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
 @keyframes slideDownFade {
   from {
     opacity: 0;

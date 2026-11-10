@@ -53,11 +53,11 @@ class WorkflowsController {
     const createWorkflowCardHtml = `
       <div class="tool-card tool-card--create-workflow" data-ref="card-create-workflow">
         <div class="tool-card__content" data-ref="create-workflow-content">
-          <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title', 'Crea un flujo de trabajo')}</h3>
-          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc', t('ui.crea_flujos_de_trabajo_personalizados_co'))}</p>
+          <h3 class="tool-card__title" data-ref="title-create-workflow" data-i18n="workflows.create_title">${t('workflows.create_title')}</h3>
+          <p class="tool-card__desc" data-ref="desc-create-workflow" data-i18n="workflows.create_desc">${t('workflows.create_desc')}</p>
         </div>
         <div class="tool-card__action-link" data-ref="link-create-workflow">
-          <span data-ref="txt-action-create-workflow" data-i18n="workflows.create_action">${t('workflows.create_action', 'Crear un flujo de trabajo')}</span>
+          <span data-ref="txt-action-create-workflow" data-i18n="workflows.create_action">${t('workflows.create_action')}</span>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_outward"></use></svg>
         </div>
       </div>
@@ -113,7 +113,7 @@ class WorkflowsController {
           const firstRoute = startWorkflowSession(wf);
           navigate(firstRoute);
         } else {
-          showToast(t('workflows.workflow_not_found', 'Flujo de trabajo no encontrado o sin pasos'), 'warning');
+          showToast(t('workflows.workflow_not_found'), 'warning');
         }
       }
     });
@@ -129,7 +129,7 @@ class WorkflowsController {
 
   private openWorkflowModal(workflow?: UserWorkflow): void {
     if (!workflow && this.workflows.length >= MAX_WORKFLOWS_LIMIT) {
-      showToast(t('ui.has_alcanzado_el_limite_maximo_de_flujos'), 'warning');
+      showToast(t('workflows.limit_reached'), 'warning');
       return;
     }
 
@@ -142,7 +142,7 @@ class WorkflowsController {
     modalBody.className = 'workflow-builder-modal';
     modalBody.setAttribute('data-ref', 'workflow-builder-modal');
 
-    modalBody.innerHTML = renderWorkflowBuilderModalBody(workflow ? this.escape(workflow.name) : '');
+    modalBody.innerHTML = renderWorkflowBuilderModalBody(workflow ? workflow.name : '');
 
     const listEl = modalBody.querySelector<HTMLElement>('[data-ref="list-workflow-tool"]');
     const toolWrapper = modalBody.querySelector<HTMLElement>('[data-ref="field-workflow-tool"]');
@@ -193,7 +193,7 @@ class WorkflowsController {
     const resetToolSelection = () => {
       selectedTool = null;
       hideElement(selectedIconEl);
-      if (selectedTxtEl) selectedTxtEl.textContent = 'Selecciona una herramienta...';
+      if (selectedTxtEl) selectedTxtEl.textContent = t('workflows.tool_placeholder');
       if (optionsContainer) {
         optionsContainer.innerHTML = '';
         hideElement(optionsContainer);
@@ -211,18 +211,18 @@ class WorkflowsController {
       if (tool.id === 'compress-pdf') {
         showElement(optionsContainer);
         optionsContainer.innerHTML = `
-          <div class="workflow-option-label">Nivel de compresión</div>
+          <div class="workflow-option-label" data-i18n="workflows.compress_level_label">${t('workflows.compress_level_label')}</div>
           <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="field-compress-level">
             <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-compress-level">
-              <span class="dropdown-trigger__text" data-ref="txt-selected-compress-level">Recomendada (Buena calidad y tamaño)</span>
+              <span class="dropdown-trigger__text" data-ref="txt-selected-compress-level" data-i18n="workflows.compress_recommended">${t('workflows.compress_recommended')}</span>
               <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
             </button>
             <div class="dropdown-backdrop" data-ref="backdrop-compress-level">
               <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-compress-level">
                 <div class="menu-panel__list" data-ref="list-compress-level">
-                  <button type="button" class="menu-item is-selected" data-value="recommended"><span>Recomendada (Buena calidad y tamaño)</span></button>
-                  <button type="button" class="menu-item" data-value="extreme"><span>Extrema (Menor tamaño, menor calidad)</span></button>
-                  <button type="button" class="menu-item" data-value="low"><span>Baja (Alta calidad, menor compresión)</span></button>
+                  <button type="button" class="menu-item is-selected" data-value="recommended"><span data-i18n="workflows.compress_recommended">${t('workflows.compress_recommended')}</span></button>
+                  <button type="button" class="menu-item" data-value="extreme"><span data-i18n="workflows.compress_extreme">${t('workflows.compress_extreme')}</span></button>
+                  <button type="button" class="menu-item" data-value="low"><span data-i18n="workflows.compress_low">${t('workflows.compress_low')}</span></button>
                 </div>
               </div>
             </div>
@@ -250,7 +250,7 @@ class WorkflowsController {
         <button type="button" class="menu-item" data-tool-id="${tool.id}">
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>
           <span class="menu-item__text">${this.escape(tool.name)}</span>
-          ${tool.isTerminal ? '<span class="component-badge component-badge--sm">Terminal</span>' : ''}
+          ${tool.isTerminal ? `<span class="component-badge component-badge--sm">${t('workflows.terminal_badge')}</span>` : ''}
         </button>
       `).join('');
     }
@@ -279,7 +279,7 @@ class WorkflowsController {
         return;
       }
       if (isPipelineTerminal()) {
-        showToast(t('toasts.no_es_posible_anadir_herramientas_despue'), 'warning');
+        showToast(t('workflows.terminal_alert'), 'warning');
         return;
       }
 
@@ -321,9 +321,9 @@ class WorkflowsController {
     openModal({
       bodyHtml: modalBody,
       cancelText: t('common.cancel'),
-      confirmClass: 'component-button--primary component-button--black',
-      confirmText: workflow ? (t('common.save_changes') || 'Guardar cambios') : (t('modals_catalog.sample_workflow_save') || 'Crear flujo'),
-      description: t('ui.configura_las_herramientas_y_el_orden_de'),
+      confirmClass: 'component-button--black',
+      confirmText: workflow ? t('workflows.save_btn') : t('workflows.create_btn'),
+      description: t('workflows.modal_desc'),
       onClose: () => {
         toolDropdownCtrl?.destroy();
         activeSubDropdownCtrls.forEach((c) => c.destroy());
@@ -335,12 +335,12 @@ class WorkflowsController {
         const name = nameInput?.value.trim() || '';
 
         if (!name) {
-          inst.showError(t('ui.por_favor_ingresa_un_nombre_para_el_fluj'));
+          inst.showError(t('workflows.name_required'));
           return false;
         }
 
         if (currentSteps.length === 0) {
-          inst.showError(t('ui.debes_anadir_al_menos_una_herramienta_a_'));
+          inst.showError(t('workflows.step_required'));
           return false;
         }
 
@@ -352,11 +352,11 @@ class WorkflowsController {
         });
 
         if (!res.success) {
-          inst.showError(res.error || t('ui.ocurrio_un_error_al_guardar_el_flujo_de_'));
+          inst.showError(res.error || t('workflows.save_error'));
           return false;
         }
 
-        showToast(workflow ? 'Flujo de trabajo actualizado exitosamente' : 'Flujo de trabajo creado exitosamente', 'success');
+        showToast(t(workflow ? 'workflows.updated_success' : 'workflows.created_success'), 'success');
         this.loadWorkflows();
         this.renderWorkflows();
         return true;
@@ -364,7 +364,7 @@ class WorkflowsController {
       showCancel: true,
       showConfirm: true,
       size: 'workflow-builder',
-      title: workflow ? 'Editar flujo de trabajo' : 'Crear flujo de trabajo',
+      title: t(workflow ? 'workflows.edit_modal_title' : 'workflows.create_modal_title'),
     });
   }
 
@@ -373,12 +373,12 @@ class WorkflowsController {
       onConfirm: async () => {
         const deleted = deleteWorkflow(workflow.id);
         if (deleted) {
-          showToast(t('toasts.flujo_de_trabajo_eliminado_exitosamente'), 'success');
+          showToast(t('workflows.deleted_success'), 'success');
           this.loadWorkflows();
           this.renderWorkflows();
           return true;
         }
-        showToast(t('ui.no_se_pudo_eliminar_el_flujo_de_trabajo'), 'danger');
+        showToast(t('workflows.delete_failed'), 'danger');
         return false;
       },
       workflowName: workflow.name,

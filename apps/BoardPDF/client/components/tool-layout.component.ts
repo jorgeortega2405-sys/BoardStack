@@ -9,6 +9,7 @@ interface ToolLayoutOptions {
   onRetry?: () => void;
   selectedCardRef?: string;
   sidebarRef?: string;
+  toolId?: string;
   toolName: string;
   workspaceRef?: string;
 }
@@ -30,6 +31,7 @@ class ToolLayoutController {
           this.showEmptyState();
         }
       },
+      toolId: options.toolId,
       toolName: options.toolName,
     });
   }

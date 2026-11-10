@@ -112,6 +112,7 @@ class PurchaseService {
             'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
             [newQuota, userId]
           );
+          await cacheService.invalidateUser(String(userId));
         } catch (tokenErr) {
           logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
         }
@@ -259,6 +260,7 @@ class PurchaseService {
             'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
             [newQuota, userId]
           );
+          await cacheService.invalidateUser(String(userId));
         } catch (tokenErr) {
           logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
         }

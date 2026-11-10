@@ -55,7 +55,7 @@ class SplitPdfController implements ViewController {
         title: 'Dividir PDF',
       },
       sidebarRef: 'pdf-splitter-sidebar',
-      toolId: 'split-pdf',
+      toolId: this.activeMode === 'pages' ? 'extract-pdf-pages' : 'split-pdf',
       toolName: 'Dividir PDF',
       topHeaderRef: 'component-top',
       workspaceCardRef: 'pdf-items-card',
@@ -305,11 +305,13 @@ class SplitPdfController implements ViewController {
       return;
     }
 
-    const limits = getCurrentUserToolLimits('split-pdf');
+    const activeToolId = this.activeMode === 'pages' ? 'extract-pdf-pages' : 'split-pdf';
+    const limits = getCurrentUserToolLimits(activeToolId);
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
+        toolId: activeToolId,
         toolName: 'Dividir PDF',
         type: 'file_size',
       });
@@ -857,7 +859,7 @@ class SplitPdfController implements ViewController {
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
         returnText: 'Dividir otro documento PDF',
-        returnUrl: '/split-pdf',
+        returnUrl: this.activeMode === 'pages' ? '/extract-pdf-pages' : '/split-pdf',
         subtitle: `Se ha dividido exitosamente "${this.currentFile?.name}".`,
         title: '¡PDF dividido con éxito!',
         token,

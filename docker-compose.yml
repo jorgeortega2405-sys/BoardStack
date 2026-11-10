@@ -84,6 +84,29 @@ services:
       RETENTION_SECONDS: 3600
     restart: unless-stopped
 
+  token-reset-worker:
+    build:
+      context: ./apps/BoardPDF
+      dockerfile: Dockerfile.token-worker
+    container_name: boardpdf-token-reset-worker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-boardpdf_user}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-boardpdf_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      TOKEN_RESET_INTERVAL_SECONDS: 60
+      TOKEN_RESET_BATCH_SIZE: 1000
+    restart: unless-stopped
+
   app:
     build:
       context: .

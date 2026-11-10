@@ -4,6 +4,7 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
@@ -13,7 +14,6 @@ import { ModalInstance, ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class UnlockPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -217,7 +217,7 @@ class UnlockPdfController implements ViewController {
       },
     });
 
-    const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
+    const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
     input?.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         modal.confirmBtn?.click();

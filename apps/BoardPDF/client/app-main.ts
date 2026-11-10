@@ -19,7 +19,21 @@ function handleScrollEvent(e: Event): void {
       );
       if (scrollableBody) {
         const maxScrollBody = Math.max(0, scrollableBody.scrollHeight - scrollableBody.clientHeight);
-        const targetScroll = Math.max(0, Math.min(target.scrollTop, maxScrollBody));
+        let maxScrollTarget = Math.max(0, target.scrollHeight - target.clientHeight);
+        if (Math.abs(maxScrollTarget - maxScrollBody) > 2) {
+          if (maxScrollBody <= 0) {
+            target.style.removeProperty('--layout-scroll-height');
+          } else {
+            target.style.setProperty('--layout-scroll-height', `${target.clientHeight + maxScrollBody}px`);
+          }
+          maxScrollTarget = Math.max(0, target.scrollHeight - target.clientHeight);
+        }
+        let targetScroll = 0;
+        if (maxScrollBody > 0 && maxScrollTarget > 0) {
+          targetScroll = target.scrollTop >= maxScrollTarget - 2
+            ? maxScrollBody
+            : Math.min(maxScrollBody, (target.scrollTop / maxScrollTarget) * maxScrollBody);
+        }
         if (Math.abs(scrollableBody.scrollTop - targetScroll) > 0.25) {
           isSyncing = true;
           scrollableBody.scrollTop = targetScroll;

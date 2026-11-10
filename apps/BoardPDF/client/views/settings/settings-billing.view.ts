@@ -14,6 +14,23 @@ async function createBillingView(): Promise<HTMLElement> {
   translateElement(container);
   renderIcons(container);
 
+  let resetCountdownTarget: Date | null = null;
+  let resetCountdownIntervalId: number | null = null;
+  let resetExpiryRefetchTimerId: number | null = null;
+  let hasTriggeredExpiryRefetch = false;
+  let isDestroyed = false;
+
+  const clearCountdownTimers = () => {
+    if (resetCountdownIntervalId !== null) {
+      window.clearInterval(resetCountdownIntervalId);
+      resetCountdownIntervalId = null;
+    }
+    if (resetExpiryRefetchTimerId !== null) {
+      window.clearTimeout(resetExpiryRefetchTimerId);
+      resetExpiryRefetchTimerId = null;
+    }
+  };
+
   const accordionHeaderSub = container.querySelector<HTMLElement>('[data-ref="accordion-header-subscription"]');
   const groupSub = container.querySelector<HTMLElement>('[data-ref="group-subscription-plan"]');
   accordionHeaderSub?.addEventListener('click', (e) => {
@@ -57,18 +74,16 @@ async function createBillingView(): Promise<HTMLElement> {
       let billingLabel = '';
       if (isOneTime) {
         if (info.billing_period === 'one_time_yearly') {
-          billingLabel = 'Pago único (1 año)';
+          billingLabel = t('settings.billing.billing_one_time_yearly');
         } else if (info.billing_period === 'one_time_monthly') {
-          billingLabel = 'Pago único (1 mes)';
+          billingLabel = t('settings.billing.billing_one_time_monthly');
         } else {
-          billingLabel = 'Pago único';
+          billingLabel = t('settings.billing.billing_one_time');
         }
+      } else if (info.interval === 'year' || info.billing_period === 'yearly') {
+        billingLabel = t('pricing.billing_yearly');
       } else {
-        if (info.interval === 'year' || info.billing_period === 'yearly') {
-          billingLabel = t('pricing.billing_yearly') || 'Suscripción Anual';
-        } else {
-          billingLabel = t('pricing.billing_monthly') || 'Suscripción Mensual';
-        }
+        billingLabel = t('pricing.billing_monthly');
       }
 
       if (planNameEl) planNameEl.textContent = `BoardPDF ${tierFormatted} (${billingLabel})`;
@@ -82,17 +97,17 @@ async function createBillingView(): Promise<HTMLElement> {
             month: 'long',
             year: 'numeric',
           });
-        } catch (_) {}
+        } catch {}
       }
 
       if (planStatusBadge) {
         planStatusBadge.classList.remove('is-hidden');
         if (info.cancel_at_period_end) {
           planStatusBadge.className = 'component-badge component-badge--sm component-badge--warning';
-          planStatusBadge.textContent = t('settings.billing.status_cancel_scheduled') || 'Cancelación programada';
+          planStatusBadge.textContent = t('settings.billing.status_cancel_scheduled');
         } else {
           planStatusBadge.className = 'component-badge component-badge--sm component-badge--success';
-          planStatusBadge.textContent = t('settings.billing.status_active') || 'Activo';
+          planStatusBadge.textContent = t('settings.billing.status_active');
         }
       }
 
@@ -102,19 +117,27 @@ async function createBillingView(): Promise<HTMLElement> {
 
         if (isOneTime) {
           if (dateFormatted) {
-            planDescEl.textContent = `${amountText}Plan activo hasta el ${dateFormatted}. Al ser un pago único, no se realizarán cobros automáticos de renovación.`;
+            planDescEl.textContent = t('settings.billing.plan_desc_one_time_date', {
+              amount: amountText,
+              date: dateFormatted,
+            });
           } else {
-            planDescEl.textContent = `${amountText}Plan activo mediante pago único. Sin cargos de renovación automática.`;
+            planDescEl.textContent = t('settings.billing.plan_desc_one_time', {
+              amount: amountText,
+            });
           }
         } else if (info.cancel_at_period_end) {
-          planDescEl.textContent = (t('settings.billing.plan_desc_scheduled') || t('ui.tu_plan_expirara_el_date_conservas_todos')).replace('{date}', dateFormatted);
+          planDescEl.textContent = t('settings.billing.plan_desc_scheduled', { date: dateFormatted });
         } else {
-          planDescEl.textContent = (t('settings.billing.plan_desc_active') || '{amount}Próximo cobro programado para el {date}.').replace('{amount}', amountText).replace('{date}', dateFormatted);
+          planDescEl.textContent = t('settings.billing.plan_desc_active', {
+            amount: amountText,
+            date: dateFormatted,
+          });
         }
       }
 
       if (btnUpgrade) {
-        btnUpgrade.textContent = t('settings.billing.btn_change_plan') || 'Cambiar de plan';
+        btnUpgrade.textContent = t('settings.billing.btn_change_plan');
         btnUpgrade.onclick = (e) => {
           e.preventDefault();
           navigate('/pricing');
@@ -131,9 +154,9 @@ async function createBillingView(): Promise<HTMLElement> {
         if (btnToggleSub && cancelTitleEl && cancelDescEl) {
           if (info.cancel_at_period_end) {
             iconCancelSubUse?.setAttribute('href', '/icons.svg#autorenew');
-            cancelTitleEl.textContent = t('settings.billing.reactivate_sub_title') || 'Reactivar suscripción';
-            cancelDescEl.textContent = (t('settings.billing.reactivate_sub_desc') || t('ui.tu_suscripcion_finalizara_el_date_puedes')).replace('{date}', dateFormatted);
-            btnToggleSub.textContent = t('settings.billing.btn_reactivate_sub') || 'Reactivar suscripción';
+            cancelTitleEl.textContent = t('settings.billing.reactivate_sub_title');
+            cancelDescEl.textContent = t('settings.billing.reactivate_sub_desc', { date: dateFormatted });
+            btnToggleSub.textContent = t('settings.billing.btn_reactivate_sub');
             btnToggleSub.className = 'component-button component-button--h34 component-button--black';
             btnToggleSub.onclick = (e) => {
               e.preventDefault();
@@ -141,9 +164,9 @@ async function createBillingView(): Promise<HTMLElement> {
             };
           } else {
             iconCancelSubUse?.setAttribute('href', '/icons.svg#close');
-            cancelTitleEl.textContent = t('settings.billing.cancel_sub_title') || 'Cancelar suscripción';
-            cancelDescEl.textContent = t('settings.billing.cancel_sub_desc') || t('ui.cancela_la_renovacion_automatica_de_tu_s');
-            btnToggleSub.textContent = t('settings.billing.btn_cancel_subscription') || 'Cancelar suscripción';
+            cancelTitleEl.textContent = t('settings.billing.cancel_sub_title');
+            cancelDescEl.textContent = t('settings.billing.cancel_sub_desc');
+            btnToggleSub.textContent = t('settings.billing.btn_cancel_subscription');
             btnToggleSub.className = 'component-button component-button--h34';
             btnToggleSub.onclick = (e) => {
               e.preventDefault();
@@ -153,12 +176,12 @@ async function createBillingView(): Promise<HTMLElement> {
         }
       }
     } else {
-      if (planNameEl) planNameEl.textContent = t('settings.billing.free_plan_title') || 'Plan Gratuito';
+      if (planNameEl) planNameEl.textContent = t('settings.billing.free_plan_title');
       if (planStatusBadge) planStatusBadge.classList.add('is-hidden');
-      if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc') || t('ui.actualmente_disfrutas_del_plan_basico_gr');
+      if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc');
 
       if (btnUpgrade) {
-        btnUpgrade.textContent = t('settings.billing.btn_explore_plans') || 'Explorar planes';
+        btnUpgrade.textContent = t('settings.billing.btn_explore_plans');
         btnUpgrade.onclick = (e) => {
           e.preventDefault();
           navigate('/pricing');
@@ -215,15 +238,15 @@ async function createBillingView(): Promise<HTMLElement> {
             const res = await updateAutoRenewalApi(true);
             if (res.success) {
               inst.close();
-              showToast(t('settings.billing.toast_subscription_cancelled') || t('ui.tu_suscripcion_no_se_renovara_mantendras'), 'info');
+              showToast(t('settings.billing.toast_subscription_cancelled'), 'info');
               await loadBillingData();
             } else {
               inst.setConfirmLoading(false);
-              showToast(res.error || t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
+              showToast(res.error || t('common.error_occurred'), 'danger');
             }
           } catch {
             inst.setConfirmLoading(false);
-            showToast(t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
+            showToast(t('common.error_occurred'), 'danger');
           }
         },
       });
@@ -232,13 +255,13 @@ async function createBillingView(): Promise<HTMLElement> {
         try {
           const res = await updateAutoRenewalApi(false);
           if (res.success) {
-            showToast(t('settings.billing.toast_subscription_reactivated') || 'Suscripción reactivada exitosamente.', 'success');
+            showToast(t('settings.billing.toast_subscription_reactivated'), 'success');
             await loadBillingData();
           } else {
-            showToast(res.error || t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
+            showToast(res.error || t('common.error_occurred'), 'danger');
           }
         } catch {
-          showToast(t('common.error_occurred') || t('ui.error_al_procesar_la_solicitud'), 'danger');
+          showToast(t('common.error_occurred'), 'danger');
         }
       })();
     }
@@ -252,7 +275,7 @@ async function createBillingView(): Promise<HTMLElement> {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  const renderStorageSection = async () => {
+  const renderStorageValues = (used: number, limit: number) => {
     const textUsed = container.querySelector<HTMLElement>('[data-ref="storage-text-used"]');
     const badgePercent = container.querySelector<HTMLElement>('[data-ref="storage-badge-percent"]');
     const barFill = container.querySelector<HTMLElement>('[data-ref="storage-bar-fill"]');
@@ -260,45 +283,116 @@ async function createBillingView(): Promise<HTMLElement> {
 
     if (!textUsed || !barFill) return;
 
+    const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
+    const avail = Math.max(0, limit - used);
+
+    textUsed.textContent = t('settings.billing.storage_used_format', {
+      limit: formatBytes(limit),
+      used: formatBytes(used),
+    });
+
+    if (badgePercent) {
+      badgePercent.textContent = `${pct}%`;
+      if (pct >= 90) {
+        badgePercent.className = 'component-badge component-badge--danger component-text--sm';
+      } else if (pct >= 75) {
+        badgePercent.className = 'component-badge component-badge--warning component-text--sm';
+      } else {
+        badgePercent.className = 'component-badge component-badge--neutral component-text--sm';
+      }
+    }
+
+    barFill.style.setProperty('--progress-pct', `${Math.min(100, pct)}%`);
+    barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
+    if (pct >= 90) {
+      barFill.classList.add('component-progress__bar--danger');
+    } else if (pct >= 75) {
+      barFill.classList.add('component-progress__bar--warning');
+    } else {
+      barFill.classList.add('component-progress__bar--primary');
+    }
+
+    if (textAvailable) {
+      textAvailable.textContent = t('settings.billing.storage_available_format', {
+        available: formatBytes(avail),
+      });
+    }
+  };
+
+  const renderStorageSection = async () => {
     try {
       const res = await getApi(API_ROUTES.settings.storage);
       if (res.ok) {
         const data = await res.json();
         const used = Number(data.usedBytes) || 0;
         const limit = Number(data.limitBytes) || 5368709120;
-        const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
-        const avail = Math.max(0, limit - used);
-
-        textUsed.textContent = `${formatBytes(used)} de ${formatBytes(limit)} utilizados`;
-        if (badgePercent) {
-          badgePercent.textContent = `${pct}%`;
-          if (pct >= 90) {
-            badgePercent.className = 'component-badge component-badge--danger';
-          } else if (pct >= 75) {
-            badgePercent.className = 'component-badge component-badge--warning';
-          } else {
-            badgePercent.className = 'component-badge component-badge--neutral';
-          }
-        }
-        barFill.style.setProperty('--progress-pct', `${Math.min(100, pct)}%`);
-        barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
-        if (pct >= 90) {
-          barFill.classList.add('component-progress__bar--danger');
-        } else if (pct >= 75) {
-          barFill.classList.add('component-progress__bar--warning');
-        } else {
-          barFill.classList.add('component-progress__bar--primary');
-        }
-        if (textAvailable) {
-          textAvailable.textContent = `${formatBytes(avail)} disponibles`;
-        }
+        renderStorageValues(used, limit);
+        return;
       }
-    } catch {
-      const used = Number(currentUser?.storage_used_bytes) || 0;
-      const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
-      const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
-      textUsed.textContent = `${formatBytes(used)} de ${formatBytes(limit)} utilizados`;
-      barFill.style.setProperty('--progress-pct', `${pct}%`);
+    } catch {}
+
+    const used = Number(currentUser?.storage_used_bytes) || 0;
+    const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
+    renderStorageValues(used, limit);
+  };
+
+  const updateResetCountdown = () => {
+    const resetDateText = container.querySelector<HTMLElement>('[data-ref="tokens-reset-date-text"]');
+    if (!resetDateText) return;
+
+    if (!resetCountdownTarget || Number.isNaN(resetCountdownTarget.getTime())) {
+      resetDateText.textContent = t('settings.billing.tokens_reset_monthly');
+      return;
+    }
+
+    const diffMs = resetCountdownTarget.getTime() - Date.now();
+    if (diffMs <= 0) {
+      resetDateText.textContent = t('settings.billing.tokens_reset_soon');
+      if (!hasTriggeredExpiryRefetch && !isDestroyed) {
+        hasTriggeredExpiryRefetch = true;
+        resetExpiryRefetchTimerId = window.setTimeout(() => {
+          if (!isDestroyed) {
+            void renderAiTokensSection();
+          }
+        }, 3000);
+      }
+      return;
+    }
+
+    const totalMinutes = Math.max(1, Math.ceil(diffMs / 60000));
+    const days = Math.floor(diffMs / 86400000);
+    const hours = Math.floor((diffMs % 86400000) / 3600000);
+    const minutes = Math.max(1, Math.floor((diffMs % 3600000) / 60000));
+
+    let dateFormatted = '';
+    try {
+      dateFormatted = resetCountdownTarget.toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {}
+
+    if (days >= 2) {
+      resetDateText.textContent = t('settings.billing.tokens_reset_in_days', {
+        date: dateFormatted,
+        days: String(days),
+        hours: String(hours),
+      });
+    } else if (days === 1) {
+      resetDateText.textContent = t('settings.billing.tokens_reset_in_days_singular', {
+        date: dateFormatted,
+        hours: String(hours),
+      });
+    } else if (hours >= 1) {
+      resetDateText.textContent = t('settings.billing.tokens_reset_in_hours', {
+        hours: String(hours),
+        minutes: String(minutes),
+      });
+    } else {
+      resetDateText.textContent = t('settings.billing.tokens_reset_in_minutes', {
+        minutes: String(totalMinutes),
+      });
     }
   };
 
@@ -306,46 +400,49 @@ async function createBillingView(): Promise<HTMLElement> {
     const textBalance = container.querySelector<HTMLElement>('[data-ref="tokens-text-balance"]');
     const badgePercent = container.querySelector<HTMLElement>('[data-ref="tokens-badge-percent"]');
     const barFill = container.querySelector<HTMLElement>('[data-ref="tokens-bar-fill"]');
-    const resetDateText = container.querySelector<HTMLElement>('[data-ref="tokens-reset-date-text"]');
 
     if (!textBalance || !barFill) return;
-
-
 
     let balance = currentUser?.ai_tokens_balance ?? 100;
     let limit = 100;
     if (currentUser?.subscription_tier === 'pro') limit = 2000;
     else if (currentUser?.subscription_tier === 'business') limit = 5000;
 
-    let resetAtStr = '';
+    clearCountdownTimers();
+    resetCountdownTarget = null;
+
     const tokenData = await fetchAiTokenBalance();
     if (tokenData) {
       balance = tokenData.balance;
       limit = tokenData.limit || limit;
       if (tokenData.resetAt) {
-        try {
-          const d = new Date(tokenData.resetAt);
-          resetAtStr = d.toLocaleDateString(undefined, {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          });
-        } catch (_) {}
+        const parsed = new Date(tokenData.resetAt);
+        if (!Number.isNaN(parsed.getTime())) {
+          resetCountdownTarget = parsed;
+          if (parsed.getTime() > Date.now()) {
+            hasTriggeredExpiryRefetch = false;
+          }
+        }
       }
     }
 
     const pct = Math.min(100, Math.max(0, Math.round((balance / limit) * 100)));
-    textBalance.textContent = `${balance.toLocaleString()} / ${limit.toLocaleString()} tokens disponibles`;
+    textBalance.textContent = t('settings.billing.tokens_balance_format', {
+      balance: balance.toLocaleString(),
+      limit: limit.toLocaleString(),
+    });
+
     if (badgePercent) {
       badgePercent.textContent = `${pct}%`;
       if (pct <= 10) {
-        badgePercent.className = 'component-badge component-badge--danger';
+        badgePercent.className = 'component-badge component-badge--danger component-text--sm';
       } else if (pct <= 25) {
-        badgePercent.className = 'component-badge component-badge--warning';
+        badgePercent.className = 'component-badge component-badge--warning component-text--sm';
       } else {
-        badgePercent.className = 'component-badge component-badge--neutral';
+        badgePercent.className = 'component-badge component-badge--neutral component-text--sm';
       }
     }
+
     barFill.style.setProperty('--progress-pct', `${pct}%`);
     barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
     if (pct <= 10) {
@@ -356,12 +453,9 @@ async function createBillingView(): Promise<HTMLElement> {
       barFill.classList.add('component-progress__bar--primary');
     }
 
-    if (resetDateText) {
-      if (resetAtStr) {
-        resetDateText.textContent = `Próximo reinicio: ${resetAtStr}`;
-      } else {
-        resetDateText.textContent = 'Próximo reinicio: Mensual';
-      }
+    updateResetCountdown();
+    if (resetCountdownTarget && !isDestroyed) {
+      resetCountdownIntervalId = window.setInterval(updateResetCountdown, 15000);
     }
   };
 
@@ -380,6 +474,8 @@ async function createBillingView(): Promise<HTMLElement> {
 
   (container as any).__controller = {
     destroy: () => {
+      isDestroyed = true;
+      clearCountdownTimers();
       window.removeEventListener('subscription-updated', onSubscriptionUpdated);
     },
   };

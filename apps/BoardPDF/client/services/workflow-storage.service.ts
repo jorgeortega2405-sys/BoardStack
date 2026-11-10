@@ -23,6 +23,17 @@ function getWorkflow(id: string): UserWorkflow | null {
   return workflows.find((w) => w.id === id) || null;
 }
 
+function generateWorkflowUuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function saveWorkflow(payload: {
   category?: 'pdf' | 'image';
   description?: string | null;
@@ -31,7 +42,7 @@ function saveWorkflow(payload: {
   steps: WorkflowStep[];
 }): { error?: string; success: boolean; workflow?: UserWorkflow } {
   if (typeof window === 'undefined' || !window.localStorage) {
-    return { error: 'Almacenamiento local no disponible', success: false };
+    return { error: t('workflows.storage_unavailable'), success: false };
   }
 
   const workflows = getWorkflows();
@@ -40,7 +51,7 @@ function saveWorkflow(payload: {
   if (payload.id) {
     const index = workflows.findIndex((w) => w.id === payload.id);
     if (index === -1) {
-      return { error: 'Flujo de trabajo no encontrado', success: false };
+      return { error: t('workflows.workflow_not_found'), success: false };
     }
     const updated: UserWorkflow = {
       ...workflows[index],
@@ -63,7 +74,7 @@ function saveWorkflow(payload: {
     };
   }
 
-  const newId = `wf_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const newId = generateWorkflowUuid();
   const created: UserWorkflow = {
     category: payload.category || 'pdf',
     created_at: now,

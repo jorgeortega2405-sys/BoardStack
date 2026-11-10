@@ -1,24 +1,18 @@
-import { t } from '../services/i18n.service.js';
+import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
-import { navigate } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance } from '../types/common.types.js';
+import { setupDropdown, setupPasswordToggle } from '../utils/dom.util.js';
 import { openCollabPageSizeModal } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
 import type { CollabPageSizeModalOptions, CollabPageSizeResult } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
-import { renderAddWebUrlModalBody, renderCollabLocalAuthModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalBody, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
-import { openModal } from './modal.component.js';
+import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
+import { openModal, setupSheetDragToDismiss } from './modal.component.js';
 
-function setupPasswordToggle(toggleBtn: HTMLElement | null, input: HTMLInputElement | null): void {
-  if (!toggleBtn || !input) return;
-  toggleBtn.addEventListener('click', (e: MouseEvent) => {
-    e.preventDefault();
-    const isPassword = input.type === 'password';
-    input.type = isPassword ? 'text' : 'password';
-    const icon = toggleBtn.querySelector<SVGUseElement>('use');
-    if (icon) {
-      icon.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-    }
-  });
+function getPasswordToggleTooltipOptions(): { hideTooltip: string; showTooltip: string } {
+  return {
+    hideTooltip: t('common.hide_password'),
+    showTooltip: t('common.show_password'),
+  };
 }
 
 function openCreateFolderModal(options: {
@@ -27,8 +21,9 @@ function openCreateFolderModal(options: {
   const modal = openModal({
     bodyHtml: renderCreateFolderModalBody(),
     cancelText: t('common.cancel'),
-    confirmClass: 'component-button--primary',
-    confirmText: t('projects.modal_create_folder_btn') || 'Crear carpeta',
+    confirmClass: 'component-button--black',
+    confirmText: t('projects.modal_create_folder_btn'),
+    description: t('projects.modal_create_folder_desc'),
     onConfirm: async (inst) => {
       const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-folder-name"]');
       const name = (input?.value || '').trim();
@@ -41,7 +36,7 @@ function openCreateFolderModal(options: {
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('projects.modal_create_folder_title') || 'Nueva carpeta',
+    title: t('projects.modal_create_folder_title'),
   });
 
   setTimeout(() => {
@@ -59,8 +54,9 @@ function openRenameFolderModal(options: {
   const modal = openModal({
     bodyHtml: renderRenameFolderModalBody(options.currentName),
     cancelText: t('common.cancel'),
-    confirmClass: 'component-button--primary',
-    confirmText: t('projects.modal_rename_folder_btn') || 'Guardar cambios',
+    confirmClass: 'component-button--black',
+    confirmText: t('projects.modal_rename_folder_btn'),
+    description: t('projects.modal_rename_folder_desc'),
     onConfirm: async (inst) => {
       const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-rename-name"]');
       const newName = (input?.value || '').trim();
@@ -73,7 +69,7 @@ function openRenameFolderModal(options: {
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('projects.modal_rename_folder_title') || 'Renombrar carpeta',
+    title: t('projects.modal_rename_folder_title'),
   });
 
   setTimeout(() => {
@@ -90,14 +86,78 @@ function openDeleteFolderModal(options: {
   return openModal({
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('projects.modal_delete_folder_btn') || 'Eliminar carpeta',
-    description: t('projects.modal_delete_folder_desc') || '¿Estás seguro de que deseas eliminar esta carpeta? Los archivos y documentos dentro se moverán a la sección principal.',
+    confirmText: t('projects.modal_delete_folder_btn'),
+    description: t('projects.modal_delete_folder_desc'),
     onConfirm: options.onConfirm,
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('projects.modal_delete_folder_title') || 'Eliminar carpeta',
+    title: t('projects.modal_delete_folder_title'),
   });
+}
+
+function openMoveFolderDropdownModal(options: {
+  activeFolderId: string | null;
+  folders: Array<{ id: string; name: string }>;
+  isUploads: boolean;
+  onConfirm: (targetFolderId: string | null, inst: ModalInstance) => Promise<boolean | void>;
+}): ModalInstance {
+  let dropdownCtrl: { destroy: () => void } | null = null;
+
+  const modal = openModal({
+    bodyHtml: renderMoveFolderOptionsModalBody({
+      activeFolderId: options.activeFolderId,
+      folders: options.folders,
+      isUploads: options.isUploads,
+    }),
+    cancelText: t('common.cancel'),
+    confirmClass: 'component-button--black',
+    confirmText: t(options.isUploads ? 'projects.modal_move_upload_btn' : 'projects.modal_move_doc_btn'),
+    description: t(options.isUploads ? 'projects.modal_move_upload_desc' : 'projects.modal_move_doc_desc'),
+    onClose: () => {
+      dropdownCtrl?.destroy();
+    },
+    onConfirm: async (inst) => {
+      const wrapper = inst.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-move-folder"]');
+      const rawId = wrapper?.getAttribute('data-selected-folder-id') || '';
+      const targetId = rawId || null;
+      return options.onConfirm(targetId, inst);
+    },
+    showCancel: true,
+    showConfirm: true,
+    size: 'sm',
+    title: t(options.isUploads ? 'projects.modal_move_upload_title' : 'projects.modal_move_doc_title'),
+  });
+
+  const wrapper = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-move-folder"]');
+  const trigger = modal.body.querySelector<HTMLElement>('[data-ref="btn-trigger-move-folder"]');
+  const backdrop = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-move-folder"]');
+  const menu = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-menu-move-folder"]');
+  const selectedTxt = modal.body.querySelector<HTMLElement>('[data-ref="txt-selected-move-folder"]');
+
+  if (wrapper) {
+    dropdownCtrl = setupDropdown(wrapper, {
+      backdrop,
+      menu,
+      onSelect: (_val, item) => {
+        if (!item) return;
+        const selectedId = item.getAttribute('data-folder-id') ?? '';
+        wrapper.setAttribute('data-selected-folder-id', selectedId);
+        selectedTxt?.removeAttribute('data-i18n');
+        const items = modal.body.querySelectorAll<HTMLElement>('[data-ref="move-folders-list"] .menu-item');
+        items.forEach((it) => {
+          const isMatch = it === item;
+          it.classList.toggle('is-selected', isMatch);
+          const checkIcon = it.querySelector<HTMLElement>('.menu-item__check');
+          checkIcon?.classList.toggle('is-hidden', !isMatch);
+        });
+      },
+      placement: 'bottom-start',
+      trigger,
+    });
+  }
+
+  return modal;
 }
 
 function openMoveDocModal(options: {
@@ -105,24 +165,9 @@ function openMoveDocModal(options: {
   folders: Array<{ id: string; name: string }>;
   onConfirm: (targetFolderId: string | null, inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  return openModal({
-    bodyHtml: renderMoveFolderOptionsModalBody({
-      activeFolderId: options.activeFolderId,
-      folders: options.folders,
-      isUploads: false,
-    }),
-    cancelText: t('common.cancel'),
-    confirmClass: 'component-button--primary',
-    confirmText: t('projects.modal_move_doc_btn') || 'Mover documento',
-    onConfirm: async (inst) => {
-      const selectedRadio = inst.body.querySelector<HTMLInputElement>('input[name="target-folder"]:checked');
-      const targetId = selectedRadio ? selectedRadio.value || null : null;
-      return options.onConfirm(targetId, inst);
-    },
-    showCancel: true,
-    showConfirm: true,
-    size: 'sm',
-    title: t('projects.modal_move_doc_title') || 'Mover a carpeta',
+  return openMoveFolderDropdownModal({
+    ...options,
+    isUploads: false,
   });
 }
 
@@ -131,24 +176,9 @@ function openMoveUploadModal(options: {
   folders: Array<{ id: string; name: string }>;
   onConfirm: (targetFolderId: string | null, inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  return openModal({
-    bodyHtml: renderMoveFolderOptionsModalBody({
-      activeFolderId: options.activeFolderId,
-      folders: options.folders,
-      isUploads: true,
-    }),
-    cancelText: t('common.cancel'),
-    confirmClass: 'component-button--primary',
-    confirmText: t('projects.modal_move_upload_btn') || 'Mover archivo',
-    onConfirm: async (inst) => {
-      const selectedRadio = inst.body.querySelector<HTMLInputElement>('input[name="target-upload-folder"]:checked');
-      const targetId = selectedRadio ? selectedRadio.value || null : null;
-      return options.onConfirm(targetId, inst);
-    },
-    showCancel: true,
-    showConfirm: true,
-    size: 'sm',
-    title: t('projects.modal_move_upload_title') || 'Mover archivo subido',
+  return openMoveFolderDropdownModal({
+    ...options,
+    isUploads: true,
   });
 }
 
@@ -158,13 +188,13 @@ function openDeleteUploadModal(options: {
   return openModal({
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('projects.modal_delete_upload_btn') || 'Eliminar archivo',
-    description: t('projects.modal_delete_upload_desc') || '¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.',
+    confirmText: t('projects.modal_delete_upload_btn'),
+    description: t('projects.modal_delete_upload_desc'),
     onConfirm: options.onConfirm,
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('projects.modal_delete_upload_title') || 'Eliminar archivo',
+    title: t('projects.modal_delete_upload_title'),
   });
 }
 
@@ -172,19 +202,18 @@ function openDeleteDocModal(options: {
   docTitle: string;
   onConfirm: (inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  const desc = (t('projects.modal_delete_doc_desc') || '¿Estás seguro de que deseas eliminar permanentemente "{title}"? Esta acción no se puede deshacer.')
-    .replace('{title}', options.docTitle);
+  const desc = t('projects.modal_delete_doc_desc').replace('{title}', options.docTitle);
 
   return openModal({
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('common.delete') || 'Eliminar',
+    confirmText: t('common.delete'),
     description: desc,
     onConfirm: options.onConfirm,
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('projects.modal_delete_doc_title') || 'Eliminar documento',
+    title: t('projects.modal_delete_doc_title'),
   });
 }
 
@@ -192,19 +221,18 @@ function openDeleteWorkflowModal(options: {
   onConfirm: (inst: ModalInstance) => Promise<boolean | void>;
   workflowName: string;
 }): ModalInstance {
-  const desc = (t('workflows.delete_modal_desc') || '¿Estás seguro de que deseas eliminar permanentemente el flujo de trabajo "{name}"? Esta acción no se puede deshacer.')
-    .replace('{name}', options.workflowName);
+  const desc = t('workflows.delete_modal_desc').replace('{name}', options.workflowName);
 
   return openModal({
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('workflows.delete_modal_btn') || 'Eliminar flujo',
+    confirmText: t('workflows.delete_modal_btn'),
     description: desc,
     onConfirm: options.onConfirm,
     showCancel: true,
     showConfirm: true,
     size: 'sm',
-    title: t('workflows.delete_modal_title') || 'Eliminar flujo de trabajo',
+    title: t('workflows.delete_modal_title'),
   });
 }
 
@@ -213,23 +241,24 @@ function openVerifyEmailCodeModal(options: {
   onConfirm: (code: string, inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
   return openModal({
-    bodyHtml: renderVerifyEmailCodeModalBody(options.email),
+    bodyHtml: renderVerifyEmailCodeModalBody(),
     cancelText: t('common.cancel'),
     confirmText: t('common.continue'),
     description: t('settings.your_account.modal_email_verify_desc', { email: options.email }),
     onConfirm: async (inst) => {
-      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="modal-input-code"]');
+      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-email-code"]');
       const code = input?.value?.trim() || '';
       if (!code) {
-        inst.showError(t('validation.code_required') || t('ui.ingresa_el_codigo_de_6_digitos'));
+        inst.showError(t('validation.code_required'));
         return false;
       }
       if (code.length !== 6 || !/^\d+$/.test(code)) {
-        inst.showError(t('validation.code_invalid') || 'El código debe contener exactamente 6 dígitos.');
+        inst.showError(t('validation.code_invalid'));
         return false;
       }
       return options.onConfirm(code, inst);
     },
+    size: 'sm',
     title: t('settings.your_account.modal_email_verify_title'),
   });
 }
@@ -238,15 +267,15 @@ function openCancelSubscriptionModal(options: {
   dateFormatted: string;
   onConfirm: (inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  const desc = (t('settings.billing.modal_cancel_sub_desc') || t('ui.tu_suscripcion_no_se_renovara_al_conclui'))
-    .replace('{date}', options.dateFormatted);
+  const desc = t('settings.billing.modal_cancel_sub_desc').replace('{date}', options.dateFormatted);
 
   return openModal({
     confirmClass: 'component-button--black',
-    confirmText: t('settings.billing.btn_confirm_cancel_sub') || 'Confirmar cancelación',
+    confirmText: t('settings.billing.btn_confirm_cancel_sub'),
     description: desc,
     onConfirm: options.onConfirm,
-    title: t('settings.billing.modal_cancel_sub_title') || '¿Cancelar suscripción?',
+    size: 'sm',
+    title: t('settings.billing.modal_cancel_sub_title'),
   });
 }
 
@@ -257,22 +286,23 @@ function openVerifyPasswordModal(options: {
     bodyHtml: renderVerifyPasswordModalBody(),
     cancelText: t('common.cancel'),
     confirmText: t('common.continue'),
-    description: t('settings.security.modal_verify_password_desc') || t('ui.por_motivos_de_seguridad_ingresa_tu_cont'),
+    description: t('settings.security.modal_verify_password_desc'),
     onConfirm: async (inst) => {
-      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="modal-input-current-password"]');
+      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-modal-password"]');
       const password = input?.value || '';
       if (!password) {
-        inst.showError(t('validation.password_required') || 'Ingresa tu contraseña actual.');
+        inst.showError(t('validation.password_required'));
         return false;
       }
       return options.onConfirm(password, inst);
     },
-    title: t('settings.security.modal_verify_password_title') || 'Verifica tu contraseña actual',
+    size: 'sm',
+    title: t('settings.security.modal_verify_password_title'),
   });
 
-  const currentPassInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-current-password"]');
-  const togglePassBtn = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-current-password"]');
-  setupPasswordToggle(togglePassBtn, currentPassInput);
+  const currentPassInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-password"]');
+  const togglePassBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-modal-password"]');
+  setupPasswordToggle(togglePassBtn, currentPassInput, getPasswordToggleTooltipOptions());
 
   return modal;
 }
@@ -283,21 +313,22 @@ function setupNewPasswordModalStep(
     onConfirm: (newPassword: string, inst: ModalInstance) => Promise<boolean | void>;
   }
 ): void {
-  modal.setTitle(t('settings.security.modal_new_password_title') || 'Crear nueva contraseña');
-  modal.setDescription(t('settings.security.modal_new_password_desc') || 'Tu nueva contraseña debe tener al menos 8 caracteres.');
+  modal.setTitle(t('settings.security.modal_new_password_title'));
+  modal.setDescription(t('settings.security.modal_new_password_desc'));
   modal.clearError();
   modal.setConfirmLoading(false);
   modal.setConfirmVisible(true);
-  modal.setConfirmText(t('common.save') || 'Guardar');
+  modal.setConfirmText(t('common.save'));
   modal.setBody(renderNewPasswordModalBody());
 
-  const inputNewPass = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-new-password"]');
-  const inputConfirmPass = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-confirm-new-password"]');
-  const toggleNewPass = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-new-password"]');
-  const toggleConfirmPass = modal.body.querySelector<HTMLElement>('[data-ref="toggle-modal-confirm-new-password"]');
+  const inputNewPass = modal.body.querySelector<HTMLInputElement>('[data-ref="input-new-password"]');
+  const inputConfirmPass = modal.body.querySelector<HTMLInputElement>('[data-ref="input-confirm-password"]');
+  const toggleNewPass = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-new-password"]');
+  const toggleConfirmPass = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-confirm-password"]');
+  const tooltipOpts = getPasswordToggleTooltipOptions();
 
-  setupPasswordToggle(toggleNewPass, inputNewPass);
-  setupPasswordToggle(toggleConfirmPass, inputConfirmPass);
+  setupPasswordToggle(toggleNewPass, inputNewPass, tooltipOpts);
+  setupPasswordToggle(toggleConfirmPass, inputConfirmPass, tooltipOpts);
   inputNewPass?.focus();
 
   modal.setOnConfirm(async (inst) => {
@@ -305,11 +336,11 @@ function setupNewPasswordModalStep(
     const confirmPass = inputConfirmPass?.value || '';
 
     if (!newPass || newPass.length < 8) {
-      inst.showError(t('validation.password_min') || 'La contraseña debe tener al menos 8 caracteres.');
+      inst.showError(t('validation.password_min'));
       return false;
     }
     if (newPass !== confirmPass) {
-      inst.showError(t('validation.passwords_not_match') || 'Las contraseñas no coinciden.');
+      inst.showError(t('validation.passwords_not_match'));
       return false;
     }
     return options.onConfirm(newPass, inst);
@@ -323,41 +354,49 @@ function openDisable2FAModal(options: {
     bodyHtml: renderDisable2FAModalBody(),
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('settings.security.btn_disable_2fa') || 'Desactivar',
-    description: t('settings.security.two_factor_disable_confirm') || t('ui.ingresa_tu_contrasena_actual_o_un_codigo'),
+    confirmText: t('settings.security.btn_disable_2fa'),
+    description: t('settings.security.two_factor_disable_confirm'),
     onConfirm: async (inst) => {
-      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-disable-2fa-password"]');
+      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-disable-2fa-code"]');
       const val = input ? input.value.trim() : '';
       if (!val) {
-        inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_o_codigo_de_verifi'));
+        inst.showError(t('settings.security.modal_current_password_error'));
         return false;
       }
       return options.onConfirm(val, inst);
     },
-    title: t('settings.security.two_factor_disable_title') || t('ui.desactivar_autenticacion_en_dos_pasos'),
+    size: 'sm',
+    title: t('settings.security.two_factor_disable_title'),
   });
 }
 
 function openDeleteAccountModal(options: {
   onConfirm: (password: string, inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  return openModal({
+  const modal = openModal({
     bodyHtml: renderDeleteAccountModalBody(),
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--danger',
-    confirmText: t('settings.security.btn_delete_account') || 'Eliminar cuenta',
-    description: t('settings.security.delete_account_modal_desc') || 'Esta acción es irreversible. Se eliminarán permanentemente todos tus archivos y datos asociados.',
+    confirmText: t('settings.security.btn_delete_account'),
+    description: t('settings.security.delete_account_modal_desc'),
     onConfirm: async (inst) => {
       const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-delete-password"]');
       const password = input?.value?.trim() || '';
       if (!password) {
-        inst.showError(t('settings.security.modal_current_password_error') || t('ui.ingresa_tu_contrasena_actual_para_confir'));
+        inst.showError(t('settings.security.modal_current_password_error'));
         return false;
       }
       return options.onConfirm(password, inst);
     },
-    title: t('settings.security.delete_account_modal_title') || '¿Eliminar tu cuenta definitivamente?',
+    size: 'sm',
+    title: t('settings.security.delete_account_modal_title'),
   });
+
+  const toggleBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-delete-password"]');
+  const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-delete-password"]');
+  setupPasswordToggle(toggleBtn, input, getPasswordToggleTooltipOptions());
+
+  return modal;
 }
 
 function openUnlockPdfPasswordModal(options: {
@@ -367,24 +406,24 @@ function openUnlockPdfPasswordModal(options: {
     bodyHtml: renderUnlockPdfModalBody(),
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--black',
-    confirmText: t('tools.unlock_pdf.unlock_btn') || 'Desbloquear PDF',
-    description: t('ui.este_archivo_pdf_requiere_una_contrasena'),
+    confirmText: t('tools.unlock_pdf.unlock_btn'),
+    description: t('tools.unlock_pdf.password_required_desc'),
     onConfirm: async (inst) => {
-      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
+      const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
       const password = input?.value.trim() || '';
       if (!password) {
-        inst.showError(t('tools.unlock_pdf.enter_password_required') || 'Debes ingresar la contraseña del archivo PDF.');
+        inst.showError(t('tools.unlock_pdf.enter_password_required'));
         return false;
       }
       return options.onConfirm(password, inst);
     },
     size: 'sm',
-    title: t('tools.unlock_pdf.password_required_title') || 'Contraseña requerida',
+    title: t('tools.unlock_pdf.password_required_title'),
   });
 
-  const toggleBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-modal-toggle-password"]');
-  const input = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-password"]');
-  setupPasswordToggle(toggleBtn, input);
+  const toggleBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-unlock-pwd"]');
+  const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
+  setupPasswordToggle(toggleBtn, input, getPasswordToggleTooltipOptions());
 
   return modal;
 }
@@ -397,13 +436,13 @@ function openAddWebUrlModal(options: {
     bodyHtml: renderAddWebUrlModalBody(options.currentUrl),
     cancelText: t('common.cancel'),
     confirmClass: 'component-button--black',
-    confirmText: t('tools.html_to_pdf.add_url_btn') || 'Añadir URL',
-    description: t('ui.escribe_la_url_de_la_pagina_web_que_dese'),
+    confirmText: t('tools.html_to_pdf.add_url_btn'),
+    description: t('tools.html_to_pdf.add_url_desc'),
     onConfirm: async (inst) => {
       const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-web-url"]');
       let raw = (input?.value || '').trim();
       if (!raw) {
-        inst.showError(t('ui.debes_ingresar_la_url_de_una_pagina_web'));
+        inst.showError(t('tools.html_to_pdf.url_required'));
         return false;
       }
       if (!/^https?:\/\//i.test(raw)) {
@@ -412,61 +451,84 @@ function openAddWebUrlModal(options: {
       return options.onConfirm(raw, inst);
     },
     size: 'sm',
-    title: t('tools.html_to_pdf.add_url_title') || 'Añadir URL',
+    title: t('tools.html_to_pdf.add_url_title'),
   });
-}
-
-function openCollabLocalAuthModal(options: {
-  docId: string;
-  onClose?: () => void;
-  onStoreCurrentAsPending: () => void;
-}): ModalInstance {
-  const modal = openModal({
-    bodyHtml: renderCollabLocalAuthModalBody(),
-    onClose: options.onClose,
-    showCancel: false,
-    showConfirm: false,
-    size: 'sm',
-    title: t('collab.share_design_title') || 'Compartir este diseño',
-  });
-
-  modal.body.querySelector('[data-ref="btn-local-modal-register"]')?.addEventListener('click', () => {
-    options.onStoreCurrentAsPending();
-    modal.close();
-    navigate(`/register?redirect=${encodeURIComponent(`/d/${options.docId}`)}`);
-  });
-
-  modal.body.querySelector('[data-ref="btn-local-modal-login"]')?.addEventListener('click', () => {
-    options.onStoreCurrentAsPending();
-    modal.close();
-    navigate(`/login?redirect=${encodeURIComponent(`/d/${options.docId}`)}`);
-  });
-
-  return modal;
 }
 
 function openShareDownloadModal(options: { downloadLink: string }): ModalInstance {
-  const modal = openModal({
-    bodyHtml: renderShareDownloadModalBody(options.downloadLink),
-    showCancel: false,
-    showConfirm: false,
-    size: 'sm',
-    title: t('ui.compartir_enlace_de_descarga'),
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.setAttribute('data-ref', 'modal-share-backdrop');
+  backdrop.innerHTML = renderShareDownloadModalContent(options.downloadLink);
+
+  translateElement(backdrop);
+  renderIcons(backdrop);
+
+  const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-share"]');
+  const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-share-drag-zone"]');
+  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
+  const bottomCloseBtn = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-close-share-modal"]');
+  const inputEl = backdrop.querySelector<HTMLInputElement>('[data-ref="input-share-url"]');
+  const copyBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-copy-url"]');
+  const qrContainer = backdrop.querySelector<HTMLElement>('[data-ref="share-qr-container"]');
+
+  let isClosing = false;
+  let copyTimer: number | null = null;
+
+  const close = () => {
+    if (isClosing) return;
+    isClosing = true;
+    if (copyTimer !== null) {
+      window.clearTimeout(copyTimer);
+      copyTimer = null;
+    }
+    backdrop.classList.remove('is-visible');
+    document.removeEventListener('keydown', handleKeyDown);
+
+    setTimeout(() => {
+      if (backdrop.parentNode) {
+        backdrop.parentNode.removeChild(backdrop);
+      }
+      if (document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
+        document.body.classList.remove('modal-open');
+      }
+    }, 200);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+  document.addEventListener('keydown', handleKeyDown);
+
+  backdrop.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === backdrop) {
+      close();
+    }
   });
 
-  const inputEl = modal.backdrop.querySelector<HTMLInputElement>('[data-ref="input-share-url"]');
+  closeBtn?.addEventListener('click', close);
+  bottomCloseBtn?.addEventListener('click', close);
   inputEl?.addEventListener('click', () => inputEl.select());
 
-  const copyBtn = modal.backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-copy-url"]');
-  const copyLabel = modal.backdrop.querySelector<HTMLElement>('[data-ref="modal-copy-label"]');
-
   copyBtn?.addEventListener('click', async () => {
+    const useEl = copyBtn.querySelector<SVGUseElement>('use');
     try {
       await navigator.clipboard.writeText(options.downloadLink);
-      if (copyLabel) copyLabel.textContent = t('common.copied') || 'Copiado';
+      if (useEl) {
+        useEl.setAttribute('href', '/icons.svg#check');
+      }
       showToast(t('toasts.enlace_copiado_al_portapapeles'), 'success');
-      setTimeout(() => {
-        if (copyLabel) copyLabel.textContent = t('common.copy') || 'Copiar';
+      if (copyTimer !== null) {
+        window.clearTimeout(copyTimer);
+      }
+      copyTimer = window.setTimeout(() => {
+        if (useEl) {
+          useEl.setAttribute('href', '/icons.svg#content_copy');
+        }
+        copyTimer = null;
       }, 2000);
     } catch {
       inputEl?.select();
@@ -474,56 +536,93 @@ function openShareDownloadModal(options: { downloadLink: string }): ModalInstanc
     }
   });
 
-  const qrContainer = modal.backdrop.querySelector<HTMLElement>('[data-ref="share-qr-target"]');
   if (qrContainer) {
-    import('qr-code-styling').then(({ default: QRCodeStyling }) => {
-      const qr = new QRCodeStyling({
-        backgroundOptions: { color: 'transparent' },
-        cornersDotOptions: { color: '#000000', type: 'dot' },
-        cornersSquareOptions: { color: '#000000', type: 'extra-rounded' },
-        data: options.downloadLink,
-        dotsOptions: { color: '#000000', type: 'rounded' },
-        height: 140,
-        margin: 4,
-        type: 'svg',
-        width: 140,
-      });
-      qrContainer.innerHTML = '';
-      qr.append(qrContainer);
-    }).catch(() => {});
+    void import('qr-code-styling')
+      .then(({ default: QRCodeStyling }) => {
+        const qr = new QRCodeStyling({
+          backgroundOptions: { color: '#ffffff' },
+          cornersDotOptions: { color: '#000000', type: 'dot' },
+          cornersSquareOptions: { color: '#000000', type: 'extra-rounded' },
+          data: options.downloadLink,
+          dotsOptions: { color: '#000000', type: 'rounded' },
+          height: 196,
+          margin: 2,
+          type: 'svg',
+          width: 196,
+        });
+        qrContainer.innerHTML = '';
+        qr.append(qrContainer);
+      })
+      .catch(() => {});
   }
 
-  return modal;
+  if (dragZone && card) {
+    setupSheetDragToDismiss(dragZone, card, backdrop, close);
+  }
+
+  document.body.appendChild(backdrop);
+  document.body.classList.add('modal-open');
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+  });
+
+  return {
+    backdrop,
+    body: backdrop.querySelector<HTMLElement>('[data-ref="modal-split-bottom"]') || backdrop,
+    btnCancel: null,
+    btnConfirm: bottomCloseBtn,
+    cancelBtn: null,
+    card,
+    clearError: () => {},
+    close,
+    closeBtn,
+    confirmBtn: bottomCloseBtn,
+    errorBanner: null,
+    setBody: () => {},
+    setConfirmLoading: () => {},
+    setConfirmText: () => {},
+    setConfirmVisible: () => {},
+    setDescription: () => {},
+    setOnConfirm: () => {},
+    setTitle: () => {},
+    showError: () => {},
+  };
 }
 
 function openThankYouShareModal(options: { shareUrl: string }): ModalInstance {
   const modal = openModal({
     bodyHtml: renderThankYouShareModalBody(),
-    cancelText: t('common.close') || 'Cerrar',
+    cancelText: t('common.close'),
     confirmClass: 'component-button--black',
-    confirmText: t('common.close') || 'Cerrar',
-    description: t('download.thank_you_desc') || '¡Haz correr la voz y comparte BoardPDF!',
+    confirmText: t('common.close'),
+    description: t('download.thank_you_desc'),
     onConfirm: () => modal.close(),
     showCancel: false,
     showConfirm: true,
     size: 'sm',
-    title: t('download.thank_you_title') || '¿Cómo nos puedes dar las gracias?',
+    title: t('download.thank_you_title'),
   });
 
   renderIcons(modal.backdrop);
 
-  modal.backdrop.querySelector('[data-ref="badge-modal-trustpilot"]')?.addEventListener('click', () => {
-    window.open('https://www.trustpilot.com/review/boardpdf.com', '_blank', 'noopener,noreferrer');
-  });
-  modal.backdrop.querySelector('[data-ref="badge-modal-facebook"]')?.addEventListener('click', () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(options.shareUrl)}`, '_blank', 'noopener,noreferrer');
-  });
-  modal.backdrop.querySelector('[data-ref="badge-modal-twitter"]')?.addEventListener('click', () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t('ui.gestiona_y_edita_tus_archivos_pdf_rapido'))}&url=${encodeURIComponent(options.shareUrl)}`, '_blank', 'noopener,noreferrer');
-  });
-  modal.backdrop.querySelector('[data-ref="badge-modal-linkedin"]')?.addEventListener('click', () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(options.shareUrl)}`, '_blank', 'noopener,noreferrer');
-  });
+  const shareText = t('download.share_tweet_text');
+  const encodedUrl = encodeURIComponent(options.shareUrl);
+  const encodedText = encodeURIComponent(shareText);
+  const encodedWhatsapp = encodeURIComponent(`${shareText} ${options.shareUrl}`);
+
+  modal.backdrop
+    .querySelector<HTMLAnchorElement>('[data-ref="share-twitter"]')
+    ?.setAttribute('href', `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`);
+  modal.backdrop
+    .querySelector<HTMLAnchorElement>('[data-ref="share-linkedin"]')
+    ?.setAttribute('href', `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`);
+  modal.backdrop
+    .querySelector<HTMLAnchorElement>('[data-ref="share-facebook"]')
+    ?.setAttribute('href', `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
+  modal.backdrop
+    .querySelector<HTMLAnchorElement>('[data-ref="share-whatsapp"]')
+    ?.setAttribute('href', `https://wa.me/?text=${encodedWhatsapp}`);
 
   return modal;
 }
@@ -531,7 +630,6 @@ function openThankYouShareModal(options: { shareUrl: string }): ModalInstance {
 export {
   openAddWebUrlModal,
   openCancelSubscriptionModal,
-  openCollabLocalAuthModal,
   openCollabPageSizeModal,
   openCreateFolderModal,
   openDeleteAccountModal,

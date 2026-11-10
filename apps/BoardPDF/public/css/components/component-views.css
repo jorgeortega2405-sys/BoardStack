@@ -24,7 +24,7 @@
 .view-body {
   box-sizing: border-box;
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   min-height: 100%;
   padding-bottom: 0;
@@ -540,40 +540,97 @@ header.view-section {
   font-size: 11px;
 }
 
-.workflow-modal-columns {
-  align-items: start;
-  display: grid;
-  gap: 24px;
-  grid-template-columns: 1fr 1fr;
+.modal-card--workflow-builder {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 790px;
+  max-height: calc(100vh - 32px);
+  max-width: 525px;
+  overflow: hidden;
+  padding: 20px;
+  width: 100%;
 }
 
-.modal-col-right--workflow {
+.modal-card--workflow-builder .modal-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.workflow-builder-modal {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.workflow-tool-picker-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.workflow-tool-dropdown {
+  flex: 1 1 auto;
+  max-width: none;
+  min-width: 0;
+  width: auto;
+}
+
+.workflow-tool-dropdown .dropdown-trigger {
+  max-width: none;
+  width: 100%;
+}
+
+.workflow-tool-picker-row [data-ref^="btn-modal-add-step"] {
+  flex-shrink: 0;
+}
+
+.workflow-modal-tool-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.workflow-modal-sequence {
   background: var(--bg-hover);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  padding: 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 14px;
 }
 
 .workflow-modal-section-title {
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
-  margin-bottom: 14px;
+  margin: 0;
 }
 
 .workflow-modal-header-row {
   align-items: center;
   display: flex;
+  gap: 8px;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .workflow-modal-steps-list {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 8px;
-  max-height: 280px;
-  min-height: 180px;
+  min-height: 120px;
   overflow-y: auto;
 }
 
@@ -581,15 +638,17 @@ header.view-section {
   align-items: center;
   color: var(--text-tertiary);
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  height: 180px;
+  gap: 8px;
   justify-content: center;
+  min-height: 140px;
   text-align: center;
 }
 
 .workflow-empty-state__icon {
   height: 32px;
-  margin-bottom: 8px;
+  margin: 0;
   opacity: 0.5;
   width: 32px;
 }
@@ -627,7 +686,15 @@ header.view-section {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .modal-card--workflow-builder {
+    height: auto;
+    max-height: calc(100vh - 56px);
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 56px);
+  }
 }
 
 .tool-summary-card {
@@ -3714,7 +3781,7 @@ body[data-theme="dark"] .view-backdrop--dots {
 .projects-body {
   box-sizing: border-box;
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   min-height: 100%;
   padding-bottom: 0;
@@ -4196,7 +4263,7 @@ body[data-theme="dark"] .view-backdrop--dots {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-start;
-  max-width: 1024px;
+  max-width: 525px;
   width: 100%;
 }
 
@@ -4238,13 +4305,25 @@ body[data-theme="dark"] .view-backdrop--dots {
   transform: none !important;
 }
 
+.modaltest-stage .modal-card--split,
 .modaltest-stage .modal-card--workflow-builder {
-  max-width: 860px;
-  width: 100%;
+  height: 790px;
+  max-height: none;
+  max-width: 525px;
+  width: 525px;
+}
+
+.modaltest-stage .modal-card--split {
+  gap: 0;
+  padding: 0;
 }
 
 .modaltest-stage .modal-card__drag-zone {
   display: flex;
+}
+
+.modaltest-stage .modal-card--split .modal-card__drag-zone {
+  display: none;
 }
 
 @media (max-width: 768px) {
@@ -4256,6 +4335,29 @@ body[data-theme="dark"] .view-backdrop--dots {
     transform: none !important;
   }
 
+  .modaltest-stage .modal-card--split,
+  .modaltest-stage .modal-card--workflow-builder {
+    height: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .modaltest-stage .modal-card--split {
+    gap: 0;
+    padding: 0;
+  }
+
+  .modaltest-stage .modal-card--split .modal-card__drag-zone {
+    background: transparent;
+    display: flex;
+    left: 0;
+    padding: 10px 0 6px 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 5;
+  }
+
   .modaltest-stage .modal-close-btn {
     left: auto;
     right: 16px;
@@ -4264,9 +4366,5 @@ body[data-theme="dark"] .view-backdrop--dots {
 
   .modaltest-header__title {
     font-size: 24px;
-  }
-
-  .workflow-modal-columns {
-    grid-template-columns: 1fr;
   }
 }

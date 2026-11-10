@@ -7,6 +7,7 @@ import { setLanguageSwitchHandler, setNavigationHandler } from './services/navig
 import { hideTooltip } from './services/tooltip.service.js';
 import { consumeTransferFile } from './services/transfer.service.js';
 import { wsService } from './services/websocket.service.js';
+import { clearWorkflowSession } from './services/workflow-session.service.js';
 import { ViewController } from './types/common.types.js';
 import { hideElement, showElement } from './utils/dom.util.js';
 
@@ -47,7 +48,13 @@ function getCurrentRouteId(): string {
 }
 
 async function switchLanguage(newLang: string): Promise<void> {
-  const targetBase = getLocalizedPath(currentActiveRouteId, newLang);
+  let targetBase = getLocalizedPath(currentActiveRouteId, newLang);
+  if (currentActiveRouteId === 'workflow-runner') {
+    const wfMatch = window.location.pathname.match(/\/workflow\/([a-zA-Z0-9_-]+)/);
+    if (wfMatch) {
+      targetBase = `/${newLang}/workflow/${wfMatch[1]}`;
+    }
+  }
   const searchAndHash = `${window.location.search}${window.location.hash}`;
   await setLanguage(newLang);
   navigate(`${targetBase}${searchAndHash}`, true);
@@ -117,6 +124,10 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
 
   const matched = findRoute(path);
 
+  if (!matched || matched.routeId !== 'workflow-runner') {
+    clearWorkflowSession();
+  }
+
   if (matched) {
     currentActiveRouteId = matched.routeId;
     if (matched.lang !== getCurrentLanguage()) {
@@ -157,7 +168,7 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
         previousPath,
         query: targetQuery || new URLSearchParams(window.location.search),
       });
-      updateDomSeo(matched.routeId, matched.lang);
+      updateDomSeo(matched.routeId === 'workflow-runner' ? 'workflows' : matched.routeId, matched.lang);
     } else {
       const { createNotFoundView } = await import('./views/not-found.view.js');
       nextViewElement = await createNotFoundView();
@@ -197,6 +208,9 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
     activeViewElement.remove();
     activeViewElement = null;
   }
+
+  layoutContent.style.removeProperty('--layout-scroll-height');
+  layoutContent.scrollTop = 0;
 
   activeViewElement = nextViewElement;
   translateElement(nextViewElement);

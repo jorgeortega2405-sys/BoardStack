@@ -27,7 +27,7 @@ function isToolView(): boolean {
     '/pdf-to-powerpoint', '/pdf-to-excel', '/pdf-to-pdfa', '/rotate-pdf', '/page-numbers',
     '/add-page-numbers', '/watermark-pdf', '/add-watermark', '/crop-pdf', '/edit-pdf',
     '/unlock-pdf', '/protect-pdf', '/redact-pdf', '/compare-pdf', '/summarize-pdf',
-    '/translate-pdf', '/pdf-to-markdown', '/to-pdf'
+    '/translate-pdf', '/pdf-to-markdown', '/to-pdf', '/workflow'
   ];
   return toolPaths.some((p) => path === p || path.startsWith(`${p}/`));
 }
