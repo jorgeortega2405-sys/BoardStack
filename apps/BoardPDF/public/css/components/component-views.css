@@ -2114,8 +2114,8 @@ header.view-section {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: var(--bg-surface-alt, #f9fafb);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
   border-radius: var(--radius-lg, 12px);
   padding: 14px 20px;
   margin: 16px auto 24px auto;
@@ -4191,7 +4191,7 @@ body[data-theme="dark"] .view-backdrop--dots {
 
 .table-user-avatar--edu_individual::before,
 .table-user-avatar[data-tier="edu_individual"]::before {
-  background: #6366f1;
+  background: #374151;
 }
 
 .table-user-avatar--edu_school::before,

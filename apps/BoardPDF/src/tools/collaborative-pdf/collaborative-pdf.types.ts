@@ -185,6 +185,13 @@ type CollaborativeElement =
   | CollaborativeElementTable
   | CollaborativeElementText;
 
+interface CollaborativeManualGuide {
+  id: string;
+  orientation: 'h' | 'v';
+  pageIndex: number;
+  position: number;
+}
+
 interface CollaborativePdfPageSource {
   pageNumber: number;
   pdfUrl: string;
@@ -192,6 +199,7 @@ interface CollaborativePdfPageSource {
 
 interface CollaborativeDocumentContent {
   elements: CollaborativeElement[];
+  guides?: CollaborativeManualGuide[];
   pageBackgrounds?: string[];
   pageCount: number;
   pagePdfSources?: Array<CollaborativePdfPageSource | null>;
@@ -232,4 +240,4 @@ interface CollaborativeDocumentRecord {
   user_id?: number | null;
 }
 
-export type { ChartDataSeries, ChartOptions, ChartType, CollaborativeAiLockInfo, CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeElement, CollaborativeElementChart, CollaborativeElementDrawing, CollaborativeElementImage, CollaborativeElementShape, CollaborativeElementTable, CollaborativeElementTableCell, CollaborativeElementText, CollaborativeMember, CollaborativePdfPageSource };
+export type { ChartDataSeries, ChartOptions, ChartType, CollaborativeAiLockInfo, CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeElement, CollaborativeElementChart, CollaborativeElementDrawing, CollaborativeElementImage, CollaborativeElementShape, CollaborativeElementTable, CollaborativeElementTableCell, CollaborativeElementText, CollaborativeManualGuide, CollaborativeMember, CollaborativePdfPageSource };

@@ -344,6 +344,7 @@ async fn handle_connection(
 
                             ClientMessage::DocSync {
                                 elements,
+                                guides,
                                 page_backgrounds,
                                 page_count,
                                 page_size,
@@ -361,6 +362,7 @@ async fn handle_connection(
                                     let broadcast_msg = ServerMessage::DocSync {
                                         sender_client_id: client_id.clone(),
                                         elements,
+                                        guides,
                                         page_backgrounds,
                                         page_count,
                                         page_size,

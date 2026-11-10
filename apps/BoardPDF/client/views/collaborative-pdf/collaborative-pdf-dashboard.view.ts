@@ -334,7 +334,7 @@ class CollaborativePdfDashboardController implements ViewController {
         ctx.font = `${el.bold ? 'bold ' : ''}${fontSize}px sans-serif`;
         ctx.fillText(el.text || '', (el.x || 0) * scale, ((el.y || 0) + (el.fontSize || 16) * 0.85) * scale);
       } else if (el.type === 'shape') {
-        ctx.strokeStyle = el.strokeColor || '#4f46e5';
+        ctx.strokeStyle = el.strokeColor || '#111827';
         ctx.lineWidth = Math.max(1, (el.strokeWidth || 1) * scale);
         ctx.fillStyle = el.fillColor || 'transparent';
         const w = (el.width || 60) * scale;

@@ -211,6 +211,13 @@ interface RemotePeer {
   username: string;
 }
 
+interface ManualGuide {
+  id: string;
+  orientation: 'h' | 'v';
+  pageIndex: number;
+  position: number;
+}
+
 const CHART_PALETTES: Record<string, string[]> = {
   amber: ['#d97706', '#f59e0b', '#fbbf24', '#fde68a'],
   blue: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd'],
@@ -235,4 +242,4 @@ const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
 
 export { CHART_PALETTES, PAGE_HEIGHT, PAGE_WIDTH, applyListFormatting };
-export type { ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, PagePdfSource, RemotePeer, UploadedAsset };
+export type { ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, ManualGuide, PagePdfSource, RemotePeer, UploadedAsset };

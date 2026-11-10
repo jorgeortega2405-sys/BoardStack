@@ -1,6 +1,6 @@
 import { PageDimension } from '../../config/collab-page-presets.config.js';
 import { wsService } from '../../services/websocket.service.js';
-import { EditorElement, PagePdfSource } from './collaborative-pdf.types.js';
+import { EditorElement, ManualGuide, PagePdfSource } from './collaborative-pdf.types.js';
 
 type CollabActionType =
   | 'DOC_SYNC_FULL'
@@ -55,6 +55,7 @@ interface CollabEditorDelegate {
   getPageDimensions: (pageIndex: number) => PageDimension;
   isCollabRoomFull: boolean;
   isLockedPage: (pageIndex: number) => boolean;
+  manualGuides: ManualGuide[];
   moveElementLayer: (elementId: string, direction: 'back' | 'backward' | 'forward' | 'front') => boolean;
   pageBackgrounds: string[];
   pageCount: number;
@@ -285,6 +286,11 @@ class CollabActionDispatcher {
             el.pageIndex = (el.pageIndex ?? 0) + 1;
           }
         });
+        this.delegate.manualGuides.forEach((g) => {
+          if (g.pageIndex >= targetIndex) {
+            g.pageIndex += 1;
+          }
+        });
         const customDim = action.payload?.customDim;
         const inheritedDim = action.payload?.afterIndex !== undefined && this.delegate.pageSizes[action.payload.afterIndex]
           ? { ...this.delegate.pageSizes[action.payload.afterIndex] }
@@ -309,6 +315,11 @@ class CollabActionDispatcher {
             el.pageIndex = (el.pageIndex ?? 0) - 1;
           }
         });
+        const nextGuides = this.delegate.manualGuides
+          .filter((g) => g.pageIndex !== pageIdx)
+          .map((g) => (g.pageIndex > pageIdx ? { ...g, pageIndex: g.pageIndex - 1 } : g));
+        this.delegate.manualGuides.length = 0;
+        this.delegate.manualGuides.push(...nextGuides);
         this.delegate.pageSizes.splice(pageIdx, 1);
         this.delegate.pageTitles.splice(pageIdx, 1);
         this.delegate.pageBackgrounds.splice(pageIdx, 1);
@@ -326,6 +337,20 @@ class CollabActionDispatcher {
             el.pageIndex = (el.pageIndex ?? 0) + 1;
           }
         });
+        this.delegate.manualGuides.forEach((g) => {
+          if (g.pageIndex >= dstIdx) {
+            g.pageIndex += 1;
+          }
+        });
+        const srcGuides = this.delegate.manualGuides.filter((g) => g.pageIndex === srcIdx && g.orientation === 'h');
+        for (const g of srcGuides) {
+          this.delegate.manualGuides.push({
+            id: `guide_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+            orientation: g.orientation,
+            pageIndex: dstIdx,
+            position: g.position,
+          });
+        }
         const pageEls = this.delegate.elements.filter((el) => (el.pageIndex ?? 0) === srcIdx);
         for (const el of pageEls) {
           const clone = JSON.parse(JSON.stringify(el));
@@ -357,6 +382,13 @@ class CollabActionDispatcher {
             el.pageIndex = toIdx;
           } else if ((el.pageIndex ?? 0) === toIdx) {
             el.pageIndex = fromIdx;
+          }
+        });
+        this.delegate.manualGuides.forEach((g) => {
+          if (g.pageIndex === fromIdx) {
+            g.pageIndex = toIdx;
+          } else if (g.pageIndex === toIdx) {
+            g.pageIndex = fromIdx;
           }
         });
         const tmpSize = this.delegate.pageSizes[fromIdx];
@@ -416,6 +448,11 @@ class CollabActionDispatcher {
           const incoming = [...action.payload.elements];
           this.delegate.elements.length = 0;
           this.delegate.elements.push(...incoming);
+        }
+        if (Array.isArray(action.payload.guides)) {
+          const incoming = [...action.payload.guides];
+          this.delegate.manualGuides.length = 0;
+          this.delegate.manualGuides.push(...incoming);
         }
         if (Array.isArray(action.payload.pageBackgrounds)) {
           const incoming = [...action.payload.pageBackgrounds];
@@ -518,10 +555,12 @@ class CollabActionDispatcher {
       case 'DOC_SYNC_FULL': {
         wsService.send({
           elements: this.delegate.elements,
+          guides: this.delegate.manualGuides,
           pageBackgrounds: this.delegate.pageBackgrounds,
           pageCount: this.delegate.pageCount,
           pageSize: this.delegate.docDefaultPageSize,
           pageSizes: this.delegate.pageSizes,
+          pageTitles: this.delegate.pageTitles,
           title: this.delegate.docTitle,
           type: 'docSync',
         });

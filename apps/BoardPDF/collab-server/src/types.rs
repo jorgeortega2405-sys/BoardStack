@@ -3,7 +3,7 @@ use serde_json::Value;
 
 pub const PALETTE: &[&str] = &[
     "#EF4444", "#F97316", "#F59E0B", "#10B981", "#06B6D4", "#3B82F6",
-    "#6366F1", "#8B5CF6", "#EC4899", "#14B8A6", "#84CC16", "#E11D48",
+    "#111827", "#475569", "#0F766E", "#14B8A6", "#84CC16", "#E11D48",
 ];
 
 pub const DEFAULT_MAX_COLLABORATORS: usize = 12;
@@ -60,6 +60,8 @@ pub enum ClientMessage {
     #[serde(rename_all = "camelCase")]
     DocSync {
         elements: Vec<Value>,
+        #[serde(default)]
+        guides: Option<Vec<Value>>,
         #[serde(default)]
         page_backgrounds: Option<Vec<String>>,
         #[serde(default)]
@@ -124,6 +126,8 @@ pub enum ServerMessage {
     DocSync {
         sender_client_id: String,
         elements: Vec<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        guides: Option<Vec<Value>>,
         page_backgrounds: Option<Vec<String>>,
         page_count: Option<usize>,
         page_size: Option<Value>,

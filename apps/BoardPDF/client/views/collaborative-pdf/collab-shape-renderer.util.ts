@@ -528,7 +528,25 @@ function renderShapeInner(el: ElementShape): string {
     const gradId = `shape-grad-${el.id}`;
     const hexes = fill.match(/#[a-fA-F0-9]{6}|#[a-fA-F0-9]{3}/g);
     if (hexes && hexes.length >= 2) {
-      gradDef = `<defs><linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${hexes[0]}"/><stop offset="100%" stop-color="${hexes[1]}"/></linearGradient></defs>`;
+      const angleMatch = fill.match(/linear-gradient\(\s*([+-]?\d+(?:\.\d+)?)deg\s*,/i);
+      const angleDeg = angleMatch ? parseFloat(angleMatch[1]) : 180;
+      const rad = (angleDeg * Math.PI) / 180;
+      const sin = Math.sin(rad);
+      const cos = Math.cos(rad);
+      const scale = Math.abs(sin) + Math.abs(cos);
+      const dx = 50 * scale * sin;
+      const dy = -50 * scale * cos;
+      const x1 = +(50 - dx).toFixed(2);
+      const y1 = +(50 - dy).toFixed(2);
+      const x2 = +(50 + dx).toFixed(2);
+      const y2 = +(50 + dy).toFixed(2);
+      const stopsHtml = hexes
+        .map((hex, idx) => {
+          const offset = Math.round((idx / (hexes.length - 1)) * 100);
+          return `<stop offset="${offset}%" stop-color="${hex}"/>`;
+        })
+        .join('');
+      gradDef = `<defs><linearGradient id="${gradId}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${stopsHtml}</linearGradient></defs>`;
       fill = `url(#${gradId})`;
     }
   }

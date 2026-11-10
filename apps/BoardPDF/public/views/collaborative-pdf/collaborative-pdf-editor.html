@@ -111,9 +111,8 @@
 <div class="collaborative-top-bar__right" >
 <div class="collab-presence-container" data-ref="collab-presence-container"></div>
 <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="Documento sin título" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " />
-<button type="button" class="component-button component-button--h40 collaborative-ai-btn" data-ref="btn-top-ai-generate" data-i18n-tooltip="collaborative.ai_btn_tooltip" data-i18n-aria="collaborative.ai_btn_aria">
+<button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-ai-generate" data-i18n-tooltip="collaborative.ai_btn_tooltip" data-i18n-aria="collaborative.ai_btn_aria">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-<span class="component-button__text" data-i18n="collaborative.ai_btn_label"></span>
 </button>
 <button type="button" class="component-button component-button--h40 collaborative-share-btn" data-ref="btn-share-link">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
@@ -604,7 +603,7 @@
 </button>
 <div class="collaborative-subtoolbar__divider" ></div>
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-chart-palette" data-tooltip="Cambiar paleta de colores" aria-label="Paleta">
-<span class="collaborative-color-picker-preview" data-ref="preview-chart-palette" data-gradient="linear-gradient(135deg, #3b82f6, #a855f7)"></span>
+<span class="collaborative-color-picker-preview" data-ref="preview-chart-palette" data-gradient="linear-gradient(135deg, #111827, #9ca3af)"></span>
 </button>
 </div>
 <div class="collaborative-context-group is-hidden" data-ref="context-group-page">
@@ -636,96 +635,11 @@
 <div class="collab-ruler-corner" data-ref="ruler-corner"></div>
 <canvas class="collab-ruler-top" data-ref="ruler-top" height="20"></canvas>
 <canvas class="collab-ruler-left" data-ref="ruler-left" width="20"></canvas>
+<div class="collab-ruler-guides-layer" data-ref="collab-ruler-guides-layer"></div>
+<div class="collab-ruler-badge collab-ruler-badge--top is-hidden" data-ref="ruler-badge-top"></div>
+<div class="collab-ruler-badge collab-ruler-badge--left is-hidden" data-ref="ruler-badge-left"></div>
 </div>
 <main class="collaborative-workspace" data-ref="collaborative-workspace">
-<div class="collab-guides-modal is-hidden" data-ref="collab-guides-modal">
-<div class="collab-guides-modal__header" >
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-guides-modal-back" aria-label="Volver">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-</button>
-<span class="collab-guides-modal__title" >Agregar guías</span>
-</div>
-<div class="collab-guides-presets" data-ref="collab-guides-presets">
-<button type="button" class="collab-guide-preset-card is-active" data-ref="card-guide-12-col" data-preset="12-col">
-<div class="collab-guide-preset-card__icon collab-guide-preset-card__icon--12" >
-<span class="collab-guide-col-num" >12</span>
-</div>
-<span class="collab-guide-preset-card__label" >12 columnas</span>
-</button>
-<button type="button" class="collab-guide-preset-card" data-ref="card-guide-3-col" data-preset="3-col">
-<div class="collab-guide-preset-card__icon collab-guide-preset-card__icon--3" >
-<span class="collab-guide-col-num" >3</span>
-</div>
-<span class="collab-guide-preset-card__label" >Tres columnas</span>
-</button>
-<button type="button" class="collab-guide-preset-card" data-ref="card-guide-3x3" data-preset="3x3">
-<div class="collab-guide-preset-card__icon collab-guide-preset-card__icon--3x3" >
-<span class="collab-guide-col-num" >3x3</span>
-</div>
-<span class="collab-guide-preset-card__label" >Cuadrícula de 3x3</span>
-</button>
-<button type="button" class="collab-guide-preset-card" data-ref="card-guide-custom" data-preset="custom">
-<div class="collab-guide-preset-card__icon collab-guide-preset-card__icon--custom" >
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-</div>
-<span class="collab-guide-preset-card__label" >Personalizar</span>
-</button>
-</div>
-<div class="collab-guides-custom-fields is-hidden" data-ref="collab-guides-custom-fields">
-<div class="collab-guides-field" >
-<span class="collab-guides-field__label" >Columnas</span>
-<input class="collab-guides-field__input" data-ref="input-guides-custom-cols" type="number" min="1" max="24" value="4" />
-</div>
-<div class="collab-guides-field" >
-<span class="collab-guides-field__label" >Filas</span>
-<input class="collab-guides-field__input" data-ref="input-guides-custom-rows" type="number" min="1" max="24" value="4" />
-</div>
-</div>
-<div class="collab-guides-modal__actions" >
-<button type="button" class="component-button component-button--primary component-button--h36 component-button--w-full collab-guides-btn-primary" data-ref="btn-guides-confirm">
-<span class="component-button__text" >Agregar guías</span>
-</button>
-<button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full collab-guides-btn-cancel" data-ref="btn-guides-cancel">
-<span class="component-button__text" >Cancelar</span>
-</button>
-</div>
-</div>
-<div class="collab-find-replace-card is-hidden" data-ref="collab-find-replace-card">
-<div class="collab-find-replace-card__header" >
-<span class="collab-find-replace-card__title" >Encontrar</span>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-find-replace-close" data-i18n-aria="common.close" aria-label="Cerrar">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="collab-find-replace-card__search-row" >
-<input class="collab-find-input" data-ref="input-find-search" type="text" placeholder="" />
-<div class="collab-find-nav-btns" >
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-find-prev" data-tooltip="Anterior" aria-label="Anterior">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28" data-ref="btn-find-next" data-tooltip="Siguiente" data-i18n-aria="common.next" aria-label="Siguiente">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-<div class="collab-find-replace-card__field" >
-<label class="collab-find-label" >Reemplazar con</label>
-<input class="collab-find-input" data-ref="input-find-replace" type="text" placeholder="" />
-</div>
-<label class="collab-find-checkbox-label" >
-<input class="collab-find-checkbox" data-ref="check-find-match-case" type="checkbox" />
-<span>Coincidir mayúsculas y minúsculas</span>
-</label>
-<div class="collab-find-replace-card__footer" >
-<button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-find-replace-all">
-<span class="component-button__text" >Reemplazar todo</span>
-</button>
-<button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-find-replace-one">
-<span class="component-button__text" >Reemplazar</span>
-</button>
-</div>
-<div class="collab-find-replace-card__status is-hidden" data-ref="txt-find-status"></div>
-</div>
 <div class="collab-layers-panel is-hidden" data-ref="collab-layers-panel">
 <div class="collab-layers-panel__header" >
 <div class="collab-layers-panel__title-group" >

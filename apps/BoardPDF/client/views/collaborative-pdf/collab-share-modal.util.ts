@@ -1,10 +1,29 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi } from '../../services/api.service.js';
+import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
 import { DocMember } from './collaborative-pdf.types.js';
-import { t } from '../../services/i18n.service.js';
+
+interface CollabShareFindState {
+  canReplace: boolean;
+  hasMatches: boolean;
+  matchCase: boolean;
+  replaceTerm: string;
+  searchTerm: string;
+  statusText: string;
+}
+
+interface CollabShareFindOptions extends CollabShareFindState {
+  onMatchCaseChange: (matchCase: boolean) => void;
+  onNext: () => void;
+  onPrev: () => void;
+  onReplaceAll: () => void;
+  onReplaceOne: () => void;
+  onReplaceTermChange: (term: string) => void;
+  onSearchTermChange: (term: string) => void;
+}
 
 interface CollabShareModalOptions {
   activePageIndex: number;
@@ -12,11 +31,13 @@ interface CollabShareModalOptions {
   docId: string;
   docMembers: DocMember[];
   docTitle: string;
+  findReplace?: CollabShareFindOptions;
+  initialView?: 'download' | 'find-replace' | 'main';
   isDocOwner: boolean;
   onAccessLevelChange: (level: 'anyone_with_link' | 'restricted') => void;
   onClose: () => void;
+  onFindOpen?: () => void;
   onMembersChange: (members: DocMember[]) => void;
-  openInDownloadView?: boolean;
   pageCount: number;
   selectedPageIndex: number | null;
 }
@@ -24,7 +45,9 @@ interface CollabShareModalOptions {
 interface CollabSharePopoverHandle {
   cleanup: () => void;
   element: HTMLElement;
-  openDownloadView: () => void;
+  getActiveView: () => 'download' | 'find-replace' | 'main';
+  openView: (view: 'download' | 'find-replace' | 'main') => void;
+  syncFindState: (state: CollabShareFindState) => void;
 }
 
 function createCollabSharePopover(options: CollabShareModalOptions): CollabSharePopoverHandle {
@@ -33,11 +56,13 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     docAccessLevel,
     docId,
     docTitle,
+    findReplace,
+    initialView = 'main',
     isDocOwner,
     onAccessLevelChange,
     onClose,
+    onFindOpen,
     onMembersChange,
-    openInDownloadView = false,
     pageCount,
     selectedPageIndex,
   } = options;
@@ -140,22 +165,28 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
         </div>
 
         <div class="tool-sidebar__footer">
+          <button type="button" class="collab-share-download-btn" data-ref="btn-collab-open-find-replace">
+            <div class="collab-share-download-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <span class="collab-share-download-text">${t('collaborative.find_replace_menu')}</span>
+          </button>
           <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
             <div class="collab-share-download-icon">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </div>
-            <span class="collab-share-download-text">Descargar</span>
+            <span class="collab-share-download-text">${t('collaborative.download_menu')}</span>
           </button>
         </div>
       </div>
 
       <div class="tool-sidebar__panel is-hidden" data-ref="collab-share-view-download">
         <div class="tool-sidebar__header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-download-back" aria-label="Volver al menú compartir">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-download-back" aria-label="${t('collaborative.back_to_share')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <h2 class="tool-sidebar__title">Descargar</h2>
-          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-download-close" data-i18n-aria="common.close" aria-label="Cerrar">
+          <h2 class="tool-sidebar__title">${t('collaborative.download_menu')}</h2>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-download-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
@@ -219,9 +250,67 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
         <div class="tool-sidebar__footer">
           <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-confirm-download">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            <span>Descargar</span>
+            <span>${t('collaborative.download_menu')}</span>
           </button>
           <div class="banner banner--danger is-hidden" data-ref="collab-download-error"></div>
+        </div>
+      </div>
+
+      <div class="tool-sidebar__panel is-hidden" data-ref="collab-share-view-find-replace">
+        <div class="tool-sidebar__header">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-find-back" aria-label="${t('collaborative.back_to_share')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <h2 class="tool-sidebar__title">${t('collaborative.find_replace_title')}</h2>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-find-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">${t('collaborative.find_label')}</div>
+            <div class="collab-share-find-row">
+              <div class="collab-share-search-box collab-share-search-box--find">
+                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="collab-share-search-input" data-ref="input-find-search" type="text" placeholder="${t('collaborative.find_placeholder')}" autocomplete="off" />
+                <span class="collab-share-find-count is-hidden" data-ref="txt-find-status"></span>
+              </div>
+              <div class="collab-share-find-nav">
+                <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collab-share-find-nav-btn" data-ref="btn-find-prev" data-tooltip="${t('collaborative.find_prev')}" aria-label="${t('collaborative.find_prev')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+                <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 collab-share-find-nav-btn" data-ref="btn-find-next" data-tooltip="${t('collaborative.find_next')}" aria-label="${t('collaborative.find_next')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">${t('collaborative.replace_label')}</div>
+            <div class="collab-share-search-box">
+              <input class="collab-share-search-input" data-ref="input-find-replace" type="text" placeholder="${t('collaborative.replace_placeholder')}" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <div class="collab-download-options-list">
+              <label class="collab-download-checkbox-row collab-share-find-option">
+                <input class="component-checkbox" data-ref="check-find-match-case" type="checkbox" />
+                <div class="collab-download-checkbox-info">
+                  <span class="collab-download-checkbox-title">${t('collaborative.match_case')}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__footer">
+          <div class="collab-share-find-actions">
+            <button type="button" class="component-button component-button--secondary component-button--h44 collab-share-find-action-btn" data-ref="btn-find-replace-one">${t('collaborative.replace_one')}</button>
+            <button type="button" class="component-button component-button--black component-button--h44 collab-share-find-action-btn" data-ref="btn-find-replace-all">${t('collaborative.replace_all')}</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -241,12 +330,17 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const btnShareClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-close"]');
   const btnShareDownloadClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-close"]');
+  const btnShareFindClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-find-close"]');
 
   btnShareClose?.addEventListener('click', (e) => {
     e.stopPropagation();
     closePopover();
   });
   btnShareDownloadClose?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closePopover();
+  });
+  btnShareFindClose?.addEventListener('click', (e) => {
     e.stopPropagation();
     closePopover();
   });
@@ -259,7 +353,13 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const onOutsidePointerDown = (e: PointerEvent) => {
     const target = e.target as HTMLElement;
-    if (popover && !popover.contains(target) && !target.closest('[data-ref="btn-share-link"]')) {
+    if (
+      popover &&
+      !popover.contains(target) &&
+      !target.closest('[data-ref="btn-share-link"]') &&
+      !target.closest('[data-ref="btn-menu-file-search"]') &&
+      !target.closest('[data-ref="btn-menu-file-download"]')
+    ) {
       closePopover();
     }
   };
@@ -367,7 +467,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
         const data = await res.json();
         const users: Array<{ avatar_url?: string | null; email: string; id: number; username: string }> = data.users || [];
         if (users.length === 0) {
-          searchDropdown.innerHTML = `<div style="padding: 10px; font-size: 13px; color: var(--text-muted); text-align: center;">No se encontraron usuarios</div>`;
+          searchDropdown.innerHTML = `<div class="collab-share-search-empty">${t('collaborative.share_no_users_found')}</div>`;
           searchDropdown.classList.remove('is-hidden');
         } else {
           searchDropdown.innerHTML = '';
@@ -380,7 +480,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
                 <span class="collab-share-user-item__name">${u.username}</span>
                 <span class="collab-share-user-item__email">${u.email}</span>
               </div>
-              <span class="component-button component-button--h30 component-button--black" style="font-size: 12px; padding: 0 10px;">Agregar</span>
+              <span class="component-button component-button--h30 component-button--black collab-share-user-add-badge">${t('collaborative.share_add_user_btn')}</span>
             `;
             item.addEventListener('click', async () => {
               const addRes = await postApi(API_ROUTES.collaborativeDocs.members(docId), { role: 'editor', userId: u.id });
@@ -455,8 +555,19 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const viewMain = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-main"]');
   const viewDownload = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-download"]');
+  const viewFindReplace = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-find-replace"]');
+  const findOpenBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-open-find-replace"]');
   const downloadBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
   const btnShareDownloadBack = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-back"]');
+  const btnShareFindBack = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-find-back"]');
+  const inputFindSearch = popover.querySelector<HTMLInputElement>('[data-ref="input-find-search"]');
+  const inputFindReplace = popover.querySelector<HTMLInputElement>('[data-ref="input-find-replace"]');
+  const checkFindMatchCase = popover.querySelector<HTMLInputElement>('[data-ref="check-find-match-case"]');
+  const txtFindStatus = popover.querySelector<HTMLElement>('[data-ref="txt-find-status"]');
+  const btnFindPrev = popover.querySelector<HTMLButtonElement>('[data-ref="btn-find-prev"]');
+  const btnFindNext = popover.querySelector<HTMLButtonElement>('[data-ref="btn-find-next"]');
+  const btnFindReplaceOne = popover.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-one"]');
+  const btnFindReplaceAll = popover.querySelector<HTMLButtonElement>('[data-ref="btn-find-replace-all"]');
   const toggleDownloadType = popover.querySelector<HTMLElement>('[data-ref="toggle-download-type"]');
   const btnTypeDigital = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-digital"]');
   const btnTypePrint = popover.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-print"]');
@@ -471,24 +582,118 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   const downloadError = popover.querySelector<HTMLElement>('[data-ref="collab-download-error"]');
   const btnConfirmDownload = popover.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
 
-  const openDownloadViewAction = () => {
-    if (viewMain && viewDownload) {
-      viewMain.classList.add('is-hidden');
-      viewDownload.classList.remove('is-hidden');
+  let activeView: 'download' | 'find-replace' | 'main' = 'main';
+
+  const syncFindState = (state: CollabShareFindState) => {
+    if (inputFindSearch && inputFindSearch.value !== state.searchTerm) {
+      inputFindSearch.value = state.searchTerm;
+    }
+    if (inputFindReplace && inputFindReplace.value !== state.replaceTerm) {
+      inputFindReplace.value = state.replaceTerm;
+    }
+    if (checkFindMatchCase && checkFindMatchCase.checked !== state.matchCase) {
+      checkFindMatchCase.checked = state.matchCase;
+    }
+    if (txtFindStatus) {
+      txtFindStatus.textContent = state.statusText;
+      txtFindStatus.classList.toggle('is-hidden', !state.statusText);
+    }
+    if (btnFindPrev) {
+      btnFindPrev.disabled = !state.hasMatches;
+    }
+    if (btnFindNext) {
+      btnFindNext.disabled = !state.hasMatches;
+    }
+    if (btnFindReplaceOne) {
+      btnFindReplaceOne.disabled = !state.hasMatches || !state.canReplace;
+    }
+    if (btnFindReplaceAll) {
+      btnFindReplaceAll.disabled = !state.hasMatches || !state.canReplace;
     }
   };
 
-  if (openInDownloadView) {
-    openDownloadViewAction();
+  if (findReplace) {
+    syncFindState(findReplace);
   }
 
-  downloadBtn?.addEventListener('click', openDownloadViewAction);
+  const openView = (view: 'download' | 'find-replace' | 'main') => {
+    activeView = view;
+    viewMain?.classList.toggle('is-hidden', view !== 'main');
+    viewDownload?.classList.toggle('is-hidden', view !== 'download');
+    viewFindReplace?.classList.toggle('is-hidden', view !== 'find-replace');
+    if (view === 'find-replace') {
+      onFindOpen?.();
+      requestAnimationFrame(() => {
+        inputFindSearch?.focus();
+        inputFindSearch?.select();
+      });
+    }
+  };
+
+  if (initialView !== 'main') {
+    openView(initialView);
+  }
+
+  findOpenBtn?.addEventListener('click', () => {
+    openView('find-replace');
+  });
+
+  downloadBtn?.addEventListener('click', () => {
+    openView('download');
+  });
 
   btnShareDownloadBack?.addEventListener('click', () => {
-    if (viewMain && viewDownload) {
-      viewDownload.classList.add('is-hidden');
-      viewMain.classList.remove('is-hidden');
+    openView('main');
+  });
+
+  btnShareFindBack?.addEventListener('click', () => {
+    openView('main');
+  });
+
+  inputFindSearch?.addEventListener('input', () => {
+    findReplace?.onSearchTermChange(inputFindSearch.value);
+  });
+
+  inputFindSearch?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        findReplace?.onPrev();
+      } else {
+        findReplace?.onNext();
+      }
     }
+  });
+
+  inputFindReplace?.addEventListener('input', () => {
+    findReplace?.onReplaceTermChange(inputFindReplace.value);
+  });
+
+  inputFindReplace?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      findReplace?.onReplaceOne();
+    }
+  });
+
+  checkFindMatchCase?.addEventListener('change', () => {
+    findReplace?.onMatchCaseChange(checkFindMatchCase.checked);
+  });
+
+  btnFindPrev?.addEventListener('click', () => {
+    findReplace?.onPrev();
+  });
+
+  btnFindNext?.addEventListener('click', () => {
+    findReplace?.onNext();
+  });
+
+  btnFindReplaceOne?.addEventListener('click', () => {
+    findReplace?.onReplaceOne();
+  });
+
+  btnFindReplaceAll?.addEventListener('click', () => {
+    findReplace?.onReplaceAll();
   });
 
   let currentDownloadType: 'digital' | 'print' = 'digital';
@@ -623,9 +828,11 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   return {
     cleanup,
     element: popover,
-    openDownloadView: openDownloadViewAction,
+    getActiveView: () => activeView,
+    openView,
+    syncFindState,
   };
 }
 
 export { createCollabSharePopover };
-export type { CollabShareModalOptions, CollabSharePopoverHandle };
+export type { CollabShareFindOptions, CollabShareFindState, CollabShareModalOptions, CollabSharePopoverHandle };

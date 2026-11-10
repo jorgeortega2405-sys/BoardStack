@@ -1,5 +1,6 @@
 import { escapeHtml } from '../../services/api.service.js';
-import { hideElement, showElement } from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
+import { hideElement, setupDropdown, showElement } from '../../utils/dom.util.js';
 import { CHART_PALETTES, ChartType, ElementChart, ElementChartDataSeries, ElementChartOptions } from './collaborative-pdf.types.js';
 
 function switchChartInspectorTab(
@@ -27,6 +28,31 @@ function switchChartInspectorTab(
   }
 }
 
+function switchChartAxisTab(
+  axis: 'xaxis' | 'yaxis',
+  queryPanel: <T extends HTMLElement>(selector: string) => T | null
+): void {
+  const tabToggle = queryPanel<HTMLElement>('[data-ref="chart-axis-tabs-toggle"]');
+  const tabX = queryPanel<HTMLElement>('[data-ref="chart-tab-content-xaxis"]');
+  const tabY = queryPanel<HTMLElement>('[data-ref="chart-tab-content-yaxis"]');
+  const btnX = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-xaxis"]');
+  const btnY = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-yaxis"]');
+
+  if (axis === 'xaxis') {
+    if (tabToggle) tabToggle.setAttribute('data-active', '0');
+    if (tabX) showElement(tabX);
+    if (tabY) hideElement(tabY);
+    btnX?.classList.add('is-active');
+    btnY?.classList.remove('is-active');
+  } else {
+    if (tabToggle) tabToggle.setAttribute('data-active', '1');
+    if (tabX) hideElement(tabX);
+    if (tabY) showElement(tabY);
+    btnY?.classList.add('is-active');
+    btnX?.classList.remove('is-active');
+  }
+}
+
 function renderChartSpreadsheet(
   el: ElementChart,
   queryPanel: <T extends HTMLElement>(selector: string) => T | null,
@@ -44,15 +70,15 @@ function renderChartSpreadsheet(
 
   const trH = document.createElement('tr');
   trH.innerHTML = `
-    <th style="width: 24px; text-align: center;">#</th>
-    <th style="min-width: 90px;">Categoría</th>
+    <th class="collaborative-chart-table__col-index">#</th>
+    <th class="collaborative-chart-table__col-cat">${escapeHtml(t('collaborative.chart_col_category'))}</th>
   `;
 
   el.series.forEach((s, sIdx) => {
     const th = document.createElement('th');
-    th.style.minWidth = '75px';
+    th.className = 'collaborative-chart-table__col-series';
     const col = s.color || palette[sIdx % palette.length];
-    th.innerHTML = `<span style="color: ${col}; font-weight: 700;">●</span> ${escapeHtml(s.name || `Serie ${sIdx + 1}`)}`;
+    th.innerHTML = `<svg class="collaborative-chart-table__dot-svg" viewBox="0 0 8 8" width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="${escapeHtml(col)}"></circle></svg> ${escapeHtml(s.name || `${t('collaborative.chart_series_prefix')} ${sIdx + 1}`)}`;
     trH.appendChild(th);
   });
   tableHead.appendChild(trH);
@@ -62,8 +88,8 @@ function renderChartSpreadsheet(
     const dotCol = palette[rIdx % palette.length];
 
     const tdDot = document.createElement('td');
-    tdDot.style.textAlign = 'center';
-    tdDot.innerHTML = `<span class="collaborative-chart-row-dot" style="background-color: ${dotCol};"></span>`;
+    tdDot.className = 'collaborative-chart-table__cell-index';
+    tdDot.innerHTML = `<svg class="collaborative-chart-table__dot-svg" viewBox="0 0 8 8" width="8" height="8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="${escapeHtml(dotCol)}"></circle></svg>`;
     tr.appendChild(tdDot);
 
     const tdCat = document.createElement('td');
@@ -102,26 +128,28 @@ function syncChartInspector(
 ): void {
   const lblType = queryPanel<HTMLElement>('[data-ref="label-current-chart-type"]');
   const typeNames: Record<ChartType, string> = {
-    'area-overlap': 'Área sin apilar',
-    'area-stacked': 'Área apilada',
-    'bar-grouped': 'Columnas agrupadas',
-    'bar-horizontal': 'Barras horizontales',
-    'bar-stacked': 'Barras apiladas',
-    'bar-vertical': 'Barras verticales',
-    'donut': 'Anillos',
-    'line': 'Líneas',
-    'line-multi': 'Varias líneas',
-    'pie': 'Pastel',
-    'progress-bar': 'Barra de progreso',
-    'progress-gauge': 'Indicador radial',
-    'progress-ring': 'Anillo de progreso',
-    'scatter': 'Dispersión',
+    'area-overlap': t('collaborative.chart_type_area_overlap'),
+    'area-stacked': t('collaborative.chart_type_area_stacked'),
+    'bar-grouped': t('collaborative.chart_type_bar_grouped'),
+    'bar-horizontal': t('collaborative.chart_type_bar_horizontal'),
+    'bar-stacked': t('collaborative.chart_type_bar_stacked'),
+    'bar-vertical': t('collaborative.chart_type_bar_vertical'),
+    'donut': t('collaborative.chart_type_donut'),
+    'line': t('collaborative.chart_type_line'),
+    'line-multi': t('collaborative.chart_type_line_multi'),
+    'pie': t('collaborative.chart_type_pie'),
+    'progress-bar': t('collaborative.chart_type_progress_bar'),
+    'progress-gauge': t('collaborative.chart_type_progress_gauge'),
+    'progress-ring': t('collaborative.chart_type_progress_ring'),
+    'scatter': t('collaborative.chart_type_scatter'),
   };
-  if (lblType) lblType.textContent = typeNames[el.chartType] || 'Barras verticales';
+  if (lblType) lblType.textContent = typeNames[el.chartType] || t('collaborative.chart_type_bar_vertical');
 
   const pickBtns = queryPanelAll<HTMLButtonElement>('[data-ref="btn-pick-chart-type"]');
   pickBtns.forEach((btn) => {
-    btn.classList.toggle('is-selected', btn.getAttribute('data-chart-type') === el.chartType);
+    const isCurrent = btn.getAttribute('data-chart-type') === el.chartType;
+    btn.classList.toggle('is-selected', isCurrent);
+    btn.classList.toggle('is-active', isCurrent);
   });
 
   const paletteBtns = queryPanelAll<HTMLButtonElement>('[data-ref="btn-chart-palette-opt"]');
@@ -167,46 +195,50 @@ function bindChartInspectorEvents(
   onApplyChartPalette: (el: ElementChart) => void
 ): void {
   const btnBack = queryPanel<HTMLButtonElement>('[data-ref="btn-chart-inspector-back"]');
-  const btnClose = queryPanel<HTMLButtonElement>('[data-ref="btn-chart-inspector-close"]');
   btnBack?.addEventListener('click', restoreElementsMain, { signal });
-  btnClose?.addEventListener('click', restoreElementsMain, { signal });
 
+  const typeDropdownWrapper = queryPanel<HTMLElement>('[data-ref="dropdown-wrapper-chart-type"]');
   const btnTypeDropdown = queryPanel<HTMLButtonElement>('[data-ref="btn-chart-type-dropdown"]');
+  const typeBackdrop = queryPanel<HTMLElement>('[data-ref="dropdown-backdrop-chart-type"]');
   const typePopup = queryPanel<HTMLElement>('[data-ref="chart-type-popup"]');
-  btnTypeDropdown?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (typePopup) typePopup.classList.toggle('is-hidden');
-  }, { signal });
-
-  document.addEventListener('click', () => {
-    if (typePopup) typePopup.classList.add('is-hidden');
-  }, { signal });
-
-  const typeItems = queryPanelAll<HTMLButtonElement>('[data-ref="btn-pick-chart-type"]');
-  typeItems.forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const newType = btn.getAttribute('data-chart-type') as ChartType;
+  const chartTypeDropdown = setupDropdown(typeDropdownWrapper, {
+    backdrop: typeBackdrop,
+    isSelect: true,
+    matchWidth: true,
+    menu: typePopup,
+    trigger: btnTypeDropdown,
+    onSelect: (val) => {
+      const newType = val as ChartType;
       const el = getSelectedChart();
-      if (!newType || !el) return;
+      if (!newType || !el) return false;
       el.chartType = newType;
       onUpdateChartSvg(el);
       syncChartInspector(el, queryPanel, queryPanelAll, onUpdateChartSvg);
-      if (typePopup) typePopup.classList.add('is-hidden');
-    }, { signal });
+      typePopup?.querySelectorAll<HTMLElement>('[data-ref="btn-pick-chart-type"]').forEach((item) => {
+        const isCurrent = item.getAttribute('data-chart-type') === newType;
+        item.classList.toggle('is-selected', isCurrent);
+        item.classList.toggle('is-active', isCurrent);
+      });
+    },
   });
+  signal?.addEventListener('abort', () => chartTypeDropdown.destroy(), { once: true });
 
   const btnTabData = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-data"]');
   const btnTabCust = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-customize"]');
   btnTabData?.addEventListener('click', () => switchChartInspectorTab('data', queryPanel), { signal });
   btnTabCust?.addEventListener('click', () => switchChartInspectorTab('customize', queryPanel), { signal });
 
+  const btnTabXAxis = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-xaxis"]');
+  const btnTabYAxis = queryPanel<HTMLButtonElement>('[data-ref="btn-tab-chart-yaxis"]');
+  btnTabXAxis?.addEventListener('click', () => switchChartAxisTab('xaxis', queryPanel), { signal });
+  btnTabYAxis?.addEventListener('click', () => switchChartAxisTab('yaxis', queryPanel), { signal });
+
   const btnAddRow = queryPanel<HTMLButtonElement>('[data-ref="btn-chart-add-row"]');
   btnAddRow?.addEventListener('click', () => {
     const el = getSelectedChart();
     if (!el) return;
     const nextIdx = el.labels.length + 1;
-    el.labels.push(`Elemento ${nextIdx}`);
+    el.labels.push(`${t('collaborative.chart_item_prefix')} ${nextIdx}`);
     el.series.forEach((s) => s.values.push(20 + Math.round(Math.random() * 50)));
     renderChartSpreadsheet(el, queryPanel, onUpdateChartSvg);
     onUpdateChartSvg(el);
@@ -221,7 +253,7 @@ function bindChartInspectorEvents(
     const pal = CHART_PALETTES[scheme] || CHART_PALETTES.blue;
     el.series.push({
       color: pal[sIdx % pal.length],
-      name: `Serie ${sIdx + 1}`,
+      name: `${t('collaborative.chart_series_prefix')} ${sIdx + 1}`,
       values: el.labels.map(() => 15 + Math.round(Math.random() * 60)),
     });
     renderChartSpreadsheet(el, queryPanel, onUpdateChartSvg);
@@ -270,14 +302,6 @@ function bindChartInspectorEvents(
     }, { signal });
   });
 
-  const accordions = queryPanelAll<HTMLElement>('.collaborative-accordion');
-  accordions.forEach((acc) => {
-    const hBtn = acc.querySelector<HTMLButtonElement>('[data-ref="btn-accordion-toggle"]');
-    hBtn?.addEventListener('click', () => {
-      acc.classList.toggle('is-open');
-    }, { signal });
-  });
-
   const bindOptInput = (ref: string, key: keyof ElementChartOptions, isNum = false) => {
     const inp = queryPanel<HTMLInputElement>(`[data-ref="${ref}"]`);
     inp?.addEventListener('input', () => {
@@ -314,4 +338,4 @@ function bindChartInspectorEvents(
   bindOptSwitch('input-chart-gridlines', 'showGridLines');
 }
 
-export { bindChartInspectorEvents, renderChartSpreadsheet, switchChartInspectorTab, syncChartInspector };
+export { bindChartInspectorEvents, renderChartSpreadsheet, switchChartAxisTab, switchChartInspectorTab, syncChartInspector };

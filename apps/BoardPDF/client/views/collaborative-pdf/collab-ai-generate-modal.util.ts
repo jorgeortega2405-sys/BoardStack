@@ -23,18 +23,19 @@ function openCollabAiGenerateModal(options: CollabAiGenerateOptions): void {
   const tokensRow = document.createElement('div');
   tokensRow.className = 'collab-ai-modal__tokens-row';
 
-  const tokenPill = document.createElement('div');
-  tokenPill.className = 'collab-ai-token-pill';
+  const tokenPill = document.createElement('span');
+  tokenPill.className = 'component-badge component-badge--sm';
   tokenPill.setAttribute('data-ref', 'ai-token-balance-pill');
 
   const tokenIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  tokenIcon.setAttribute('class', 'component-icon');
+  tokenIcon.setAttribute('class', 'component-icon component-badge__icon');
   tokenIcon.setAttribute('aria-hidden', 'true');
   const tokenUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
   tokenUse.setAttribute('href', '/icons.svg#bolt');
   tokenIcon.appendChild(tokenUse);
 
   const tokenText = document.createElement('span');
+  tokenText.className = 'component-badge__text';
   tokenText.setAttribute('data-ref', 'txt-ai-token-balance');
   if (typeof currentUser?.ai_tokens_balance === 'number') {
     tokenText.textContent = t('collaborative.ai_tokens_available', { balance: String(currentUser.ai_tokens_balance) });
@@ -81,37 +82,34 @@ function openCollabAiGenerateModal(options: CollabAiGenerateOptions): void {
     modeHeading.textContent = t('collaborative.ai_mode_label');
     modeGroup.appendChild(modeHeading);
 
-    const modeOptions = document.createElement('div');
-    modeOptions.className = 'collab-ai-mode-options';
+    const modeTabs = document.createElement('div');
+    modeTabs.className = 'component-tabs';
+    modeTabs.setAttribute('data-ref', 'ai-mode-toggle');
+    modeTabs.setAttribute('data-mode', selectedMode);
 
-    const buildModeOption = (value: 'append' | 'replace', labelText: string): HTMLLabelElement => {
-      const optLabel = document.createElement('label');
-      optLabel.className = 'collab-ai-mode-option';
+    const modeButtons: HTMLButtonElement[] = [];
 
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.className = 'collab-ai-mode-radio';
-      radio.name = 'collab-ai-mode';
-      radio.value = value;
-      radio.checked = selectedMode === value;
-      radio.setAttribute('data-ref', `radio-ai-mode-${value}`);
-      radio.addEventListener('change', () => {
-        if (radio.checked) {
-          selectedMode = value;
+    const buildModeTab = (value: 'append' | 'replace', labelText: string): HTMLButtonElement => {
+      const tabBtn = document.createElement('button');
+      tabBtn.type = 'button';
+      tabBtn.className = `component-tab${selectedMode === value ? ' is-active' : ''}`;
+      tabBtn.setAttribute('data-ref', `btn-ai-mode-${value}`);
+      tabBtn.setAttribute('data-mode', value);
+      tabBtn.textContent = labelText;
+      tabBtn.addEventListener('click', () => {
+        selectedMode = value;
+        modeTabs.setAttribute('data-mode', value);
+        for (const btn of modeButtons) {
+          btn.classList.toggle('is-active', btn === tabBtn);
         }
       });
-
-      const span = document.createElement('span');
-      span.textContent = labelText;
-
-      optLabel.appendChild(radio);
-      optLabel.appendChild(span);
-      return optLabel;
+      modeButtons.push(tabBtn);
+      return tabBtn;
     };
 
-    modeOptions.appendChild(buildModeOption('append', t('collaborative.ai_mode_append')));
-    modeOptions.appendChild(buildModeOption('replace', t('collaborative.ai_mode_replace')));
-    modeGroup.appendChild(modeOptions);
+    modeTabs.appendChild(buildModeTab('append', t('collaborative.ai_mode_append')));
+    modeTabs.appendChild(buildModeTab('replace', t('collaborative.ai_mode_replace')));
+    modeGroup.appendChild(modeTabs);
     root.appendChild(modeGroup);
   }
 

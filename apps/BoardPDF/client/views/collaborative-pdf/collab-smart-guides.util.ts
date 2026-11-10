@@ -1,4 +1,28 @@
-import { EditorElement, ElementChart, ElementImage, ElementShape, ElementTable, ElementText } from './collaborative-pdf.types.js';
+import { EditorElement, ElementChart, ElementImage, ElementShape, ElementTable, ElementText, ManualGuide } from './collaborative-pdf.types.js';
+
+function getManualGuideCoordsForPage(
+  pageIndex: number,
+  pageW: number,
+  manualGuides: ManualGuide[],
+  pageSizes?: Array<{ height: number; width: number }>
+): { xCoords: number[]; yCoords: number[] } {
+  const xCoords: number[] = [];
+  const yCoords: number[] = [];
+
+  for (const g of manualGuides) {
+    if (g.orientation === 'h') {
+      if ((g.pageIndex ?? 0) === pageIndex) {
+        yCoords.push(g.position);
+      }
+    } else {
+      const refW = pageSizes?.[g.pageIndex ?? 0]?.width ?? pageW;
+      const offsetX = Math.abs(refW - pageW) < 2 ? 0 : (pageW - refW) / 2;
+      xCoords.push(g.position + offsetX);
+    }
+  }
+
+  return { xCoords, yCoords };
+}
 
 function renderActiveSmartGuides(
   pageIndex: number,
@@ -8,7 +32,9 @@ function renderActiveSmartGuides(
   height: number,
   otherElements: Array<ElementChart | ElementImage | ElementShape | ElementTable | ElementText>,
   pageDim: { height: number; width: number },
-  container: HTMLElement
+  container: HTMLElement,
+  manualGuides: ManualGuide[] = [],
+  pageSizes?: Array<{ height: number; width: number }>
 ): void {
   const guidesSvg = container.querySelector<SVGElement>(`[data-ref="guides-svg-${pageIndex}"]`);
   if (!guidesSvg) return;
@@ -18,7 +44,7 @@ function renderActiveSmartGuides(
   const pageW = pageDim.width;
   const pageH = pageDim.height;
   const margin = 38;
-  const linesToDraw: Array<{ x1: number; x2: number; y1: number; y2: number }> = [];
+  const linesToDraw: Array<{ isManual?: boolean; x1: number; x2: number; y1: number; y2: number }> = [];
 
   const myLeft = x;
   const myCenter = x + width / 2;
@@ -46,6 +72,30 @@ function renderActiveSmartGuides(
       y1: pageH / 2,
       y2: pageH / 2,
     });
+  }
+
+  const { xCoords: manualXs, yCoords: manualYs } = getManualGuideCoordsForPage(pageIndex, pageW, manualGuides, pageSizes);
+  for (const gx of manualXs) {
+    if (isClose(myLeft, gx) || isClose(myCenter, gx) || isClose(myRight, gx)) {
+      linesToDraw.push({
+        isManual: true,
+        x1: gx,
+        x2: gx,
+        y1: 0,
+        y2: pageH,
+      });
+    }
+  }
+  for (const gy of manualYs) {
+    if (isClose(myTop, gy) || isClose(myMiddle, gy) || isClose(myBottom, gy)) {
+      linesToDraw.push({
+        isManual: true,
+        x1: 0,
+        x2: pageW,
+        y1: gy,
+        y2: gy,
+      });
+    }
   }
 
   if (isClose(myLeft, margin) || isClose(myRight, margin) || isClose(myCenter, margin)) {
@@ -130,12 +180,12 @@ function renderActiveSmartGuides(
 
   const drawnLineKeys = new Set<string>();
   for (const l of linesToDraw) {
-    const key = `${l.x1}_${l.y1}_${l.x2}_${l.y2}`;
+    const key = `${l.x1}_${l.y1}_${l.x2}_${l.y2}_${l.isManual ? 'm' : 's'}`;
     if (drawnLineKeys.has(key)) continue;
     drawnLineKeys.add(key);
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('class', 'collaborative-guide-line');
+    line.setAttribute('class', l.isManual ? 'collaborative-guide-line collaborative-guide-line--manual' : 'collaborative-guide-line');
     line.setAttribute('x1', l.x1.toString());
     line.setAttribute('y1', l.y1.toString());
     line.setAttribute('x2', l.x2.toString());
@@ -272,7 +322,9 @@ function applySmartGuides(
   rawY: number,
   elements: EditorElement[],
   pageDim: { height: number; width: number },
-  container: HTMLElement
+  container: HTMLElement,
+  manualGuides: ManualGuide[] = [],
+  pageSizes?: Array<{ height: number; width: number }>
 ): { x: number; y: number } {
   const pageIndex = item.pageIndex ?? 0;
   const width = item.width || 100;
@@ -287,6 +339,7 @@ function applySmartGuides(
 
   const pageW = pageDim.width;
   const pageH = pageDim.height;
+  const { xCoords: manualXs, yCoords: manualYs } = getManualGuideCoordsForPage(pageIndex, pageW, manualGuides, pageSizes);
   let bestDiffX: number | null = null;
   let snappedX = rawX;
 
@@ -306,6 +359,12 @@ function applySmartGuides(
   checkSnapX(rawX + width, pageW - margin);
   checkSnapX(rawX + width / 2, margin);
   checkSnapX(rawX + width / 2, pageW - margin);
+
+  for (const gx of manualXs) {
+    checkSnapX(rawX, gx);
+    checkSnapX(rawX + width / 2, gx);
+    checkSnapX(rawX + width, gx);
+  }
 
   for (const other of otherElements) {
     const oW = other.width || 100;
@@ -350,6 +409,12 @@ function applySmartGuides(
   checkSnapY(rawY + height / 2, margin);
   checkSnapY(rawY + height / 2, pageH - margin);
 
+  for (const gy of manualYs) {
+    checkSnapY(rawY, gy);
+    checkSnapY(rawY + height / 2, gy);
+    checkSnapY(rawY + height, gy);
+  }
+
   for (const other of otherElements) {
     const oH = other.height || 40;
     const oTop = other.y;
@@ -373,7 +438,7 @@ function applySmartGuides(
     snappedY = rawY + bestDiffY;
   }
 
-  renderActiveSmartGuides(pageIndex, snappedX, snappedY, width, height, otherElements, pageDim, container);
+  renderActiveSmartGuides(pageIndex, snappedX, snappedY, width, height, otherElements, pageDim, container, manualGuides, pageSizes);
 
   return { x: snappedX, y: snappedY };
 }

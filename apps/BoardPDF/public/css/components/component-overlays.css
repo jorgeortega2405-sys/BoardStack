@@ -98,6 +98,29 @@
   gap: 8px;
 }
 
+.menu-panel--dropdown .menu-panel__list--grid,
+.menu-panel__list--grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 10px;
+}
+
+.menu-panel--dropdown .menu-panel__list--cols-2,
+.menu-panel__list--cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.menu-panel--dropdown .menu-panel__list--cols-3,
+.menu-panel__list--cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.menu-panel--dropdown .menu-panel__list--cols-4,
+.menu-panel__list--cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 /* Panel de Notificaciones */
 
 /* ==========================================================================
@@ -260,6 +283,59 @@
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.menu-item--card {
+  align-items: center;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  flex-direction: column;
+  gap: 4px;
+  height: auto;
+  justify-content: center;
+  min-height: 0;
+  padding: 8px 4px;
+  text-align: center;
+  width: 100%;
+}
+
+.menu-item--card:hover {
+  background-color: var(--bg-hover);
+  border-color: #000000;
+  color: var(--text-primary);
+}
+
+.menu-item--card.is-active,
+.menu-item--card.is-selected {
+  background-color: var(--bg-selected);
+  border-color: #000000;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+[data-theme='dark'] .menu-item--card:hover,
+[data-theme='dark'] .menu-item--card.is-active,
+[data-theme='dark'] .menu-item--card.is-selected {
+  border-color: #ffffff;
+}
+
+.menu-item--card svg,
+.menu-item--card .component-icon {
+  flex-shrink: 0;
+}
+
+.menu-item--card .menu-item__text {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: inherit;
+  line-height: 1.15;
+  overflow: visible;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* ==========================================================================
@@ -676,15 +752,15 @@ body.modal-open {
 @keyframes chat-logo-spin {
   0% {
     transform: rotate(0deg) scale(1);
-    filter: drop-shadow(0 0 0 rgba(147, 51, 234, 0));
+    filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
   }
   50% {
     transform: rotate(180deg) scale(1.12);
-    filter: drop-shadow(0 0 6px rgba(147, 51, 234, 0.6));
+    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.28));
   }
   100% {
     transform: rotate(360deg) scale(1);
-    filter: drop-shadow(0 0 0 rgba(147, 51, 234, 0));
+    filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
   }
 }
 
@@ -693,7 +769,7 @@ body.modal-open {
   width: 6px;
   height: 14px;
   margin-left: 2px;
-  background-color: var(--color-primary, #6366f1);
+  background-color: var(--text-primary, #111827);
   border-radius: 2px;
   vertical-align: middle;
   animation: aiCursorBlink 0.75s ease-in-out infinite;
