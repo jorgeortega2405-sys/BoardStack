@@ -1,5 +1,5 @@
 import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
-import { openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
+import { getLabelDisplayName, openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi, putApi } from '../../services/api.service.js';
@@ -9,7 +9,7 @@ import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { ViewController } from '../../types/common.types.js';
+import { DocumentLabel, ViewController } from '../../types/common.types.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
 
 
@@ -32,6 +32,7 @@ interface DocItem {
   created_at: string;
   folder_id?: string | null;
   id: string;
+  labels?: DocumentLabel[];
   page_count: number;
   pdf_filename?: string;
   title: string;
@@ -57,16 +58,20 @@ class ProjectsController implements ViewController {
   private footerController: { destroy: () => void } | null = null;
   private currentFolder: ProjectFolder | null = null;
   private currentFolderId: string | null = null;
+  private customLabelsCount: number = 0;
   private documents: DocItem[] = [];
   private files: UploadFileItem[] = [];
   private filterCategory: string = 'all';
+  private filterLabelId: number | null = null;
   private filterType: 'all' | 'docs' | 'folders' | 'images' | 'pdfs' | 'uploads' = 'all';
   private folders: ProjectFolder[] = [];
+  private maxCustomLabels: number = 3;
   private searchQuery: string = '';
   private sortAscending: boolean = false;
   private sortOption: 'az' | 'oldest' | 'recent' | 'za' = 'recent';
   private uploadsActiveTab: 'all' | 'images' | 'pdfs' = 'all';
   private uploadsFolder: ProjectFolder | null = null;
+  private userLabels: DocumentLabel[] = [];
 
   constructor(container: HTMLElement, folderId?: string | null) {
     this.container = container;
@@ -107,9 +112,24 @@ class ProjectsController implements ViewController {
 
   private async loadData(): Promise<void> {
     if (!this.currentFolderId) {
-      await this.loadRootProjectsData();
+      await Promise.all([this.loadRootProjectsData(), this.loadLabelsCatalog()]);
     } else {
-      await this.loadFolderDetailData(this.currentFolderId);
+      await Promise.all([this.loadFolderDetailData(this.currentFolderId), this.loadLabelsCatalog()]);
+    }
+  }
+
+  private async loadLabelsCatalog(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.documentLabels.base);
+      if (res.ok) {
+        const data = await res.json();
+        this.userLabels = Array.isArray(data.labels) ? data.labels : [];
+        this.customLabelsCount = typeof data.customCount === 'number'
+          ? data.customCount
+          : this.userLabels.filter((l) => !l.is_default).length;
+        this.maxCustomLabels = typeof data.maxCustomLabels === 'number' ? data.maxCustomLabels : 3;
+      }
+    } catch {
     }
   }
 
@@ -174,6 +194,10 @@ class ProjectsController implements ViewController {
       } else {
         list = list.filter((d) => d.folder_id === this.filterCategory);
       }
+    }
+
+    if (this.filterLabelId !== null) {
+      list = list.filter((d) => Array.isArray(d.labels) && d.labels.some((lbl) => lbl.id === this.filterLabelId));
     }
 
     list.sort((a, b) => {
@@ -275,6 +299,9 @@ class ProjectsController implements ViewController {
     const btnFilterCat = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-category"]');
     btnFilterCat?.classList.toggle('is-active', this.filterCategory !== 'all');
 
+    const btnFilterLabel = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-label"]');
+    btnFilterLabel?.classList.toggle('is-active', this.filterLabelId !== null);
+
     const btnFilterDate = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-date"]');
     btnFilterDate?.classList.toggle('is-active', this.sortOption !== 'recent');
 
@@ -332,6 +359,7 @@ class ProjectsController implements ViewController {
     }
 
     this.renderCategoryFilterItems();
+    this.renderLabelFilterItems();
   }
 
   private renderTypeFilterMenu(context: 'root' | 'project' | 'uploads'): void {
@@ -423,6 +451,51 @@ class ProjectsController implements ViewController {
     list.innerHTML = html;
   }
 
+  private renderLabelFilterItems(): void {
+    const list = this.container.querySelector<HTMLElement>('[data-ref="list-filter-label"]');
+    const badgeLabel = this.container.querySelector<HTMLElement>('[data-ref="label-filter-label"]');
+    const badgeDot = this.container.querySelector<HTMLElement>('[data-ref="dot-filter-label"]');
+    if (!list) return;
+
+    let html = `
+      <button type="button" class="menu-item ${this.filterLabelId === null ? 'is-active' : ''}" data-ref="item-label-all" data-filter-label-id="all">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#label"></use></svg>
+        <span class="menu-item__text">${this.escapeHtml(t('projects.label_all'))}</span>
+      </button>
+    `;
+
+    for (const lbl of this.userLabels) {
+      const isActive = this.filterLabelId === lbl.id;
+      const displayName = getLabelDisplayName(lbl);
+      html += `
+        <button type="button" class="menu-item ${isActive ? 'is-active' : ''}" data-ref="item-label-${lbl.id}" data-filter-label-id="${lbl.id}">
+          <span class="projects-filter-label__menu-dot label-dot--${lbl.color}"></span>
+          <span class="menu-item__text">${this.escapeHtml(displayName)}</span>
+        </button>
+      `;
+    }
+
+    list.innerHTML = html;
+    renderIcons(list);
+
+    const activeLabel = this.filterLabelId !== null
+      ? this.userLabels.find((l) => l.id === this.filterLabelId) || null
+      : null;
+
+    if (badgeLabel) {
+      badgeLabel.textContent = activeLabel ? getLabelDisplayName(activeLabel) : t('projects.filter_label');
+    }
+
+    if (badgeDot) {
+      badgeDot.className = 'projects-filter-label__dot';
+      if (activeLabel) {
+        badgeDot.classList.add(`label-dot--${activeLabel.color}`);
+      } else {
+        badgeDot.classList.add('is-hidden');
+      }
+    }
+  }
+
   private renderDocsGrid(): void {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="grid-documents"]');
     const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-documents"]');
@@ -468,6 +541,12 @@ class ProjectsController implements ViewController {
       const relativeTime = this.formatRelativeTime(doc.updated_at);
       const dim = this.getDocDimensions(doc);
       const paperSize = this.computePaperSize(dim.width, dim.height, 196, 156);
+      const docLabels = Array.isArray(doc.labels) ? doc.labels : [];
+      const labelsDotsHtml = docLabels.length > 0
+        ? `<div class="pdf-card__labels" data-ref="labels-doc-${doc.id}">${docLabels
+            .map((lbl) => `<span class="pdf-card__label-dot label-dot--${lbl.color}" title="${this.escapeHtml(getLabelDisplayName(lbl))}"></span>`)
+            .join('')}</div>`
+        : '';
 
       return `
         <div class="tool-card tool-card--collab-doc" data-ref="card-doc-${doc.id}" data-doc-id="${doc.id}">
@@ -499,6 +578,10 @@ class ProjectsController implements ViewController {
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
                       <span class="menu-item__text">Copiar enlace</span>
                     </button>
+                    <button type="button" class="menu-item" data-ref="item-labels-doc-${doc.id}" data-action="manage-labels" data-id="${doc.id}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#label"></use></svg>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.add_label'))}</span>
+                    </button>
                     <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
                     <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
@@ -515,6 +598,7 @@ class ProjectsController implements ViewController {
                 <svg class="component-icon tool-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
               </div>
             </div>
+            ${labelsDotsHtml}
           </div>
 
           <div class="tool-card__bottom" data-ref="info-doc-${doc.id}">
@@ -945,6 +1029,22 @@ class ProjectsController implements ViewController {
       }, { signal: this.abortController?.signal });
     }
 
+    const labelDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-label"]');
+    if (labelDropdown) {
+      setupDropdown(labelDropdown);
+
+      labelDropdown.addEventListener('click', (e) => {
+        const item = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-filter-label-id]');
+        if (!item) return;
+        const rawVal = item.getAttribute('data-filter-label-id') || 'all';
+        this.filterLabelId = rawVal === 'all' ? null : Number(rawVal);
+        if (this.filterLabelId !== null && (!Number.isInteger(this.filterLabelId) || this.filterLabelId <= 0)) {
+          this.filterLabelId = null;
+        }
+        this.renderView();
+      }, { signal: this.abortController?.signal });
+    }
+
     const dateDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-date"]');
     if (dateDropdown) {
       setupDropdown(dateDropdown);
@@ -1087,6 +1187,10 @@ class ProjectsController implements ViewController {
           const link = `${window.location.origin}/d/${encodeURIComponent(id)}`;
           navigator.clipboard?.writeText(link);
           showToast(t('toasts.enlace_copiado_al_portapapeles'), 'info');
+        } else if (action === 'manage-labels' && id) {
+          actionBtn.closest<HTMLElement>('.dropdown')?.classList.remove('is-open');
+          actionBtn.closest<HTMLElement>('.tool-card')?.classList.remove('has-open-dropdown');
+          void this.promptManageLabels(id);
         } else if (action === 'download' && id) {
           showToast(t('toasts.generando_descarga_del_documento'), 'info');
           window.open(`/api/collaborative-docs/${encodeURIComponent(id)}/export`, '_blank');
@@ -1227,6 +1331,47 @@ class ProjectsController implements ViewController {
           showToast(t('ui.no_se_pudo_mover_el_documento') || 'Error al mover documento', 'danger');
           return false;
         }
+      },
+    });
+  }
+
+  private async promptManageLabels(docId: string): Promise<void> {
+    if (this.userLabels.length === 0) {
+      await this.loadLabelsCatalog();
+    }
+
+    const doc = this.documents.find((d) => d.id === docId);
+    const initialSelectedIds = Array.isArray(doc?.labels) ? doc.labels.map((l) => l.id) : [];
+
+    openDocumentLabelsModal({
+      customCount: this.customLabelsCount,
+      documentId: docId,
+      initialSelectedIds,
+      labels: this.userLabels,
+      maxCustomLabels: this.maxCustomLabels,
+      onCatalogUpdated: (updatedLabels, customCount, maxCustomLabels, deletedLabelId) => {
+        this.userLabels = updatedLabels;
+        this.customLabelsCount = customCount;
+        this.maxCustomLabels = maxCustomLabels;
+        if (deletedLabelId !== undefined) {
+          this.documents = this.documents.map((item) => ({
+            ...item,
+            labels: Array.isArray(item.labels) ? item.labels.filter((lbl) => lbl.id !== deletedLabelId) : [],
+          }));
+          if (this.filterLabelId === deletedLabelId) {
+            this.filterLabelId = null;
+          }
+        }
+        this.renderView();
+      },
+      onSave: (updatedDocLabels, updatedLabels, customCount, maxCustomLabels) => {
+        this.userLabels = updatedLabels;
+        this.customLabelsCount = customCount;
+        this.maxCustomLabels = maxCustomLabels;
+        this.documents = this.documents.map((item) =>
+          item.id === docId ? { ...item, labels: updatedDocLabels } : item
+        );
+        this.renderView();
       },
     });
   }

@@ -1,3 +1,13 @@
+type LabelColorKey = 'blue' | 'gray' | 'green' | 'orange' | 'purple' | 'red' | 'yellow';
+
+interface DocumentLabel {
+  color: LabelColorKey;
+  created_at?: string;
+  id: number;
+  is_default: boolean;
+  name: string;
+}
+
 type ToastType = 'success' | 'error' | 'warning' | 'info' | 'danger';
 
 interface ViewController {
@@ -52,4 +62,4 @@ interface ModalOptions {
   titleKey?: string;
 }
 
-export type { Language, ModalInstance, ModalOptions, ToastType, ViewController };
+export type { DocumentLabel, LabelColorKey, Language, ModalInstance, ModalOptions, ToastType, ViewController };

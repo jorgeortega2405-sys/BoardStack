@@ -2,6 +2,7 @@ import { getDbPool } from '../config/database.config.js';
 import { cacheService } from './cache.service.js';
 import { logger } from './logger.service.js';
 import { permissionService } from './permission.service.js';
+import { trackAiCollabEvent } from './telemetry.service.js';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 interface UserTokenRecord extends RowDataPacket {
@@ -180,6 +181,15 @@ async function consumeAiTokens(params: {
   const required = calculatePdfCost(params.toolId, params.pageCount, params.fileSizeBytes);
 
   if (tokenInfo.balance < required) {
+    trackAiCollabEvent({
+      eventType: 'ai_tokens_insufficient',
+      featureName: params.toolId,
+      metadata: { pageCount: params.pageCount, required },
+      status: 'rejected',
+      tokensConsumed: 0,
+      tokensRemaining: tokenInfo.balance,
+      userId: params.userId,
+    });
     return {
       balance: tokenInfo.balance,
       consumed: 0,
@@ -197,6 +207,15 @@ async function consumeAiTokens(params: {
 
   if (updateResult.affectedRows === 0) {
     const freshInfo = await getUserTokenBalance(params.userId, perms);
+    trackAiCollabEvent({
+      eventType: 'ai_tokens_insufficient',
+      featureName: params.toolId,
+      metadata: { pageCount: params.pageCount, required },
+      status: 'rejected',
+      tokensConsumed: 0,
+      tokensRemaining: freshInfo.balance,
+      userId: params.userId,
+    });
     return {
       balance: freshInfo.balance,
       consumed: 0,
@@ -223,6 +242,15 @@ async function consumeAiTokens(params: {
     consumed: required,
     newBalance,
     toolId: params.toolId,
+    userId: params.userId,
+  });
+  trackAiCollabEvent({
+    eventType: 'ai_tokens_consumed',
+    featureName: params.toolId,
+    metadata: { fileSizeBytes: params.fileSizeBytes, pageCount: params.pageCount },
+    status: 'success',
+    tokensConsumed: required,
+    tokensRemaining: newBalance,
     userId: params.userId,
   });
 
@@ -254,6 +282,15 @@ async function consumeCustomAiTokens(params: {
   const required = Math.max(1, Math.floor(params.requiredTokens || 1));
 
   if (tokenInfo.balance < required) {
+    trackAiCollabEvent({
+      eventType: 'ai_tokens_insufficient',
+      featureName: params.toolId,
+      metadata: { pageCount: params.pageCount, required },
+      status: 'rejected',
+      tokensConsumed: 0,
+      tokensRemaining: tokenInfo.balance,
+      userId: params.userId,
+    });
     return {
       balance: tokenInfo.balance,
       consumed: 0,
@@ -271,6 +308,15 @@ async function consumeCustomAiTokens(params: {
 
   if (updateResult.affectedRows === 0) {
     const freshInfo = await getUserTokenBalance(params.userId, perms);
+    trackAiCollabEvent({
+      eventType: 'ai_tokens_insufficient',
+      featureName: params.toolId,
+      metadata: { pageCount: params.pageCount, required },
+      status: 'rejected',
+      tokensConsumed: 0,
+      tokensRemaining: freshInfo.balance,
+      userId: params.userId,
+    });
     return {
       balance: freshInfo.balance,
       consumed: 0,
@@ -297,6 +343,15 @@ async function consumeCustomAiTokens(params: {
     consumed: required,
     newBalance,
     toolId: params.toolId,
+    userId: params.userId,
+  });
+  trackAiCollabEvent({
+    eventType: 'ai_tokens_consumed',
+    featureName: params.toolId,
+    metadata: { fileSizeBytes: params.fileSizeBytes || 0, pageCount: Math.max(1, params.pageCount || 1) },
+    status: 'success',
+    tokensConsumed: required,
+    tokensRemaining: newBalance,
     userId: params.userId,
   });
 

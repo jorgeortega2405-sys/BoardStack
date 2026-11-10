@@ -1,11 +1,13 @@
+import { API_ROUTES } from '../config/api-routes.js';
+import { deleteApi, postApi, putApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
-import { ModalInstance } from '../types/common.types.js';
+import { DocumentLabel, LabelColorKey, ModalInstance } from '../types/common.types.js';
 import { setupDropdown, setupPasswordToggle } from '../utils/dom.util.js';
 import { openCollabPageSizeModal } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
 import type { CollabPageSizeModalOptions, CollabPageSizeResult } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
-import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
+import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderDocumentLabelsModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
 import { openModal, setupSheetDragToDismiss } from './modal.component.js';
 
 function getPasswordToggleTooltipOptions(): { hideTooltip: string; showTooltip: string } {
@@ -627,6 +629,246 @@ function openThankYouShareModal(options: { shareUrl: string }): ModalInstance {
   return modal;
 }
 
+function resolveLabelErrorText(code?: string, fallback?: string): string {
+  switch (code) {
+    case 'LABEL_LIMIT_REACHED':
+      return t('toasts.label_limit_reached');
+    case 'LABEL_NAME_DUPLICATE':
+      return t('toasts.label_name_duplicate');
+    case 'LABEL_NAME_REQUIRED':
+      return t('toasts.label_name_required');
+    case 'LABEL_NAME_TOO_LONG':
+      return t('toasts.label_name_too_long');
+    default:
+      return fallback || t('toasts.generic_error');
+  }
+}
+
+function openDocumentLabelsModal(options: {
+  customCount: number;
+  documentId: string;
+  initialSelectedIds: number[];
+  labels: DocumentLabel[];
+  maxCustomLabels: number;
+  onCatalogUpdated?: (labels: DocumentLabel[], customCount: number, maxCustomLabels: number, deletedLabelId?: number) => void;
+  onSave: (updatedDocLabels: DocumentLabel[], labels: DocumentLabel[], customCount: number, maxCustomLabels: number) => void;
+}): ModalInstance {
+  let availableLabels = [...options.labels];
+  let customCount = options.customCount;
+  let maxCustomLabels = options.maxCustomLabels;
+  let selectedColor: LabelColorKey = 'red';
+  const selectedIds = new Set<number>(options.initialSelectedIds);
+  let isMutating = false;
+
+  const modal = openModal({
+    bodyHtml: renderDocumentLabelsModalBody({
+      customCount,
+      labels: availableLabels,
+      maxCustomLabels,
+      selectedColor,
+      selectedIds,
+    }),
+    cancelText: t('common.cancel'),
+    confirmClass: 'component-button--black',
+    confirmText: t('projects.modal_labels_btn'),
+    description: t('projects.modal_labels_desc'),
+    onConfirm: async (inst) => {
+      inst.clearError();
+      try {
+        const res = await putApi(API_ROUTES.collaborativeDocs.labels(options.documentId), {
+          labelIds: Array.from(selectedIds),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          inst.showError(resolveLabelErrorText(data.code, data.error || t('toasts.label_save_error')));
+          return false;
+        }
+        const savedLabels: DocumentLabel[] = Array.isArray(data.labels) ? data.labels : [];
+        options.onSave(savedLabels, availableLabels, customCount, maxCustomLabels);
+        showToast(t('toasts.document_labels_updated'), 'success');
+        return true;
+      } catch {
+        inst.showError(t('toasts.network_error'));
+        return false;
+      }
+    },
+    showCancel: true,
+    showConfirm: true,
+    size: 'sm',
+    title: t('projects.modal_labels_title'),
+  });
+
+  const showInlineError = (message: string): void => {
+    const errEl = modal.body.querySelector<HTMLElement>('[data-ref="label-picker-error"]');
+    if (!errEl) return;
+    errEl.textContent = message;
+    errEl.classList.remove('is-hidden');
+  };
+
+  const clearInlineError = (): void => {
+    const errEl = modal.body.querySelector<HTMLElement>('[data-ref="label-picker-error"]');
+    if (!errEl) return;
+    errEl.textContent = '';
+    errEl.classList.add('is-hidden');
+  };
+
+  const rerenderBody = (preserveInput = false): void => {
+    const prevInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-new-label-name"]');
+    const draftValue = preserveInput && prevInput ? prevInput.value : '';
+    modal.setBody(
+      renderDocumentLabelsModalBody({
+        customCount,
+        labels: availableLabels,
+        maxCustomLabels,
+        selectedColor,
+        selectedIds,
+      })
+    );
+    if (draftValue) {
+      const nextInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-new-label-name"]');
+      if (nextInput) {
+        nextInput.value = draftValue;
+      }
+    }
+  };
+
+  const handleCreateCustomLabel = async (): Promise<void> => {
+    if (isMutating) return;
+    clearInlineError();
+
+    const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-new-label-name"]');
+    const name = (input?.value || '').trim();
+    if (!name) {
+      showInlineError(t('toasts.label_name_required'));
+      input?.focus();
+      return;
+    }
+
+    if (customCount >= maxCustomLabels) {
+      showInlineError(t('toasts.label_limit_reached'));
+      return;
+    }
+
+    isMutating = true;
+    const createBtn = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-create-label"]');
+    if (createBtn) createBtn.disabled = true;
+
+    try {
+      const res = await postApi(API_ROUTES.documentLabels.base, {
+        color: selectedColor,
+        name,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showInlineError(resolveLabelErrorText(data.code, data.error));
+        return;
+      }
+
+      const created: DocumentLabel = data.label;
+      availableLabels = [...availableLabels, created];
+      customCount = typeof data.customCount === 'number' ? data.customCount : customCount + 1;
+      maxCustomLabels = typeof data.maxCustomLabels === 'number' ? data.maxCustomLabels : maxCustomLabels;
+      selectedIds.add(created.id);
+      selectedColor = 'red';
+      rerenderBody(false);
+      options.onCatalogUpdated?.(availableLabels, customCount, maxCustomLabels);
+      showToast(t('toasts.label_created'), 'success');
+    } catch {
+      showInlineError(t('toasts.network_error'));
+    } finally {
+      isMutating = false;
+      const refreshedBtn = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-create-label"]');
+      if (refreshedBtn) refreshedBtn.disabled = false;
+    }
+  };
+
+  const handleDeleteCustomLabel = async (labelId: number): Promise<void> => {
+    if (isMutating) return;
+    clearInlineError();
+    isMutating = true;
+
+    try {
+      const res = await deleteApi(API_ROUTES.documentLabels.byId(labelId));
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showInlineError(resolveLabelErrorText(data.code, data.error));
+        return;
+      }
+
+      availableLabels = availableLabels.filter((l) => l.id !== labelId);
+      selectedIds.delete(labelId);
+      customCount = typeof data.customCount === 'number' ? data.customCount : availableLabels.filter((l) => !l.is_default).length;
+      maxCustomLabels = typeof data.maxCustomLabels === 'number' ? data.maxCustomLabels : maxCustomLabels;
+      rerenderBody(true);
+      options.onCatalogUpdated?.(availableLabels, customCount, maxCustomLabels, labelId);
+      showToast(t('toasts.label_deleted'), 'info');
+    } catch {
+      showInlineError(t('toasts.network_error'));
+    } finally {
+      isMutating = false;
+    }
+  };
+
+  modal.body.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+
+    const swatchBtn = target.closest<HTMLElement>('[data-color]');
+    if (swatchBtn) {
+      const color = swatchBtn.getAttribute('data-color') as LabelColorKey | null;
+      if (color) {
+        selectedColor = color;
+        modal.body.querySelectorAll<HTMLElement>('[data-color]').forEach((el) => {
+          el.classList.toggle('is-selected', el.getAttribute('data-color') === color);
+        });
+      }
+      return;
+    }
+
+    const deleteBtn = target.closest<HTMLElement>('[data-delete-label-id]');
+    if (deleteBtn) {
+      e.stopPropagation();
+      const labelId = Number(deleteBtn.getAttribute('data-delete-label-id'));
+      if (Number.isInteger(labelId) && labelId > 0) {
+        void handleDeleteCustomLabel(labelId);
+      }
+      return;
+    }
+
+    const toggleBtn = target.closest<HTMLElement>('[data-label-id]');
+    if (toggleBtn) {
+      const labelId = Number(toggleBtn.getAttribute('data-label-id'));
+      if (Number.isInteger(labelId) && labelId > 0) {
+        if (selectedIds.has(labelId)) {
+          selectedIds.delete(labelId);
+        } else {
+          selectedIds.add(labelId);
+        }
+        const isActive = selectedIds.has(labelId);
+        const chip = toggleBtn.closest<HTMLElement>('.label-picker__chip');
+        chip?.classList.toggle('is-selected', isActive);
+        const checkIcon = toggleBtn.querySelector<HTMLElement>('.label-picker__chip-check');
+        checkIcon?.classList.toggle('is-hidden', !isActive);
+      }
+      return;
+    }
+
+    const createBtn = target.closest<HTMLElement>('[data-ref="btn-create-label"]');
+    if (createBtn) {
+      void handleCreateCustomLabel();
+    }
+  });
+
+  modal.body.addEventListener('keydown', (e) => {
+    const target = e.target as HTMLElement;
+    if (e.key === 'Enter' && target.matches('[data-ref="input-new-label-name"]')) {
+      e.preventDefault();
+      void handleCreateCustomLabel();
+    }
+  });
+
+  return modal;
+}
+
 export {
   openAddWebUrlModal,
   openCancelSubscriptionModal,
@@ -638,6 +880,7 @@ export {
   openDeleteUploadModal,
   openDeleteWorkflowModal,
   openDisable2FAModal,
+  openDocumentLabelsModal,
   openMoveDocModal,
   openMoveUploadModal,
   openRenameFolderModal,

@@ -106,7 +106,7 @@ async function getCollaborativeDocHandler(req: Request, res: Response): Promise<
       return;
     }
     const user = getCurrentUser(req);
-    let document = await getCollaborativeDocument(id);
+    let document = await getCollaborativeDocument(id, user?.id ? Number(user.id) : null);
     if (!document) {
       if (!user) {
         res.status(401).json({

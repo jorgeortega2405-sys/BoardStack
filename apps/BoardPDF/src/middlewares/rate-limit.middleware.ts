@@ -1,6 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
 import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
+import { trackSecurityEvent } from '../services/telemetry.service.js';
+import { NextFunction, Request, Response } from 'express';
 
 interface RateLimiterOptions {
   keyGenerator?: (req: Request) => string;
@@ -146,6 +147,18 @@ function createRateLimiter(options: RateLimiterOptions) {
         path: req.originalUrl || req.url,
         retryAfter: resetInSeconds,
       });
+      trackSecurityEvent({
+        actorIdentifier: identifier,
+        eventType: 'rate_limit_exceeded',
+        ip: req.ip || req.socket.remoteAddress || '',
+        metadata: { action: prefix, mode: 'redis', retryAfter: resetInSeconds },
+        outcome: 'blocked',
+        reason: 'rate_limit_exceeded',
+        routePattern: req.originalUrl || req.url,
+        severity: 'warn',
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+        userId: (req as any).user?.id ? Number((req as any).user.id) : null,
+      });
 
       const minutes = Math.ceil(resetInSeconds / 60);
       const hours = Math.floor(minutes / 60);
@@ -180,6 +193,18 @@ function createRateLimiter(options: RateLimiterOptions) {
 
       res.setHeader('Retry-After', fallback.resetInSeconds);
       logger.security.warn(`Rate limit en memoria local excedido en "${prefix}"`, { action: prefix, identifier });
+      trackSecurityEvent({
+        actorIdentifier: identifier,
+        eventType: 'rate_limit_exceeded',
+        ip: req.ip || req.socket.remoteAddress || '',
+        metadata: { action: prefix, mode: 'memory_fallback', retryAfter: fallback.resetInSeconds },
+        outcome: 'blocked',
+        reason: 'rate_limit_exceeded',
+        routePattern: req.originalUrl || req.url,
+        severity: 'warn',
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+        userId: (req as any).user?.id ? Number((req as any).user.id) : null,
+      });
       res.status(429).json({
         error: message,
         retryAfter: fallback.resetInSeconds,

@@ -1,5 +1,15 @@
 import { MODAL_2FA_SHIELD_SVG } from '../graphics/modal-illustrations.graphics.js';
 import { t } from '../services/i18n.service.js';
+import { DocumentLabel, LabelColorKey } from '../types/common.types.js';
+
+const LABEL_COLOR_KEYS: readonly LabelColorKey[] = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray'];
+
+function getLabelDisplayName(label: Pick<DocumentLabel, 'color' | 'is_default' | 'name'>): string {
+  if (label.is_default) {
+    return t(`projects.label_color_${label.color}`);
+  }
+  return label.name;
+}
 
 function escapeHtml(str: string): string {
   return (str || '')
@@ -476,13 +486,84 @@ function renderWorkflowEmptyStepsState(): string {
   `;
 }
 
+function renderDocumentLabelsModalBody(options: {
+  customCount: number;
+  labels: DocumentLabel[];
+  maxCustomLabels: number;
+  selectedColor: LabelColorKey;
+  selectedIds: Set<number> | number[];
+}): string {
+  const selectedSet = options.selectedIds instanceof Set ? options.selectedIds : new Set(options.selectedIds);
+  const limitReached = options.customCount >= options.maxCustomLabels;
+  const counterText = t('projects.label_limit_counter', {
+    count: options.customCount,
+    max: options.maxCustomLabels,
+  });
+
+  const chipsHtml = options.labels.length > 0
+    ? options.labels.map((lbl) => {
+      const isSelected = selectedSet.has(lbl.id);
+      const displayName = getLabelDisplayName(lbl);
+      const safeName = escapeHtml(displayName);
+      const deleteBtnHtml = lbl.is_default
+        ? ''
+        : `<button type="button" class="label-picker__chip-delete" data-ref="btn-delete-label-${lbl.id}" data-delete-label-id="${lbl.id}" data-i18n-aria="projects.label_delete_aria" aria-label="${escapeHtml(t('projects.label_delete_aria'))}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg></button>`;
+
+      return `
+        <div class="label-picker__chip ${isSelected ? 'is-selected' : ''}" data-ref="chip-label-${lbl.id}">
+          <button type="button" class="label-picker__chip-btn" data-ref="btn-toggle-label-${lbl.id}" data-label-id="${lbl.id}">
+            <span class="label-picker__circle label-dot--${lbl.color}"></span>
+            <span class="label-picker__chip-name">${safeName}</span>
+            <svg class="component-icon label-picker__chip-check ${isSelected ? '' : 'is-hidden'}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </button>
+          ${deleteBtnHtml}
+        </div>
+      `;
+    }).join('')
+    : `<p class="label-picker__empty" data-i18n="projects.no_labels_available">${escapeHtml(t('projects.no_labels_available'))}</p>`;
+
+  const swatchesHtml = LABEL_COLOR_KEYS.map((colorKey) => {
+    const isSelected = colorKey === options.selectedColor;
+    const colorName = escapeHtml(t(`projects.label_color_${colorKey}`));
+    return `<button type="button" class="label-picker__swatch label-dot--${colorKey} ${isSelected ? 'is-selected' : ''}" data-ref="swatch-color-${colorKey}" data-color="${colorKey}" aria-label="${colorName}"></button>`;
+  }).join('');
+
+  return `
+    <div class="label-picker" data-ref="label-picker">
+      <div class="label-picker__list" data-ref="label-picker-list">
+        ${chipsHtml}
+      </div>
+      <div class="label-picker__create" data-ref="label-picker-create">
+        <div class="label-picker__create-header">
+          <span class="label-picker__create-title" data-i18n="projects.label_create_section">${escapeHtml(t('projects.label_create_section'))}</span>
+          <span class="label-picker__limit ${limitReached ? 'is-limit-reached' : ''}" data-ref="label-picker-limit-counter">${escapeHtml(counterText)}</span>
+        </div>
+        <div class="label-picker__create-row">
+          <label class="field" data-ref="field-new-label-name">
+            <input class="field__input" data-ref="input-new-label-name" type="text" placeholder=" " maxlength="60" autocomplete="off" />
+            <span class="field__label" data-ref="lbl-new-label-name" data-i18n="projects.label_create_placeholder">${escapeHtml(t('projects.label_create_placeholder'))}</span>
+          </label>
+          <button type="button" class="component-button component-button--secondary component-button--h48" data-ref="btn-create-label" data-i18n="projects.label_create_btn">${escapeHtml(t('projects.label_create_btn'))}</button>
+        </div>
+        <div class="label-picker__swatches" data-ref="label-picker-swatches">
+          ${swatchesHtml}
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="label-picker-error"></div>
+      </div>
+    </div>
+  `;
+}
+
 export {
+  LABEL_COLOR_KEYS,
   escapeHtml,
+  getLabelDisplayName,
   renderAddWebUrlModalBody,
   renderCollabPageSizeModalBody,
   renderCreateFolderModalBody,
   renderDeleteAccountModalBody,
   renderDisable2FAModalBody,
+  renderDocumentLabelsModalBody,
   renderMoveFolderOptionsModalBody,
   renderNewPasswordModalBody,
   renderRenameFolderModalBody,

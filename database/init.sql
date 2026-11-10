@@ -242,3 +242,31 @@ CREATE TABLE IF NOT EXISTS user_cloud_integrations (
   INDEX idx_user_provider (user_id, provider),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- User Color Labels & Document Label Assignments
+
+CREATE TABLE IF NOT EXISTS user_labels (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  name VARCHAR(60) NOT NULL,
+  color ENUM('red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray') NOT NULL DEFAULT 'red',
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_label_name (user_id, name),
+  INDEX idx_user_labels_user (user_id),
+  INDEX idx_user_labels_user_default (user_id, is_default),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS collaborative_document_labels (
+  document_id VARCHAR(64) NOT NULL,
+  label_id INT NOT NULL,
+  assigned_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (document_id, label_id),
+  INDEX idx_doc_labels_label (label_id),
+  FOREIGN KEY (document_id) REFERENCES collaborative_documents(id) ON DELETE CASCADE,
+  FOREIGN KEY (label_id) REFERENCES user_labels(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,7 +1,8 @@
-import crypto from 'crypto';
-import type { NextFunction, Request, Response } from 'express';
 import { config } from '../config/env.config.js';
 import { logger } from '../services/logger.service.js';
+import { trackSecurityEvent } from '../services/telemetry.service.js';
+import crypto from 'crypto';
+import type { NextFunction, Request, Response } from 'express';
 
 const CSRF_COOKIE_NAME = 'boardpdf_csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
@@ -37,6 +38,17 @@ function csrfProtection(req: Request, res: Response, next: NextFunction): void {
     logger.security.warn('Petición bloqueada por fallo o ausencia de token CSRF', {
       method: req.method,
       path: req.path,
+    });
+    trackSecurityEvent({
+      eventType: 'csrf_blocked',
+      ip: req.ip || req.socket.remoteAddress || '',
+      metadata: { method: req.method },
+      outcome: 'blocked',
+      reason: 'invalid_or_missing_csrf_token',
+      routePattern: req.originalUrl || req.path,
+      severity: 'warn',
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      userId: (req as any).user?.id ? Number((req as any).user.id) : null,
     });
     res.status(403).json({
       error: 'Token CSRF inválido o ausente.',

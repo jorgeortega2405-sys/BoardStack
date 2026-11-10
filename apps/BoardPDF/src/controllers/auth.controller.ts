@@ -5,6 +5,7 @@ import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.se
 import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
 import { ssoService } from '../services/sso.service.js';
+import { trackSecurityEvent } from '../services/telemetry.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserLastLogin, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { generateSixDigitCode, getPendingRegistration, savePendingRegistration, verifyAndConsumeCode } from '../services/verification.service.js';
@@ -224,6 +225,17 @@ async function verifyRegistrationCode(req: Request, res: Response): Promise<void
     } catch {}
 
     logger.security.info('Cuenta creada y verificada exitosamente', { email: newUser.email, userId: newUser.id });
+    trackSecurityEvent({
+      actorIdentifier: newUser.email,
+      eventType: 'auth_register_verified',
+      ip: getClientIp(req),
+      outcome: 'success',
+      reason: 'registration_verified',
+      routePattern: '/api/auth/verify-register',
+      severity: 'info',
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      userId: newUser.id,
+    });
 
     res.status(201).json({
       accounts: session.accounts.map(sanitizeUser),
@@ -250,6 +262,16 @@ async function login(req: Request, res: Response): Promise<void> {
 
     if (!userRow || !userRow.password_hash) {
       logger.security.warn('Intento de inicio de sesión fallido: correo no encontrado', { email: trimmedEmail });
+      trackSecurityEvent({
+        actorIdentifier: trimmedEmail,
+        eventType: 'auth_login_failed',
+        ip: getClientIp(req),
+        outcome: 'failure',
+        reason: 'account_not_found',
+        routePattern: '/api/auth/login',
+        severity: 'warn',
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      });
       res.status(401).json({ error: 'Credenciales inválidas.' });
       return;
     }
@@ -257,6 +279,17 @@ async function login(req: Request, res: Response): Promise<void> {
     const isMatch = await verifyPassword(String(password), userRow.password_hash);
     if (!isMatch) {
       logger.security.warn('Intento de inicio de sesión fallido: contraseña incorrecta', { email: trimmedEmail });
+      trackSecurityEvent({
+        actorIdentifier: trimmedEmail,
+        eventType: 'auth_login_failed',
+        ip: getClientIp(req),
+        outcome: 'failure',
+        reason: 'invalid_password',
+        routePattern: '/api/auth/login',
+        severity: 'warn',
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+        userId: userRow.id,
+      });
       res.status(401).json({ error: 'Credenciales inválidas.' });
       return;
     }
@@ -267,6 +300,17 @@ async function login(req: Request, res: Response): Promise<void> {
         const tempToken = crypto.randomBytes(32).toString('hex');
         await savePending2FALogin(tempToken, { email: userRow.email, userId: userRow.id });
         logger.security.info('2FA requerido para inicio de sesión', { email: userRow.email, userId: userRow.id });
+        trackSecurityEvent({
+          actorIdentifier: userRow.email,
+          eventType: 'auth_login_2fa_required',
+          ip: getClientIp(req),
+          outcome: 'pending',
+          reason: '2fa_challenge_issued',
+          routePattern: '/api/auth/login',
+          severity: 'info',
+          userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+          userId: userRow.id,
+        });
         res.status(200).json({ requires_2fa: true, temp_token: tempToken });
         return;
       }
@@ -287,6 +331,17 @@ async function login(req: Request, res: Response): Promise<void> {
     const session = await addAccountToSession(res, req, user);
 
     logger.security.info('Inicio de sesión exitoso', { email: user.email, userId: user.id });
+    trackSecurityEvent({
+      actorIdentifier: user.email,
+      eventType: 'auth_login_success',
+      ip: clientIp,
+      outcome: 'success',
+      reason: 'password_verified',
+      routePattern: '/api/auth/login',
+      severity: 'info',
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      userId: user.id,
+    });
 
     res.status(200).json({
       accounts: session.accounts.map(sanitizeUser),
@@ -342,6 +397,17 @@ async function loginWith2FA(req: Request, res: Response): Promise<void> {
 
     if (!isAuthorized) {
       logger.security.warn('Intento de 2FA fallido en login', { email: userRow.email, userId: userRow.id });
+      trackSecurityEvent({
+        actorIdentifier: userRow.email,
+        eventType: 'auth_2fa_failed',
+        ip: getClientIp(req),
+        outcome: 'failure',
+        reason: 'invalid_2fa_code',
+        routePattern: '/api/auth/login-2fa',
+        severity: 'warn',
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+        userId: userRow.id,
+      });
       res.status(400).json({ error: 'Código de verificación incorrecto.' });
       return;
     }
@@ -363,6 +429,17 @@ async function loginWith2FA(req: Request, res: Response): Promise<void> {
     const session = await addAccountToSession(res, req, user);
 
     logger.security.info('Inicio de sesión con 2FA exitoso', { email: user.email, userId: user.id });
+    trackSecurityEvent({
+      actorIdentifier: user.email,
+      eventType: 'auth_2fa_success',
+      ip: clientIp,
+      outcome: 'success',
+      reason: 'totp_or_backup_verified',
+      routePattern: '/api/auth/login-2fa',
+      severity: 'info',
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      userId: user.id,
+    });
 
     res.status(200).json({
       accounts: session.accounts.map(sanitizeUser),

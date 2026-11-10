@@ -21,6 +21,7 @@ const API_ROUTES = {
     aiGenerate: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/ai-generate`,
     base: '/api/collaborative-docs',
     byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
+    labels: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/labels`,
     memberDelete: (id: string, userId: number) => `/api/collaborative-docs/${encodeURIComponent(id)}/members/${userId}`,
     members: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/members`,
     pdf: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/pdf`,
@@ -28,6 +29,10 @@ const API_ROUTES = {
     searchUsers: (query: string, docId?: string) => `/api/collaborative-docs/users/search?q=${encodeURIComponent(query)}${docId ? `&docId=${encodeURIComponent(docId)}` : ''}`,
     upload: '/api/collaborative-docs/upload',
     uploads: '/api/collaborative-docs/uploads',
+  },
+  documentLabels: {
+    base: '/api/document-labels',
+    byId: (id: number | string) => `/api/document-labels/${encodeURIComponent(id)}`,
   },
   projectFolders: {
     base: '/api/project-folders',

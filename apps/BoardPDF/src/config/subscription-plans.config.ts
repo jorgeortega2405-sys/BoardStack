@@ -52,6 +52,12 @@ const FOLDER_LIMITS: Record<SubscriptionTierKey, number> = {
   pro: 100,
 };
 
+const LABEL_LIMITS: Record<SubscriptionTierKey, number> = {
+  business: 100,
+  free: 3,
+  pro: 20,
+};
+
 const WORKFLOW_LIMITS: Record<SubscriptionTierKey, number> = {
   business: 200,
   free: 5,
@@ -65,6 +71,7 @@ const PLATFORM_LIMITS = {
     pro: { maxCollaborators: 10, maxFiles: 10, maxFileSizeMB: 500 },
   },
   folders: FOLDER_LIMITS,
+  labels: LABEL_LIMITS,
   workflows: WORKFLOW_LIMITS,
 };
 
@@ -420,5 +427,16 @@ function resolveToolLimits(toolId: string, permissions: string[] = []): ToolLimi
   return tool.free;
 }
 
-export { ALL_TOOLS_LIMITS, FOLDER_LIMITS, PLAN_TIER_BENEFITS, PLATFORM_LIMITS, WORKFLOW_LIMITS, getPlanBenefits, getToolTierLimits, normalizeTierKey, resolveToolLimits };
+function resolveLabelLimit(permissions: string[] = []): number {
+  const perms = permissions ?? [];
+  if (perms.includes('subscription:feature:business')) {
+    return LABEL_LIMITS.business;
+  }
+  if (perms.includes('subscription:feature:pro')) {
+    return LABEL_LIMITS.pro;
+  }
+  return LABEL_LIMITS.free;
+}
+
+export { ALL_TOOLS_LIMITS, FOLDER_LIMITS, LABEL_LIMITS, PLAN_TIER_BENEFITS, PLATFORM_LIMITS, WORKFLOW_LIMITS, getPlanBenefits, getToolTierLimits, normalizeTierKey, resolveLabelLimit, resolveToolLimits };
 export type { AllPdfToolsLimits, PlanBenefitsDefinition, PlanFeatureItem, SubscriptionTierKey, ToolLimitTierConfig, ToolTierLimits };

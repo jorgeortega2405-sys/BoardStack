@@ -981,7 +981,7 @@ ${params.prompt}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${params.modelName}:generateContent?key=${params.apiKey}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
   let response: Awaited<ReturnType<GeminiFetchFn>>;
   try {
     response = await params.fetcher(url, {
@@ -1076,10 +1076,10 @@ async function generateCollaborativeDocumentWithAi(params: GenerateDocWithAiPara
       primaryModel,
       'gemini-flash-lite-latest',
       'gemini-3.5-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
       'gemini-3.5-flash',
       'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
     ])
   );
   const currentSummary = summarizeExistingDoc(params.currentContent, params.currentTitle);
@@ -1110,7 +1110,7 @@ async function generateCollaborativeDocumentWithAi(params: GenerateDocWithAiPara
 
   if (!blueprintResult && sawTransientError) {
     await new Promise((resolve) => setTimeout(resolve, 800));
-    const retryModels = Array.from(new Set([primaryModel, 'gemini-3.5-flash-lite', 'gemini-3.8-flash']));
+    const retryModels = Array.from(new Set([primaryModel, 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite', 'gemini-3.5-flash']));
     for (const modelName of retryModels) {
       try {
         blueprintResult = await callGeminiBlueprintApi({

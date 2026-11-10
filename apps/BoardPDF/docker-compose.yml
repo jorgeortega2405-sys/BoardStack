@@ -54,6 +54,72 @@ services:
       timeout: 3s
       retries: 5
 
+  cassandra:
+    image: cassandra:4.1
+    container_name: boardpdf-cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: BoardPDFTelemetry
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      MAX_HEAP_SIZE: 768M
+      HEAP_NEWSIZE: 256M
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 45s
+
+  cassandra-init:
+    image: cassandra:4.1
+    container_name: boardpdf-cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ../../database/cassandra/init.cql:/init.cql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        echo "Applying Cassandra telemetry schema..."
+        cqlsh cassandra 9042 -f /init.cql
+        echo "Cassandra telemetry schema ready."
+    restart: "no"
+
+  telemetry-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.telemetry-worker
+    container_name: boardpdf-telemetry-worker
+    depends_on:
+      redis:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+      cassandra-init:
+        condition: service_completed_successfully
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      CASSANDRA_HOSTS: cassandra
+      CASSANDRA_PORT: 9042
+      CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE:-boardpdf_telemetry}
+      CASSANDRA_USER: ${CASSANDRA_USER:-}
+      CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD:-}
+      TELEMETRY_STREAM_KEY: ${TELEMETRY_STREAM_KEY:-telemetry:events:stream}
+      TELEMETRY_DLQ_STREAM_KEY: ${TELEMETRY_DLQ_STREAM_KEY:-telemetry:events:dlq}
+      TELEMETRY_CONSUMER_GROUP: ${TELEMETRY_CONSUMER_GROUP:-telemetry-cassandra-workers}
+      TELEMETRY_WORKER_BATCH_SIZE: ${TELEMETRY_WORKER_BATCH_SIZE:-250}
+      TELEMETRY_WORKER_BLOCK_MS: ${TELEMETRY_WORKER_BLOCK_MS:-1000}
+    restart: unless-stopped
+
   storage-cleaner:
     build:
       context: .
@@ -123,3 +189,4 @@ volumes:
   s3_data:
   mysql_data:
   redis_data:
+  cassandra_data:

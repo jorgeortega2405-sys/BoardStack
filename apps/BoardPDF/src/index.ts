@@ -17,6 +17,7 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import { startColdStorageCron } from './services/storage-quota.service.js';
+import { flushTelemetryQueue, trackApplicationError } from './services/telemetry.service.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -50,6 +51,13 @@ function configureServerResilience(server: http.Server): void {
         logger.db.info('Pool de MySQL drenado y finalizado correctamente.');
       } catch (err) {
         logger.db.error('Error cerrando el pool de MySQL:', err);
+      }
+
+      try {
+        await flushTelemetryQueue();
+        logger.app.info('Cola de telemetría vaciada hacia Redis Streams correctamente.');
+      } catch (err) {
+        logger.app.warn('Error vaciando cola de telemetría antes de cerrar:', err);
       }
 
       try {
@@ -214,8 +222,18 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
     });
   }
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     logger.app.error('Error no controlado en middleware o ruta', err);
+    trackApplicationError({
+      errorCode: typeof err?.code === 'string' ? err.code : String(typeof err?.status === 'number' ? err.status : 500),
+      errorName: err instanceof Error ? err.name : 'UnhandledError',
+      message: err instanceof Error ? err.message : String(err),
+      method: req.method,
+      requestId: typeof (req as any).requestId === 'string' ? (req as any).requestId : undefined,
+      routePattern: req.originalUrl || req.url,
+      severity: 'error',
+      userId: (req as any).user?.id ? Number((req as any).user.id) : null,
+    });
     if (res.headersSent) {
       return next(err);
     }

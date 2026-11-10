@@ -1,9 +1,10 @@
+import { getDbPool } from '../config/database.config.js';
 import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../config/s3.config.js';
+import { logger } from './logger.service.js';
+import { trackStorageEvent } from './telemetry.service.js';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import fs from 'fs';
-import { getDbPool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
 import zlib from 'zlib';
 
 const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
@@ -97,6 +98,17 @@ async function recordUserAsset(params: {
     );
 
     await conn.commit();
+    trackStorageEvent({
+      bytesDelta: params.byteSize,
+      eventType: 'user_asset_recorded',
+      fileCount: 1,
+      fileId: id,
+      metadata: { assetType: params.assetType, documentId: params.documentId || null, mimeType: params.mimeType },
+      objectKey: params.s3Key || params.filePath,
+      status: 'completed',
+      storageTier: params.s3Key ? 's3_hot' : 'virtual_doc',
+      userId: params.userId,
+    });
     return id;
   } catch (err) {
     await conn.rollback();
@@ -168,6 +180,17 @@ async function reclaimDocumentStorage(
     }
 
     await conn.commit();
+    if (totalReclaimed > 0) {
+      trackStorageEvent({
+        bytesDelta: -totalReclaimed,
+        eventType: 'document_storage_reclaimed',
+        fileCount: assets?.length || 0,
+        fileId: documentId,
+        status: 'completed',
+        storageTier: 's3_hot',
+        userId: targetUserId ?? null,
+      });
+    }
   } catch (err) {
     await conn.rollback();
     logger.db.error('Error al liberar almacenamiento de documento en base de datos', err);
@@ -222,6 +245,16 @@ async function reclaimUserAsset(assetId: string, userId: number): Promise<boolea
       );
     }
     await conn.commit();
+    trackStorageEvent({
+      bytesDelta: -byteSize,
+      eventType: 'user_asset_reclaimed',
+      fileCount: 1,
+      fileId: assetId,
+      objectKey: asset.s3_key || asset.file_path || '',
+      status: 'completed',
+      storageTier: asset.s3_key ? 's3_hot' : 'virtual_doc',
+      userId,
+    });
     return true;
   } catch (err) {
     await conn.rollback();
@@ -296,6 +329,17 @@ async function syncDocumentStorage(
     }
 
     await conn.commit();
+    if (delta !== 0) {
+      trackStorageEvent({
+        bytesDelta: delta,
+        eventType: 'document_storage_synced',
+        fileCount: pdfBytes > 0 ? 2 : 1,
+        fileId: documentId,
+        status: 'completed',
+        storageTier: 'virtual_doc',
+        userId,
+      });
+    }
   } catch (err) {
     await conn.rollback();
     logger.db.warn(`No se pudo sincronizar cuota de almacenamiento para documento ${documentId}`, err);
@@ -368,6 +412,13 @@ function startColdStorageCron(): void {
       const result = await compressColdDocuments(45);
       if (result.archivedDocs > 0) {
         logger.app.info(`Almacenamiento en frío: ${result.archivedDocs} documentos archivados, ${result.freedBytes} bytes liberados`);
+        trackStorageEvent({
+          bytesDelta: -result.freedBytes,
+          eventType: 'cold_archive_run',
+          fileCount: result.archivedDocs,
+          status: 'completed',
+          storageTier: 's3_cold_compressed',
+        });
       }
     } catch (err) {
       logger.app.warn('Error en tarea programada de almacenamiento en frío', err);

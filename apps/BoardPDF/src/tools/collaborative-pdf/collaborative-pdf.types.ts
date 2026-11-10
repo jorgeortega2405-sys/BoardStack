@@ -1,3 +1,5 @@
+import { DocumentLabelRecord } from '../../services/document-labels.service.js';
+
 interface CollaborativeElementText {
   align?: 'center' | 'justify' | 'left' | 'right';
   authorName?: string;
@@ -221,6 +223,7 @@ interface CollaborativeDocumentRecord {
   created_at: string;
   folder_id?: string | null;
   id: string;
+  labels?: DocumentLabelRecord[];
   members?: CollaborativeMember[];
   page_count: number;
   pdf_filename?: string | null;

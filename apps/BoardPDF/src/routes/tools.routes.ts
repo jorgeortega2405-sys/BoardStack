@@ -21,6 +21,7 @@ import toPdfConverterRoutes from '../tools/to-pdf-converter/to-pdf-converter.rou
 import translatePdfRoutes from '../tools/translate-pdf/translate-pdf.routes.js';
 import unlockPdfRoutes from '../tools/unlock-pdf/unlock-pdf.routes.js';
 import watermarkPdfRoutes from '../tools/watermark-pdf/watermark-pdf.routes.js';
+import documentLabelsRoutes from './document-labels.routes.js';
 import projectFoldersRoutes from './project-folders.routes.js';
 import { Router } from 'express';
 
@@ -31,6 +32,7 @@ router.use(collaborativePdfRoutes);
 router.use(comparePdfRoutes);
 router.use(compressPdfRoutes);
 router.use(cropPdfRoutes);
+router.use(documentLabelsRoutes);
 router.use(editPdfRoutes);
 router.use(mergePdfRoutes);
 router.use(ocrPdfRoutes);

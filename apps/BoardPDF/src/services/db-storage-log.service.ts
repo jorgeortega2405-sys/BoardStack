@@ -1,5 +1,6 @@
 import { getDbPool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
+import { trackStorageEvent } from './telemetry.service.js';
 
 interface FileOperationRecord {
   fileSize?: number;
@@ -40,6 +41,16 @@ async function recordFileOperation(record: FileOperationRecord): Promise<void> {
       record.toolName || 'general',
       expiresAt,
     ]);
+    trackStorageEvent({
+      bytesDelta: record.fileSize || 0,
+      eventType: 'file_operation_stored',
+      fileCount: 1,
+      fileId: record.token,
+      metadata: { mimeType: record.mimeType || 'application/pdf', toolName: record.toolName || 'general' },
+      objectKey: record.s3Key,
+      status: 'completed',
+      storageTier: 's3_temp',
+    });
   } catch (err) {
     logger.db.warn('No se pudo registrar la operación de archivo en MySQL', err);
   }
@@ -54,6 +65,13 @@ async function markFileOperationExpired(token: string): Promise<void> {
       WHERE file_token = ? AND status = 'active'
     `;
     await pool.execute(query, [token]);
+    trackStorageEvent({
+      eventType: 'file_operation_expired',
+      fileCount: 1,
+      fileId: token,
+      status: 'expired',
+      storageTier: 's3_temp',
+    });
   } catch (err) {
     logger.db.warn('No se pudo actualizar estado a expirado en MySQL', err);
   }
@@ -68,6 +86,13 @@ async function markFileOperationDeleted(token: string): Promise<void> {
       WHERE file_token = ?
     `;
     await pool.execute(query, [token]);
+    trackStorageEvent({
+      eventType: 'file_operation_deleted',
+      fileCount: 1,
+      fileId: token,
+      status: 'completed',
+      storageTier: 's3_temp',
+    });
   } catch (err) {
     logger.db.warn('No se pudo marcar archivo como eliminado en MySQL', err);
   }

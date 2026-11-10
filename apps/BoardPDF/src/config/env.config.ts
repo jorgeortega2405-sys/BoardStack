@@ -14,10 +14,14 @@ for (const p of envCandidates) {
   }
 }
 
+const rawCassandraPort = process.env.CASSANDRA_PORT;
 const rawDbPort = process.env.DB_PORT;
 const rawPort = process.env.PORT;
 const rawRedisPort = process.env.REDIS_PORT;
 const rawSmtpPort = process.env.SMTP_PORT;
+const rawTelemetryBatchSize = process.env.TELEMETRY_BATCH_SIZE;
+const rawTelemetryFlushMs = process.env.TELEMETRY_FLUSH_INTERVAL_MS;
+const rawTelemetryMaxLen = process.env.TELEMETRY_STREAM_MAX_LEN;
 const redisPassword = process.env.REDIS_PASSWORD;
 const s3Endpoint = process.env.AWS_S3_ENDPOINT ?? process.env.S3_ENDPOINT;
 const s3ForcePathStyle = process.env.AWS_S3_FORCE_PATH_STYLE ?? process.env.S3_FORCE_PATH_STYLE;
@@ -25,6 +29,16 @@ const s3ForcePathStyle = process.env.AWS_S3_FORCE_PATH_STYLE ?? process.env.S3_F
 const config = {
   appName: process.env.APP_NAME ?? 'BoardPDF',
   baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
+  cassandra: {
+    hosts: (process.env.CASSANDRA_HOSTS ?? '127.0.0.1')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    keyspace: process.env.CASSANDRA_KEYSPACE ?? 'boardpdf_telemetry',
+    password: process.env.CASSANDRA_PASSWORD ?? '',
+    port: rawCassandraPort ? parseInt(rawCassandraPort, 10) : 9042,
+    user: process.env.CASSANDRA_USER ?? '',
+  },
   cors: {
     allowedOrigins: (process.env.ALLOWED_ORIGINS ?? '')
       .split(',')
@@ -107,6 +121,15 @@ const config = {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
     secretKey: process.env.STRIPE_SECRET_KEY ?? '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+  },
+  telemetry: {
+    batchSize: rawTelemetryBatchSize ? Math.max(10, parseInt(rawTelemetryBatchSize, 10)) : 100,
+    enabled: process.env.TELEMETRY_ENABLED !== 'false',
+    flushIntervalMs: rawTelemetryFlushMs ? Math.max(100, parseInt(rawTelemetryFlushMs, 10)) : 500,
+    ipSalt: process.env.TELEMETRY_IP_SALT ?? '',
+    serviceName: process.env.TELEMETRY_SERVICE_NAME ?? 'boardpdf-api',
+    streamKey: process.env.TELEMETRY_STREAM_KEY ?? 'telemetry:events:stream',
+    streamMaxLen: rawTelemetryMaxLen ? Math.max(1000, parseInt(rawTelemetryMaxLen, 10)) : 200000,
   },
   turnstile: {
     enabled: process.env.TURNSTILE_ENABLED === 'true' || Boolean(process.env.TURNSTILE_SECRET_KEY),

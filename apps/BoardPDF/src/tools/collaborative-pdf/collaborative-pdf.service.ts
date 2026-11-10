@@ -1,6 +1,8 @@
 import { getDbPool } from '../../config/database.config.js';
+import { getLabelsForDocumentIds } from '../../services/document-labels.service.js';
 import { logger } from '../../services/logger.service.js';
 import { reclaimDocumentStorage, syncDocumentStorage } from '../../services/storage-quota.service.js';
+import { trackAiCollabEvent } from '../../services/telemetry.service.js';
 import { cleanTextForWinAnsi, parseHexColor } from '../../utils/pdf.util.js';
 import { CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeMember } from './collaborative-pdf.types.js';
 import fs from 'fs';
@@ -503,12 +505,15 @@ async function listCollaborativeDocuments(
     query += ' ORDER BY cd.updated_at DESC';
     const [rows] = await pool.query<any[]>(query, params);
     if (Array.isArray(rows)) {
+      const docIds = rows.map((r) => String(r.id));
+      const labelMap = await getLabelsForDocumentIds(Number(userId), docIds);
       return rows.map((r) => ({
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
         folder_id: r.folder_id || null,
         id: r.id,
+        labels: labelMap.get(String(r.id)) ?? [],
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
         title: r.title,
@@ -523,7 +528,8 @@ async function listCollaborativeDocuments(
 }
 
 async function getCollaborativeDocument(
-  id: string
+  id: string,
+  viewerUserId?: number | null
 ): Promise<CollaborativeDocumentRecord | null> {
   try {
     const pool = getDbPool();
@@ -533,13 +539,17 @@ async function getCollaborativeDocument(
     );
     if (Array.isArray(rows) && rows.length > 0) {
       const r = rows[0];
-      const members = await getCollaborativeDocMembers(id);
+      const [members, labelMap] = await Promise.all([
+        getCollaborativeDocMembers(id),
+        viewerUserId ? getLabelsForDocumentIds(Number(viewerUserId), [id]) : Promise.resolve(new Map()),
+      ]);
       return {
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
         folder_id: r.folder_id || null,
         id: r.id,
+        labels: labelMap.get(String(id)) ?? [],
         members,
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
@@ -599,6 +609,15 @@ async function saveCollaborativeDocument(payload: {
     void syncDocumentStorage(payload.id, Number(existingUserId), jsonBytes, 0);
   }
 
+  trackAiCollabEvent({
+    documentId: payload.id,
+    eventType: 'document_saved',
+    featureName: 'collaborative-pdf',
+    metadata: { accessLevel: existingAccess, pageCount },
+    status: 'success',
+    userId: existingUserId ? Number(existingUserId) : null,
+  });
+
   const members = await getCollaborativeDocMembers(payload.id);
   return {
     access_level: existingAccess,
@@ -644,6 +663,13 @@ async function deleteCollaborativeDocument(id: string, userId?: number | null): 
   }
 
   await reclaimDocumentStorage(id, userId);
+  trackAiCollabEvent({
+    documentId: id,
+    eventType: 'document_deleted',
+    featureName: 'collaborative-pdf',
+    status: 'success',
+    userId: userId ?? null,
+  });
   return true;
 }
 
@@ -698,6 +724,15 @@ async function addCollaborativeDocMember(
     logger.db.warn('Error al guardar miembro en MySQL', err);
     return null;
   }
+
+  trackAiCollabEvent({
+    documentId: docId,
+    eventType: 'collaborator_added',
+    featureName: 'collaborative-pdf',
+    metadata: { role, targetUserId },
+    status: 'success',
+    userId: _requestingUserId ?? targetUserId,
+  });
 
   return {
     avatar_url: userRecord?.avatar_url || null,
