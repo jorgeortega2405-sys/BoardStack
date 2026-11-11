@@ -8,6 +8,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 
 const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
+const TEAM_STORAGE_LIMIT_BYTES = 536870912000;
 
 interface StorageStats {
   limitBytes: number;
@@ -27,20 +28,34 @@ interface UserAssetRecord {
   is_cold: boolean;
   mime_type: string;
   s3_key: string | null;
+  team_id: number | null;
   updated_at: string;
   user_id: number;
 }
 
-async function getUserStorageStats(userId: number): Promise<StorageStats> {
+async function getUserStorageStats(userId: number, teamId?: number | null): Promise<StorageStats> {
   const pool = getDbPool();
-  const [rows] = await pool.query<any[]>(
-    'SELECT storage_used_bytes, storage_limit_bytes FROM users WHERE id = ?',
-    [userId]
-  );
+  let usedBytes = 0;
+  let limitBytes = teamId ? TEAM_STORAGE_LIMIT_BYTES : DEFAULT_STORAGE_LIMIT_BYTES;
 
-  const userRow = rows?.[0];
-  const usedBytes = Number(userRow?.storage_used_bytes) || 0;
-  const limitBytes = Number(userRow?.storage_limit_bytes) || DEFAULT_STORAGE_LIMIT_BYTES;
+  if (teamId) {
+    const [rows] = await pool.query<any[]>(
+      'SELECT storage_used_bytes, storage_limit_bytes FROM teams WHERE id = ?',
+      [teamId]
+    );
+    const teamRow = rows?.[0];
+    usedBytes = Number(teamRow?.storage_used_bytes) || 0;
+    limitBytes = Number(teamRow?.storage_limit_bytes) || TEAM_STORAGE_LIMIT_BYTES;
+  } else {
+    const [rows] = await pool.query<any[]>(
+      'SELECT storage_used_bytes, storage_limit_bytes FROM users WHERE id = ?',
+      [userId]
+    );
+    const userRow = rows?.[0];
+    usedBytes = Number(userRow?.storage_used_bytes) || 0;
+    limitBytes = Number(userRow?.storage_limit_bytes) || DEFAULT_STORAGE_LIMIT_BYTES;
+  }
+
   const remainingBytes = Math.max(0, limitBytes - usedBytes);
   const percentage = limitBytes > 0 ? Math.min(100, Math.round((usedBytes / limitBytes) * 1000) / 10) : 0;
 
@@ -49,9 +64,10 @@ async function getUserStorageStats(userId: number): Promise<StorageStats> {
 
 async function canUserAllocateStorage(
   userId: number,
-  additionalBytes: number
+  additionalBytes: number,
+  teamId?: number | null
 ): Promise<{ allowed: boolean; limitBytes: number; remainingBytes: number; usedBytes: number }> {
-  const stats = await getUserStorageStats(userId);
+  const stats = await getUserStorageStats(userId, teamId);
   const allowed = stats.usedBytes + additionalBytes <= stats.limitBytes;
   return { allowed, ...stats };
 }
@@ -65,10 +81,12 @@ async function recordUserAsset(params: {
   folderId?: string | null;
   mimeType: string;
   s3Key?: string | null;
+  teamId?: number | null;
   userId: number;
 }): Promise<string> {
   const pool = getDbPool();
   const id = `ast_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+  const effectiveTeamId = params.teamId || null;
 
   const conn = await pool.getConnection();
   try {
@@ -76,11 +94,12 @@ async function recordUserAsset(params: {
 
     await conn.query(
       `INSERT INTO user_storage_assets 
-       (id, user_id, document_id, folder_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
+       (id, user_id, team_id, document_id, folder_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)`,
       [
         id,
         params.userId,
+        effectiveTeamId,
         params.documentId || null,
         params.folderId || null,
         params.fileName,
@@ -92,10 +111,17 @@ async function recordUserAsset(params: {
       ]
     );
 
-    await conn.query(
-      'UPDATE users SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?',
-      [params.byteSize, params.userId]
-    );
+    if (effectiveTeamId) {
+      await conn.query(
+        'UPDATE teams SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?',
+        [params.byteSize, effectiveTeamId]
+      );
+    } else {
+      await conn.query(
+        'UPDATE users SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?',
+        [params.byteSize, params.userId]
+      );
+    }
 
     await conn.commit();
     trackStorageEvent({
@@ -103,7 +129,7 @@ async function recordUserAsset(params: {
       eventType: 'user_asset_recorded',
       fileCount: 1,
       fileId: id,
-      metadata: { assetType: params.assetType, documentId: params.documentId || null, mimeType: params.mimeType },
+      metadata: { assetType: params.assetType, documentId: params.documentId || null, mimeType: params.mimeType, teamId: effectiveTeamId },
       objectKey: params.s3Key || params.filePath,
       status: 'completed',
       storageTier: params.s3Key ? 's3_hot' : 'virtual_doc',
@@ -125,17 +151,21 @@ async function reclaimDocumentStorage(
 ): Promise<{ reclaimedBytes: number }> {
   const pool = getDbPool();
   let targetUserId = userId;
+  let targetTeamId: number | null = null;
 
-  if (!targetUserId) {
-    const [docRows] = await pool.query<any[]>(
-      'SELECT user_id FROM collaborative_documents WHERE id = ?',
-      [documentId]
-    );
-    targetUserId = docRows?.[0]?.user_id ? Number(docRows[0].user_id) : null;
+  const [docRows] = await pool.query<any[]>(
+    'SELECT user_id, team_id FROM collaborative_documents WHERE id = ?',
+    [documentId]
+  );
+  if (docRows?.[0]) {
+    if (!targetUserId) {
+      targetUserId = docRows[0].user_id ? Number(docRows[0].user_id) : null;
+    }
+    targetTeamId = docRows[0].team_id ? Number(docRows[0].team_id) : null;
   }
 
   const [assets] = await pool.query<any[]>(
-    'SELECT id, file_path, s3_key, byte_size FROM user_storage_assets WHERE document_id = ?',
+    'SELECT id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE document_id = ?',
     [documentId]
   );
 
@@ -143,6 +173,9 @@ async function reclaimDocumentStorage(
 
   for (const asset of assets || []) {
     totalReclaimed += Number(asset.byte_size) || 0;
+    if (!targetTeamId && asset.team_id) {
+      targetTeamId = Number(asset.team_id);
+    }
 
     if (asset.file_path && fs.existsSync(asset.file_path)) {
       try {
@@ -172,11 +205,18 @@ async function reclaimDocumentStorage(
 
     await conn.query('DELETE FROM user_storage_assets WHERE document_id = ?', [documentId]);
 
-    if (targetUserId && totalReclaimed > 0) {
-      await conn.query(
-        'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
-        [totalReclaimed, targetUserId]
-      );
+    if (totalReclaimed > 0) {
+      if (targetTeamId) {
+        await conn.query(
+          'UPDATE teams SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+          [totalReclaimed, targetTeamId]
+        );
+      } else if (targetUserId) {
+        await conn.query(
+          'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+          [totalReclaimed, targetUserId]
+        );
+      }
     }
 
     await conn.commit();
@@ -201,17 +241,23 @@ async function reclaimDocumentStorage(
   return { reclaimedBytes: totalReclaimed };
 }
 
-async function reclaimUserAsset(assetId: string, userId: number): Promise<boolean> {
+async function reclaimUserAsset(assetId: string, userId: number, teamId?: number | null): Promise<boolean> {
   const pool = getDbPool();
-  const [rows] = await pool.query<any[]>(
-    'SELECT id, file_path, s3_key, byte_size FROM user_storage_assets WHERE id = ? AND user_id = ?',
-    [assetId, userId]
-  );
+  const [rows] = teamId
+    ? await pool.query<any[]>(
+        'SELECT id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND team_id = ?',
+        [assetId, teamId]
+      )
+    : await pool.query<any[]>(
+        'SELECT id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL',
+        [assetId, userId]
+      );
 
   const asset = rows?.[0];
   if (!asset) return false;
 
   const byteSize = Number(asset.byte_size) || 0;
+  const assetTeamId = asset.team_id ? Number(asset.team_id) : null;
 
   if (asset.file_path && fs.existsSync(asset.file_path)) {
     try {
@@ -237,12 +283,23 @@ async function reclaimUserAsset(assetId: string, userId: number): Promise<boolea
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    await conn.query('DELETE FROM user_storage_assets WHERE id = ? AND user_id = ?', [assetId, userId]);
+    if (assetTeamId) {
+      await conn.query('DELETE FROM user_storage_assets WHERE id = ? AND team_id = ?', [assetId, assetTeamId]);
+    } else {
+      await conn.query('DELETE FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL', [assetId, userId]);
+    }
     if (byteSize > 0) {
-      await conn.query(
-        'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
-        [byteSize, userId]
-      );
+      if (assetTeamId) {
+        await conn.query(
+          'UPDATE teams SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+          [byteSize, assetTeamId]
+        );
+      } else {
+        await conn.query(
+          'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+          [byteSize, userId]
+        );
+      }
     }
     await conn.commit();
     trackStorageEvent({
@@ -265,10 +322,20 @@ async function reclaimUserAsset(assetId: string, userId: number): Promise<boolea
   }
 }
 
-async function reconcileUserStorage(userId: number): Promise<number> {
+async function reconcileUserStorage(userId: number, teamId?: number | null): Promise<number> {
   const pool = getDbPool();
+  if (teamId) {
+    const [rows] = await pool.query<any[]>(
+      'SELECT COALESCE(SUM(byte_size), 0) AS total_bytes FROM user_storage_assets WHERE team_id = ?',
+      [teamId]
+    );
+    const accurateTotal = Number(rows?.[0]?.total_bytes) || 0;
+    await pool.query('UPDATE teams SET storage_used_bytes = ? WHERE id = ?', [accurateTotal, teamId]);
+    return accurateTotal;
+  }
+
   const [rows] = await pool.query<any[]>(
-    'SELECT COALESCE(SUM(byte_size), 0) AS total_bytes FROM user_storage_assets WHERE user_id = ?',
+    'SELECT COALESCE(SUM(byte_size), 0) AS total_bytes FROM user_storage_assets WHERE user_id = ? AND team_id IS NULL',
     [userId]
   );
 
@@ -281,12 +348,22 @@ async function syncDocumentStorage(
   documentId: string,
   userId: number,
   jsonBytes: number,
-  pdfBytes = 0
+  pdfBytes = 0,
+  teamId?: number | null
 ): Promise<void> {
   const pool = getDbPool();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    let effectiveTeamId = teamId;
+    if (effectiveTeamId === undefined) {
+      const [docRows] = await conn.query<any[]>(
+        'SELECT team_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+        [documentId]
+      );
+      effectiveTeamId = docRows?.[0]?.team_id ? Number(docRows[0].team_id) : null;
+    }
 
     const [existing] = await conn.query<any[]>(
       'SELECT id, byte_size, asset_type FROM user_storage_assets WHERE document_id = ? AND asset_type IN ("document_json", "document_pdf")',
@@ -304,28 +381,35 @@ async function syncDocumentStorage(
     const jsonId = `doc_json_${documentId}`;
     await conn.query(
       `INSERT INTO user_storage_assets 
-       (id, user_id, document_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold)
-       VALUES (?, ?, ?, ?, ?, NULL, 'application/json', ?, 'document_json', FALSE)
-       ON DUPLICATE KEY UPDATE byte_size = VALUES(byte_size), updated_at = NOW()`,
-      [jsonId, userId, documentId, `${documentId}.json`, `data/collaborative-docs/${documentId}.json`, jsonBytes]
+       (id, user_id, team_id, document_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, 'application/json', ?, 'document_json', FALSE)
+       ON DUPLICATE KEY UPDATE team_id = VALUES(team_id), byte_size = VALUES(byte_size), updated_at = NOW()`,
+      [jsonId, userId, effectiveTeamId || null, documentId, `${documentId}.json`, `data/collaborative-docs/${documentId}.json`, jsonBytes]
     );
 
     if (pdfBytes > 0) {
       const pdfId = `doc_pdf_${documentId}`;
       await conn.query(
         `INSERT INTO user_storage_assets 
-         (id, user_id, document_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold)
-         VALUES (?, ?, ?, ?, ?, NULL, 'application/pdf', ?, 'document_pdf', FALSE)
-         ON DUPLICATE KEY UPDATE byte_size = VALUES(byte_size), updated_at = NOW()`,
-        [pdfId, userId, documentId, `${documentId}.pdf`, `data/collaborative-docs/${documentId}.pdf`, pdfBytes]
+         (id, user_id, team_id, document_id, file_name, file_path, s3_key, mime_type, byte_size, asset_type, is_cold)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, 'application/pdf', ?, 'document_pdf', FALSE)
+         ON DUPLICATE KEY UPDATE team_id = VALUES(team_id), byte_size = VALUES(byte_size), updated_at = NOW()`,
+        [pdfId, userId, effectiveTeamId || null, documentId, `${documentId}.pdf`, `data/collaborative-docs/${documentId}.pdf`, pdfBytes]
       );
     }
 
     if (delta !== 0) {
-      await conn.query(
-        'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) + ?) WHERE id = ?',
-        [delta, userId]
-      );
+      if (effectiveTeamId) {
+        await conn.query(
+          'UPDATE teams SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) + ?) WHERE id = ?',
+          [delta, effectiveTeamId]
+        );
+      } else {
+        await conn.query(
+          'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) + ?) WHERE id = ?',
+          [delta, userId]
+        );
+      }
     }
 
     await conn.commit();
@@ -351,7 +435,7 @@ async function syncDocumentStorage(
 async function compressColdDocuments(daysThreshold = 45): Promise<{ archivedDocs: number; freedBytes: number }> {
   const pool = getDbPool();
   const [docs] = await pool.query<any[]>(
-    `SELECT d.id, d.user_id, d.content_json, d.pdf_filename 
+    `SELECT d.id, d.user_id, d.team_id, d.content_json, d.pdf_filename 
        FROM collaborative_documents d
       WHERE d.updated_at < NOW() - INTERVAL ? DAY
         AND d.id NOT IN (SELECT DISTINCT document_id FROM user_storage_assets WHERE is_cold = TRUE AND document_id IS NOT NULL)
@@ -381,11 +465,18 @@ async function compressColdDocuments(daysThreshold = 45): Promise<{ archivedDocs
           [compressedSize, doc.id]
         );
 
-        if (doc.user_id && savedBytes > 0) {
-          await conn.query(
-            'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
-            [savedBytes, doc.user_id]
-          );
+        if (savedBytes > 0) {
+          if (doc.team_id) {
+            await conn.query(
+              'UPDATE teams SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+              [savedBytes, doc.team_id]
+            );
+          } else if (doc.user_id) {
+            await conn.query(
+              'UPDATE users SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
+              [savedBytes, doc.user_id]
+            );
+          }
         }
 
         await conn.commit();

@@ -267,9 +267,10 @@ function openVerifyEmailCodeModal(options: {
 
 function openCancelSubscriptionModal(options: {
   dateFormatted: string;
+  description?: string;
   onConfirm: (inst: ModalInstance) => Promise<boolean | void>;
 }): ModalInstance {
-  const desc = t('settings.billing.modal_cancel_sub_desc').replace('{date}', options.dateFormatted);
+  const desc = options.description || t('settings.billing.modal_cancel_sub_desc').replace('{date}', options.dateFormatted);
 
   return openModal({
     confirmClass: 'component-button--black',

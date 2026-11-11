@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { getWorkspaceTeamId } from '../middlewares/workspace.middleware.js';
 import { estimateAiTokenCost, getUserTokenBalance } from '../services/ai-token.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
@@ -12,7 +13,8 @@ async function handleGetTokenBalance(req: Request, res: Response): Promise<void>
     }
 
     const permissions = user.permissions || [];
-    const info = await getUserTokenBalance(user.id, permissions);
+    const teamId = getWorkspaceTeamId(req);
+    const info = await getUserTokenBalance(user.id, permissions, teamId);
 
     res.status(200).json({
       data: info,
@@ -42,10 +44,12 @@ async function handleEstimateTokenCost(req: Request, res: Response): Promise<voi
     }
 
     const permissions = user.permissions || [];
+    const teamId = getWorkspaceTeamId(req);
     const estimate = await estimateAiTokenCost({
       fileSizeBytes: Number(fileSizeBytes) || 0,
       pageCount: Number(pageCount) || 1,
       permissions,
+      teamId,
       toolId,
       userId: user.id,
     });

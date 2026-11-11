@@ -617,7 +617,7 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async ({ path }) => {
       await loadStylesheet('/css/components/component-views.css');
-      const { createBillingView, createPurchasesView, createSecurityView, createYourAccountView } = await import('../views/settings.view.js');
+      const { createBillingView, createPurchasesView, createSecurityView, createTeamMembersView, createTeamSettingsView, createYourAccountView } = await import('../views/settings.view.js');
       if (path === '/settings' || path === '/settings/' || path === '/settings/your-account') {
         if (path === '/settings' || path === '/settings/') {
           window.history.replaceState({}, '', '/settings/your-account');
@@ -630,6 +630,12 @@ const APP_ROUTES: RouteDefinition[] = [
       if (path === '/settings/billing') {
         return await createBillingView();
       }
+      if (path === '/settings/team/members' || path === '/settings/teams/members') {
+        return await createTeamMembersView();
+      }
+      if (path === '/settings/team' || path === '/settings/teams') {
+        return await createTeamSettingsView();
+      }
       if (path === '/settings/purchases' || path === '/settings/purchase-history') {
         return await createPurchasesView();
       }
@@ -637,6 +643,15 @@ const APP_ROUTES: RouteDefinition[] = [
     },
     id: 'settings',
     match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
+  },
+  {
+    handler: async () => {
+      await loadStylesheet('/css/components/component-views.css');
+      const { createTeamInviteView } = await import('../views/teams/invite.view.js');
+      return await createTeamInviteView();
+    },
+    id: 'team-invite',
+    match: (path) => path === '/teams/invite' || path.startsWith('/teams/invite/'),
   },
   {
     handler: async (ctx) => {

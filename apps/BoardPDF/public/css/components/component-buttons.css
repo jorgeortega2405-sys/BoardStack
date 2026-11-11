@@ -458,6 +458,18 @@
   color: var(--color-error);
 }
 
+.component-badge--success {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
+}
+
+.component-badge--neutral {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
 /* Contenedor de opciones de verificación */
 
 /* Alertas / Banners Genéricos */

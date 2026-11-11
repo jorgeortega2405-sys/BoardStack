@@ -90,9 +90,7 @@
                       <span class="component-item__value component-text--bold" data-ref="tokens-text-balance"></span>
                       <span class="component-badge component-badge--neutral component-text--sm" data-ref="tokens-badge-percent"></span>
                     </div>
-                    <div class="component-progress">
-                      <div class="component-progress__bar component-progress__bar--full" data-ref="tokens-bar-fill"></div>
-                    </div>
+                    <progress class="component-progress" data-ref="tokens-bar-fill" max="100" value="100"></progress>
                     <div class="component-group--between component-text--muted">
                       <span data-ref="tokens-reset-date-text" data-i18n="settings.billing.tokens_reset_monthly"></span>
                       <a class="link component-link--subtle" data-ref="btn-tokens-upgrade" href="/pricing" data-i18n="settings.billing.btn_get_more_tokens"></a>
@@ -116,9 +114,7 @@
                       <span class="component-item__value component-text--bold" data-ref="storage-text-used"></span>
                       <span class="component-badge component-badge--neutral component-text--sm" data-ref="storage-badge-percent"></span>
                     </div>
-                    <div class="component-progress">
-                      <div class="component-progress__bar component-progress__bar--empty" data-ref="storage-bar-fill"></div>
-                    </div>
+                    <progress class="component-progress" data-ref="storage-bar-fill" max="100" value="0"></progress>
                     <div class="component-text--muted" data-ref="storage-available-text"></div>
                   </div>
                 </div>

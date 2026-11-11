@@ -149,5 +149,20 @@ async function sendEmailChangeCodeEmail(
   });
 }
 
-export { escapeHtml, renderTemplateString, sendEmailChangeCodeEmail, sendPasswordResetEmail, sendTemplateEmail, sendVerificationCodeEmail, sendWelcomeEmail };
+async function sendTeamInvitationEmail(
+  toEmail: string,
+  inviterName: string,
+  teamName: string,
+  roleLabel: string,
+  inviteUrl: string
+): Promise<void> {
+  await sendTemplateEmail('team_invitation', toEmail, {
+    inviterName,
+    inviteUrl,
+    roleLabel,
+    teamName,
+  });
+}
+
+export { escapeHtml, renderTemplateString, sendEmailChangeCodeEmail, sendPasswordResetEmail, sendTeamInvitationEmail, sendTemplateEmail, sendVerificationCodeEmail, sendWelcomeEmail };
 export type { EmailTemplate };

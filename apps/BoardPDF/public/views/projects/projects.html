@@ -9,6 +9,9 @@
 </a>
 <div class="projects-quick-actions" data-ref="projects-quick-actions">
 <div class="projects-hero__folder-actions is-hidden" data-ref="folder-header-actions">
+<button type="button" class="component-button component-button--h40 component-button--icon-only is-hidden" data-ref="btn-folder-share" data-i18n-aria="projects.action_share_folder" data-i18n-title="projects.action_share_folder" aria-label=" ">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+</button>
 <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-folder-rename" data-i18n-aria="projects.rename_folder" data-tooltip="Renombrar carpeta" aria-label=" ">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
 </button>
@@ -50,6 +53,16 @@
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 projects-hero__back-btn is-hidden" data-ref="btn-folder-back" data-i18n-aria="projects.back_to_projects" aria-label=" ">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
 </button>
+<div class="dropdown projects-workspace-dropdown is-hidden" data-ref="dropdown-projects-workspace">
+<button type="button" class="component-badge component-badge--interactive projects-workspace-pill" data-ref="btn-projects-workspace-pill">
+<svg class="component-icon component-badge__icon" data-ref="icon-projects-workspace" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+<span data-ref="label-projects-workspace" data-i18n="projects.workspace_personal_badge"></span>
+<svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+</button>
+<div class="menu-panel menu-panel--dropdown menu-panel--w-240" data-ref="menu-projects-workspace">
+<div class="menu-panel__list" data-ref="list-projects-workspace"></div>
+</div>
+</div>
 <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
 <p class="view-hero__subtitle projects-hero__subtitle" data-ref="projects-main-subtitle" data-i18n="projects.subtitle"></p>
 </div>

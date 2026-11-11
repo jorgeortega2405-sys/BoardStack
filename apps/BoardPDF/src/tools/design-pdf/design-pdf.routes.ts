@@ -1,6 +1,6 @@
 import { optionalAuth, requireAuth, requireFeature } from '../../middlewares/auth.middleware.js';
 import { removeBackgroundLimiter } from '../../middlewares/rate-limit.middleware.js';
-import { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, resolveCollaborativeDocSlugHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, updateCollaborativeDocCustomSlugHandler, uploadCollaborativeAssetHandler } from './design-pdf.controller.js';
+import { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, resolveCollaborativeDocSlugHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, updateCollaborativeDocCustomSlugHandler, updateCollaborativeDocTeamAccessHandler, uploadCollaborativeAssetHandler } from './design-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
 
@@ -24,6 +24,7 @@ for (const base of endpoints) {
   router.delete(`${base}/:id/members/:userId`, optionalAuth, removeCollaborativeDocMemberHandler);
   router.get(`${base}/resolve-slug/:slug`, optionalAuth, resolveCollaborativeDocSlugHandler);
   router.patch(`${base}/:id/access-level`, optionalAuth, updateCollaborativeDocAccessLevelHandler);
+  router.patch(`${base}/:id/team-access`, requireAuth, updateCollaborativeDocTeamAccessHandler);
   router.patch(`${base}/:id/custom-slug`, optionalAuth, updateCollaborativeDocCustomSlugHandler);
   router.post(`${base}/:id/ai-generate`, requireAuth, aiGenerateCollaborativeDocHandler);
   router.get(`${base}/:id`, optionalAuth, getCollaborativeDocHandler);

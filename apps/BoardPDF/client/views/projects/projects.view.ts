@@ -1,15 +1,18 @@
 import { showAuthGateModal } from '../../components/auth-gate-modal.component.js';
 import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
 import { getLabelDisplayName, openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
+import { openCreateTeamModal } from '../../components/team-create-modal.component.js';
+import { openTeamFolderShareModal } from '../../components/team-folder-share-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
-import { currentUser, deleteApi, getApi, patchApi, postApi, putApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, getActiveWorkspaceTeam, getApi, hasTeamPermission, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { onWorkspaceChange, setActiveTeamId } from '../../services/workspace.service.js';
 import { DocumentLabel, ViewController } from '../../types/common.types.js';
 import { getLocalDraft, listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
@@ -74,6 +77,8 @@ class ProjectsController implements ViewController {
   private sortOption: 'az' | 'oldest' | 'recent' | 'za' = 'recent';
   private uploadsFolder: ProjectFolder | null = null;
   private userLabels: DocumentLabel[] = [];
+  private workspaceDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  private workspaceUnsubscribe: (() => void) | null = null;
 
   constructor(container: HTMLElement, folderId?: string | null) {
     this.container = container;
@@ -87,9 +92,28 @@ class ProjectsController implements ViewController {
     this.renderFooter();
     renderIcons(this.container);
     this.bindEvents();
+
+    this.workspaceUnsubscribe = onWorkspaceChange(() => {
+      if (this.currentFolderId) {
+        navigate('/projects');
+        return;
+      }
+      void this.loadData().then(() => {
+        this.renderView();
+        renderIcons(this.container);
+      });
+    });
   }
 
   public destroy(): void {
+    if (this.workspaceUnsubscribe) {
+      this.workspaceUnsubscribe();
+      this.workspaceUnsubscribe = null;
+    }
+    if (this.workspaceDropdownCtrl) {
+      this.workspaceDropdownCtrl.destroy();
+      this.workspaceDropdownCtrl = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -350,9 +374,67 @@ class ProjectsController implements ViewController {
     return list;
   }
 
+  private renderWorkspaceBadge(): void {
+    const dropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-projects-workspace"]');
+    const iconUse = this.container.querySelector<SVGUseElement>('[data-ref="icon-projects-workspace"] use');
+    const labelEl = this.container.querySelector<HTMLElement>('[data-ref="label-projects-workspace"]');
+    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-projects-workspace"]');
+    if (!dropdown || !labelEl || !listEl) return;
+
+    if (!currentUser) {
+      dropdown.classList.add('is-hidden');
+      return;
+    }
+
+    dropdown.classList.remove('is-hidden');
+    const activeTeam = getActiveWorkspaceTeam();
+    if (activeTeam) {
+      iconUse?.setAttribute('href', '/icons.svg#groups');
+      labelEl.textContent = t('projects.workspace_team_badge', { name: activeTeam.name });
+    } else {
+      iconUse?.setAttribute('href', '/icons.svg#person');
+      labelEl.textContent = t('projects.workspace_personal_badge');
+    }
+
+    const teams = Array.isArray(currentUser.teams) ? currentUser.teams : [];
+    const personalActive = !activeTeam;
+    let html = `
+      <button type="button" class="menu-item ${personalActive ? 'is-active' : ''}" data-action="switch-workspace" data-team-id="personal">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+        <span class="menu-item__text">${this.escapeHtml(t('projects.workspace_personal_badge'))}</span>
+        ${personalActive ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+      </button>
+    `;
+
+    for (const team of teams) {
+      const isSelected = activeTeam && Number(activeTeam.id) === Number(team.id);
+      html += `
+        <button type="button" class="menu-item ${isSelected ? 'is-active' : ''}" data-action="switch-workspace" data-team-id="${team.id}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+          <span class="menu-item__text">${this.escapeHtml(team.name)}</span>
+          ${isSelected ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+        </button>
+      `;
+    }
+
+    html += `
+      <div class="menu-divider"></div>
+      <button type="button" class="menu-item" data-action="create-team-shortcut">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        <span class="menu-item__text">${this.escapeHtml(t('nav.create_team'))}</span>
+      </button>
+    `;
+
+    listEl.innerHTML = html;
+    renderIcons(listEl);
+  }
+
   private renderView(): void {
+    this.renderWorkspaceBadge();
+
     const mainTitle = this.container.querySelector<HTMLElement>('[data-ref="projects-main-title"]');
     const folderHeaderActions = this.container.querySelector<HTMLElement>('[data-ref="folder-header-actions"]');
+    const btnFolderShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-share"]');
     const btnFolderBack = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-back"]');
     const btnUploadDirect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-upload-direct"]');
 
@@ -383,11 +465,20 @@ class ProjectsController implements ViewController {
     const dropdownCategory = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-category"]');
     const dropdownLabel = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-label"]');
 
+    const activeTeam = getActiveWorkspaceTeam();
+    const canShareCurrentFolder = Boolean(
+      this.currentFolder &&
+      activeTeam &&
+      currentUser &&
+      (Number(this.currentFolder.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
+    );
+
     if (!this.currentFolderId || !this.currentFolder) {
       if (mainTitle) mainTitle.textContent = t('projects.title');
       if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle');
       btnFolderBack?.classList.add('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
+      btnFolderShare?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
 
       sectionDocs?.classList.remove('is-hidden');
@@ -404,6 +495,7 @@ class ProjectsController implements ViewController {
       if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_project_folder');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
+      btnFolderShare?.classList.toggle('is-hidden', !canShareCurrentFolder);
       btnUploadDirect?.classList.add('is-hidden');
 
       sectionFolders?.classList.add('is-hidden');
@@ -419,6 +511,7 @@ class ProjectsController implements ViewController {
       if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
+      btnFolderShare?.classList.add('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
 
       sectionFolders?.classList.remove('is-hidden');
@@ -436,6 +529,7 @@ class ProjectsController implements ViewController {
       if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
+      btnFolderShare?.classList.toggle('is-hidden', !canShareCurrentFolder);
       btnUploadDirect?.classList.remove('is-hidden');
 
       sectionFolders?.classList.add('is-hidden');
@@ -695,8 +789,15 @@ class ProjectsController implements ViewController {
       `;
     }
 
+    const activeTeam = getActiveWorkspaceTeam();
+
     filteredFolders.forEach((f) => {
       const docCount = f.document_count || 0;
+      const canShareFolder = Boolean(
+        activeTeam &&
+        currentUser &&
+        (Number(f.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
+      );
       cardsHtml += `
         <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-folder-${f.id}" data-folder-id="${f.id}">
           <div class="tool-card__preview-box project-folder-preview-box">
@@ -707,6 +808,13 @@ class ProjectsController implements ViewController {
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-folder-${f.id}">
                   <div class="menu-panel__list">
+                    ${canShareFolder ? `
+                      <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
+                      </button>
+                      <div class="menu-divider"></div>
+                    ` : ''}
                     <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
@@ -774,8 +882,14 @@ class ProjectsController implements ViewController {
     empty?.classList.add('is-hidden');
 
     let cardsHtml = '';
+    const activeTeam = getActiveWorkspaceTeam();
     filteredFolders.forEach((f) => {
       const fCount = f.file_count || 0;
+      const canShareFolder = Boolean(
+        activeTeam &&
+        currentUser &&
+        (Number(f.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
+      );
       cardsHtml += `
         <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-subfolder-${f.id}" data-folder-id="${f.id}">
           <div class="tool-card__preview-box project-folder-preview-box">
@@ -786,6 +900,13 @@ class ProjectsController implements ViewController {
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-subfolder-${f.id}">
                   <div class="menu-panel__list">
+                    ${canShareFolder ? `
+                      <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
+                      </button>
+                      <div class="menu-divider"></div>
+                    ` : ''}
                     <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
@@ -1061,6 +1182,39 @@ class ProjectsController implements ViewController {
       this.renderView();
     }, { signal: this.abortController?.signal });
 
+    const workspaceDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-projects-workspace"]');
+    if (workspaceDropdown) {
+      this.workspaceDropdownCtrl = setupDropdown(workspaceDropdown);
+      workspaceDropdown.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const btn = target.closest<HTMLElement>('[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (action === 'switch-workspace') {
+          const teamAttr = btn.getAttribute('data-team-id');
+          this.workspaceDropdownCtrl?.close();
+          if (teamAttr === 'personal') {
+            setActiveTeamId(null);
+          } else if (teamAttr) {
+            const parsedId = Number(teamAttr);
+            if (Number.isInteger(parsedId) && parsedId > 0) {
+              setActiveTeamId(parsedId);
+            }
+          }
+        } else if (action === 'create-team-shortcut') {
+          this.workspaceDropdownCtrl?.close();
+          openCreateTeamModal({
+            onCreated: () => {
+              void this.loadData().then(() => {
+                this.renderView();
+                renderIcons(this.container);
+              });
+            },
+          });
+        }
+      }, { signal: this.abortController?.signal });
+    }
+
     const plusDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-new-action"]');
     if (plusDropdown) {
       setupDropdown(plusDropdown);
@@ -1114,6 +1268,22 @@ class ProjectsController implements ViewController {
         return;
       }
       fileInput?.click();
+    }, { signal: this.abortController?.signal });
+
+    const btnShareFolder = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-share"]');
+    btnShareFolder?.addEventListener('click', () => {
+      if (this.currentFolder) {
+        openTeamFolderShareModal({
+          folderId: this.currentFolder.id,
+          folderName: this.currentFolder.name,
+          onUpdated: () => {
+            void this.loadData().then(() => {
+              this.renderView();
+              renderIcons(this.container);
+            });
+          },
+        });
+      }
     }, { signal: this.abortController?.signal });
 
     const btnRenameFolder = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-rename"]');
@@ -1205,6 +1375,20 @@ class ProjectsController implements ViewController {
           void this.handleDownloadDoc(id);
         } else if (action === 'delete' && id) {
           void this.handleDeleteDoc(id);
+        } else if (action === 'share-folder' && id) {
+          actionBtn.closest<HTMLElement>('.dropdown')?.classList.remove('is-open');
+          actionBtn.closest<HTMLElement>('.tool-card')?.classList.remove('has-open-dropdown');
+          const name = actionBtn.getAttribute('data-name') || '';
+          openTeamFolderShareModal({
+            folderId: id,
+            folderName: name,
+            onUpdated: () => {
+              void this.loadData().then(() => {
+                this.renderView();
+                renderIcons(this.container);
+              });
+            },
+          });
         } else if (action === 'rename-folder' && id) {
           const name = actionBtn.getAttribute('data-name') || '';
           void this.promptRenameFolder(id, name);
@@ -1542,10 +1726,7 @@ class ProjectsController implements ViewController {
     showToast(t('projects.uploading_count', { count: files.length }), 'info');
 
     try {
-      const res = await fetch(API_ROUTES.collaborativeDocs.upload, {
-        body: formData,
-        method: 'POST',
-      });
+      const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
       if (res.ok) {
         showToast(t('toasts.files_uploaded_success'), 'info');
         await this.loadData();

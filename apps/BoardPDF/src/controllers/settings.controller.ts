@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { getWorkspaceTeamId } from '../middlewares/workspace.middleware.js';
 import { removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { deleteAvatar, deleteUserAccount, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, updateAvatar, updateEmail, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
@@ -585,7 +586,8 @@ async function handleGetStorageStats(req: Request, res: Response): Promise<void>
       sendUnauthorized(res, 'Sesión no válida o expirada.');
       return;
     }
-    const stats = await getUserStorageStats(currentUser.id);
+    const teamId = getWorkspaceTeamId(req);
+    const stats = await getUserStorageStats(currentUser.id, teamId);
     sendSuccess(res, stats);
   } catch (error) {
     logger.app.error('Error al obtener estadísticas de almacenamiento de usuario', error);

@@ -89,7 +89,29 @@
 </div>
 <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
 </button>
+<div class="avatar-menu__section-header" data-ref="section-header-workspace">
+<span class="drawer-section__title" data-i18n="nav.workspace_label"></span>
+<span class="component-badge component-badge--sm component-badge--warning is-hidden" data-ref="workspace-pending-badge"></span>
+</div>
+<button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-workspace-menu">
+<div class="account-item__avatar workspace-item__avatar" data-ref="active-workspace-avatar-box">
+<svg class="component-icon workspace-item__icon" data-ref="active-workspace-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+</div>
+<div class="account-item__info" data-ref="active-workspace-info">
+<span class="account-item__name" data-ref="active-workspace-name"></span>
+<span class="account-item__email" data-ref="active-workspace-meta"></span>
+</div>
+<svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
+</button>
 <div class="menu-divider" data-ref="active-account-divider"></div>
+<button type="button" class="menu-item menu-item--bordered is-hidden" data-ref="btn-menu-team-settings">
+<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+<span class="menu-item__text" data-i18n="settings.team.nav_label"></span>
+</button>
+<button type="button" class="menu-item menu-item--bordered" data-ref="btn-menu-create-team">
+<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add_circle"></use></svg>
+<span class="menu-item__text" data-i18n="nav.create_team"></span>
+</button>
 <button type="button" class="menu-item menu-item--bordered" data-ref="btn-menu-settings">
 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
 <span class="menu-item__text" data-i18n="nav.settings"></span>
@@ -102,6 +124,20 @@
 <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout">
 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
 <span class="menu-item__text" data-i18n="nav.logout"></span>
+</button>
+</div>
+<div class="menu-panel__list is-hidden" data-ref="panel-workspace-switcher">
+<button type="button" class="menu-item menu-item--bordered" data-ref="btn-back-from-workspace">
+<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+<span class="menu-item__text" data-i18n="common.back"></span>
+</button>
+<div class="menu-divider" data-ref="workspace-switcher-divider"></div>
+<div class="account-switcher__list" data-ref="workspace-switcher-list"></div>
+<div class="workspace-pending-list is-hidden" data-ref="workspace-pending-list"></div>
+<div class="menu-divider" data-ref="workspace-switcher-divider-bottom"></div>
+<button type="button" class="menu-item menu-item--bordered" data-ref="btn-switcher-create-team">
+<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add_circle"></use></svg>
+<span class="menu-item__text" data-i18n="nav.create_team"></span>
 </button>
 </div>
 <div class="menu-panel__list is-hidden" data-ref="panel-account-switcher">

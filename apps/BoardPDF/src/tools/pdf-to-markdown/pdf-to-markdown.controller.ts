@@ -1,3 +1,4 @@
+import { getWorkspaceTeamId } from '../../middlewares/workspace.middleware.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
 import { getPdfPageCount } from '../../utils/pdf.util.js';
@@ -20,9 +21,10 @@ async function handleConvertPdfToMarkdown(req: Request, res: Response): Promise<
   if (!file) return;
 
   const userPerms: string[] = user?.permissions || [];
+  const teamId = getWorkspaceTeamId(req);
   const pageCount = await getPdfPageCount(file.buffer);
   const requiredTokens = calculatePdfCost('pdf-to-markdown', pageCount, file.buffer.length);
-  const tokenInfo = await getUserTokenBalance(user.id, userPerms);
+  const tokenInfo = await getUserTokenBalance(user.id, userPerms, teamId);
 
   if (tokenInfo.balance < requiredTokens) {
     res.status(402).json({
@@ -55,6 +57,7 @@ async function handleConvertPdfToMarkdown(req: Request, res: Response): Promise<
       fileSizeBytes: file.buffer.length,
       pageCount,
       permissions: userPerms,
+      teamId,
       toolId: 'pdf-to-markdown',
       userId: user.id,
     });

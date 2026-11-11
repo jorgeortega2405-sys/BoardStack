@@ -6,6 +6,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getWorkflows } from '../services/workflow-storage.service.js';
+import { onWorkspaceChange, resolveActiveWorkspace } from '../services/workspace.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
 import { isSupportedLanguage } from '../utils/languages.util.js';
 import { setupUserMenu } from './layout-user-menu.component.js';
@@ -439,6 +440,8 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
     });
   };
 
+  const hasActiveTeam = Boolean(resolveActiveWorkspace(currentUser));
+
   drawerBody.innerHTML = `
     <div class="drawer-section__header" data-ref="drawer-settings-header" style="padding: 8px 8px 4px 8px;">
       <span class="drawer-section__title" data-ref="drawer-settings-title" data-i18n="nav.settings" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${t('nav.settings', 'Configuración')}</span>
@@ -451,21 +454,36 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
       <span class="menu-item__text" data-i18n="nav.security">${t('nav.security', 'Seguridad')}</span>
     </button>
+    ${hasActiveTeam ? `
+      <button type="button" class="menu-item" data-ref="btn-nav-settings-team">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+        <span class="menu-item__text" data-i18n="settings.team.nav_label">${t('settings.team.nav_label', 'Equipo')}</span>
+      </button>
+    ` : ''}
   `;
 
   translateElement(drawerBody);
 
   const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
   const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
+  const btnTeam = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-team"]');
 
   if (currentPath === '/settings' || currentPath === '/settings/your-account') {
     btnAccount?.classList.add('is-active');
   } else if (currentPath === '/settings/security') {
     btnSecurity?.classList.add('is-active');
+  } else if (
+    currentPath === '/settings/team' ||
+    currentPath === '/settings/teams' ||
+    currentPath.startsWith('/settings/team/') ||
+    currentPath.startsWith('/settings/teams/')
+  ) {
+    btnTeam?.classList.add('is-active');
   }
 
   bindNavLink(btnAccount, '/settings/your-account');
   bindNavLink(btnSecurity, '/settings/security');
+  bindNavLink(btnTeam, '/settings/team');
 
   if (drawerFooter) {
     drawerFooter.innerHTML = `
@@ -691,6 +709,12 @@ async function createSidebar(): Promise<HTMLElement> {
     onAuthChange(() => {
       if (sidebarInstance) {
         updateSidebarAuthState(sidebarInstance);
+      }
+    });
+
+    onWorkspaceChange(() => {
+      if (sidebarInstance && isDrawerOpen && currentDrawerMode === 'settings') {
+        void updateDynamicDrawer(sidebarInstance);
       }
     });
 

@@ -1,7 +1,7 @@
 import { navigate } from '../../app-router.js';
 import { openCancelSubscriptionModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { checkAuthSession, currentUser, fetchAiTokenBalance, getApi, getBillingDetailsApi, updateAutoRenewalApi } from '../../services/api.service.js';
+import { checkAuthSession, currentUser, fetchAiTokenBalance, getActiveWorkspaceTeam, getApi, getBillingDetailsApi, getTeamBillingDetailsApi, hasSubscriptionFeature, hasTeamPermission, updateAutoRenewalApi, updateTeamRenewalApi } from '../../services/api.service.js';
 import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
@@ -13,6 +13,25 @@ async function createBillingView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/billing.html');
   translateElement(container);
   renderIcons(container);
+
+  const activeTeam = getActiveWorkspaceTeam();
+  const isTeamScope = Boolean(activeTeam);
+
+  const canManageTeamBilling = !isTeamScope || hasTeamPermission('team:billing:manage');
+
+  if (isTeamScope && activeTeam) {
+    const subtitleEl = container.querySelector<HTMLElement>('[data-ref="settings-subtitle"]');
+    const storageTitleEl = container.querySelector<HTMLElement>('[data-ref="item-storage-title"]');
+    const storageDescEl = container.querySelector<HTMLElement>('[data-ref="item-storage-desc"]');
+    const tokensDescEl = container.querySelector<HTMLElement>('[data-ref="item-tokens-desc"]');
+    const btnTokensUpgrade = container.querySelector<HTMLElement>('[data-ref="btn-tokens-upgrade"]');
+
+    if (subtitleEl) subtitleEl.textContent = t('settings.billing.team_scope_subtitle', { name: activeTeam.name });
+    if (storageTitleEl) storageTitleEl.textContent = t('settings.billing.team_storage_title');
+    if (storageDescEl) storageDescEl.textContent = t('settings.billing.team_storage_desc');
+    if (tokensDescEl) tokensDescEl.textContent = t('settings.billing.team_tokens_desc');
+    btnTokensUpgrade?.classList.add('is-hidden');
+  }
 
   let resetCountdownTarget: Date | null = null;
   let resetCountdownIntervalId: number | null = null;
@@ -114,37 +133,57 @@ async function createBillingView(): Promise<HTMLElement> {
       if (planDescEl) {
         const amountVal = info.amount || 0;
         const amountText = amountVal > 0 ? `USD $${amountVal.toFixed(2)} - ` : '';
+        const seatsPrefix = isTeamScope && activeTeam
+          ? `${t('settings.billing.team_seats_summary', {
+              limit: Number(info.seat_limit || activeTeam.seat_limit || 1),
+              used: Number(info.seats_used || activeTeam.seats_used || 1),
+            })} · `
+          : '';
 
         if (isOneTime) {
           if (dateFormatted) {
-            planDescEl.textContent = t('settings.billing.plan_desc_one_time_date', {
+            planDescEl.textContent = `${seatsPrefix}${t('settings.billing.plan_desc_one_time_date', {
               amount: amountText,
               date: dateFormatted,
-            });
+            })}`;
           } else {
-            planDescEl.textContent = t('settings.billing.plan_desc_one_time', {
+            planDescEl.textContent = `${seatsPrefix}${t('settings.billing.plan_desc_one_time', {
               amount: amountText,
-            });
+            })}`;
           }
         } else if (info.cancel_at_period_end) {
-          planDescEl.textContent = t('settings.billing.plan_desc_scheduled', { date: dateFormatted });
+          planDescEl.textContent = `${seatsPrefix}${t('settings.billing.plan_desc_scheduled', { date: dateFormatted })}`;
         } else {
-          planDescEl.textContent = t('settings.billing.plan_desc_active', {
+          planDescEl.textContent = `${seatsPrefix}${t('settings.billing.plan_desc_active', {
             amount: amountText,
             date: dateFormatted,
-          });
+          })}`;
         }
       }
 
       if (btnUpgrade) {
-        btnUpgrade.textContent = t('settings.billing.btn_change_plan');
-        btnUpgrade.onclick = (e) => {
-          e.preventDefault();
-          navigate('/pricing');
-        };
+        if (isTeamScope) {
+          if (canManageTeamBilling) {
+            btnUpgrade.classList.remove('is-hidden');
+            btnUpgrade.textContent = t('settings.billing.btn_manage_team_seats');
+            btnUpgrade.onclick = (e) => {
+              e.preventDefault();
+              navigate('/settings/team');
+            };
+          } else {
+            btnUpgrade.classList.add('is-hidden');
+          }
+        } else {
+          btnUpgrade.classList.remove('is-hidden');
+          btnUpgrade.textContent = t('settings.billing.btn_change_plan');
+          btnUpgrade.onclick = (e) => {
+            e.preventDefault();
+            navigate('/pricing');
+          };
+        }
       }
 
-      if (isOneTime) {
+      if (isOneTime || (isTeamScope && !canManageTeamBilling)) {
         itemCancelSub?.classList.add('is-hidden');
         dividerCancelSub?.classList.add('is-hidden');
       } else {
@@ -181,11 +220,23 @@ async function createBillingView(): Promise<HTMLElement> {
       if (planDescEl) planDescEl.textContent = t('settings.billing.free_plan_desc');
 
       if (btnUpgrade) {
-        btnUpgrade.textContent = t('settings.billing.btn_explore_plans');
-        btnUpgrade.onclick = (e) => {
-          e.preventDefault();
-          navigate('/pricing');
-        };
+        if (isTeamScope && !canManageTeamBilling) {
+          btnUpgrade.classList.add('is-hidden');
+        } else if (isTeamScope) {
+          btnUpgrade.classList.remove('is-hidden');
+          btnUpgrade.textContent = t('settings.billing.btn_manage_team_seats');
+          btnUpgrade.onclick = (e) => {
+            e.preventDefault();
+            navigate('/settings/team');
+          };
+        } else {
+          btnUpgrade.classList.remove('is-hidden');
+          btnUpgrade.textContent = t('settings.billing.btn_explore_plans');
+          btnUpgrade.onclick = (e) => {
+            e.preventDefault();
+            navigate('/pricing');
+          };
+        }
       }
 
       itemCancelSub?.classList.add('is-hidden');
@@ -195,6 +246,32 @@ async function createBillingView(): Promise<HTMLElement> {
 
   const loadBillingData = async () => {
     try {
+      if (isTeamScope && activeTeam) {
+        const res = await getTeamBillingDetailsApi();
+        const teamBilling = res?.billing;
+        if (res && res.success && teamBilling && teamBilling.tier && teamBilling.tier !== 'free') {
+          renderSubscriptionPlan(teamBilling);
+        } else if (activeTeam.subscription_tier && activeTeam.subscription_tier !== 'free') {
+          renderSubscriptionPlan({
+            billing_period: 'one_time_monthly',
+            hasSubscription: true,
+            is_one_time: true,
+            seat_limit: activeTeam.seat_limit,
+            seats_used: activeTeam.seats_used,
+            status: activeTeam.subscription_status || 'active',
+            success: true,
+            team_id: activeTeam.id,
+            team_name: activeTeam.name,
+            tier: activeTeam.subscription_tier,
+          });
+        } else if (teamBilling) {
+          renderSubscriptionPlan(teamBilling);
+        } else {
+          renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
+        }
+        return;
+      }
+
       const res = await getBillingDetailsApi();
       if (res && res.success && res.tier && res.tier !== 'free') {
         renderSubscriptionPlan(res);
@@ -213,6 +290,26 @@ async function createBillingView(): Promise<HTMLElement> {
         renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
       }
     } catch {
+      if (isTeamScope && activeTeam) {
+        if (activeTeam.subscription_tier && activeTeam.subscription_tier !== 'free') {
+          renderSubscriptionPlan({
+            billing_period: 'one_time_monthly',
+            hasSubscription: true,
+            is_one_time: true,
+            seat_limit: activeTeam.seat_limit,
+            seats_used: activeTeam.seats_used,
+            status: activeTeam.subscription_status || 'active',
+            success: true,
+            team_id: activeTeam.id,
+            team_name: activeTeam.name,
+            tier: activeTeam.subscription_tier,
+          });
+        } else {
+          renderSubscriptionPlan({ hasSubscription: false, success: false, tier: 'free' });
+        }
+        return;
+      }
+
       if (currentUser?.subscription_tier && currentUser.subscription_tier !== 'free') {
         renderSubscriptionPlan({
           billing_period: 'one_time_monthly',
@@ -229,13 +326,16 @@ async function createBillingView(): Promise<HTMLElement> {
   };
 
   const handleToggleSubscription = (cancelAtPeriodEnd: boolean, dateFormatted = '') => {
+    if (isTeamScope && !canManageTeamBilling) return;
+
     if (cancelAtPeriodEnd) {
       openCancelSubscriptionModal({
         dateFormatted,
+        description: isTeamScope ? t('settings.billing.team_modal_cancel_sub_desc', { date: dateFormatted }) : undefined,
         onConfirm: async (inst: any) => {
           inst.setConfirmLoading(true);
           try {
-            const res = await updateAutoRenewalApi(true);
+            const res = isTeamScope ? await updateTeamRenewalApi(true) : await updateAutoRenewalApi(true);
             if (res.success) {
               inst.close();
               showToast(t('settings.billing.toast_subscription_cancelled'), 'info');
@@ -253,7 +353,7 @@ async function createBillingView(): Promise<HTMLElement> {
     } else {
       (async () => {
         try {
-          const res = await updateAutoRenewalApi(false);
+          const res = isTeamScope ? await updateTeamRenewalApi(false) : await updateAutoRenewalApi(false);
           if (res.success) {
             showToast(t('settings.billing.toast_subscription_reactivated'), 'success');
             await loadBillingData();
@@ -278,16 +378,17 @@ async function createBillingView(): Promise<HTMLElement> {
   const renderStorageValues = (used: number, limit: number) => {
     const textUsed = container.querySelector<HTMLElement>('[data-ref="storage-text-used"]');
     const badgePercent = container.querySelector<HTMLElement>('[data-ref="storage-badge-percent"]');
-    const barFill = container.querySelector<HTMLElement>('[data-ref="storage-bar-fill"]');
+    const barFill = container.querySelector<HTMLProgressElement>('[data-ref="storage-bar-fill"]');
     const textAvailable = container.querySelector<HTMLElement>('[data-ref="storage-available-text"]');
 
     if (!textUsed || !barFill) return;
 
-    const pct = Math.min(100, Math.round((used / limit) * 1000) / 10);
-    const avail = Math.max(0, limit - used);
+    const safeLimit = Math.max(1, limit);
+    const pct = Math.min(100, Math.round((used / safeLimit) * 1000) / 10);
+    const avail = Math.max(0, safeLimit - used);
 
     textUsed.textContent = t('settings.billing.storage_used_format', {
-      limit: formatBytes(limit),
+      limit: formatBytes(safeLimit),
       used: formatBytes(used),
     });
 
@@ -302,7 +403,8 @@ async function createBillingView(): Promise<HTMLElement> {
       }
     }
 
-    barFill.style.setProperty('--progress-pct', `${Math.min(100, pct)}%`);
+    barFill.max = 100;
+    barFill.value = Math.min(100, pct);
     barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
     if (pct >= 90) {
       barFill.classList.add('component-progress__bar--danger');
@@ -325,14 +427,16 @@ async function createBillingView(): Promise<HTMLElement> {
       if (res.ok) {
         const data = await res.json();
         const used = Number(data.usedBytes) || 0;
-        const limit = Number(data.limitBytes) || 5368709120;
+        const limit = Number(data.limitBytes) || (isTeamScope ? 536870912000 : 5368709120);
         renderStorageValues(used, limit);
         return;
       }
     } catch {}
 
-    const used = Number(currentUser?.storage_used_bytes) || 0;
-    const limit = Number(currentUser?.storage_limit_bytes) || 5368709120;
+    const used = isTeamScope ? 0 : (Number(currentUser?.storage_used_bytes) || 0);
+    const limit = isTeamScope
+      ? 536870912000
+      : (Number(currentUser?.storage_limit_bytes) || 5368709120);
     renderStorageValues(used, limit);
   };
 
@@ -399,19 +503,22 @@ async function createBillingView(): Promise<HTMLElement> {
   const renderAiTokensSection = async () => {
     const textBalance = container.querySelector<HTMLElement>('[data-ref="tokens-text-balance"]');
     const badgePercent = container.querySelector<HTMLElement>('[data-ref="tokens-badge-percent"]');
-    const barFill = container.querySelector<HTMLElement>('[data-ref="tokens-bar-fill"]');
+    const barFill = container.querySelector<HTMLProgressElement>('[data-ref="tokens-bar-fill"]');
 
     if (!textBalance || !barFill) return;
 
-    let balance = currentUser?.ai_tokens_balance ?? 100;
-    let limit = 100;
-    if (currentUser?.subscription_tier === 'pro') limit = 2000;
-    else if (currentUser?.subscription_tier === 'business') limit = 5000;
+    let balance = isTeamScope ? (activeTeam?.ai_tokens_balance ?? 5000) : (currentUser?.ai_tokens_balance ?? 100);
+    let limit = isTeamScope ? 5000 : 100;
+    if (!isTeamScope) {
+      if (hasSubscriptionFeature('business')) limit = 5000;
+      else if (hasSubscriptionFeature('pro')) limit = 2000;
+    }
 
     clearCountdownTimers();
     resetCountdownTarget = null;
 
     const tokenData = await fetchAiTokenBalance();
+    if (isDestroyed) return;
     if (tokenData) {
       balance = tokenData.balance;
       limit = tokenData.limit || limit;
@@ -426,7 +533,8 @@ async function createBillingView(): Promise<HTMLElement> {
       }
     }
 
-    const pct = Math.min(100, Math.max(0, Math.round((balance / limit) * 100)));
+    const safeLimit = Math.max(1, limit);
+    const pct = Math.min(100, Math.max(0, Math.round((balance / safeLimit) * 100)));
     textBalance.textContent = t('settings.billing.tokens_balance_format', {
       balance: balance.toLocaleString(),
       limit: limit.toLocaleString(),
@@ -443,7 +551,8 @@ async function createBillingView(): Promise<HTMLElement> {
       }
     }
 
-    barFill.style.setProperty('--progress-pct', `${pct}%`);
+    barFill.max = 100;
+    barFill.value = pct;
     barFill.classList.remove('component-progress__bar--danger', 'component-progress__bar--warning', 'component-progress__bar--primary');
     if (pct <= 10) {
       barFill.classList.add('component-progress__bar--danger');

@@ -1,6 +1,7 @@
 import { getMultiAccountSession } from '../services/auth.service.js';
 import { permissionService } from '../services/permission.service.js';
 import { SessionAccount, UserPayload } from '../types/auth.types.js';
+import { hydrateWorkspaceForRequest } from './workspace.middleware.js';
 import type { NextFunction, Request, Response } from 'express';
 
 function getCurrentUser(req: Request): UserPayload | null {
@@ -37,19 +38,36 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
       );
     } catch {}
   }
+
+  const wsResult = await hydrateWorkspaceForRequest(req, user.id);
+  if (wsResult.error) {
+    res.status(wsResult.statusCode || 403).json({ error: wsResult.error, success: false });
+    return;
+  }
+  if (req.workspaceTeam && Array.isArray(req.workspacePermissions)) {
+    user.permissions = req.workspacePermissions;
+    (req as any).userPermissions = req.workspacePermissions;
+  }
   next();
 }
 
 async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const user = getCurrentUser(req);
-  if (user && (!user.permissions || !Array.isArray(user.permissions) || user.permissions.length === 0)) {
-    try {
-      user.permissions = await permissionService.getUserPermissions(
-        user.id,
-        user.subscription_tier,
-        user.subscription_status
-      );
-    } catch {}
+  if (user) {
+    if (!user.permissions || !Array.isArray(user.permissions) || user.permissions.length === 0) {
+      try {
+        user.permissions = await permissionService.getUserPermissions(
+          user.id,
+          user.subscription_tier,
+          user.subscription_status
+        );
+      } catch {}
+    }
+    const wsResult = await hydrateWorkspaceForRequest(req, user.id);
+    if (!wsResult.error && req.workspaceTeam && Array.isArray(req.workspacePermissions)) {
+      user.permissions = req.workspacePermissions;
+      (req as any).userPermissions = req.workspacePermissions;
+    }
   }
   next();
 }

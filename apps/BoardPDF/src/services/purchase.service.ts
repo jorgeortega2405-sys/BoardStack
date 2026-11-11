@@ -25,6 +25,9 @@ class PurchaseService {
       await pool.query<ResultSetHeader>(
         `INSERT INTO purchases (
           user_id,
+          team_id,
+          team_seats,
+          purchase_scope,
           stripe_session_id,
           stripe_payment_intent_id,
           stripe_subscription_id,
@@ -34,15 +37,21 @@ class PurchaseService {
           amount_total,
           currency,
           status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           stripe_payment_intent_id = COALESCE(VALUES(stripe_payment_intent_id), stripe_payment_intent_id),
           stripe_subscription_id = COALESCE(VALUES(stripe_subscription_id), stripe_subscription_id),
           stripe_customer_id = COALESCE(VALUES(stripe_customer_id), stripe_customer_id),
+          team_id = COALESCE(VALUES(team_id), team_id),
+          team_seats = COALESCE(VALUES(team_seats), team_seats),
+          purchase_scope = VALUES(purchase_scope),
           status = IF(purchases.status = 'completed', 'completed', VALUES(status)),
           updated_at = CURRENT_TIMESTAMP`,
         [
           purchase.user_id,
+          purchase.team_id || null,
+          purchase.team_seats || null,
+          purchase.purchase_scope || (purchase.team_id ? 'team' : 'personal'),
           purchase.stripe_session_id,
           purchase.stripe_payment_intent_id || null,
           purchase.stripe_subscription_id || null,
@@ -194,6 +203,9 @@ class PurchaseService {
       await connection.query<ResultSetHeader>(
         `INSERT INTO purchases (
           user_id,
+          team_id,
+          team_seats,
+          purchase_scope,
           stripe_session_id,
           stripe_payment_intent_id,
           stripe_subscription_id,
@@ -203,15 +215,21 @@ class PurchaseService {
           amount_total,
           currency,
           status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')
         ON DUPLICATE KEY UPDATE
           stripe_payment_intent_id = COALESCE(VALUES(stripe_payment_intent_id), stripe_payment_intent_id),
           stripe_subscription_id = COALESCE(VALUES(stripe_subscription_id), stripe_subscription_id),
           stripe_customer_id = COALESCE(VALUES(stripe_customer_id), stripe_customer_id),
+          team_id = COALESCE(VALUES(team_id), team_id),
+          team_seats = COALESCE(VALUES(team_seats), team_seats),
+          purchase_scope = VALUES(purchase_scope),
           status = 'completed',
           updated_at = CURRENT_TIMESTAMP`,
         [
           userId,
+          purchaseData.team_id || null,
+          purchaseData.team_seats || null,
+          purchaseData.purchase_scope || (purchaseData.team_id ? 'team' : 'personal'),
           purchaseData.stripe_session_id,
           purchaseData.stripe_payment_intent_id || null,
           purchaseData.stripe_subscription_id || null,
@@ -224,45 +242,50 @@ class PurchaseService {
       );
 
       const canonicalTier = normalizeTierKey(tier);
-      const shouldUpdateSubId = subscriptionId !== undefined;
-      const shouldUpdatePeriodEnd = periodEnd !== undefined;
 
-      const params: any[] = [canonicalTier, purchaseData.stripe_customer_id || null];
-      if (shouldUpdateSubId) params.push(subscriptionId);
-      params.push(status);
-      if (shouldUpdatePeriodEnd) params.push(periodEnd);
-      params.push(userId);
+      if (purchaseData.purchase_scope !== 'team' && !purchaseData.team_id) {
+        const shouldUpdateSubId = subscriptionId !== undefined;
+        const shouldUpdatePeriodEnd = periodEnd !== undefined;
 
-      await connection.query<ResultSetHeader>(
-        `UPDATE users
-        SET
-          subscription_tier = ?,
-          stripe_customer_id = COALESCE(?, stripe_customer_id),
-          stripe_subscription_id = ${shouldUpdateSubId ? '?' : 'stripe_subscription_id'},
-          subscription_status = ?,
-          subscription_period_end = ${shouldUpdatePeriodEnd ? '?' : 'subscription_period_end'}
-        WHERE id = ?`,
-        params
-      );
+        const params: any[] = [canonicalTier, purchaseData.stripe_customer_id || null];
+        if (shouldUpdateSubId) params.push(subscriptionId);
+        params.push(status);
+        if (shouldUpdatePeriodEnd) params.push(periodEnd);
+        params.push(userId);
+
+        await connection.query<ResultSetHeader>(
+          `UPDATE users
+          SET
+            subscription_tier = ?,
+            stripe_customer_id = COALESCE(?, stripe_customer_id),
+            stripe_subscription_id = ${shouldUpdateSubId ? '?' : 'stripe_subscription_id'},
+            subscription_status = ?,
+            subscription_period_end = ${shouldUpdatePeriodEnd ? '?' : 'subscription_period_end'}
+          WHERE id = ?`,
+          params
+        );
+      }
 
       await connection.commit();
 
-      try {
-        await cacheService.invalidateUser(String(userId));
-        await permissionService.invalidateUserPermissions(userId);
-      } catch {}
-
-      if (status === 'active') {
+      if (purchaseData.purchase_scope !== 'team' && !purchaseData.team_id) {
         try {
-          const perms = await permissionService.getUserPermissions(userId, canonicalTier, status);
-          const newQuota = getMonthlyQuotaByPermissions(perms);
-          await pool.query(
-            'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
-            [newQuota, userId]
-          );
           await cacheService.invalidateUser(String(userId));
-        } catch (tokenErr) {
-          logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
+          await permissionService.invalidateUserPermissions(userId);
+        } catch {}
+
+        if (status === 'active') {
+          try {
+            const perms = await permissionService.getUserPermissions(userId, canonicalTier, status);
+            const newQuota = getMonthlyQuotaByPermissions(perms);
+            await pool.query(
+              'UPDATE users SET ai_tokens_balance = ?, ai_tokens_reset_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 1 MONTH) WHERE id = ?',
+              [newQuota, userId]
+            );
+            await cacheService.invalidateUser(String(userId));
+          } catch (tokenErr) {
+            logger.db.warn('Error al actualizar tokens de usuario tras cambio de suscripción', tokenErr);
+          }
         }
       }
 
@@ -296,6 +319,25 @@ class PurchaseService {
       [status, paymentIntentId || null, purchaseId]
     );
     return result.affectedRows > 0;
+  }
+
+  public async getPurchasesByTeamId(teamId: number): Promise<PurchaseRecord[]> {
+    const pool = getDbPool();
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM purchases WHERE team_id = ? ORDER BY created_at DESC',
+      [teamId]
+    );
+    return rows as PurchaseRecord[];
+  }
+
+  public async getPurchaseByIdForTeam(purchaseId: number, teamId: number): Promise<PurchaseRecord | null> {
+    const pool = getDbPool();
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM purchases WHERE id = ? AND team_id = ? LIMIT 1',
+      [purchaseId, teamId]
+    );
+    if (rows.length === 0) return null;
+    return rows[0] as PurchaseRecord;
   }
 
   public async getUserBillingInfo(userId: number): Promise<{

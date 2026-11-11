@@ -13,6 +13,7 @@ import downloadRoutes from './routes/download.routes.js';
 import seoRoutes from './routes/seo.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
+import teamRoutes from './routes/team.routes.js';
 import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import { startColdStorageCron } from './services/storage-quota.service.js';
@@ -372,6 +373,7 @@ async function startServer(): Promise<void> {
   app.use('/api', downloadRoutes);
   app.use('/api', settingsRoutes);
   app.use('/api', subscriptionRoutes);
+  app.use('/api', teamRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);
 

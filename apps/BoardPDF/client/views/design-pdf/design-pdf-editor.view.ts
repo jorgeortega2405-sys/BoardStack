@@ -63,6 +63,8 @@ class DesignPdfEditorController implements ViewController {
   private dispatcher!: CollabActionDispatcher;
   private docAccessLevel: 'anyone_with_link' | 'restricted' = 'restricted';
   private docCustomSlug: string | null = null;
+  private docTeamAccess: 'editor' | 'viewer' | 'none' = 'none';
+  private docTeamId: number | null = null;
   private docDefaultPageSize: PageDimension = { height: 1123, width: 794 };
   private initialUrlDimensions: PageDimension | null = null;
   private isLoadingDocument = false;
@@ -1651,6 +1653,8 @@ class DesignPdfEditorController implements ViewController {
                 this.docTitle = data.document.title || t('collaborative.untitled_doc');
                 this.docAccessLevel = data.document.access_level || 'anyone_with_link';
                 this.docCustomSlug = data.document.custom_slug || null;
+                this.docTeamId = data.document.team_id ? Number(data.document.team_id) : null;
+                this.docTeamAccess = data.document.team_access || 'none';
                 this.isDocOwner = false;
                 this.canEditDoc = data.canEdit ?? (this.docAccessLevel === 'anyone_with_link');
                 this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
@@ -1674,6 +1678,8 @@ class DesignPdfEditorController implements ViewController {
               this.docTitle = t('collaborative.untitled_doc');
               this.docAccessLevel = 'restricted';
               this.docCustomSlug = null;
+              this.docTeamId = null;
+              this.docTeamAccess = 'none';
               this.isDocOwner = true;
               this.canEditDoc = true;
               this.docMembers = [];
@@ -1688,6 +1694,8 @@ class DesignPdfEditorController implements ViewController {
             this.docTitle = t('collaborative.untitled_doc');
             this.docAccessLevel = 'restricted';
             this.docCustomSlug = null;
+            this.docTeamId = null;
+            this.docTeamAccess = 'none';
             this.isDocOwner = true;
             this.canEditDoc = true;
             this.docMembers = [];
@@ -1717,6 +1725,8 @@ class DesignPdfEditorController implements ViewController {
               this.docTitle = data.document.title || t('collaborative.untitled_doc');
               this.docAccessLevel = data.document.access_level || 'restricted';
               this.docCustomSlug = data.document.custom_slug || null;
+              this.docTeamId = data.document.team_id ? Number(data.document.team_id) : null;
+              this.docTeamAccess = data.document.team_access || 'none';
               this.isDocOwner = data.isOwner ?? true;
               this.canEditDoc = data.canEdit ?? true;
               this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
@@ -8200,8 +8210,13 @@ class DesignPdfEditorController implements ViewController {
       onMembersChange: (members) => {
         this.docMembers = members;
       },
+      onTeamAccessChange: (access) => {
+        this.docTeamAccess = access;
+      },
       pageCount: this.pageCount,
       selectedPageIndex: this.selectedPageIndex,
+      teamAccess: this.docTeamAccess,
+      teamId: this.docTeamId,
     });
 
     this.sharePopoverHandle = handle;

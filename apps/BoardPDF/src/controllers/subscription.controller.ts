@@ -1,13 +1,15 @@
 import { config } from '../config/env.config.js';
 import { normalizeTierKey, PLAN_TIER_CONFIGS } from '../config/plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { getWorkspaceTeam } from '../middlewares/workspace.middleware.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
 import { generateInvoicePdf } from '../services/invoice.service.js';
 import { logger } from '../services/logger.service.js';
 import { purchaseService } from '../services/purchase.service.js';
+import { cancelTeamSubscription, getTeamBillingDetails, updateTeamRenewal } from '../services/stripe-team.service.js';
 import { stripeService } from '../services/stripe.service.js';
 import { SubscriptionTierId } from '../types/subscription.types.js';
-import { sendBadRequest, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { sendBadRequest, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
 function isSafeClientError(msg: string): boolean {
@@ -139,6 +141,27 @@ async function getBillingDetails(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const teamCtx = getWorkspaceTeam(req);
+    if (teamCtx) {
+      if (teamCtx.permissions.includes('team:billing:manage')) {
+        const teamBilling = await getTeamBillingDetails(teamCtx.id);
+        sendSuccess(res, teamBilling);
+        return;
+      }
+      sendSuccess(res, {
+        hasSubscription: teamCtx.subscription_status === 'active' || teamCtx.subscription_status === 'past_due',
+        scope: 'team',
+        seat_limit: teamCtx.seat_limit,
+        seats_used: teamCtx.seats_used,
+        status: teamCtx.subscription_status,
+        success: true,
+        team_id: teamCtx.id,
+        team_name: teamCtx.name,
+        tier: teamCtx.subscription_tier,
+      });
+      return;
+    }
+
     const details = await stripeService.getSubscriptionDetails(user.id);
     sendSuccess(res, details);
   } catch (error) {
@@ -154,8 +177,19 @@ async function getPurchaseHistory(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const teamCtx = getWorkspaceTeam(req);
+    if (teamCtx) {
+      if (!teamCtx.permissions.includes('team:billing:manage')) {
+        sendSuccess(res, { purchases: [], scope: 'team', success: true });
+        return;
+      }
+      const purchases = await purchaseService.getPurchasesByTeamId(teamCtx.id);
+      sendSuccess(res, { purchases, scope: 'team', success: true });
+      return;
+    }
+
     const purchases = await purchaseService.getPurchasesByUserId(user.id);
-    sendSuccess(res, { purchases, success: true });
+    sendSuccess(res, { purchases, scope: 'personal', success: true });
   } catch (error) {
     sendInternalError(res, 'Error al obtener historial de compras', error, 'Error al obtener el historial de compras.');
   }
@@ -175,7 +209,18 @@ async function downloadPurchaseInvoice(req: Request, res: Response): Promise<voi
       return;
     }
 
-    const purchase = await purchaseService.getPurchaseById(purchaseId, user.id);
+    const teamCtx = getWorkspaceTeam(req);
+    let purchase = null;
+    if (teamCtx) {
+      if (!teamCtx.permissions.includes('team:billing:manage')) {
+        sendForbidden(res, 'No tienes permisos para descargar facturas de este equipo.');
+        return;
+      }
+      purchase = await purchaseService.getPurchaseByIdForTeam(purchaseId, teamCtx.id);
+    } else {
+      purchase = await purchaseService.getPurchaseById(purchaseId, user.id);
+    }
+
     if (!purchase) {
       sendBadRequest(res, 'No se encontró el registro de la compra solicitada.');
       return;
@@ -205,6 +250,24 @@ async function updateAutoRenewal(req: Request, res: Response): Promise<void> {
     }
 
     const { cancelAtPeriodEnd } = req.body || {};
+    const teamCtx = getWorkspaceTeam(req);
+    if (teamCtx) {
+      if (!teamCtx.permissions.includes('team:billing:manage')) {
+        sendForbidden(res, 'No tienes permisos para gestionar la facturación del equipo.');
+        return;
+      }
+      const teamResult = await updateTeamRenewal(teamCtx.id, Boolean(cancelAtPeriodEnd));
+      sendSuccess(res, {
+        cancel_at_period_end: teamResult.cancel_at_period_end,
+        current_period_end: teamResult.current_period_end,
+        message: cancelAtPeriodEnd
+          ? 'Renovación automática del equipo cancelada. Mantendrán la suscripción hasta el término del período actual.'
+          : 'Renovación automática del equipo reactivada exitosamente.',
+        success: true,
+      });
+      return;
+    }
+
     const result = await stripeService.updateSubscriptionRenewal(user.id, Boolean(cancelAtPeriodEnd));
 
     sendSuccess(res, {
@@ -225,6 +288,21 @@ async function cancelSubscriptionImmediate(req: Request, res: Response): Promise
     const user = getCurrentUser(req);
     if (!user) {
       sendUnauthorized(res);
+      return;
+    }
+
+    const teamCtx = getWorkspaceTeam(req);
+    if (teamCtx) {
+      if (!teamCtx.permissions.includes('team:billing:manage')) {
+        sendForbidden(res, 'No tienes permisos para cancelar la suscripción del equipo.');
+        return;
+      }
+      await cancelTeamSubscription(teamCtx.id);
+      sendSuccess(res, {
+        message: 'La suscripción del equipo ha sido cancelada.',
+        success: true,
+        tier: 'free',
+      });
       return;
     }
 
@@ -324,7 +402,7 @@ async function createSubscriptionIntent(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const { billingPeriod, planId } = req.body;
+    const { billingPeriod, planId, scope, seats, teamId, teamName } = req.body;
     if (!planId) {
       sendBadRequest(res, 'El plan es obligatorio.');
       return;
@@ -341,7 +419,13 @@ async function createSubscriptionIntent(req: Request, res: Response): Promise<vo
       user.id,
       user.email,
       canonicalPlan,
-      cycle
+      cycle,
+      {
+        scope: scope === 'team' ? 'team' : 'personal',
+        seats: Number(seats || 1),
+        teamId: teamId ? Number(teamId) : undefined,
+        teamName: typeof teamName === 'string' ? teamName : undefined,
+      }
     );
 
     sendSuccess(res, result);
@@ -374,9 +458,11 @@ async function confirmSubscriptionPayment(req: Request, res: Response): Promise<
       paymentIntentId
     );
 
-    updateActiveAccountInSession(res, req, {
-      subscription_tier: result.tier as SubscriptionTierId,
-    });
+    if (!result.teamId) {
+      updateActiveAccountInSession(res, req, {
+        subscription_tier: result.tier as SubscriptionTierId,
+      });
+    }
 
     sendSuccess(res, result);
   } catch (error: any) {
@@ -396,7 +482,7 @@ async function createOneTimeIntent(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { duration, planId } = req.body;
+    const { duration, planId, scope, seats, teamId, teamName } = req.body;
     if (!planId) {
       sendBadRequest(res, 'El plan es obligatorio.');
       return;
@@ -413,7 +499,13 @@ async function createOneTimeIntent(req: Request, res: Response): Promise<void> {
       user.id,
       user.email,
       canonicalPlan,
-      dur
+      dur,
+      {
+        scope: scope === 'team' ? 'team' : 'personal',
+        seats: Number(seats || 1),
+        teamId: teamId ? Number(teamId) : undefined,
+        teamName: typeof teamName === 'string' ? teamName : undefined,
+      }
     );
 
     sendSuccess(res, result);
@@ -442,9 +534,11 @@ async function confirmOneTimePayment(req: Request, res: Response): Promise<void>
 
     const result = await stripeService.confirmOneTimePayment(user.id, paymentIntentId);
 
-    updateActiveAccountInSession(res, req, {
-      subscription_tier: result.planId as SubscriptionTierId,
-    });
+    if (!result.teamId) {
+      updateActiveAccountInSession(res, req, {
+        subscription_tier: result.planId as SubscriptionTierId,
+      });
+    }
 
     sendSuccess(res, result);
   } catch (error: any) {

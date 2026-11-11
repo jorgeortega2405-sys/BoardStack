@@ -2,6 +2,9 @@ import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
 const CACHE_KEYS = {
+  teamById: (teamId: number | string) => `cache:team:id:${teamId}`,
+  teamLabels: (teamId: number | string) => `cache:team:labels:${teamId}`,
+  teamPerms: (teamId: number | string, userId: number | string) => `cache:team:perms:${teamId}:${userId}`,
   userBilling: (userId: string) => `cache:user:billing:${userId}`,
   userById: (userId: string) => `cache:user:id:${userId}`,
   userEmail: (email: string) => `cache:user:email:${email.toLowerCase().trim()}`,
@@ -9,16 +12,21 @@ const CACHE_KEYS = {
   userPerms: (userId: string) => `cache:user:perms:${userId}`,
   userPrefs: (userId: string) => `cache:user:prefs:${userId}`,
   userProfile: (userId: string) => `user:profile:${userId}`,
+  userTeams: (userId: number | string) => `cache:user:teams:${userId}`,
   userUsername: (username: string) => `cache:user:username:${username.toLowerCase().trim()}`,
 };
 
 const CACHE_TTL = {
+  teamById: 300,
+  teamLabels: 300,
+  teamPerms: 300,
   userBilling: 300,
   userById: 300,
   userEmail: 300,
   userLabels: 300,
   userPerms: 300,
   userPrefs: 600,
+  userTeams: 300,
   userUsername: 300,
 };
 
@@ -126,17 +134,31 @@ async function invalidateUserPrefs(userId: string): Promise<void> {
   await del(CACHE_KEYS.userPrefs(userId));
 }
 
+async function invalidateUserOrg(userId: number | string): Promise<void> {
+  await del(CACHE_KEYS.userTeams(userId), CACHE_KEYS.userPerms(String(userId)));
+}
+
+async function invalidateTeam(teamId: number | string, memberUserIds: Array<number | string> = []): Promise<void> {
+  const keys = [CACHE_KEYS.teamById(teamId), CACHE_KEYS.teamLabels(teamId)];
+  for (const uid of memberUserIds) {
+    keys.push(CACHE_KEYS.teamPerms(teamId, uid), CACHE_KEYS.userTeams(uid));
+  }
+  await del(...keys);
+}
+
 const cacheService = {
   CACHE_KEYS,
   CACHE_TTL,
   del,
   get,
+  invalidateTeam,
   invalidateUser,
   invalidateUserCache,
   invalidateUserLabels,
+  invalidateUserOrg,
   invalidateUserPrefs,
   remember,
   set,
 };
 
-export { CACHE_KEYS, CACHE_TTL, cacheService, del, get, invalidateUser, invalidateUserCache, invalidateUserLabels, invalidateUserPrefs, remember, set };
+export { CACHE_KEYS, CACHE_TTL, cacheService, del, get, invalidateTeam, invalidateUser, invalidateUserCache, invalidateUserLabels, invalidateUserOrg, invalidateUserPrefs, remember, set };

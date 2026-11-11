@@ -1,9 +1,16 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { User } from '../types/auth.types.js';
 import { OneTimePaymentIntentResponse, SubscriptionIntentResponse } from '../types/subscription.types.js';
+import type { FolderSharingDetailsResponse, TeamBillingDetailsResponse, TeamDetailResponse, TeamInviteInspectResponse, TeamListResponse, TeamSeatPreviewResponse, TeamSeatUpdateResponse, TeamSummary } from '../types/team.types.js';
 import { clearAllLocalDrafts } from '../utils/collab-local-draft.util.js';
-import { wsService } from './websocket.service.js';
 import { t } from './i18n.service.js';
+import { wsService } from './websocket.service.js';
+import { getActiveTeamId, resolveActiveWorkspace, setActiveTeamId } from './workspace.service.js';
+
+function getWorkspaceHeaders(): Record<string, string> {
+  const teamId = getActiveTeamId();
+  return teamId ? { 'X-Team-Id': String(teamId) } : {};
+}
 
 let currentUser: User | null = null;
 let linkedAccounts: User[] = [];
@@ -38,9 +45,25 @@ function onAuthChange(callback: (user: User | null, accounts?: User[]) => void):
   };
 }
 
+function getActiveWorkspaceTeam(): TeamSummary | null {
+  return resolveActiveWorkspace(currentUser);
+}
+
 function hasPermission(permission: string): boolean {
-  if (!currentUser || !Array.isArray(currentUser.permissions)) return false;
-  return currentUser.permissions.includes(permission);
+  if (currentUser && Array.isArray(currentUser.permissions) && currentUser.permissions.includes(permission)) {
+    return true;
+  }
+  const activeTeam = resolveActiveWorkspace(currentUser);
+  if (activeTeam && Array.isArray(activeTeam.permissions) && activeTeam.permissions.includes(permission)) {
+    return true;
+  }
+  return false;
+}
+
+function hasTeamPermission(permission: string): boolean {
+  const activeTeam = resolveActiveWorkspace(currentUser);
+  if (!activeTeam || !Array.isArray(activeTeam.permissions)) return false;
+  return activeTeam.permissions.includes(permission);
 }
 
 function hasSubscriptionFeature(feature: string): boolean {
@@ -73,6 +96,7 @@ async function getApi(url: string): Promise<Response> {
     credentials: 'same-origin',
     headers: {
       Accept: 'application/json',
+      ...getWorkspaceHeaders(),
     },
     method: 'GET',
   });
@@ -87,6 +111,7 @@ async function postApi(url: string, body?: unknown, customHeaders?: Record<strin
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'x-csrf-token': token,
+      ...getWorkspaceHeaders(),
       ...(customHeaders || {}),
     },
     method: 'POST',
@@ -102,6 +127,7 @@ async function patchApi(url: string, body?: unknown): Promise<Response> {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'x-csrf-token': token,
+      ...getWorkspaceHeaders(),
     },
     method: 'PATCH',
   });
@@ -116,6 +142,7 @@ async function putApi(url: string, body?: unknown): Promise<Response> {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'x-csrf-token': token,
+      ...getWorkspaceHeaders(),
     },
     method: 'PUT',
   });
@@ -129,6 +156,7 @@ async function deleteApi(url: string, body?: unknown): Promise<Response> {
     headers: {
       Accept: 'application/json',
       'x-csrf-token': token,
+      ...getWorkspaceHeaders(),
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     method: 'DELETE',
@@ -143,6 +171,7 @@ async function postFormApi(url: string, formData: FormData): Promise<Response> {
     headers: {
       Accept: 'application/json',
       'x-csrf-token': token,
+      ...getWorkspaceHeaders(),
     },
     method: 'POST',
   });
@@ -170,6 +199,10 @@ async function postFormWithProgress(
     xhr.withCredentials = true;
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('x-csrf-token', token);
+    const activeTeamId = getActiveTeamId();
+    if (activeTeamId) {
+      xhr.setRequestHeader('X-Team-Id', String(activeTeamId));
+    }
 
     const startTime = Date.now();
 
@@ -247,10 +280,12 @@ async function checkAuthSession(): Promise<User | null> {
       const data = await res.json();
       if (data && data.user) {
         setAuthState(data.user, data.accounts || []);
+        resolveActiveWorkspace(data.user);
         return data.user;
       }
     }
   } catch {}
+  setActiveTeamId(null);
   setAuthState(null, []);
   return null;
 }
@@ -261,6 +296,7 @@ async function switchAccountApi(userId: number | string): Promise<{ accounts?: U
     const data = await res.json();
     if (res.ok && data.success && data.user) {
       setAuthState(data.user, data.accounts || []);
+      resolveActiveWorkspace(data.user);
       return { accounts: data.accounts, success: true, user: data.user };
     }
     return { error: data.error || t('ui.no_se_pudo_cambiar_de_cuenta'), success: false };
@@ -287,11 +323,13 @@ async function logoutApi(userId?: number | string): Promise<{ accounts?: User[];
       const data = await res.json();
       if (data.switched && data.user) {
         setAuthState(data.user, data.accounts || []);
+        resolveActiveWorkspace(data.user);
         return { accounts: data.accounts, success: true, switched: true, user: data.user };
       }
       clearWalStorage();
       clearAllLocalDrafts();
       wsService.disconnect();
+      setActiveTeamId(null);
       setAuthState(null, []);
       return { accounts: [], success: true, switched: false, user: null };
     }
@@ -299,6 +337,7 @@ async function logoutApi(userId?: number | string): Promise<{ accounts?: User[];
   clearWalStorage();
   clearAllLocalDrafts();
   wsService.disconnect();
+  setActiveTeamId(null);
   setAuthState(null, []);
   return { accounts: [], success: true, switched: false, user: null };
 }
@@ -310,6 +349,7 @@ async function logoutAllApi(): Promise<boolean> {
   clearWalStorage();
   clearAllLocalDrafts();
   wsService.disconnect();
+  setActiveTeamId(null);
   setAuthState(null, []);
   return true;
 }
@@ -335,10 +375,15 @@ async function createCheckoutApi(planId: string, billingPeriod: string): Promise
 
 async function createSubscriptionIntentApi(
   planId: string,
-  billingPeriod: string = 'monthly'
+  billingPeriod: string = 'monthly',
+  teamOptions?: { scope?: 'personal' | 'team'; seats?: number; teamId?: number; teamName?: string }
 ): Promise<SubscriptionIntentResponse & { error?: string }> {
   try {
-    const res = await postApi('/api/subscription/create-intent', { billingPeriod, planId });
+    const res = await postApi('/api/subscription/create-intent', {
+      billingPeriod,
+      planId,
+      ...(teamOptions || {}),
+    });
     return await res.json();
   } catch {
     return {
@@ -360,7 +405,7 @@ async function createSubscriptionIntentApi(
 async function confirmSubscriptionPaymentApi(
   subscriptionId: string,
   paymentIntentId?: string
-): Promise<{ error?: string; message?: string; success: boolean; tier?: string }> {
+): Promise<{ error?: string; message?: string; seats?: number; success: boolean; teamId?: number | null; tier?: string }> {
   try {
     const res = await postApi('/api/subscription/confirm-intent', { paymentIntentId, subscriptionId });
     return await res.json();
@@ -371,10 +416,15 @@ async function confirmSubscriptionPaymentApi(
 
 async function createOneTimePaymentIntentApi(
   planId: string,
-  duration: '1_month' | '12_months' = '1_month'
+  duration: '1_month' | '12_months' = '1_month',
+  teamOptions?: { scope?: 'personal' | 'team'; seats?: number; teamId?: number; teamName?: string }
 ): Promise<OneTimePaymentIntentResponse & { error?: string }> {
   try {
-    const res = await postApi('/api/subscription/create-one-time-intent', { duration, planId });
+    const res = await postApi('/api/subscription/create-one-time-intent', {
+      duration,
+      planId,
+      ...(teamOptions || {}),
+    });
     return await res.json();
   } catch {
     return {
@@ -395,7 +445,7 @@ async function createOneTimePaymentIntentApi(
 
 async function confirmOneTimePaymentApi(
   paymentIntentId: string
-): Promise<{ error?: string; periodEnd?: string; planId?: string; success: boolean }> {
+): Promise<{ error?: string; periodEnd?: string; planId?: string; seats?: number; success: boolean; teamId?: number | null }> {
   try {
     const res = await postApi('/api/subscription/confirm-one-time-intent', { paymentIntentId });
     return await res.json();
@@ -511,5 +561,246 @@ async function estimateAiTokens(
   }
 }
 
-export { cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, createCheckoutApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, currentUser, deleteApi, downloadInvoiceApi, ensureCsrfToken, escapeHtml, estimateAiTokens, fetchAiTokenBalance, getApi, getBillingDetailsApi, getCsrfToken, getPurchaseHistoryApi, hasPermission, hasSubscriptionFeature, linkedAccounts, logoutAllApi, logoutApi, onAuthChange, patchApi, postApi, postFormApi, postFormWithProgress, putApi, setAuthState, setCurrentUser, setLinkedAccounts, switchAccountApi, updateAutoRenewalApi, updateUserAiTokens, updateUserSubscriptionTier, verifySubscriptionSessionApi };
+async function listMyTeamsApi(): Promise<TeamListResponse> {
+  try {
+    const res = await getApi(API_ROUTES.teams.base);
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.load_teams'), success: false, teams: [] };
+  }
+}
+
+async function createTeamApi(name: string): Promise<{ error?: string; success: boolean; team?: TeamSummary }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.base, { name });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.create_team'), success: false };
+  }
+}
+
+async function inspectTeamInvitationApi(token: string): Promise<TeamInviteInspectResponse> {
+  try {
+    const res = await getApi(API_ROUTES.teams.invitationsInspect(token));
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.inspect_invite'), success: false };
+  }
+}
+
+async function acceptTeamInvitationApi(token: string): Promise<{ error?: string; message?: string; success: boolean; team?: TeamSummary }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.invitationsAccept, { token });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.accept_invite'), success: false };
+  }
+}
+
+async function getCurrentTeamApi(): Promise<TeamDetailResponse> {
+  try {
+    const res = await getApi(API_ROUTES.teams.current);
+    return await res.json();
+  } catch {
+    return {
+      error: t('teams.errors.load_current'),
+      invitations: [],
+      members: [],
+      pendingCount: 0,
+      permissions: [],
+      role: 'member',
+      seatLimit: 0,
+      seatsAvailable: 0,
+      seatsUsed: 0,
+      success: false,
+      team: null as unknown as TeamSummary,
+    };
+  }
+}
+
+async function updateCurrentTeamApi(name: string): Promise<{ error?: string; message?: string; success: boolean; team?: TeamSummary }> {
+  try {
+    const res = await patchApi(API_ROUTES.teams.current, { name });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.update_team'), success: false };
+  }
+}
+
+async function searchCurrentTeamMembersApi(query = ''): Promise<{ error?: string; members: any[]; success: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.teams.currentMembersSearch(query));
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.search_members'), members: [], success: false };
+  }
+}
+
+async function inviteTeamMemberApi(
+  email: string,
+  role: 'admin' | 'member'
+): Promise<{ emailSent?: boolean; error?: string; invitation?: any; inviteUrl?: string; success: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentInvitations, { email, role });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.invite_member'), success: false };
+  }
+}
+
+async function revokeTeamInvitationApi(invitationId: number | string): Promise<{ error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await deleteApi(API_ROUTES.teams.currentInvitationRevoke(invitationId));
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.revoke_invite'), success: false };
+  }
+}
+
+async function updateTeamMemberRoleApi(userId: number | string, role: 'admin' | 'member'): Promise<{ error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await patchApi(API_ROUTES.teams.currentMemberRole(userId), { role });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.update_role'), success: false };
+  }
+}
+
+async function removeTeamMemberApi(userId: number | string): Promise<{ error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await deleteApi(API_ROUTES.teams.currentMemberDelete(userId));
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.remove_member'), success: false };
+  }
+}
+
+async function leaveCurrentTeamApi(): Promise<{ error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentLeave);
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.leave_team'), success: false };
+  }
+}
+
+async function getTeamBillingDetailsApi(): Promise<TeamBillingDetailsResponse> {
+  try {
+    const res = await getApi(API_ROUTES.teams.currentBilling);
+    return await res.json();
+  } catch {
+    return {
+      billing: { hasSubscription: false, success: false, tier: 'business' },
+      error: t('teams.errors.load_billing'),
+      purchases: [],
+      success: false,
+    };
+  }
+}
+
+async function previewTeamSeatsApi(seats: number): Promise<TeamSeatPreviewResponse> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentSeatsPreview, { seats });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.preview_seats'), success: false };
+  }
+}
+
+async function updateTeamSeatsApi(seats: number): Promise<TeamSeatUpdateResponse> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentSeats, { seats });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.update_seats'), success: false };
+  }
+}
+
+async function confirmTeamSeatUpgradeIntentApi(
+  paymentIntentId: string
+): Promise<{ error?: string; message?: string; seatLimit?: number; success: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentSeatsConfirmIntent, { paymentIntentId });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.confirm_seats'), success: false };
+  }
+}
+
+async function updateTeamRenewalApi(
+  cancelAtPeriodEnd: boolean
+): Promise<{ cancel_at_period_end?: boolean; current_period_end?: string | null; error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentBillingRenewal, { cancelAtPeriodEnd });
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.update_renewal'), success: false };
+  }
+}
+
+async function cancelTeamSubscriptionImmediateApi(): Promise<{ error?: string; message?: string; success: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.teams.currentBillingCancel);
+    return await res.json();
+  } catch {
+    return { error: t('teams.errors.cancel_subscription'), success: false };
+  }
+}
+
+async function getFolderMembersApi(folderId: string): Promise<FolderSharingDetailsResponse> {
+  try {
+    const res = await getApi(API_ROUTES.projectFolders.members(folderId));
+    return await res.json();
+  } catch {
+    return { error: t('projects.sharing_load_error'), success: false };
+  }
+}
+
+async function updateFolderVisibilityApi(
+  folderId: string,
+  visibility: 'restricted' | 'team'
+): Promise<{ error?: string; folder?: any; success: boolean }> {
+  try {
+    const res = await patchApi(API_ROUTES.projectFolders.visibility(folderId), { visibility });
+    return await res.json();
+  } catch {
+    return { error: t('projects.sharing_update_error'), success: false };
+  }
+}
+
+async function addFolderMemberApi(
+  folderId: string,
+  userId: number | string,
+  role: 'editor' | 'viewer'
+): Promise<FolderSharingDetailsResponse> {
+  try {
+    const res = await postApi(API_ROUTES.projectFolders.members(folderId), { role, userId });
+    return await res.json();
+  } catch {
+    return { error: t('projects.sharing_member_add_error'), success: false };
+  }
+}
+
+async function removeFolderMemberApi(folderId: string, userId: number | string): Promise<FolderSharingDetailsResponse> {
+  try {
+    const res = await deleteApi(API_ROUTES.projectFolders.memberDelete(folderId, userId));
+    return await res.json();
+  } catch {
+    return { error: t('projects.sharing_member_remove_error'), success: false };
+  }
+}
+
+async function updateDocTeamAccessApi(
+  docId: string,
+  teamAccess: 'editor' | 'viewer' | 'none'
+): Promise<{ document?: any; error?: string; success: boolean; team_access?: 'editor' | 'viewer' | 'none' }> {
+  try {
+    const res = await patchApi(API_ROUTES.collaborativeDocs.teamAccess(docId), { teamAccess });
+    return await res.json();
+  } catch {
+    return { error: t('collaborative.team_access_update_error'), success: false };
+  }
+}
+
+export { acceptTeamInvitationApi, addFolderMemberApi, cancelSubscriptionImmediateApi, cancelTeamSubscriptionImmediateApi, checkAuthSession, clearUserState, confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, confirmTeamSeatUpgradeIntentApi, createCheckoutApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, createTeamApi, currentUser, deleteApi, downloadInvoiceApi, ensureCsrfToken, escapeHtml, estimateAiTokens, fetchAiTokenBalance, getActiveWorkspaceTeam, getApi, getBillingDetailsApi, getCsrfToken, getCurrentTeamApi, getFolderMembersApi, getPurchaseHistoryApi, getTeamBillingDetailsApi, getWorkspaceHeaders, hasPermission, hasSubscriptionFeature, hasTeamPermission, inspectTeamInvitationApi, inviteTeamMemberApi, leaveCurrentTeamApi, linkedAccounts, listMyTeamsApi, logoutAllApi, logoutApi, onAuthChange, patchApi, postApi, postFormApi, postFormWithProgress, previewTeamSeatsApi, putApi, removeFolderMemberApi, removeTeamMemberApi, revokeTeamInvitationApi, searchCurrentTeamMembersApi, setAuthState, setCurrentUser, setLinkedAccounts, switchAccountApi, updateAutoRenewalApi, updateCurrentTeamApi, updateDocTeamAccessApi, updateFolderVisibilityApi, updateTeamMemberRoleApi, updateTeamRenewalApi, updateTeamSeatsApi, updateUserAiTokens, updateUserSubscriptionTier, verifySubscriptionSessionApi };
 export type { UploadProgressInfo };

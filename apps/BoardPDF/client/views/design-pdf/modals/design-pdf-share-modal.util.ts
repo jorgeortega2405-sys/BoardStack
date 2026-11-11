@@ -1,6 +1,6 @@
 import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
-import { currentUser, deleteApi, getApi, patchApi, postApi } from '../../../services/api.service.js';
+import { currentUser, deleteApi, getApi, patchApi, postApi, updateDocTeamAccessApi } from '../../../services/api.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -44,8 +44,11 @@ interface CollabShareModalOptions {
   onCustomSlugChange?: (slug: string) => void;
   onFindOpen?: () => void;
   onMembersChange: (members: DocMember[]) => void;
+  onTeamAccessChange?: (teamAccess: 'editor' | 'viewer' | 'none') => void;
   pageCount: number;
   selectedPageIndex: number | null;
+  teamAccess?: 'editor' | 'viewer' | 'none';
+  teamId?: number | null;
 }
 
 interface CollabSharePopoverHandle {
@@ -71,12 +74,16 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     onCustomSlugChange,
     onFindOpen,
     onMembersChange,
+    onTeamAccessChange,
     pageCount,
     selectedPageIndex,
+    teamAccess = 'none',
+    teamId = null,
   } = options;
 
   let currentCustomSlug = customSlug || null;
   let currentMembers = [...options.docMembers];
+  let currentTeamAccess: 'editor' | 'viewer' | 'none' = teamAccess;
 
   const popover = document.createElement('div');
   popover.className = 'tool-sidebar-container tool-sidebar-container--share collab-share-dropdown is-open';
@@ -84,6 +91,12 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const canManagePermissions = isDocOwner && !!currentUser;
   const isLinkMode = docAccessLevel === 'anyone_with_link';
+  const getTeamAccessMeta = (access: 'editor' | 'viewer' | 'none') => {
+    if (access === 'editor') return { icon: 'edit', label: t('collaborative.team_access_editor') };
+    if (access === 'viewer') return { icon: 'visibility', label: t('collaborative.team_access_viewer') };
+    return { icon: 'lock', label: t('collaborative.team_access_none') };
+  };
+  const initialTeamMeta = getTeamAccessMeta(currentTeamAccess);
   const ownerName = currentUser?.username || 'Propietario';
   const ownerAvatar = currentUser?.avatar_url || (currentUser?.username ? `/api/avatar?name=${encodeURIComponent(currentUser.username)}&size=80` : null);
   const ownerInitials = ownerName.substring(0, 2).toUpperCase();
@@ -169,6 +182,59 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
               ` : ''}
             </div>
           </div>
+
+          ${teamId ? `
+            <div class="tool-sidebar__section" data-ref="section-team-access">
+              <div class="tool-sidebar__section-title">${t('collaborative.team_access_label')}</div>
+              <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-team-access">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-team-access-trigger" aria-label="${t('collaborative.team_access_label')}" ${!canManagePermissions ? 'disabled' : ''}>
+                  <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-team-access">
+                    <svg class="component-icon dropdown-trigger__icon" data-ref="team-access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${initialTeamMeta.icon}"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="team-access-trigger-label">${initialTeamMeta.label}</span>
+                  </div>
+                  ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-team-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
+                </button>
+
+                ${canManagePermissions ? `
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-team-access">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="collab-team-access-menu">
+                      <div class="menu-panel__list" data-ref="list-team-access-options">
+                        <button type="button" class="menu-item ${currentTeamAccess === 'none' ? 'is-selected' : ''}" data-ref="option-team-access-none" data-team-access="none">
+                          <div class="menu-item__icon-wrapper">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                          </div>
+                          <div class="menu-item__text-group">
+                            <span class="menu-item__title">${t('collaborative.team_access_none')}</span>
+                          </div>
+                          <svg class="component-icon menu-item__check ${currentTeamAccess !== 'none' ? 'is-hidden' : ''}" data-ref="check-team-access-none" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+
+                        <button type="button" class="menu-item ${currentTeamAccess === 'viewer' ? 'is-selected' : ''}" data-ref="option-team-access-viewer" data-team-access="viewer">
+                          <div class="menu-item__icon-wrapper">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                          </div>
+                          <div class="menu-item__text-group">
+                            <span class="menu-item__title">${t('collaborative.team_access_viewer')}</span>
+                          </div>
+                          <svg class="component-icon menu-item__check ${currentTeamAccess !== 'viewer' ? 'is-hidden' : ''}" data-ref="check-team-access-viewer" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+
+                        <button type="button" class="menu-item ${currentTeamAccess === 'editor' ? 'is-selected' : ''}" data-ref="option-team-access-editor" data-team-access="editor">
+                          <div class="menu-item__icon-wrapper">
+                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                          </div>
+                          <div class="menu-item__text-group">
+                            <span class="menu-item__title">${t('collaborative.team_access_editor')}</span>
+                          </div>
+                          <svg class="component-icon menu-item__check ${currentTeamAccess !== 'editor' ? 'is-hidden' : ''}" data-ref="check-team-access-editor" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
 
           <div class="collab-share-actions">
             <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-collab-copy-link">
@@ -394,6 +460,15 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     });
   }
 
+  const teamAccessDropdown = popover.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-team-access"]');
+  let teamDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  if (teamAccessDropdown && canManagePermissions) {
+    teamDropdownCtrl = setupDropdown(teamAccessDropdown, {
+      backdrop: teamAccessDropdown.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-team-access"]'),
+      menu: teamAccessDropdown.querySelector<HTMLElement>('[data-ref="collab-team-access-menu"]'),
+    });
+  }
+
   const btnShareClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-close"]');
   const btnShareDownloadClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-close"]');
   const btnShareFindClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-find-close"]');
@@ -413,6 +488,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const closePopover = () => {
     dropdownCtrl?.destroy();
+    teamDropdownCtrl?.destroy();
     cleanup();
     onClose();
   };
@@ -442,6 +518,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const cleanup = () => {
     dropdownCtrl?.destroy();
+    teamDropdownCtrl?.destroy();
     document.removeEventListener('pointerdown', onOutsidePointerDown);
     document.removeEventListener('keydown', onEscapeKey);
     popover.remove();
@@ -611,6 +688,55 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
     optRestricted?.addEventListener('click', () => void selectAccess('restricted'));
     optLink?.addEventListener('click', () => void selectAccess('anyone_with_link'));
+  }
+
+  const optTeamNone = popover.querySelector<HTMLButtonElement>('[data-ref="option-team-access-none"]');
+  const optTeamViewer = popover.querySelector<HTMLButtonElement>('[data-ref="option-team-access-viewer"]');
+  const optTeamEditor = popover.querySelector<HTMLButtonElement>('[data-ref="option-team-access-editor"]');
+  const teamTriggerLabel = popover.querySelector<HTMLElement>('[data-ref="team-access-trigger-label"]');
+  const teamTriggerIcon = popover.querySelector<HTMLElement>('[data-ref="team-access-trigger-icon"]');
+  const checkTeamNone = popover.querySelector<HTMLElement>('[data-ref="check-team-access-none"]');
+  const checkTeamViewer = popover.querySelector<HTMLElement>('[data-ref="check-team-access-viewer"]');
+  const checkTeamEditor = popover.querySelector<HTMLElement>('[data-ref="check-team-access-editor"]');
+
+  if (canManagePermissions && teamId) {
+    const selectTeamAccess = async (access: 'editor' | 'viewer' | 'none') => {
+      teamDropdownCtrl?.close();
+      const meta = getTeamAccessMeta(access);
+      if (teamTriggerLabel) teamTriggerLabel.textContent = meta.label;
+      if (teamTriggerIcon) teamTriggerIcon.innerHTML = `<svg class="component-icon dropdown-trigger__icon" data-ref="team-access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${meta.icon}"></use></svg>`;
+
+      optTeamNone?.classList.toggle('is-selected', access === 'none');
+      optTeamViewer?.classList.toggle('is-selected', access === 'viewer');
+      optTeamEditor?.classList.toggle('is-selected', access === 'editor');
+      checkTeamNone?.classList.toggle('is-hidden', access !== 'none');
+      checkTeamViewer?.classList.toggle('is-hidden', access !== 'viewer');
+      checkTeamEditor?.classList.toggle('is-hidden', access !== 'editor');
+      renderIcons(popover);
+
+      const res = await updateDocTeamAccessApi(docId, access);
+      if (res.success) {
+        currentTeamAccess = access;
+        onTeamAccessChange?.(access);
+        showToast(t('collaborative.team_access_updated'), 'info');
+      } else {
+        const fallbackMeta = getTeamAccessMeta(currentTeamAccess);
+        if (teamTriggerLabel) teamTriggerLabel.textContent = fallbackMeta.label;
+        if (teamTriggerIcon) teamTriggerIcon.innerHTML = `<svg class="component-icon dropdown-trigger__icon" data-ref="team-access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${fallbackMeta.icon}"></use></svg>`;
+        optTeamNone?.classList.toggle('is-selected', currentTeamAccess === 'none');
+        optTeamViewer?.classList.toggle('is-selected', currentTeamAccess === 'viewer');
+        optTeamEditor?.classList.toggle('is-selected', currentTeamAccess === 'editor');
+        checkTeamNone?.classList.toggle('is-hidden', currentTeamAccess !== 'none');
+        checkTeamViewer?.classList.toggle('is-hidden', currentTeamAccess !== 'viewer');
+        checkTeamEditor?.classList.toggle('is-hidden', currentTeamAccess !== 'editor');
+        renderIcons(popover);
+        showToast(res.error || t('collaborative.team_access_update_error'), 'danger');
+      }
+    };
+
+    optTeamNone?.addEventListener('click', () => void selectTeamAccess('none'));
+    optTeamViewer?.addEventListener('click', () => void selectTeamAccess('viewer'));
+    optTeamEditor?.addEventListener('click', () => void selectTeamAccess('editor'));
   }
 
   const copyBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-copy-link"]');

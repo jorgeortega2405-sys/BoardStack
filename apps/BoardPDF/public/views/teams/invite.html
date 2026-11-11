@@ -1,0 +1,66 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="team-invite-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="team-invite-scrollable">
+    <div class="view-body team-invite-view" data-ref="team-invite-container">
+      <div class="component-group team-invite-card" data-ref="team-invite-card">
+        <div class="component-item component-item--stacked" data-ref="team-invite-loading">
+          <div class="team-invite-card__header">
+            <div class="team-invite-card__icon">
+              <svg class="component-icon component-icon--spin" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            </div>
+            <h1 class="component-title" data-i18n="teams.invite_page.loading"></h1>
+          </div>
+        </div>
+
+        <div class="component-item component-item--stacked is-hidden" data-ref="team-invite-invalid">
+          <div class="team-invite-card__header">
+            <div class="team-invite-card__icon team-invite-card__icon--danger">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+            </div>
+            <h1 class="component-title" data-ref="invite-invalid-title" data-i18n="teams.invite_page.invalid_title"></h1>
+            <p class="component-subtitle" data-ref="invite-invalid-desc" data-i18n="teams.invite_page.invalid_desc"></p>
+          </div>
+          <div class="team-invite-card__actions">
+            <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-invite-go-home" data-i18n="teams.invite_page.btn_go_home"></button>
+          </div>
+        </div>
+
+        <div class="component-item component-item--stacked is-hidden" data-ref="team-invite-ready">
+          <div class="team-invite-card__header">
+            <div class="team-invite-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            </div>
+            <h1 class="component-title" data-ref="invite-ready-title" data-i18n="teams.invite_page.title"></h1>
+            <p class="component-subtitle" data-ref="invite-ready-subtitle"></p>
+          </div>
+
+          <div class="team-invite-meta-list" data-ref="invite-meta-list">
+            <div class="team-invite-meta-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+              <span data-ref="invite-meta-role"></span>
+            </div>
+            <div class="team-invite-meta-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
+              <span data-ref="invite-meta-email"></span>
+            </div>
+            <div class="team-invite-meta-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+              <span data-ref="invite-meta-expires"></span>
+            </div>
+          </div>
+
+          <div class="banner banner--info is-hidden" data-ref="invite-auth-notice"></div>
+          <div class="banner banner--warning is-hidden" data-ref="invite-mismatch-notice"></div>
+
+          <div class="team-invite-card__actions" data-ref="invite-actions-row">
+            <button type="button" class="component-button component-button--h44 component-button--black is-hidden" data-ref="btn-accept-invite" data-i18n="teams.invite_page.btn_accept"></button>
+            <button type="button" class="component-button component-button--h44 component-button--black is-hidden" data-ref="btn-invite-login" data-i18n="teams.invite_page.btn_login"></button>
+            <button type="button" class="component-button component-button--h44 is-hidden" data-ref="btn-invite-register" data-i18n="teams.invite_page.btn_register"></button>
+            <button type="button" class="component-button component-button--h44" data-ref="btn-invite-cancel" data-i18n="teams.invite_page.btn_go_home"></button>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="invite-error-banner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

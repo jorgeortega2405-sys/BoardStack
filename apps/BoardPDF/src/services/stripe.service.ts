@@ -5,6 +5,7 @@ import { BillingDetailsResponse, OneTimePaymentIntentResponse, PaymentMethod, Pu
 import { acquireLock, releaseLock } from '../utils/lock.util.js';
 import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
+import { activateTeamSubscription, createPendingOrReuseTeamForCheckout, getTeamById, getTeamByStripeSubscriptionId, updateTeamSubscriptionState } from './team.service.js';
 import Stripe from 'stripe';
 
 class StripeService {
@@ -172,7 +173,8 @@ class StripeService {
     userId: number,
     email: string,
     planId: string,
-    billingPeriod: 'monthly' | 'yearly' = 'monthly'
+    billingPeriod: 'monthly' | 'yearly' = 'monthly',
+    teamOptions?: { scope?: 'personal' | 'team'; seats?: number; teamId?: number; teamName?: string }
   ): Promise<SubscriptionIntentResponse> {
     const lockKey = `lock:purchase:intent:${userId}`;
     const lockToken = await acquireLock(lockKey, 15);
@@ -188,23 +190,30 @@ class StripeService {
         throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
       }
 
-      const userBilling = await purchaseService.getUserBillingInfo(userId);
-      const userTier = userBilling?.subscription_tier ? normalizeTierKey(userBilling.subscription_tier) : 'free';
-      const userWeight = getTierWeight(userTier);
-      const targetWeight = getTierWeight(normalizedPlan);
+      const seats = Math.max(1, Math.min(100, Math.floor(Number(teamOptions?.seats || 1))));
+      const isTeamScope =
+        normalizedPlan === 'business' &&
+        (teamOptions?.scope === 'team' || Boolean(teamOptions?.teamId) || Boolean(teamOptions?.teamName?.trim()) || seats > 1);
 
-      const isPeriodValid = userBilling?.subscription_period_end
-        ? new Date(userBilling.subscription_period_end).getTime() > Date.now()
-        : true;
-      const isStatusActive = userBilling?.subscription_status === 'active' || userBilling?.subscription_status === 'trialing';
-      const hasActivePaidTier = userWeight > 0 && (isStatusActive || isPeriodValid);
+      if (!isTeamScope) {
+        const userBilling = await purchaseService.getUserBillingInfo(userId);
+        const userTier = userBilling?.subscription_tier ? normalizeTierKey(userBilling.subscription_tier) : 'free';
+        const userWeight = getTierWeight(userTier);
+        const targetWeight = getTierWeight(normalizedPlan);
 
-      if (hasActivePaidTier) {
-        if (userWeight === targetWeight) {
-          throw new Error(`Ya cuentas con una suscripción activa al plan ${tier.name}.`);
-        }
-        if (userWeight > targetWeight) {
-          throw new Error(`Tu cuenta ya cuenta con un plan superior (${PLAN_TIER_CONFIGS[userTier].name}), el cual incluye todas las características del plan ${tier.name}.`);
+        const isPeriodValid = userBilling?.subscription_period_end
+          ? new Date(userBilling.subscription_period_end).getTime() > Date.now()
+          : true;
+        const isStatusActive = userBilling?.subscription_status === 'active' || userBilling?.subscription_status === 'trialing';
+        const hasActivePaidTier = userWeight > 0 && (isStatusActive || isPeriodValid);
+
+        if (hasActivePaidTier) {
+          if (userWeight === targetWeight) {
+            throw new Error(`Ya cuentas con una suscripción activa al plan ${tier.name}.`);
+          }
+          if (userWeight > targetWeight) {
+            throw new Error(`Tu cuenta ya cuenta con un plan superior (${PLAN_TIER_CONFIGS[userTier].name}), el cual incluye todas las características del plan ${tier.name}.`);
+          }
         }
       }
 
@@ -217,6 +226,29 @@ class StripeService {
       const unitPrice = isYearly ? tier.priceYearly * 12 : tier.priceMonthly;
       const customer = await this.getOrCreateCustomer(userId, email);
 
+      let targetTeamId: number | null = null;
+      let targetTeamName: string | null = null;
+      if (isTeamScope) {
+        if (teamOptions?.teamId) {
+          const existingTeam = await getTeamById(teamOptions.teamId);
+          if (!existingTeam || existingTeam.owner_id !== userId) {
+            throw new Error('No tienes permisos para administrar la suscripción de este equipo.');
+          }
+          targetTeamId = existingTeam.id;
+          targetTeamName = existingTeam.name;
+        } else {
+          const createdTeam = await createPendingOrReuseTeamForCheckout({
+            billingPeriod,
+            ownerId: userId,
+            seats,
+            stripeCustomerId: customer.id,
+            teamName: teamOptions?.teamName || '',
+          });
+          targetTeamId = createdTeam.id;
+          targetTeamName = createdTeam.name;
+        }
+      }
+
       try {
         const existingIncomplete = await this.stripe.subscriptions.list({
           customer: customer.id,
@@ -228,10 +260,10 @@ class StripeService {
         }
       } catch {}
 
-      const idempotencyKey = `sub_${userId}_${tier.id}_${billingPeriod}_${Math.floor(Date.now() / 30000)}`;
+      const idempotencyKey = `sub_${userId}_${tier.id}_${billingPeriod}_${targetTeamId || 'p'}_${seats}_${Math.floor(Date.now() / 30000)}`;
       const subscription = await this.stripe.subscriptions.create({
         customer: customer.id,
-        items: [{ price: priceId }],
+        items: [{ price: priceId, quantity: isTeamScope ? seats : 1 }],
         payment_behavior: 'default_incomplete',
         payment_settings: {
           payment_method_types: ['card'],
@@ -241,6 +273,10 @@ class StripeService {
         metadata: {
           billingPeriod,
           planId: tier.id,
+          scope: isTeamScope ? 'team' : 'personal',
+          teamId: targetTeamId ? String(targetTeamId) : '',
+          teamName: targetTeamName || '',
+          teamSeats: String(isTeamScope ? seats : 1),
           userId: String(userId),
         },
       }, {
@@ -255,16 +291,22 @@ class StripeService {
         throw new Error('No se pudo inicializar la pasarela de pagos con Stripe Elements.');
       }
 
+      const effectiveSeats = isTeamScope ? seats : 1;
+      const totalAmount = Math.round(unitPrice * effectiveSeats * 100) / 100;
+
       await purchaseService.recordPurchase({
-        amount_total: unitPrice,
+        amount_total: totalAmount,
         billing_period: billingPeriod,
         currency: 'USD',
         plan_id: tier.id,
+        purchase_scope: isTeamScope ? 'team' : 'personal',
         status: 'pending',
         stripe_customer_id: customer.id,
         stripe_payment_intent_id: paymentIntent.id,
         stripe_session_id: paymentIntent.id,
         stripe_subscription_id: subscription.id,
+        team_id: targetTeamId,
+        team_seats: effectiveSeats,
         user_id: userId,
       });
 
@@ -272,12 +314,14 @@ class StripeService {
         billingPeriod,
         paymentIntentId: paymentIntent.id,
         plan: tier.id,
+        seats: effectiveSeats,
         subscriptionId: subscription.id,
+        teamId: targetTeamId,
         userId,
       });
 
       return {
-        amount: unitPrice,
+        amount: totalAmount,
         billingPeriod,
         clientSecret,
         currency: 'USD',
@@ -285,19 +329,26 @@ class StripeService {
         planId: tier.id,
         planName: tier.name,
         publishableKey: config.stripe.publishableKey,
+        seats: effectiveSeats,
         subscriptionId: subscription.id,
         success: true,
+        teamId: targetTeamId,
+        teamName: targetTeamName,
       };
     } finally {
       await releaseLock(lockKey, lockToken);
     }
   }
 
+  public getStripeClient(): Stripe {
+    return this.stripe;
+  }
+
   public async confirmSubscriptionPayment(
     userId: number,
     subscriptionId: string,
     paymentIntentId?: string
-  ): Promise<{ success: boolean; tier: SubscriptionTierId; subscriptionId: string }> {
+  ): Promise<{ seats?: number; subscriptionId: string; success: boolean; teamId?: number | null; tier: SubscriptionTierId }> {
     const lockKey = `lock:purchase:confirm:${userId}`;
     const lockToken = await acquireLock(lockKey, 20);
     if (!lockToken) {
@@ -318,10 +369,76 @@ class StripeService {
       const planId = normalizeTierKey(rawPlan);
 
       const rawEnd = (subscription as any).current_period_end;
-      const periodEndDate = typeof rawEnd === 'number' ? new Date(rawEnd * 1000) : null;
+      const periodEndDate = typeof rawEnd === 'number' ? new Date(rawEnd * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const customerId = typeof subscription.customer === 'string' ? subscription.customer : (subscription.customer as any)?.id;
 
       const subStatus = subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : subscription.status;
+
+      const firstItem = subscription.items?.data?.[0];
+      const unitAmount = firstItem?.price?.unit_amount || 0;
+      const quantity = Math.max(1, Number(subscription.metadata?.teamSeats || firstItem?.quantity || 1));
+      const amountTotal = (unitAmount * quantity) / 100;
+
+      const metaTeamId = Number(subscription.metadata?.teamId || 0);
+      const isTeamScope = subscription.metadata?.scope === 'team' || metaTeamId > 0;
+
+      if (isTeamScope && metaTeamId > 0) {
+        const teamRecord = await getTeamById(metaTeamId);
+        const prevTeamSubId = teamRecord?.stripe_subscription_id;
+        if (prevTeamSubId && prevTeamSubId !== subscription.id) {
+          await this.stripe.subscriptions.cancel(prevTeamSubId).catch(() => {});
+        }
+
+        await purchaseService.fulfillPurchase(
+          userId,
+          planId,
+          {
+            amount_total: amountTotal,
+            billing_period: (subscription.metadata?.billingPeriod as any) || 'monthly',
+            currency: (subscription.currency || 'USD').toUpperCase(),
+            plan_id: planId,
+            purchase_scope: 'team',
+            status: 'completed',
+            stripe_customer_id: customerId,
+            stripe_payment_intent_id: paymentIntentId || null,
+            stripe_session_id: paymentIntentId || subscription.id,
+            stripe_subscription_id: subscription.id,
+            team_id: metaTeamId,
+            team_seats: quantity,
+            user_id: userId,
+          },
+          periodEndDate,
+          subscription.id,
+          subStatus
+        );
+
+        await activateTeamSubscription({
+          billingPeriod: (subscription.metadata?.billingPeriod as string) || 'monthly',
+          periodEnd: periodEndDate,
+          seats: quantity,
+          stripeCustomerId: customerId || null,
+          stripeSubscriptionId: subscription.id,
+          teamId: metaTeamId,
+        });
+
+        logger.security.info('Suscripción de equipo confirmada y activada mediante Stripe Elements', {
+          periodEnd: periodEndDate,
+          plan: planId,
+          seats: quantity,
+          status: subscription.status,
+          subscriptionId: subscription.id,
+          teamId: metaTeamId,
+          userId,
+        });
+
+        return {
+          seats: quantity,
+          subscriptionId: subscription.id,
+          success: true,
+          teamId: metaTeamId,
+          tier: planId,
+        };
+      }
 
       const userBilling = await purchaseService.getUserBillingInfo(userId);
       const previousSubId = userBilling?.stripe_subscription_id;
@@ -342,11 +459,6 @@ class StripeService {
         }
       }
 
-      const firstItem = subscription.items?.data?.[0];
-      const unitAmount = firstItem?.price?.unit_amount || 0;
-      const quantity = firstItem?.quantity || 1;
-      const amountTotal = (unitAmount * quantity) / 100;
-
       await purchaseService.fulfillPurchase(
         userId,
         planId,
@@ -355,6 +467,7 @@ class StripeService {
           billing_period: (subscription.metadata?.billingPeriod as any) || 'monthly',
           currency: (subscription.currency || 'USD').toUpperCase(),
           plan_id: planId,
+          purchase_scope: 'personal',
           status: 'completed',
           stripe_customer_id: customerId,
           stripe_payment_intent_id: paymentIntentId || null,
@@ -389,7 +502,8 @@ class StripeService {
     userId: number,
     email: string,
     planId: string,
-    duration: '1_month' | '12_months' = '1_month'
+    duration: '1_month' | '12_months' = '1_month',
+    teamOptions?: { scope?: 'personal' | 'team'; seats?: number; teamId?: number; teamName?: string }
   ): Promise<OneTimePaymentIntentResponse> {
     const lockKey = `lock:purchase:intent:${userId}`;
     const lockToken = await acquireLock(lockKey, 15);
@@ -405,46 +519,82 @@ class StripeService {
         throw new Error(`Plan "${planId}" no disponible para contratación directa.`);
       }
 
-      const userBilling = await purchaseService.getUserBillingInfo(userId);
-      if (userBilling?.subscription_status === 'active' && userBilling?.stripe_subscription_id) {
-        throw new Error('Ya cuentas con una suscripción recurrente activa. Administra tu suscripción antes de adquirir pases de pago único.');
-      }
+      const seats = Math.max(1, Math.min(100, Math.floor(Number(teamOptions?.seats || 1))));
+      const isTeamScope =
+        normalizedPlan === 'business' &&
+        (teamOptions?.scope === 'team' || Boolean(teamOptions?.teamId) || Boolean(teamOptions?.teamName?.trim()) || seats > 1);
 
-      const userTier = userBilling?.subscription_tier ? normalizeTierKey(userBilling.subscription_tier) : 'free';
-      const userWeight = getTierWeight(userTier);
-      const targetWeight = getTierWeight(normalizedPlan);
-
-      const isPeriodValid = userBilling?.subscription_period_end
-        ? new Date(userBilling.subscription_period_end).getTime() > Date.now()
-        : true;
-      const isStatusActive = userBilling?.subscription_status === 'active' || userBilling?.subscription_status === 'trialing';
-      const hasActivePaidTier = userWeight > 0 && (isStatusActive || isPeriodValid);
-
-      if (hasActivePaidTier) {
-        if (userWeight === targetWeight) {
-          throw new Error(`Ya cuentas con el plan ${tier.name} activo. No es necesario adquirir un pase adicional.`);
+      if (!isTeamScope) {
+        const userBilling = await purchaseService.getUserBillingInfo(userId);
+        if (userBilling?.subscription_status === 'active' && userBilling?.stripe_subscription_id) {
+          throw new Error('Ya cuentas con una suscripción recurrente activa. Administra tu suscripción antes de adquirir pases de pago único.');
         }
-        if (userWeight > targetWeight) {
-          throw new Error(`Tu cuenta ya cuenta con un plan superior (${PLAN_TIER_CONFIGS[userTier].name}).`);
+
+        const userTier = userBilling?.subscription_tier ? normalizeTierKey(userBilling.subscription_tier) : 'free';
+        const userWeight = getTierWeight(userTier);
+        const targetWeight = getTierWeight(normalizedPlan);
+
+        const isPeriodValid = userBilling?.subscription_period_end
+          ? new Date(userBilling.subscription_period_end).getTime() > Date.now()
+          : true;
+        const isStatusActive = userBilling?.subscription_status === 'active' || userBilling?.subscription_status === 'trialing';
+        const hasActivePaidTier = userWeight > 0 && (isStatusActive || isPeriodValid);
+
+        if (hasActivePaidTier) {
+          if (userWeight === targetWeight) {
+            throw new Error(`Ya cuentas con el plan ${tier.name} activo. No es necesario adquirir un pase adicional.`);
+          }
+          if (userWeight > targetWeight) {
+            throw new Error(`Tu cuenta ya cuenta con un plan superior (${PLAN_TIER_CONFIGS[userTier].name}).`);
+          }
         }
       }
 
       const isYearly = duration === '12_months';
       const unitPrice = isYearly ? tier.priceYearly * 12 : tier.priceMonthly;
-      const amountInCents = Math.round(unitPrice * 100);
+      const effectiveSeats = isTeamScope ? seats : 1;
+      const totalAmount = Math.round(unitPrice * effectiveSeats * 100) / 100;
+      const amountInCents = Math.round(totalAmount * 100);
 
       const customer = await this.getOrCreateCustomer(userId, email);
 
-      const idempotencyKey = `pi_${userId}_${tier.id}_${duration}_${Math.floor(Date.now() / 30000)}`;
+      let targetTeamId: number | null = null;
+      let targetTeamName: string | null = null;
+      if (isTeamScope) {
+        if (teamOptions?.teamId) {
+          const existingTeam = await getTeamById(teamOptions.teamId);
+          if (!existingTeam || existingTeam.owner_id !== userId) {
+            throw new Error('No tienes permisos para administrar el pago de este equipo.');
+          }
+          targetTeamId = existingTeam.id;
+          targetTeamName = existingTeam.name;
+        } else {
+          const createdTeam = await createPendingOrReuseTeamForCheckout({
+            billingPeriod: isYearly ? 'one_time_yearly' : 'one_time_monthly',
+            ownerId: userId,
+            seats: effectiveSeats,
+            stripeCustomerId: customer.id,
+            teamName: teamOptions?.teamName || '',
+          });
+          targetTeamId = createdTeam.id;
+          targetTeamName = createdTeam.name;
+        }
+      }
+
+      const idempotencyKey = `pi_${userId}_${tier.id}_${duration}_${targetTeamId || 'p'}_${effectiveSeats}_${Math.floor(Date.now() / 30000)}`;
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: amountInCents,
         currency: 'usd',
         customer: customer.id,
-        description: `BoardPDF ${tier.name} - Pago único (${isYearly ? '12 meses' : '1 mes'})`,
+        description: `BoardPDF ${tier.name} - Pago único (${isYearly ? '12 meses' : '1 mes'}${isTeamScope ? `, ${effectiveSeats} asientos` : ''})`,
         metadata: {
           billingType: 'one_time',
           duration,
           planId: tier.id,
+          scope: isTeamScope ? 'team' : 'personal',
+          teamId: targetTeamId ? String(targetTeamId) : '',
+          teamName: targetTeamName || '',
+          teamSeats: String(effectiveSeats),
           userId: String(userId),
         },
         payment_method_types: ['card'],
@@ -457,27 +607,32 @@ class StripeService {
       }
 
       await purchaseService.recordPurchase({
-        amount_total: unitPrice,
+        amount_total: totalAmount,
         billing_period: isYearly ? 'one_time_yearly' : 'one_time_monthly',
         currency: 'USD',
         plan_id: tier.id,
+        purchase_scope: isTeamScope ? 'team' : 'personal',
         status: 'pending',
         stripe_customer_id: customer.id,
         stripe_payment_intent_id: paymentIntent.id,
         stripe_session_id: paymentIntent.id,
+        team_id: targetTeamId,
+        team_seats: effectiveSeats,
         user_id: userId,
       });
 
       logger.app.info('Intento de pago único creado', {
-        amount: unitPrice,
+        amount: totalAmount,
         duration,
         paymentIntentId: paymentIntent.id,
         plan: tier.id,
+        seats: effectiveSeats,
+        teamId: targetTeamId,
         userId,
       });
 
       return {
-        amount: unitPrice,
+        amount: totalAmount,
         billingType: 'one_time',
         clientSecret: paymentIntent.client_secret,
         currency: 'USD',
@@ -486,7 +641,10 @@ class StripeService {
         planId: tier.id,
         planName: tier.name,
         publishableKey: config.stripe.publishableKey,
+        seats: effectiveSeats,
         success: true,
+        teamId: targetTeamId,
+        teamName: targetTeamName,
       };
     } finally {
       await releaseLock(lockKey, lockToken);
@@ -496,7 +654,7 @@ class StripeService {
   public async confirmOneTimePayment(
     userId: number,
     paymentIntentId: string
-  ): Promise<{ periodEnd: Date; planId: SubscriptionTierId; success: boolean }> {
+  ): Promise<{ periodEnd: Date; planId: SubscriptionTierId; seats?: number; success: boolean; teamId?: number | null }> {
     const lockKey = `lock:purchase:confirm:${userId}`;
     const lockToken = await acquireLock(lockKey, 20);
     if (!lockToken) {
@@ -524,6 +682,62 @@ class StripeService {
       const planId = normalizeTierKey(rawPlan);
       const duration = paymentIntent.metadata?.duration || '1_month';
       const isYearly = duration === '12_months';
+      const metaTeamId = Number(paymentIntent.metadata?.teamId || 0);
+      const seats = Math.max(1, Number(paymentIntent.metadata?.teamSeats || 1));
+      const isTeamScope = paymentIntent.metadata?.scope === 'team' || metaTeamId > 0;
+      const customerId = typeof paymentIntent.customer === 'string' ? paymentIntent.customer : null;
+      const durationDays = isYearly ? 365 : 30;
+
+      if (isTeamScope && metaTeamId > 0) {
+        const teamRecord = await getTeamById(metaTeamId);
+        let baseTs = Date.now();
+        if (teamRecord?.subscription_status === 'active' && teamRecord.subscription_period_end) {
+          const endMs = new Date(teamRecord.subscription_period_end).getTime();
+          if (endMs > baseTs) baseTs = endMs;
+        }
+        const periodEndDate = new Date(baseTs + durationDays * 24 * 60 * 60 * 1000);
+
+        if (existingPurchase?.status !== 'completed') {
+          await purchaseService.fulfillPurchase(
+            userId,
+            planId,
+            {
+              amount_total: paymentIntent.amount / 100,
+              billing_period: isYearly ? 'one_time_yearly' : 'one_time_monthly',
+              currency: (paymentIntent.currency || 'USD').toUpperCase(),
+              plan_id: planId,
+              purchase_scope: 'team',
+              status: 'completed',
+              stripe_customer_id: customerId,
+              stripe_payment_intent_id: paymentIntent.id,
+              stripe_session_id: paymentIntent.id,
+              team_id: metaTeamId,
+              team_seats: seats,
+              user_id: userId,
+            },
+            periodEndDate,
+            null,
+            'active'
+          );
+        }
+
+        await activateTeamSubscription({
+          billingPeriod: isYearly ? 'one_time_yearly' : 'one_time_monthly',
+          periodEnd: periodEndDate,
+          seats,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: null,
+          teamId: metaTeamId,
+        });
+
+        return {
+          periodEnd: periodEndDate,
+          planId,
+          seats,
+          success: true,
+          teamId: metaTeamId,
+        };
+      }
 
       const userBilling = await purchaseService.getUserBillingInfo(userId);
 
@@ -535,7 +749,6 @@ class StripeService {
         };
       }
 
-      const durationDays = isYearly ? 365 : 30;
       let baseTimestamp = Date.now();
       if (
         userBilling &&
@@ -546,7 +759,6 @@ class StripeService {
         baseTimestamp = new Date(userBilling.subscription_period_end).getTime();
       }
       const periodEndDate = new Date(baseTimestamp + durationDays * 24 * 60 * 60 * 1000);
-      const customerId = typeof paymentIntent.customer === 'string' ? paymentIntent.customer : null;
 
       const fulfillment = await purchaseService.fulfillPurchase(
         userId,
@@ -556,6 +768,7 @@ class StripeService {
           billing_period: isYearly ? 'one_time_yearly' : 'one_time_monthly',
           currency: (paymentIntent.currency || 'USD').toUpperCase(),
           plan_id: planId,
+          purchase_scope: 'personal',
           status: 'completed',
           stripe_customer_id: customerId,
           stripe_payment_intent_id: paymentIntent.id,
@@ -609,6 +822,9 @@ class StripeService {
 
     const planId = normalizeTierKey(session.metadata?.planId || 'pro');
     const billingPeriod = (session.metadata?.billingPeriod as 'monthly' | 'yearly') || 'monthly';
+    const scope = session.metadata?.scope === 'team' ? 'team' : 'personal';
+    const metaTeamId = Number(session.metadata?.teamId || 0);
+    const metaSeats = Math.max(1, Number(session.metadata?.seats || 1));
     const amountTotal = (session.amount_total ?? 0) / 100;
     const currency = (session.currency || 'USD').toUpperCase();
     const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer)?.id || null;
@@ -625,14 +841,17 @@ class StripeService {
     }
 
     const isPaid = session.payment_status === 'paid' || session.status === 'complete';
+    const isTeamPurchase = scope === 'team' && metaTeamId > 0;
 
     if (isPaid) {
-      const userBilling = await purchaseService.getUserBillingInfo(userId);
-      const previousSubId = userBilling?.stripe_subscription_id;
-      if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
-        try {
-          await this.stripe.subscriptions.cancel(previousSubId);
-        } catch {}
+      if (!isTeamPurchase) {
+        const userBilling = await purchaseService.getUserBillingInfo(userId);
+        const previousSubId = userBilling?.stripe_subscription_id;
+        if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
+          try {
+            await this.stripe.subscriptions.cancel(previousSubId);
+          } catch {}
+        }
       }
 
       await purchaseService.fulfillPurchase(
@@ -643,28 +862,45 @@ class StripeService {
           billing_period: billingPeriod,
           currency,
           plan_id: planId,
+          purchase_scope: isTeamPurchase ? 'team' : 'personal',
           status: 'completed',
           stripe_customer_id: customerId,
           stripe_payment_intent_id: paymentIntentId,
           stripe_session_id: session.id,
           stripe_subscription_id: subscriptionId,
+          team_id: isTeamPurchase ? metaTeamId : null,
+          team_seats: isTeamPurchase ? metaSeats : null,
           user_id: userId,
         },
         periodEnd,
         subscriptionId,
         'active'
       );
+
+      if (isTeamPurchase) {
+        await activateTeamSubscription({
+          billingPeriod,
+          periodEnd,
+          seats: metaSeats,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          teamId: metaTeamId,
+        });
+      }
     } else {
       await purchaseService.recordPurchase({
         amount_total: amountTotal,
         billing_period: billingPeriod,
         currency,
         plan_id: planId,
+        purchase_scope: isTeamPurchase ? 'team' : 'personal',
         status: 'pending',
         stripe_customer_id: customerId,
         stripe_payment_intent_id: paymentIntentId,
         stripe_session_id: session.id,
         stripe_subscription_id: subscriptionId,
+        team_id: isTeamPurchase ? metaTeamId : null,
+        team_seats: isTeamPurchase ? metaSeats : null,
         user_id: userId,
       });
     }
@@ -737,6 +973,10 @@ class StripeService {
 
     const planId = normalizeTierKey(session.metadata?.planId || 'pro');
     const billingPeriod = (session.metadata?.billingPeriod as 'monthly' | 'yearly') || 'monthly';
+    const scope = session.metadata?.scope === 'team' ? 'team' : 'personal';
+    const metaTeamId = Number(session.metadata?.teamId || 0);
+    const metaSeats = Math.max(1, Number(session.metadata?.seats || 1));
+    const isTeamPurchase = scope === 'team' && metaTeamId > 0;
     const amountTotal = (session.amount_total ?? 0) / 100;
     const currency = (session.currency || 'USD').toUpperCase();
     const customerId = typeof session.customer === 'string' ? session.customer : (session.customer as Stripe.Customer)?.id || null;
@@ -763,25 +1003,36 @@ class StripeService {
         billing_period: billingPeriod,
         currency,
         plan_id: planId,
+        purchase_scope: isTeamPurchase ? 'team' : 'personal',
         status: 'completed',
         stripe_customer_id: customerId,
         stripe_payment_intent_id: paymentIntentId,
         stripe_session_id: session.id,
         stripe_subscription_id: subscriptionId,
+        team_id: isTeamPurchase ? metaTeamId : null,
+        team_seats: isTeamPurchase ? metaSeats : null,
         user_id: userId,
       },
       periodEnd,
       subscriptionId,
       'active'
     );
+
+    if (isTeamPurchase) {
+      await activateTeamSubscription({
+        billingPeriod,
+        periodEnd,
+        seats: metaSeats,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        teamId: metaTeamId,
+      });
+    }
   }
 
   private async processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
     if (!customerId) return;
-
-    const user = await purchaseService.getUserByStripeCustomerId(customerId);
-    if (!user) return;
 
     const subscriptionId = typeof (invoice as any).subscription === 'string'
       ? (invoice as any).subscription
@@ -790,7 +1041,11 @@ class StripeService {
     if (!subscriptionId) return;
 
     let periodEnd: Date | null = null;
-    let planId = user.subscription_tier;
+    let planId: SubscriptionTierId = 'pro';
+    let subTeamId = 0;
+    let subSeats = 1;
+    let billingPeriod: 'monthly' | 'yearly' = 'monthly';
+
     try {
       const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
       const rawEnd = (subscription as any).current_period_end;
@@ -800,20 +1055,72 @@ class StripeService {
       if (subscription.metadata?.planId) {
         planId = normalizeTierKey(subscription.metadata.planId);
       }
+      if (subscription.metadata?.billingPeriod === 'yearly') {
+        billingPeriod = 'yearly';
+      }
+      subTeamId = Number(subscription.metadata?.teamId || 0);
+      const item = subscription.items?.data?.[0];
+      subSeats = Math.max(1, Number(item?.quantity || subscription.metadata?.teamSeats || 1));
     } catch {}
+
+    const teamRecord = subTeamId > 0
+      ? await getTeamById(subTeamId)
+      : await getTeamByStripeSubscriptionId(subscriptionId);
 
     const amountPaid = (invoice.amount_paid ?? 0) / 100;
     const currency = (invoice.currency || 'USD').toUpperCase();
     const paymentIntentId = typeof (invoice as any).payment_intent === 'string' ? (invoice as any).payment_intent : null;
+
+    if (teamRecord) {
+      await purchaseService.fulfillPurchase(
+        teamRecord.owner_id,
+        'business',
+        {
+          amount_total: amountPaid,
+          billing_period: billingPeriod,
+          currency,
+          plan_id: 'business',
+          purchase_scope: 'team',
+          status: 'completed',
+          stripe_customer_id: customerId,
+          stripe_payment_intent_id: paymentIntentId,
+          stripe_session_id: invoice.id,
+          stripe_subscription_id: subscriptionId,
+          team_id: teamRecord.id,
+          team_seats: subSeats,
+          user_id: teamRecord.owner_id,
+        },
+        periodEnd,
+        subscriptionId,
+        'active'
+      );
+
+      await activateTeamSubscription({
+        billingPeriod,
+        periodEnd: periodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        seats: subSeats,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        teamId: teamRecord.id,
+      });
+      return;
+    }
+
+    const user = await purchaseService.getUserByStripeCustomerId(customerId);
+    if (!user) return;
+    if (!planId || planId === 'free') {
+      planId = user.subscription_tier;
+    }
 
     await purchaseService.fulfillPurchase(
       user.id,
       planId,
       {
         amount_total: amountPaid,
-        billing_period: 'monthly',
+        billing_period: billingPeriod,
         currency,
         plan_id: planId,
+        purchase_scope: 'personal',
         status: 'completed',
         stripe_customer_id: customerId,
         stripe_payment_intent_id: paymentIntentId,
@@ -830,6 +1137,24 @@ class StripeService {
   private async processInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
     if (!customerId) return;
+
+    const subscriptionId = typeof (invoice as any).subscription === 'string'
+      ? (invoice as any).subscription
+      : (invoice as any).subscription?.id;
+
+    if (subscriptionId) {
+      const teamRecord = await getTeamByStripeSubscriptionId(subscriptionId);
+      if (teamRecord) {
+        await updateTeamSubscriptionState(teamRecord.id, {
+          subscriptionStatus: 'past_due',
+        });
+        logger.security.warn('Pago recurrente fallido en Stripe para equipo', {
+          invoiceId: invoice.id,
+          teamId: teamRecord.id,
+        });
+        return;
+      }
+    }
 
     const user = await purchaseService.getUserByStripeCustomerId(customerId);
     if (!user) return;
@@ -868,12 +1193,29 @@ class StripeService {
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
     if (!customerId) return;
 
-    const user = await purchaseService.getUserByStripeCustomerId(customerId);
-    if (!user) return;
-
     const rawEnd = (subscription as any).current_period_end;
     const periodEnd = typeof rawEnd === 'number' ? new Date(rawEnd * 1000) : null;
     const status = subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : subscription.status;
+
+    const metaTeamId = Number(subscription.metadata?.teamId || 0);
+    const teamRecord = metaTeamId > 0
+      ? await getTeamById(metaTeamId)
+      : await getTeamByStripeSubscriptionId(subscription.id);
+
+    if (teamRecord) {
+      const itemQuantity = Math.max(1, Number(subscription.items?.data?.[0]?.quantity || teamRecord.seat_limit || 1));
+      await updateTeamSubscriptionState(teamRecord.id, {
+        seatLimit: itemQuantity,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
+        subscriptionPeriodEnd: periodEnd,
+        subscriptionStatus: status,
+      });
+      return;
+    }
+
+    const user = await purchaseService.getUserByStripeCustomerId(customerId);
+    if (!user) return;
 
     let planId = user.subscription_tier;
     if (subscription.metadata?.planId) {
@@ -904,6 +1246,19 @@ class StripeService {
   private async processSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
     if (!customerId) return;
+
+    const metaTeamId = Number(subscription.metadata?.teamId || 0);
+    const teamRecord = metaTeamId > 0
+      ? await getTeamById(metaTeamId)
+      : await getTeamByStripeSubscriptionId(subscription.id);
+
+    if (teamRecord) {
+      await updateTeamSubscriptionState(teamRecord.id, {
+        stripeSubscriptionId: null,
+        subscriptionStatus: 'canceled',
+      });
+      return;
+    }
 
     const user = await purchaseService.getUserByStripeCustomerId(customerId);
     if (!user) return;
@@ -962,9 +1317,12 @@ class StripeService {
       const item = sub.items?.data?.[0];
       const interval: 'month' | 'year' = item?.price?.recurring?.interval === 'year' ? 'year' : 'month';
       const unitAmount = item?.price?.unit_amount;
+      const quantity = Math.max(1, Number(item?.quantity || 1));
 
       return {
-        amount: typeof unitAmount === 'number' ? unitAmount / 100 : (latestPurchase ? Number(latestPurchase.amount_total) : undefined),
+        amount: typeof unitAmount === 'number'
+          ? Math.round(((unitAmount * quantity) / 100) * 100) / 100
+          : (latestPurchase ? Number(latestPurchase.amount_total) : undefined),
         billing_period: (latestPurchase?.billing_period as any) || (interval === 'year' ? 'yearly' : 'monthly'),
         cancel_at_period_end: Boolean(sub.cancel_at_period_end),
         current_period_end: typeof rawEnd === 'number' ? new Date(rawEnd * 1000).toISOString() : periodEndIso,

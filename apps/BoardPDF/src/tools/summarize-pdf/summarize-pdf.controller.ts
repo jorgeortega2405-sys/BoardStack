@@ -1,3 +1,4 @@
+import { getWorkspaceTeamId } from '../../middlewares/workspace.middleware.js';
 import { calculatePdfCost, consumeAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
 import { getPdfPageCount } from '../../utils/pdf.util.js';
@@ -20,9 +21,10 @@ async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
   if (!file) return;
 
   const userPerms = (user.permissions as string[]) || [];
+  const teamId = getWorkspaceTeamId(req);
   const pageCount = await getPdfPageCount(file.buffer);
   const requiredTokens = calculatePdfCost('summarize-pdf', pageCount, file.buffer.length);
-  const tokenInfo = await getUserTokenBalance(user.id, userPerms);
+  const tokenInfo = await getUserTokenBalance(user.id, userPerms, teamId);
 
   if (tokenInfo.balance < requiredTokens) {
     res.status(402).json({
@@ -49,6 +51,7 @@ async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
       fileSizeBytes: file.buffer.length,
       pageCount,
       permissions: userPerms,
+      teamId,
       toolId: 'summarize-pdf',
       userId: user.id,
     });

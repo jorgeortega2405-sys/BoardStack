@@ -2,6 +2,7 @@ import { getDbPool } from '../../config/database.config.js';
 import { getLabelsForDocumentIds } from '../../services/document-labels.service.js';
 import { logger } from '../../services/logger.service.js';
 import { reclaimDocumentStorage, syncDocumentStorage } from '../../services/storage-quota.service.js';
+import { getTeamContextForUser } from '../../services/team.service.js';
 import { trackAiCollabEvent } from '../../services/telemetry.service.js';
 import { cleanTextForWinAnsi, parseHexColor } from '../../utils/pdf.util.js';
 import { CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeMember } from './design-pdf.types.js';
@@ -480,20 +481,45 @@ async function renderCollaborativePdf(
 
 async function listCollaborativeDocuments(
   userId?: number | null,
-  folderId?: string | null | 'all'
+  folderId?: string | null | 'all',
+  teamId?: number | null,
+  teamPermissions: string[] = []
 ): Promise<CollaborativeDocumentRecord[]> {
   if (!userId) {
     return [];
   }
   try {
     const pool = getDbPool();
-    let query = `
-      SELECT DISTINCT cd.id, cd.user_id, cd.folder_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
-      FROM collaborative_documents cd
-      LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id
-      WHERE (cd.user_id = ? OR cdm.user_id = ?)
-    `;
-    const params: any[] = [userId, userId];
+    const effectiveTeamId = teamId || null;
+    const canManageTeamFolders = teamPermissions.includes('team:folders:manage');
+
+    let query = effectiveTeamId
+      ? `
+        SELECT DISTINCT cd.id, cd.user_id, cd.team_id, cd.team_access, cd.folder_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
+        FROM collaborative_documents cd
+        LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id AND cdm.user_id = ?
+        LEFT JOIN project_folders pf ON pf.id = cd.folder_id
+        LEFT JOIN project_folder_members pfm ON pfm.folder_id = cd.folder_id AND pfm.user_id = ?
+        WHERE cd.team_id = ?
+          AND (
+            ? = 1
+            OR cd.user_id = ?
+            OR cdm.user_id IS NOT NULL
+            OR (
+              cd.team_access IN ('editor', 'viewer')
+              AND (pf.id IS NULL OR pf.visibility != 'restricted' OR pf.user_id = ? OR pfm.user_id IS NOT NULL)
+            )
+          )
+      `
+      : `
+        SELECT DISTINCT cd.id, cd.user_id, cd.team_id, cd.team_access, cd.folder_id, cd.title, cd.content_json, cd.pdf_filename, cd.page_count, cd.access_level, cd.created_at, cd.updated_at
+        FROM collaborative_documents cd
+        LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id
+        WHERE cd.team_id IS NULL AND (cd.user_id = ? OR cdm.user_id = ?)
+      `;
+    const params: any[] = effectiveTeamId
+      ? [userId, userId, effectiveTeamId, canManageTeamFolders ? 1 : 0, userId, userId]
+      : [userId, userId];
 
     if (folderId === null || folderId === '') {
       query += ' AND cd.folder_id IS NULL';
@@ -506,7 +532,7 @@ async function listCollaborativeDocuments(
     const [rows] = await pool.query<any[]>(query, params);
     if (Array.isArray(rows)) {
       const docIds = rows.map((r) => String(r.id));
-      const labelMap = await getLabelsForDocumentIds(Number(userId), docIds);
+      const labelMap = await getLabelsForDocumentIds(Number(userId), docIds, effectiveTeamId);
       return rows.map((r) => ({
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
@@ -516,6 +542,8 @@ async function listCollaborativeDocuments(
         labels: labelMap.get(String(r.id)) ?? [],
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
+        team_access: (r.team_access as 'editor' | 'none' | 'viewer') || 'none',
+        team_id: r.team_id ? Number(r.team_id) : null,
         title: r.title,
         updated_at: new Date(r.updated_at).toISOString(),
         user_id: r.user_id,
@@ -529,19 +557,21 @@ async function listCollaborativeDocuments(
 
 async function getCollaborativeDocument(
   id: string,
-  viewerUserId?: number | null
+  viewerUserId?: number | null,
+  teamId?: number | null
 ): Promise<CollaborativeDocumentRecord | null> {
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
-      'SELECT id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, custom_slug, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, team_id, team_access, folder_id, title, content_json, pdf_filename, page_count, access_level, custom_slug, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (Array.isArray(rows) && rows.length > 0) {
       const r = rows[0];
+      const docTeamId = r.team_id ? Number(r.team_id) : (teamId || null);
       const [members, labelMap] = await Promise.all([
         getCollaborativeDocMembers(id),
-        viewerUserId ? getLabelsForDocumentIds(Number(viewerUserId), [id]) : Promise.resolve(new Map()),
+        viewerUserId ? getLabelsForDocumentIds(Number(viewerUserId), [id], docTeamId) : Promise.resolve(new Map()),
       ]);
       return {
         access_level: r.access_level || 'restricted',
@@ -554,6 +584,8 @@ async function getCollaborativeDocument(
         members,
         page_count: r.page_count,
         pdf_filename: r.pdf_filename,
+        team_access: (r.team_access as 'editor' | 'none' | 'viewer') || 'none',
+        team_id: r.team_id ? Number(r.team_id) : null,
         title: r.title,
         updated_at: new Date(r.updated_at).toISOString(),
         user_id: r.user_id,
@@ -570,6 +602,8 @@ async function saveCollaborativeDocument(payload: {
   content: CollaborativeDocumentContent;
   folderId?: string | null;
   id: string;
+  teamAccess?: 'editor' | 'none' | 'viewer';
+  teamId?: number | null;
   title: string;
   userId?: number | null;
 }): Promise<CollaborativeDocumentRecord> {
@@ -581,11 +615,13 @@ async function saveCollaborativeDocument(payload: {
   let existingUserId = payload.userId ?? null;
   let existingAccess: 'anyone_with_link' | 'restricted' = payload.accessLevel || 'restricted';
   let existingFolderId: string | null = payload.folderId !== undefined ? (payload.folderId || null) : null;
+  let existingTeamId: number | null = payload.teamId ?? null;
+  let existingTeamAccess: 'editor' | 'none' | 'viewer' = payload.teamAccess || (existingTeamId ? 'editor' : 'none');
 
   try {
     const pool = getDbPool();
     const [existingRows] = await pool.query<any[]>(
-      'SELECT user_id, access_level, folder_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT user_id, team_id, team_access, access_level, folder_id FROM collaborative_documents WHERE id = ? LIMIT 1',
       [payload.id]
     );
     if (Array.isArray(existingRows) && existingRows.length > 0) {
@@ -593,13 +629,15 @@ async function saveCollaborativeDocument(payload: {
       if (!payload.accessLevel && prev.access_level) existingAccess = prev.access_level;
       if (existingUserId === null && prev.user_id) existingUserId = prev.user_id;
       if (payload.folderId === undefined && prev.folder_id) existingFolderId = prev.folder_id;
+      if (prev.team_id) existingTeamId = Number(prev.team_id);
+      if (!payload.teamAccess && prev.team_access) existingTeamAccess = prev.team_access;
     }
 
     await pool.query(
-      `INSERT INTO collaborative_documents (id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-       ON DUPLICATE KEY UPDATE title = VALUES(title), content_json = VALUES(content_json), page_count = VALUES(page_count), folder_id = COALESCE(VALUES(folder_id), folder_id), updated_at = NOW()`,
-      [payload.id, existingUserId, existingFolderId, title, JSON.stringify(payload.content), pdfFilename, pageCount, existingAccess]
+      `INSERT INTO collaborative_documents (id, user_id, team_id, team_access, folder_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE title = VALUES(title), content_json = VALUES(content_json), page_count = VALUES(page_count), folder_id = COALESCE(VALUES(folder_id), folder_id), team_access = COALESCE(VALUES(team_access), team_access), updated_at = NOW()`,
+      [payload.id, existingUserId, existingTeamId, existingTeamAccess, existingFolderId, title, JSON.stringify(payload.content), pdfFilename, pageCount, existingAccess]
     );
   } catch (err) {
     logger.db.warn('Error al guardar documento colaborativo en MySQL', err);
@@ -607,14 +645,14 @@ async function saveCollaborativeDocument(payload: {
 
   if (existingUserId) {
     const jsonBytes = Buffer.byteLength(JSON.stringify(payload.content), 'utf-8');
-    void syncDocumentStorage(payload.id, Number(existingUserId), jsonBytes, 0);
+    void syncDocumentStorage(payload.id, Number(existingUserId), jsonBytes, 0, existingTeamId);
   }
 
   trackAiCollabEvent({
     documentId: payload.id,
     eventType: 'document_saved',
     featureName: 'collaborative-pdf',
-    metadata: { accessLevel: existingAccess, pageCount },
+    metadata: { accessLevel: existingAccess, pageCount, teamId: existingTeamId },
     status: 'success',
     userId: existingUserId ? Number(existingUserId) : null,
   });
@@ -629,31 +667,41 @@ async function saveCollaborativeDocument(payload: {
     members,
     page_count: pageCount,
     pdf_filename: pdfFilename,
+    team_access: existingTeamAccess,
+    team_id: existingTeamId,
     title,
     updated_at: now,
     user_id: existingUserId,
   };
 }
 
-async function deleteCollaborativeDocument(id: string, userId?: number | null): Promise<boolean> {
+async function deleteCollaborativeDocument(
+  id: string,
+  userId?: number | null,
+  teamPermissions: string[] = []
+): Promise<boolean> {
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
-      'SELECT user_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT user_id, team_id FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (!rows || rows.length === 0) {
       return false;
     }
     const docUserId = rows[0].user_id;
+    const docTeamId = rows[0].team_id ? Number(rows[0].team_id) : null;
     if (userId && docUserId !== null && docUserId !== undefined && Number(docUserId) !== Number(userId)) {
-      const [memberRows] = await pool.query<any[]>(
-        'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
-        [id, userId]
-      );
-      const isOwnerMember = memberRows && memberRows.length > 0 && memberRows[0].role === 'owner';
-      if (!isOwnerMember) {
-        return false;
+      const canManageTeamDoc = Boolean(docTeamId && teamPermissions.includes('team:folders:manage'));
+      if (!canManageTeamDoc) {
+        const [memberRows] = await pool.query<any[]>(
+          'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
+          [id, userId]
+        );
+        const isOwnerMember = memberRows && memberRows.length > 0 && memberRows[0].role === 'owner';
+        if (!isOwnerMember) {
+          return false;
+        }
       }
     }
     await pool.query('DELETE FROM collaborative_document_members WHERE document_id = ?', [id]);
@@ -775,23 +823,56 @@ async function updateCollaborativeDocAccessLevel(
   }
 }
 
+async function updateCollaborativeDocTeamAccess(
+  docId: string,
+  teamAccess: 'editor' | 'none' | 'viewer',
+  _requestingUserId?: number | null
+): Promise<boolean> {
+  try {
+    const pool = getDbPool();
+    await pool.query('UPDATE collaborative_documents SET team_access = ?, updated_at = NOW() WHERE id = ?', [teamAccess, docId]);
+    return true;
+  } catch (err) {
+    logger.db.warn('Error al actualizar acceso de equipo del documento en MySQL', err);
+    return false;
+  }
+}
+
 async function searchRegisteredUsers(
   query: string,
-  excludeDocId?: string
-): Promise<Array<{ avatar_url: string | null; email: string; id: number; username: string }>> {
+  excludeDocId?: string,
+  teamId?: number | null
+): Promise<Array<{ avatar_url: string | null; email: string; id: number; is_team_member?: boolean; username: string }>> {
   const cleanQ = query.trim().toLowerCase();
-  if (!cleanQ) return [];
 
   try {
     const pool = getDbPool();
-    const [rows] = await pool.query<any[]>(
-      `SELECT id, username, email, avatar_url
-       FROM users
-       WHERE (LOWER(username) LIKE ? OR LOWER(email) LIKE ?)
-       LIMIT 10`,
-      [`%${cleanQ}%`, `%${cleanQ}%`]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
+    let rows: any[] = [];
+    if (teamId) {
+      const [teamRows] = await pool.query<any[]>(
+        `SELECT u.id, u.username, u.email, u.avatar_url
+         FROM team_members tm
+         INNER JOIN users u ON u.id = tm.user_id
+         WHERE tm.team_id = ?
+           AND (? = '' OR LOWER(u.username) LIKE ? OR LOWER(u.email) LIKE ?)
+         ORDER BY u.username ASC
+         LIMIT 25`,
+        [teamId, cleanQ, `%${cleanQ}%`, `%${cleanQ}%`]
+      );
+      rows = Array.isArray(teamRows) ? teamRows : [];
+    } else {
+      if (!cleanQ) return [];
+      const [userRows] = await pool.query<any[]>(
+        `SELECT id, username, email, avatar_url
+         FROM users
+         WHERE (LOWER(username) LIKE ? OR LOWER(email) LIKE ?)
+         LIMIT 10`,
+        [`%${cleanQ}%`, `%${cleanQ}%`]
+      );
+      rows = Array.isArray(userRows) ? userRows : [];
+    }
+
+    if (rows.length > 0) {
       let filtered = rows;
       if (excludeDocId) {
         const members = await getCollaborativeDocMembers(excludeDocId);
@@ -802,6 +883,7 @@ async function searchRegisteredUsers(
         avatar_url: r.avatar_url || null,
         email: r.email || '',
         id: r.id,
+        is_team_member: Boolean(teamId),
         username: r.username || '',
       }));
     }
@@ -883,7 +965,7 @@ async function updateCollaborativeDocCustomSlug(
     const pool = getDbPool();
 
     const [docRows] = await pool.query<any[]>(
-      'SELECT id, user_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, team_id, team_access FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (!Array.isArray(docRows) || docRows.length === 0) {
@@ -892,12 +974,21 @@ async function updateCollaborativeDocCustomSlug(
 
     const doc = docRows[0];
     if (userId && doc.user_id && Number(doc.user_id) !== Number(userId)) {
-      const [members] = await pool.query<any[]>(
-        'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
-        [id, userId]
-      );
-      if (!Array.isArray(members) || members.length === 0 || members[0].role !== 'editor') {
-        return { error: 'No tienes permisos para personalizar este enlace.', success: false };
+      let authorized = false;
+      if (doc.team_id) {
+        const teamCtx = await getTeamContextForUser(Number(doc.team_id), Number(userId));
+        if (teamCtx && (doc.team_access === 'editor' || teamCtx.permissions.includes('team:folders:manage'))) {
+          authorized = true;
+        }
+      }
+      if (!authorized) {
+        const [members] = await pool.query<any[]>(
+          'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
+          [id, userId]
+        );
+        if (!Array.isArray(members) || members.length === 0 || members[0].role !== 'editor') {
+          return { error: 'No tienes permisos para personalizar este enlace.', success: false };
+        }
       }
     }
 
@@ -924,4 +1015,4 @@ async function updateCollaborativeDocCustomSlug(
   }
 }
 
-export { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug };
+export { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug, updateCollaborativeDocTeamAccess };

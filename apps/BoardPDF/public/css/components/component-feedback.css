@@ -280,11 +280,59 @@
 }
 
 .component-progress {
+  display: block;
   width: 100%;
   height: 8px;
   background-color: var(--bg-active, #ebecef);
   border-radius: var(--radius-full, 9999px);
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+progress.component-progress {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+}
+
+progress.component-progress::-webkit-progress-bar {
+  background-color: var(--bg-active, #ebecef);
+  border-radius: var(--radius-full, 9999px);
+}
+
+progress.component-progress::-webkit-progress-value {
+  background-color: var(--action-primary, #111827);
+  border-radius: var(--radius-full, 9999px);
+  transition: width var(--sl-transition-fast, 150ms) ease;
+}
+
+progress.component-progress::-moz-progress-bar {
+  background-color: var(--action-primary, #111827);
+  border-radius: var(--radius-full, 9999px);
+}
+
+progress.component-progress.component-progress__bar--danger::-webkit-progress-value {
+  background-color: var(--color-danger, #dc2626);
+}
+
+progress.component-progress.component-progress__bar--warning::-webkit-progress-value {
+  background-color: var(--color-warning, #d97706);
+}
+
+progress.component-progress.component-progress__bar--primary::-webkit-progress-value {
+  background-color: var(--action-primary, #111827);
+}
+
+progress.component-progress.component-progress__bar--danger::-moz-progress-bar {
+  background-color: var(--color-danger, #dc2626);
+}
+
+progress.component-progress.component-progress__bar--warning::-moz-progress-bar {
+  background-color: var(--color-warning, #d97706);
+}
+
+progress.component-progress.component-progress__bar--primary::-moz-progress-bar {
+  background-color: var(--action-primary, #111827);
 }
 
 .component-progress__bar {

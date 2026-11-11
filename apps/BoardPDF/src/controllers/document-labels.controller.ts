@@ -1,11 +1,15 @@
 import { resolveLabelLimit } from '../config/subscription-plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { getWorkspaceTeamId } from '../middlewares/workspace.middleware.js';
 import { DocumentLabelError, createUserLabel, deleteUserLabel, getUserLabels, setDocumentLabels } from '../services/document-labels.service.js';
 import { logger } from '../services/logger.service.js';
 import { permissionService } from '../services/permission.service.js';
 import type { Request, Response } from 'express';
 
 async function resolveUserPermissions(req: Request, userId: number, fallbackPerms?: string[]): Promise<string[]> {
+  if (Array.isArray((req as any).workspacePermissions) && (req as any).workspacePermissions.length > 0) {
+    return (req as any).workspacePermissions as string[];
+  }
   try {
     return await permissionService.getUserPermissions(userId);
   } catch {
@@ -44,8 +48,9 @@ async function listLabelsHandler(req: Request, res: Response): Promise<void> {
     }
 
     const userId = Number(user.id);
+    const teamId = getWorkspaceTeamId(req);
     const [labels, permissions] = await Promise.all([
-      getUserLabels(userId),
+      getUserLabels(userId, teamId),
       resolveUserPermissions(req, userId, user.permissions),
     ]);
     const customCount = labels.filter((l) => !l.is_default).length;
@@ -71,10 +76,11 @@ async function createLabelHandler(req: Request, res: Response): Promise<void> {
     }
 
     const userId = Number(user.id);
+    const teamId = getWorkspaceTeamId(req);
     const permissions = await resolveUserPermissions(req, userId, user.permissions);
     const { color, name } = req.body || {};
 
-    const result = await createUserLabel(userId, permissions, { color, name });
+    const result = await createUserLabel(userId, permissions, { color, name }, teamId);
     res.status(201).json({
       customCount: result.customCount,
       label: result.label,
@@ -101,8 +107,9 @@ async function deleteLabelHandler(req: Request, res: Response): Promise<void> {
     }
 
     const userId = Number(user.id);
+    const teamId = getWorkspaceTeamId(req);
     const permissions = await resolveUserPermissions(req, userId, user.permissions);
-    const result = await deleteUserLabel(userId, labelId, permissions);
+    const result = await deleteUserLabel(userId, labelId, permissions, teamId);
 
     res.json({
       customCount: result.customCount,
@@ -134,7 +141,8 @@ async function updateDocumentLabelsHandler(req: Request, res: Response): Promise
       return;
     }
 
-    const labels = await setDocumentLabels(Number(user.id), documentId, labelIds);
+    const teamId = getWorkspaceTeamId(req);
+    const labels = await setDocumentLabels(Number(user.id), documentId, labelIds, teamId);
     res.json({
       documentId,
       labels,

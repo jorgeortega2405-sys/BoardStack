@@ -1,5 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, getCsrfToken } from '../services/api.service.js';
+import { currentUser, getCsrfToken, getWorkspaceHeaders } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -94,7 +94,9 @@ async function handleGeneralFilesUpload(files: File[]): Promise<void> {
     files.forEach((file) => formData.append('files', file));
 
     const csrf = getCsrfToken();
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      ...getWorkspaceHeaders(),
+    };
     if (csrf) {
       headers['X-CSRF-Token'] = csrf;
     }

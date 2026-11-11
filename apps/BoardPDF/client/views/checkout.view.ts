@@ -1,12 +1,13 @@
-import { confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, currentUser, updateUserSubscriptionTier } from '../services/api.service.js';
+import { checkAuthSession, confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, currentUser, hasSubscriptionFeature, updateUserSubscriptionTier } from '../services/api.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { setActiveTeamId } from '../services/workspace.service.js';
 import { ViewController } from '../types/common.types.js';
-import { applyAvatarTier, getTierDisplayName, getTierWeight, normalizeTier } from '../utils/tier.util.js';
+import { applyAvatarTier, getTierDisplayName, normalizeTier } from '../utils/tier.util.js';
 
 class CheckoutController implements ViewController {
   private abortController: AbortController | null = null;
@@ -16,6 +17,7 @@ class CheckoutController implements ViewController {
   private currentPlan: 'pro' | 'business' = 'pro';
   private currentStep: 1 | 2 = 1;
   private elements: any = null;
+  private flowMode: 'create-team' | 'standard' = 'standard';
   private initialQuery?: URLSearchParams;
   private isCardSelected = false;
   private isInitializingGateway = false;
@@ -24,6 +26,9 @@ class CheckoutController implements ViewController {
   private paymentElement: any = null;
   private recurringCycle: 'monthly' | 'yearly' = 'monthly';
   private stripe: any = null;
+  private teamId: number | null = null;
+  private teamName = '';
+  private teamSeats = 1;
 
   constructor(container: HTMLElement, initialQuery?: URLSearchParams) {
     this.container = container;
@@ -41,20 +46,37 @@ class CheckoutController implements ViewController {
 
     const params = this.initialQuery || new URLSearchParams(window.location.search);
     const planParam = params.get('plan');
-    if (planParam === 'business') {
+    const flowParam = params.get('flow');
+    this.flowMode = flowParam === 'create-team' ? 'create-team' : 'standard';
+
+    if (planParam === 'business' || this.flowMode === 'create-team') {
       this.currentPlan = 'business';
     } else {
       this.currentPlan = 'pro';
     }
 
-    const userTier = normalizeTier(currentUser.subscription_tier);
-    const targetTier = this.currentPlan;
-    const userWeight = getTierWeight(userTier);
-    const targetWeight = getTierWeight(targetTier);
+    const rawTeamId = Number(params.get('teamId') || 0);
+    this.teamId = Number.isInteger(rawTeamId) && rawTeamId > 0 ? rawTeamId : null;
+    this.teamName = (params.get('teamName') || '').trim();
+    const rawSeats = Number(params.get('seats') || 0);
+    if (Number.isInteger(rawSeats) && rawSeats >= 1) {
+      this.teamSeats = Math.min(50, rawSeats);
+    } else {
+      this.teamSeats = this.flowMode === 'create-team' ? 2 : 1;
+    }
 
-    if (userWeight >= targetWeight && userWeight > 0) {
-      this.renderAlreadyOwnedPlan(userTier, targetTier);
+    const hasPro = hasSubscriptionFeature('pro');
+    const hasBusiness = hasSubscriptionFeature('business');
+    const isTeamFlow = this.currentPlan === 'business'
+      && (this.flowMode === 'create-team' || this.teamId !== null || this.teamName.length > 0 || this.teamSeats > 1);
+
+    if (this.currentPlan === 'pro' && (hasPro || hasBusiness)) {
+      this.renderAlreadyOwnedPlan(normalizeTier(currentUser.subscription_tier), 'pro');
       return;
+    }
+
+    if (this.currentPlan === 'business' && hasBusiness && !isTeamFlow) {
+      this.flowMode = 'create-team';
     }
 
     const cycleParam = params.get('cycle');
@@ -88,6 +110,29 @@ class CheckoutController implements ViewController {
         btnOneTime.classList.add('is-active', 'active');
         btnRecurring.classList.remove('is-active', 'active');
       }
+    }
+
+    const teamConfigBox = this.container.querySelector<HTMLElement>('[data-ref="checkout-team-config"]');
+    const step1Title = this.container.querySelector<HTMLElement>('[data-ref="checkout-step1-title"]');
+    const teamNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-team-name"]');
+    const seatsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats"]');
+
+    if (this.currentPlan === 'business') {
+      teamConfigBox?.classList.remove('is-hidden');
+      if (step1Title) {
+        step1Title.textContent = this.flowMode === 'create-team'
+          ? t('checkout.step1_title_team')
+          : t('checkout.step1_title');
+      }
+      if (teamNameInput && this.teamName) {
+        teamNameInput.value = this.teamName;
+      }
+      if (seatsInput) {
+        seatsInput.value = String(this.teamSeats);
+      }
+    } else {
+      teamConfigBox?.classList.add('is-hidden');
+      if (step1Title) step1Title.textContent = t('checkout.step1_title');
     }
 
     this.bindEvents();
@@ -235,9 +280,58 @@ class CheckoutController implements ViewController {
       this.invalidateGateway();
     }, { signal });
 
+    const teamNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-team-name"]');
+    teamNameInput?.addEventListener('input', () => {
+      this.teamName = teamNameInput.value.trim();
+      this.updateSelectionCards();
+      this.updateSummary();
+      this.invalidateGateway();
+    }, { signal });
+
+    const seatsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats"]');
+    const btnSeatsDec = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-dec"]');
+    const btnSeatsInc = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-inc"]');
+
+    const applySeats = (nextVal: number) => {
+      const clamped = Math.max(1, Math.min(50, Math.floor(Number(nextVal) || 1)));
+      if (seatsInput) seatsInput.value = String(clamped);
+      if (btnSeatsDec) btnSeatsDec.disabled = clamped <= 1;
+      if (btnSeatsInc) btnSeatsInc.disabled = clamped >= 50;
+      if (clamped === this.teamSeats) return;
+      this.teamSeats = clamped;
+      this.updateSelectionCards();
+      this.updateSummary();
+      this.invalidateGateway();
+    };
+
+    btnSeatsDec?.addEventListener('click', (e) => {
+      e.preventDefault();
+      applySeats(this.teamSeats - 1);
+    }, { signal });
+
+    btnSeatsInc?.addEventListener('click', (e) => {
+      e.preventDefault();
+      applySeats(this.teamSeats + 1);
+    }, { signal });
+
+    seatsInput?.addEventListener('change', () => {
+      applySeats(Number(seatsInput.value));
+    }, { signal });
+
     const btnNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-next"]');
     btnNext?.addEventListener('click', (e) => {
       e.preventDefault();
+      if (this.isTeamPurchase() && !this.teamId && this.teamName.trim().length < 2) {
+        const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
+        if (errorBanner) {
+          errorBanner.textContent = t('checkout.team_name_required');
+          errorBanner.classList.remove('is-hidden');
+        }
+        teamNameInput?.focus();
+        return;
+      }
+      const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
+      errorBanner?.classList.add('is-hidden');
       this.goToStep(2);
     }, { signal });
 
@@ -258,6 +352,14 @@ class CheckoutController implements ViewController {
       e.preventDefault();
       void this.handlePaymentSubmit();
     }, { signal });
+  }
+
+  private isTeamPurchase(): boolean {
+    if (this.currentPlan !== 'business') return false;
+    return this.flowMode === 'create-team'
+      || this.teamId !== null
+      || this.teamSeats > 1
+      || this.teamName.trim().length > 0;
   }
 
   private goToStep(step: 1 | 2): void {
@@ -413,6 +515,14 @@ class CheckoutController implements ViewController {
   private updateSelectionCards(): void {
     const isRecurring = this.currentMode === 'recurring';
     const isBusiness = this.currentPlan === 'business';
+    const seats = isBusiness ? this.teamSeats : 1;
+
+    const unitMonthly = isBusiness ? 19.99 : 9.99;
+    const unitYearlyMonthlyEq = isBusiness ? 15.99 : 7.99;
+    const unitYearlyTotal = isBusiness ? 191.88 : 95.88;
+
+    const totalMonthly = Math.round(unitMonthly * seats * 100) / 100;
+    const totalYearly = Math.round(unitYearlyTotal * seats * 100) / 100;
 
     const card1 = this.container.querySelector<HTMLElement>('[data-ref="option-card-1"]');
     const card2 = this.container.querySelector<HTMLElement>('[data-ref="option-card-2"]');
@@ -424,16 +534,20 @@ class CheckoutController implements ViewController {
     const price2 = this.container.querySelector<HTMLElement>('[data-ref="option-price-2"]');
     const badge2 = this.container.querySelector<HTMLElement>('[data-ref="option-badge-2"]');
 
-    if (isRecurring) {
-      if (title1) title1.textContent = 'Mensual';
-      if (desc1) desc1.textContent = 'Facturación cada mes';
-      if (price1) price1.textContent = isBusiness ? 'USD $19.99' : 'USD $9.99';
+    const unitEqLabel = isBusiness && seats > 1
+      ? `USD $${(unitYearlyMonthlyEq * seats).toFixed(2)}`
+      : `USD $${unitYearlyMonthlyEq.toFixed(2)}`;
 
-      if (title2) title2.textContent = 'Anual';
-      if (desc2) desc2.textContent = isBusiness ? 'USD $15.99 al mes facturado anualmente' : 'USD $7.99 al mes facturado anualmente';
-      if (price2) price2.textContent = isBusiness ? 'USD $191.88' : 'USD $95.88';
+    if (isRecurring) {
+      if (title1) title1.textContent = t('checkout.option_monthly_title');
+      if (desc1) desc1.textContent = t('checkout.option_monthly_desc');
+      if (price1) price1.textContent = `USD $${totalMonthly.toFixed(2)}`;
+
+      if (title2) title2.textContent = t('checkout.option_yearly_title');
+      if (desc2) desc2.textContent = t('checkout.option_yearly_desc', { unit: unitEqLabel });
+      if (price2) price2.textContent = `USD $${totalYearly.toFixed(2)}`;
       if (badge2) {
-        badge2.textContent = 'Ahorra 20%';
+        badge2.textContent = t('checkout.option_yearly_badge');
         badge2.classList.remove('is-hidden');
       }
 
@@ -441,15 +555,15 @@ class CheckoutController implements ViewController {
       card1?.classList.toggle('is-selected', isMonthlySelected);
       card2?.classList.toggle('is-selected', !isMonthlySelected);
     } else {
-      if (title1) title1.textContent = '1 mes';
-      if (desc1) desc1.textContent = 'Pago único sin renovaciones automáticas';
-      if (price1) price1.textContent = isBusiness ? 'USD $19.99' : 'USD $9.99';
+      if (title1) title1.textContent = t('checkout.option_onetime_1m_title');
+      if (desc1) desc1.textContent = t('checkout.option_onetime_1m_desc');
+      if (price1) price1.textContent = `USD $${totalMonthly.toFixed(2)}`;
 
-      if (title2) title2.textContent = '12 meses';
-      if (desc2) desc2.textContent = isBusiness ? 'USD $15.99 al mes (1 año prepagado)' : 'USD $7.99 al mes (1 año prepagado)';
-      if (price2) price2.textContent = isBusiness ? 'USD $191.88' : 'USD $95.88';
+      if (title2) title2.textContent = t('checkout.option_onetime_12m_title');
+      if (desc2) desc2.textContent = t('checkout.option_onetime_12m_desc', { unit: unitEqLabel });
+      if (price2) price2.textContent = `USD $${totalYearly.toFixed(2)}`;
       if (badge2) {
-        badge2.textContent = 'Mejor valor';
+        badge2.textContent = t('checkout.option_onetime_12m_badge');
         badge2.classList.remove('is-hidden');
       }
 
@@ -462,42 +576,48 @@ class CheckoutController implements ViewController {
   private updateSummary(): void {
     const isRecurring = this.currentMode === 'recurring';
     const isBusiness = this.currentPlan === 'business';
+    const seats = isBusiness ? this.teamSeats : 1;
+    const isTeam = this.isTeamPurchase();
+    const isYearly = isRecurring ? this.recurringCycle === 'yearly' : this.oneTimeDuration === '12_months';
 
-    let amount = 9.99;
-    if (isBusiness) {
-      if (isRecurring) {
-        amount = this.recurringCycle === 'yearly' ? 191.88 : 19.99;
-      } else {
-        amount = this.oneTimeDuration === '12_months' ? 191.88 : 19.99;
-      }
-    } else {
-      if (isRecurring) {
-        amount = this.recurringCycle === 'yearly' ? 95.88 : 9.99;
-      } else {
-        amount = this.oneTimeDuration === '12_months' ? 95.88 : 9.99;
-      }
-    }
+    const unitAmount = isBusiness
+      ? (isYearly ? 191.88 : 19.99)
+      : (isYearly ? 95.88 : 9.99);
+    const amount = Math.round(unitAmount * seats * 100) / 100;
 
     const planName = this.getPlanDisplayName();
     const formattedPrice = `USD $${amount.toFixed(2)}`;
 
+    const seatsBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-seats-badge"]');
+    if (seatsBadgeEl) {
+      seatsBadgeEl.textContent = seats === 1
+        ? t('checkout.seats_count_singular')
+        : t('checkout.seats_count_plural', { count: seats });
+    }
+
+    const seatsHelperEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-seats-helper"]');
+    if (seatsHelperEl) {
+      const unitStr = isYearly ? 'USD $15.99/mes' : 'USD $19.99/mes';
+      seatsHelperEl.textContent = t('checkout.seats_helper', { unit: unitStr });
+    }
+
     const feat1El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-1"]');
     if (feat1El) {
-      feat1El.textContent = planName;
+      feat1El.textContent = isTeam && this.teamName.trim()
+        ? `${planName} — ${this.teamName.trim()}`
+        : planName;
     }
 
     const feat2El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-2"]');
     if (feat2El) {
       if (isRecurring) {
-        const isYearly = this.recurringCycle === 'yearly';
         const nextDate = this.formatBillingDate(isYearly ? 12 : 1);
         feat2El.textContent = isYearly
           ? t('checkout.summary_billing_yearly', { date: nextDate, price: formattedPrice })
           : t('checkout.summary_billing_monthly', { date: nextDate, price: formattedPrice });
       } else {
-        const isTwelveMonths = this.oneTimeDuration === '12_months';
-        const endDate = this.formatBillingDate(isTwelveMonths ? 12 : 1);
-        feat2El.textContent = isTwelveMonths
+        const endDate = this.formatBillingDate(isYearly ? 12 : 1);
+        feat2El.textContent = isYearly
           ? t('checkout.summary_billing_one_time_12m', { date: endDate, price: formattedPrice })
           : t('checkout.summary_billing_one_time_1m', { date: endDate, price: formattedPrice });
       }
@@ -505,7 +625,12 @@ class CheckoutController implements ViewController {
 
     const feat3El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-3"]');
     if (feat3El) {
-      feat3El.textContent = t('checkout.summary_seats_single');
+      if (isTeam && seats > 1) {
+        const unitLabel = isYearly ? 'USD $15.99/mes' : 'USD $19.99/mes';
+        feat3El.textContent = t('checkout.summary_seats_multiple', { count: seats, unit: unitLabel });
+      } else {
+        feat3El.textContent = t('checkout.summary_seats_single');
+      }
     }
 
     const priceValEl = this.container.querySelector<HTMLElement>('[data-ref="summary-price-val"]');
@@ -522,7 +647,7 @@ class CheckoutController implements ViewController {
 
     const btnSubmitText = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-text"]');
     if (btnSubmitText && !this.isSubmitting) {
-      btnSubmitText.textContent = `Pagar ${formattedPrice}`;
+      btnSubmitText.textContent = t('checkout.pay_button_label', { price: formattedPrice });
     }
   }
 
@@ -546,9 +671,19 @@ class CheckoutController implements ViewController {
       this.paymentElement = null;
     }
 
+    const isTeam = this.isTeamPurchase();
+    const teamOptions = isTeam
+      ? {
+          scope: 'team' as const,
+          seats: this.teamSeats,
+          ...(this.teamId ? { teamId: this.teamId } : {}),
+          ...(this.teamName.trim() ? { teamName: this.teamName.trim() } : {}),
+        }
+      : undefined;
+
     try {
       if (this.currentMode === 'recurring') {
-        const res = await createSubscriptionIntentApi(this.currentPlan, this.recurringCycle);
+        const res = await createSubscriptionIntentApi(this.currentPlan, this.recurringCycle, teamOptions);
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
             errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
@@ -559,7 +694,7 @@ class CheckoutController implements ViewController {
         }
         this.currentIntent = res;
       } else {
-        const res = await createOneTimePaymentIntentApi(this.currentPlan, this.oneTimeDuration);
+        const res = await createOneTimePaymentIntentApi(this.currentPlan, this.oneTimeDuration, teamOptions);
         if (!res.success || !res.clientSecret || !res.publishableKey) {
           if (errorBanner) {
             errorBanner.textContent = res.error || t('checkout.error_connecting_gateway');
@@ -634,7 +769,7 @@ class CheckoutController implements ViewController {
 
     this.isSubmitting = true;
     if (btnSubmit) btnSubmit.disabled = true;
-    if (btnSubmitText) btnSubmitText.textContent = 'Procesando pago...';
+    if (btnSubmitText) btnSubmitText.textContent = t('checkout.processing_payment');
     if (errorBanner) errorBanner.classList.add('is-hidden');
 
     try {
@@ -670,6 +805,8 @@ class CheckoutController implements ViewController {
 
       if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         let resolvedTier = this.currentPlan;
+        let resolvedTeamId: number | null = this.currentIntent?.teamId ? Number(this.currentIntent.teamId) : null;
+        let resolvedSeats = this.teamSeats;
 
         if (this.currentMode === 'recurring') {
           const confirmRes = await confirmSubscriptionPaymentApi(
@@ -677,19 +814,41 @@ class CheckoutController implements ViewController {
             paymentIntent.id
           );
           resolvedTier = (confirmRes.tier as any) || this.currentPlan;
+          if (confirmRes.teamId) resolvedTeamId = Number(confirmRes.teamId);
+          if (confirmRes.seats) resolvedSeats = Number(confirmRes.seats);
         } else {
           const confirmRes = await confirmOneTimePaymentApi(paymentIntent.id);
           resolvedTier = (confirmRes.planId as any) || this.currentPlan;
+          if (confirmRes.teamId) resolvedTeamId = Number(confirmRes.teamId);
+          if (confirmRes.seats) resolvedSeats = Number(confirmRes.seats);
+        }
+
+        if (resolvedTeamId) {
+          setActiveTeamId(resolvedTeamId);
+          await checkAuthSession();
+          showToast(
+            t('checkout.success_team_ready', {
+              seats: resolvedSeats,
+              team: this.teamName.trim() || this.getPlanDisplayName(),
+            }),
+            'success'
+          );
+          window.dispatchEvent(new CustomEvent('subscription-updated', {
+            detail: { teamId: resolvedTeamId, user: currentUser },
+          }));
+          navigate('/settings/team');
+          return;
         }
 
         updateUserSubscriptionTier(resolvedTier);
+        await checkAuthSession();
         const avatarEl = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
         applyAvatarTier(avatarEl, resolvedTier);
 
         showToast(
           this.currentMode === 'recurring'
-            ? `¡Felicidades! Tu suscripción recurrente a ${this.currentIntent.planName} está activa.`
-            : `¡Felicidades! Tu acceso de pago único a ${this.currentIntent.planName} está activo.`,
+            ? t('checkout.success_recurring', { plan: this.currentIntent.planName })
+            : t('checkout.success_one_time', { plan: this.currentIntent.planName }),
           'success'
         );
 

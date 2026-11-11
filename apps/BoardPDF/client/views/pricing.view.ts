@@ -1,5 +1,6 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
-import { currentUser, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
+import { openCreateTeamModal } from '../components/team-create-modal.component.js';
+import { currentUser, hasSubscriptionFeature, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -129,30 +130,31 @@ class PricingController implements ViewController {
   private updateUserTierStatus(): void {
     if (!currentUser) return;
 
-    const userTier = normalizeTier(currentUser.subscription_tier);
-    const userWeight = getTierWeight(userTier);
+    const hasPro = hasSubscriptionFeature('pro');
+    const hasBusiness = hasSubscriptionFeature('business');
 
     const btnPro = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-pro"]');
     const btnBusiness = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-subscribe-business"]');
 
     if (btnPro) {
-      if (userWeight === 1) {
-        btnPro.classList.add('component-button--disabled');
-        btnPro.disabled = true;
-        btnPro.innerHTML = `<span>${t('pricing.current_plan')}</span>`;
-      } else if (userWeight > 1) {
+      if (hasBusiness) {
         btnPro.classList.add('component-button--disabled');
         btnPro.disabled = true;
         btnPro.innerHTML = `<span>${t('pricing.included_in_plan')}</span>`;
+      } else if (hasPro) {
+        btnPro.classList.add('component-button--disabled');
+        btnPro.disabled = true;
+        btnPro.innerHTML = `<span>${t('pricing.current_plan')}</span>`;
       }
     }
 
     if (btnBusiness) {
-      if (userWeight === 2) {
-        btnBusiness.classList.add('component-button--disabled');
-        btnBusiness.disabled = true;
-        btnBusiness.innerHTML = `<span>${t('pricing.current_plan')}</span>`;
-      } else if (userWeight === 1) {
+      if (hasBusiness) {
+        const defaultText = btnBusiness.querySelector<HTMLElement>('.component-button__default-text');
+        const hoverText = btnBusiness.querySelector<HTMLElement>('.component-button__hover-text');
+        if (defaultText) defaultText.textContent = t('nav.create_team');
+        if (hoverText) hoverText.textContent = t('pricing.cta_start_now');
+      } else if (hasPro) {
         const defaultText = btnBusiness.querySelector<HTMLElement>('.component-button__default-text');
         const hoverText = btnBusiness.querySelector<HTMLElement>('.component-button__hover-text');
         if (defaultText) defaultText.textContent = t('pricing.upgrade_to_business');
@@ -172,21 +174,27 @@ class PricingController implements ViewController {
       return;
     }
 
-    const userTier = normalizeTier(currentUser.subscription_tier);
-    const userWeight = getTierWeight(userTier);
-    const targetWeight = getTierWeight(tierId);
+    const hasPro = hasSubscriptionFeature('pro');
+    const hasBusiness = hasSubscriptionFeature('business');
 
-    if (userWeight === targetWeight) {
-      showToast(t('pricing.already_active'), 'info');
+    if (tierId === 'pro') {
+      if (hasBusiness) {
+        showToast(t('pricing.already_included'), 'info');
+        return;
+      }
+      if (hasPro) {
+        showToast(t('pricing.already_active'), 'info');
+        return;
+      }
+    }
+
+    if (tierId === 'business' && hasBusiness) {
+      openCreateTeamModal();
       return;
     }
 
-    if (userWeight > targetWeight) {
-      showToast(t('pricing.already_included'), 'info');
-      return;
-    }
-
-    navigate(`/checkout?plan=${tierId}&cycle=${this.currentCycle}`);
+    const extra = tierId === 'business' ? '&flow=create-team' : '';
+    navigate(`/checkout?plan=${tierId}&cycle=${this.currentCycle}${extra}`);
   }
 
   private async handlePaymentReturn(sessionId: string): Promise<void> {

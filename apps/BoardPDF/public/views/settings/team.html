@@ -1,0 +1,121 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="team-wrapper">
+  <header class="component-top tool-top-bar team-top" data-ref="component-top">
+    <div class="tool-top-bar__left team-top__left" data-ref="tool-top-left">
+      <div class="team-top__identity" data-ref="team-top-identity">
+        <div class="team-top__icon-box" data-ref="team-top-icon-box">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+        </div>
+        <div class="team-top__meta" data-ref="team-top-meta">
+          <div class="team-top__title-row" data-ref="team-name-view-box">
+            <h1 class="team-top__title" data-ref="display-team-name" data-i18n="settings.team.title"></h1>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn is-hidden" data-ref="btn-edit-team-name" data-i18n-tooltip="settings.team.btn_edit" data-i18n-aria="settings.team.btn_edit" data-i18n-title="settings.team.btn_edit">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+            </button>
+            <span class="component-badge component-badge--sm team-top__role-badge is-hidden" data-ref="display-my-team-role"></span>
+          </div>
+          <div class="team-top__edit-row is-hidden" data-ref="team-name-edit-row">
+            <input class="collaborative-title-input team-top__edit-input" data-ref="input-team-name" data-i18n-placeholder="settings.team.name_placeholder" type="text" placeholder=" " maxlength="80" autocomplete="organization" />
+            <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn" data-ref="btn-cancel-team-name" data-i18n-tooltip="settings.team.btn_cancel" data-i18n-aria="settings.team.btn_cancel" data-i18n-title="settings.team.btn_cancel">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn" data-ref="btn-save-team-name" data-i18n-tooltip="settings.team.btn_save" data-i18n-aria="settings.team.btn_save" data-i18n-title="settings.team.btn_save">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-top-bar__right team-top__right" data-ref="tool-top-right">
+      <button type="button" class="component-button component-button--h40 tool-top-btn is-hidden" data-ref="btn-top-create-team" data-i18n="settings.team.btn_create_team"></button>
+      <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn is-hidden" data-ref="btn-open-seats-modal" data-i18n-tooltip="settings.team.btn_manage_seats" data-i18n-aria="settings.team.btn_manage_seats" data-i18n-title="settings.team.btn_manage_seats">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn is-hidden" data-ref="btn-view-members" data-i18n-tooltip="settings.team.btn_view_members" data-i18n-aria="settings.team.btn_view_members" data-i18n-title="settings.team.btn_view_members">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h40 component-button--icon-only collaborative-top-icon-btn is-hidden" data-ref="btn-open-invite-modal" data-i18n-tooltip="settings.team.btn_send_invite" data-i18n-aria="settings.team.btn_send_invite" data-i18n-title="settings.team.btn_send_invite">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom component-bottom--no-padding layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="team-bottom">
+    <div class="component-layout is-hidden" data-ref="team-empty-state">
+      <div class="component-group" data-ref="team-empty-item">
+        <div class="component-item">
+          <div class="component-item__content">
+            <div class="component-item__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            </div>
+            <div class="component-item__text">
+              <h2 class="component-item__title" data-i18n="settings.team.empty_title"></h2>
+              <p class="component-item__desc" data-i18n="settings.team.empty_desc"></p>
+            </div>
+          </div>
+          <div class="component-item__actions">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-empty-create-team" data-i18n="settings.team.btn_create_team"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-layout is-hidden" data-ref="team-content-groups">
+      <div class="component-group component-group--accordion is-active" data-ref="group-team-seats">
+        <div class="component-accordion-header" data-ref="accordion-header-seats">
+          <div class="component-item__content" data-ref="accordion-seats-content">
+            <div class="component-item__icon-box" data-ref="accordion-seats-icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+            </div>
+            <div class="component-item__text" data-ref="accordion-seats-text">
+              <h2 class="component-item__title" data-ref="accordion-seats-title" data-i18n="settings.team.group_seats"></h2>
+              <p class="component-item__desc" data-ref="accordion-seats-desc" data-i18n="settings.team.seats_accordion_desc"></p>
+            </div>
+          </div>
+          <div class="component-item__actions" data-ref="accordion-seats-actions">
+            <svg class="component-icon component-accordion-icon" data-ref="accordion-seats-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </div>
+        </div>
+        <div class="component-accordion-body" data-ref="accordion-body-seats">
+          <div class="component-accordion-content" data-ref="accordion-content-seats">
+            <div class="component-item component-item--stacked" data-ref="item-seats-usage">
+              <div class="component-item__content component-block--w-full" data-ref="item-seats-usage-content">
+                <div class="component-item__text component-block--w-full" data-ref="item-seats-usage-text">
+                  <div class="component-item__title-row" data-ref="seats-title-row">
+                    <h3 class="component-item__title" data-ref="item-seats-title" data-i18n="settings.team.seats_title"></h3>
+                  </div>
+                  <p class="component-item__desc" data-ref="item-seats-desc" data-i18n="settings.team.seats_billing_note"></p>
+                  <div class="storage-meter component-block--w-full" data-ref="seats-meter-box">
+                    <div class="component-group--between">
+                      <span class="component-item__value component-text--bold" data-ref="team-seats-text-used"></span>
+                      <span class="component-badge component-badge--neutral component-text--sm" data-ref="team-seats-badge-percent"></span>
+                    </div>
+                    <progress class="component-progress" data-ref="team-seats-progress" max="100" value="0"></progress>
+                    <div class="component-text--muted" data-ref="team-seats-available-text"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-group is-hidden" data-ref="group-team-danger">
+        <div class="component-item" data-ref="item-leave-team">
+          <div class="component-item__content">
+            <div class="component-item__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+            </div>
+            <div class="component-item__text">
+              <h2 class="component-item__title" data-i18n="settings.team.leave_team_title"></h2>
+              <p class="component-item__desc" data-i18n="settings.team.leave_team_desc"></p>
+            </div>
+          </div>
+          <div class="component-item__actions">
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-leave-team" data-i18n="settings.team.btn_leave_team"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

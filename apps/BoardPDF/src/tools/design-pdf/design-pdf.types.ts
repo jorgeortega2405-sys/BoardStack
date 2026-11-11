@@ -236,6 +236,8 @@ interface CollaborativeDocumentRecord {
   members?: CollaborativeMember[];
   page_count: number;
   pdf_filename?: string | null;
+  team_access?: 'editor' | 'none' | 'viewer';
+  team_id?: number | null;
   title: string;
   updated_at: string;
   user_id?: number | null;

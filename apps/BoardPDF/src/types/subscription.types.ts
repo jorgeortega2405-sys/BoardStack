@@ -7,11 +7,14 @@ interface PurchaseRecord {
   currency: string;
   id?: number;
   plan_id: string;
+  purchase_scope?: 'personal' | 'team';
   status: string;
   stripe_customer_id?: string | null;
   stripe_payment_intent_id?: string | null;
   stripe_session_id: string;
   stripe_subscription_id?: string | null;
+  team_id?: number | null;
+  team_seats?: number | null;
   updated_at?: Date | string;
   user_id: number;
 }
@@ -35,10 +38,15 @@ interface BillingDetailsResponse {
   hasSubscription: boolean;
   interval?: 'month' | 'year';
   is_one_time?: boolean;
+  scope?: 'personal' | 'team';
+  seat_limit?: number;
+  seats_used?: number;
   status?: string;
   stripe_subscription_id?: string | null;
   subscription_id?: string | null;
   success: boolean;
+  team_id?: number | null;
+  team_name?: string | null;
   tier: SubscriptionTierId | string;
 }
 
@@ -67,8 +75,11 @@ interface SubscriptionIntentResponse {
   planId: SubscriptionTierId;
   planName: string;
   publishableKey: string;
+  seats?: number;
   subscriptionId: string;
   success: boolean;
+  teamId?: number | null;
+  teamName?: string | null;
 }
 
 interface OneTimePaymentIntentResponse {
@@ -81,7 +92,10 @@ interface OneTimePaymentIntentResponse {
   planId: SubscriptionTierId;
   planName: string;
   publishableKey: string;
+  seats?: number;
   success: boolean;
+  teamId?: number | null;
+  teamName?: string | null;
 }
 
 export type { BillingDetailsResponse, OneTimePaymentIntentResponse, PaymentMethod, PurchaseRecord, SubscriptionIntentResponse, SubscriptionTier, SubscriptionTierId };

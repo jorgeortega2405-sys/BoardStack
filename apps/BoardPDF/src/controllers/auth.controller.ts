@@ -1,9 +1,11 @@
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
+import { extractRequestedTeamId } from '../middlewares/workspace.middleware.js';
 import { addAccountToSession, clearSessionCookie, hashPassword, removeAccountFromSession, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.service.js';
 import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
+import { getPendingInvitationsCountForEmail, listUserTeams } from '../services/team.service.js';
 import { trackSecurityEvent } from '../services/telemetry.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserLastLogin, verifyAndConsumeBackupCode } from '../services/user.service.js';
@@ -23,6 +25,7 @@ function getClientIp(req: Request): string {
 
 function sanitizeUser(user: any): UserPayload {
   return {
+    active_team_id: user.active_team_id ?? null,
     ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
     ai_tokens_reset_at: user.ai_tokens_reset_at ? new Date(user.ai_tokens_reset_at).toISOString() : undefined,
     avatar_url: user.avatar_url ?? null,
@@ -32,11 +35,13 @@ function sanitizeUser(user: any): UserPayload {
     google_email: user.google_email || null,
     has_password: Boolean(user.password_hash || user.has_password),
     id: user.id,
+    pending_invitations_count: Number(user.pending_invitations_count || 0),
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
     storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
     subscription_status: user.subscription_status,
     subscription_tier: user.subscription_tier || 'free',
+    teams: Array.isArray(user.teams) ? user.teams : [],
     two_factor_enabled: Boolean(user.two_factor_enabled),
     username: user.username,
   };
@@ -477,6 +482,19 @@ async function me(req: Request, res: Response): Promise<void> {
         user.subscription_tier,
         user.subscription_status
       );
+      const [userTeams, pendingInvites] = await Promise.all([
+        listUserTeams(user.id),
+        getPendingInvitationsCountForEmail(user.email),
+      ]);
+      user.teams = userTeams;
+      user.pending_invitations_count = pendingInvites;
+      const requestedTeamId = extractRequestedTeamId(req);
+      const matchedTeam =
+        requestedTeamId && requestedTeamId > 0
+          ? userTeams.find((t) => Number(t.id) === Number(requestedTeamId)) || null
+          : null;
+      user.active_team_id = matchedTeam ? matchedTeam.id : null;
+
       updateActiveAccountInSession(res, req, {
         ai_tokens_balance: user.ai_tokens_balance,
         avatar_url: user.avatar_url,

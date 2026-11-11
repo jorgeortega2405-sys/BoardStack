@@ -75,14 +75,71 @@ function calculateAiGenerateCost(geminiTotalTokens: number, generatedPageCount: 
   return Math.max(MIN_AI_GENERATE_COST, baseCost + pageCost + geminiFactor);
 }
 
-async function getUserTokenBalance(userId: number, permissions?: string[]): Promise<AiTokenBalanceInfo> {
+async function getUserTokenBalance(userId: number, permissions?: string[], teamId?: number | null): Promise<AiTokenBalanceInfo> {
   const pool = getDbPool();
   let perms = permissions;
-  if (!perms) {
+  if (!perms && !teamId) {
     perms = await permissionService.getUserPermissions(userId);
   }
 
-  const maxLimit = getMonthlyQuotaByPermissions(perms);
+  let maxLimit = getMonthlyQuotaByPermissions(perms || []);
+
+  if (teamId) {
+    const [teamRows] = await pool.query<any[]>(
+      'SELECT ai_tokens_balance, ai_tokens_reset_at, subscription_status FROM teams WHERE id = ? LIMIT 1',
+      [teamId]
+    );
+    if (!teamRows || teamRows.length === 0) {
+      return {
+        balance: 0,
+        limit: 100,
+        resetAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+
+    const teamRow = teamRows[0];
+    if (!perms) {
+      maxLimit = teamRow.subscription_status === 'active' || teamRow.subscription_status === 'past_due' ? 5000 : 100;
+    }
+
+    let teamBalance = Number(teamRow.ai_tokens_balance) || 0;
+    let teamResetAt = teamRow.ai_tokens_reset_at ? new Date(teamRow.ai_tokens_reset_at) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    if (new Date() >= teamResetAt) {
+      const nextResetDate = new Date();
+      nextResetDate.setMonth(nextResetDate.getMonth() + 1);
+      await pool.query(
+        'UPDATE teams SET ai_tokens_balance = ?, ai_tokens_reset_at = ? WHERE id = ?',
+        [maxLimit, nextResetDate, teamId]
+      );
+      await cacheService.invalidateTeam(teamId);
+      teamBalance = maxLimit;
+      teamResetAt = nextResetDate;
+      logger.db.info('Cuota mensual de tokens IA de equipo restablecida', { limit: maxLimit, teamId });
+    } else if (teamBalance < maxLimit) {
+      try {
+        const [consumedRows] = await pool.query<RowDataPacket[]>(
+          'SELECT COALESCE(SUM(tokens_consumed), 0) AS total_consumed FROM ai_token_logs WHERE team_id = ? AND created_at >= ?',
+          [teamId, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)]
+        );
+        const totalConsumed = Number((consumedRows as any[])?.[0]?.total_consumed) || 0;
+        const expectedBalance = Math.max(0, maxLimit - totalConsumed);
+        if (teamBalance < expectedBalance) {
+          await pool.query('UPDATE teams SET ai_tokens_balance = ? WHERE id = ?', [expectedBalance, teamId]);
+          await cacheService.invalidateTeam(teamId);
+          teamBalance = expectedBalance;
+        }
+      } catch (err) {
+        logger.db.warn('Error al verificar balance esperado de tokens del equipo', err);
+      }
+    }
+
+    return {
+      balance: teamBalance,
+      limit: maxLimit,
+      resetAt: teamResetAt.toISOString(),
+    };
+  }
 
   const [rows] = await pool.query<UserTokenRecord[]>(
     'SELECT ai_tokens_balance, ai_tokens_reset_at FROM users WHERE id = ? LIMIT 1',
@@ -117,7 +174,7 @@ async function getUserTokenBalance(userId: number, permissions?: string[]): Prom
   } else if (currentBalance < maxLimit) {
     try {
       const [consumedRows] = await pool.query<RowDataPacket[]>(
-        'SELECT COALESCE(SUM(tokens_consumed), 0) AS total_consumed FROM ai_token_logs WHERE user_id = ? AND created_at >= ?',
+        'SELECT COALESCE(SUM(tokens_consumed), 0) AS total_consumed FROM ai_token_logs WHERE user_id = ? AND team_id IS NULL AND created_at >= ?',
         [userId, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)]
       );
       const totalConsumed = Number((consumedRows as any[])?.[0]?.total_consumed) || 0;
@@ -147,11 +204,12 @@ async function estimateAiTokenCost(params: {
   fileSizeBytes: number;
   pageCount: number;
   permissions?: string[];
+  teamId?: number | null;
   toolId: string;
   userId: number;
 }): Promise<AiTokenEstimateResult> {
   const cost = calculatePdfCost(params.toolId, params.pageCount, params.fileSizeBytes);
-  const info = await getUserTokenBalance(params.userId, params.permissions);
+  const info = await getUserTokenBalance(params.userId, params.permissions, params.teamId);
   const canAfford = info.balance >= cost;
   const remainingAfter = Math.max(0, info.balance - cost);
 
@@ -164,27 +222,30 @@ async function estimateAiTokenCost(params: {
   };
 }
 
-async function consumeAiTokens(params: {
+async function executeTokenDeduction(params: {
   fileSizeBytes: number;
   pageCount: number;
   permissions?: string[];
+  required: number;
+  teamId?: number | null;
   toolId: string;
   userId: number;
 }): Promise<ConsumeAiTokenResult> {
   const pool = getDbPool();
   let perms = params.permissions;
-  if (!perms) {
+  if (!perms && !params.teamId) {
     perms = await permissionService.getUserPermissions(params.userId);
   }
 
-  const tokenInfo = await getUserTokenBalance(params.userId, perms);
-  const required = calculatePdfCost(params.toolId, params.pageCount, params.fileSizeBytes);
+  const effectiveTeamId = params.teamId || null;
+  const tokenInfo = await getUserTokenBalance(params.userId, perms, effectiveTeamId);
+  const required = params.required;
 
   if (tokenInfo.balance < required) {
     trackAiCollabEvent({
       eventType: 'ai_tokens_insufficient',
       featureName: params.toolId,
-      metadata: { pageCount: params.pageCount, required },
+      metadata: { pageCount: params.pageCount, required, teamId: effectiveTeamId },
       status: 'rejected',
       tokensConsumed: 0,
       tokensRemaining: tokenInfo.balance,
@@ -200,17 +261,22 @@ async function consumeAiTokens(params: {
     };
   }
 
-  const [updateResult] = await pool.query<ResultSetHeader>(
-    'UPDATE users SET ai_tokens_balance = ai_tokens_balance - ? WHERE id = ? AND ai_tokens_balance >= ?',
-    [required, params.userId, required]
-  );
+  const [updateResult] = effectiveTeamId
+    ? await pool.query<ResultSetHeader>(
+        'UPDATE teams SET ai_tokens_balance = ai_tokens_balance - ? WHERE id = ? AND ai_tokens_balance >= ?',
+        [required, effectiveTeamId, required]
+      )
+    : await pool.query<ResultSetHeader>(
+        'UPDATE users SET ai_tokens_balance = ai_tokens_balance - ? WHERE id = ? AND ai_tokens_balance >= ?',
+        [required, params.userId, required]
+      );
 
   if (updateResult.affectedRows === 0) {
-    const freshInfo = await getUserTokenBalance(params.userId, perms);
+    const freshInfo = await getUserTokenBalance(params.userId, perms, effectiveTeamId);
     trackAiCollabEvent({
       eventType: 'ai_tokens_insufficient',
       featureName: params.toolId,
-      metadata: { pageCount: params.pageCount, required },
+      metadata: { pageCount: params.pageCount, required, teamId: effectiveTeamId },
       status: 'rejected',
       tokensConsumed: 0,
       tokensRemaining: freshInfo.balance,
@@ -227,27 +293,32 @@ async function consumeAiTokens(params: {
   }
 
   const newBalance = Math.max(0, tokenInfo.balance - required);
-  await cacheService.invalidateUser(String(params.userId));
+  if (effectiveTeamId) {
+    await cacheService.invalidateTeam(effectiveTeamId);
+  } else {
+    await cacheService.invalidateUser(String(params.userId));
+  }
 
   try {
     await pool.query(
-      'INSERT INTO ai_token_logs (user_id, tool_id, tokens_consumed, pdf_pages, pdf_bytes) VALUES (?, ?, ?, ?, ?)',
-      [params.userId, params.toolId, required, params.pageCount, params.fileSizeBytes]
+      'INSERT INTO ai_token_logs (user_id, team_id, tool_id, tokens_consumed, pdf_pages, pdf_bytes) VALUES (?, ?, ?, ?, ?, ?)',
+      [params.userId, effectiveTeamId, params.toolId, required, Math.max(1, params.pageCount || 1), Math.max(0, params.fileSizeBytes || 0)]
     );
   } catch (err) {
-    logger.db.warn('No se pudo registrar log transaccional de tokens IA', { error: err, userId: params.userId });
+    logger.db.warn('No se pudo registrar log transaccional de tokens IA', { error: err, teamId: effectiveTeamId, userId: params.userId });
   }
 
   logger.app.info('Tokens IA consumidos exitosamente', {
     consumed: required,
     newBalance,
+    teamId: effectiveTeamId,
     toolId: params.toolId,
     userId: params.userId,
   });
   trackAiCollabEvent({
     eventType: 'ai_tokens_consumed',
     featureName: params.toolId,
-    metadata: { fileSizeBytes: params.fileSizeBytes, pageCount: params.pageCount },
+    metadata: { fileSizeBytes: params.fileSizeBytes, pageCount: Math.max(1, params.pageCount || 1), teamId: effectiveTeamId },
     status: 'success',
     tokensConsumed: required,
     tokensRemaining: newBalance,
@@ -264,105 +335,43 @@ async function consumeAiTokens(params: {
   };
 }
 
+async function consumeAiTokens(params: {
+  fileSizeBytes: number;
+  pageCount: number;
+  permissions?: string[];
+  teamId?: number | null;
+  toolId: string;
+  userId: number;
+}): Promise<ConsumeAiTokenResult> {
+  return executeTokenDeduction({
+    fileSizeBytes: params.fileSizeBytes,
+    pageCount: params.pageCount,
+    permissions: params.permissions,
+    required: calculatePdfCost(params.toolId, params.pageCount, params.fileSizeBytes),
+    teamId: params.teamId,
+    toolId: params.toolId,
+    userId: params.userId,
+  });
+}
+
 async function consumeCustomAiTokens(params: {
   fileSizeBytes?: number;
   pageCount: number;
   permissions?: string[];
   requiredTokens: number;
+  teamId?: number | null;
   toolId: string;
   userId: number;
 }): Promise<ConsumeAiTokenResult> {
-  const pool = getDbPool();
-  let perms = params.permissions;
-  if (!perms) {
-    perms = await permissionService.getUserPermissions(params.userId);
-  }
-
-  const tokenInfo = await getUserTokenBalance(params.userId, perms);
-  const required = Math.max(1, Math.floor(params.requiredTokens || 1));
-
-  if (tokenInfo.balance < required) {
-    trackAiCollabEvent({
-      eventType: 'ai_tokens_insufficient',
-      featureName: params.toolId,
-      metadata: { pageCount: params.pageCount, required },
-      status: 'rejected',
-      tokensConsumed: 0,
-      tokensRemaining: tokenInfo.balance,
-      userId: params.userId,
-    });
-    return {
-      balance: tokenInfo.balance,
-      consumed: 0,
-      limit: tokenInfo.limit,
-      required,
-      resetAt: tokenInfo.resetAt,
-      success: false,
-    };
-  }
-
-  const [updateResult] = await pool.query<ResultSetHeader>(
-    'UPDATE users SET ai_tokens_balance = ai_tokens_balance - ? WHERE id = ? AND ai_tokens_balance >= ?',
-    [required, params.userId, required]
-  );
-
-  if (updateResult.affectedRows === 0) {
-    const freshInfo = await getUserTokenBalance(params.userId, perms);
-    trackAiCollabEvent({
-      eventType: 'ai_tokens_insufficient',
-      featureName: params.toolId,
-      metadata: { pageCount: params.pageCount, required },
-      status: 'rejected',
-      tokensConsumed: 0,
-      tokensRemaining: freshInfo.balance,
-      userId: params.userId,
-    });
-    return {
-      balance: freshInfo.balance,
-      consumed: 0,
-      limit: freshInfo.limit,
-      required,
-      resetAt: freshInfo.resetAt,
-      success: false,
-    };
-  }
-
-  const newBalance = Math.max(0, tokenInfo.balance - required);
-  await cacheService.invalidateUser(String(params.userId));
-
-  try {
-    await pool.query(
-      'INSERT INTO ai_token_logs (user_id, tool_id, tokens_consumed, pdf_pages, pdf_bytes) VALUES (?, ?, ?, ?, ?)',
-      [params.userId, params.toolId, required, Math.max(1, params.pageCount || 1), Math.max(0, params.fileSizeBytes || 0)]
-    );
-  } catch (err) {
-    logger.db.warn('No se pudo registrar log transaccional de tokens IA', { error: err, userId: params.userId });
-  }
-
-  logger.app.info('Tokens IA consumidos exitosamente', {
-    consumed: required,
-    newBalance,
+  return executeTokenDeduction({
+    fileSizeBytes: Math.max(0, params.fileSizeBytes || 0),
+    pageCount: Math.max(1, params.pageCount || 1),
+    permissions: params.permissions,
+    required: Math.max(1, Math.floor(params.requiredTokens || 1)),
+    teamId: params.teamId,
     toolId: params.toolId,
     userId: params.userId,
   });
-  trackAiCollabEvent({
-    eventType: 'ai_tokens_consumed',
-    featureName: params.toolId,
-    metadata: { fileSizeBytes: params.fileSizeBytes || 0, pageCount: Math.max(1, params.pageCount || 1) },
-    status: 'success',
-    tokensConsumed: required,
-    tokensRemaining: newBalance,
-    userId: params.userId,
-  });
-
-  return {
-    balance: newBalance,
-    consumed: required,
-    limit: tokenInfo.limit,
-    required,
-    resetAt: tokenInfo.resetAt,
-    success: true,
-  };
 }
 
 export { MIN_AI_GENERATE_COST, calculateAiGenerateCost, calculatePdfCost, consumeAiTokens, consumeCustomAiTokens, estimateAiTokenCost, getMonthlyQuotaByPermissions, getUserTokenBalance };
