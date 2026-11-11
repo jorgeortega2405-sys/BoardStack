@@ -340,6 +340,34 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
+      const slug = params?.slug;
+      const { navigate } = await import('../services/navigation.service.js');
+      if (!slug) {
+        navigate('/');
+        return null;
+      }
+      const { getApi } = await import('../services/api.service.js');
+      try {
+        const res = await getApi(`/api/collaborative-docs/resolve-slug/${encodeURIComponent(slug)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.id) {
+            navigate(`/d/${data.id}`, true);
+            return null;
+          }
+        }
+      } catch {}
+      navigate('/');
+      return null;
+    },
+    id: 'collab-custom-link-resolver',
+    match: (path) => {
+      const match = path.match(/^\/l\/([a-zA-Z0-9_-]+)\/?$/);
+      return match ? { slug: match[1] } : false;
+    },
+  },
+  {
+    handler: async ({ params }) => {
       const { currentUser } = await import('../services/api.service.js');
       if (!currentUser) {
         const { navigate } = await import('../services/navigation.service.js');

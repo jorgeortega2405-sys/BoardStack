@@ -1,4 +1,5 @@
 import { currentUser, escapeHtml } from '../../services/api.service.js';
+import { getUserAvatarUrl } from '../../utils/avatar.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { RemotePeer } from './collaborative-pdf.types.js';
 
@@ -11,17 +12,12 @@ function addPeerPresenceBubble(container: HTMLElement, peer: RemotePeer): void {
     bubble = document.createElement('div');
     bubble.className = 'collab-presence-bubble collab-presence-bubble--enter';
     bubble.setAttribute('data-client-id', peer.clientId);
-    bubble.style.backgroundColor = peer.color;
     applyAvatarTier(bubble, (peer as any).subscription_tier || (peer as any).subscriptionTier || 'free');
     const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
     bubble.setAttribute('data-tooltip', peerLabel);
     bubble.setAttribute('aria-label', peerLabel);
-    const peerAvatar = peer.avatarUrl || (peer.username ? `/api/avatar?name=${encodeURIComponent(peer.username)}&size=80` : null);
-    if (peerAvatar) {
-      bubble.innerHTML = `<img src="${peerAvatar}" alt="${peer.username}" />`;
-    } else {
-      bubble.textContent = peer.username.substring(0, 2).toUpperCase();
-    }
+    const peerAvatar = getUserAvatarUrl({ avatar_url: peer.avatarUrl, subscription_tier: (peer as any).subscription_tier || (peer as any).subscriptionTier, username: peer.username }, 80);
+    bubble.innerHTML = `<img src="${peerAvatar}" alt="${peer.username}" />`;
     presenceContainer.appendChild(bubble);
   }
 }
@@ -52,38 +48,27 @@ function renderPresenceList(
   presenceContainer.innerHTML = '';
 
   const myName = currentUser?.username || guestIdentity?.username || 'Tú';
-  const myAvatar = currentUser?.avatar_url || (currentUser?.username ? `/api/avatar?name=${encodeURIComponent(currentUser.username)}&size=80` : (guestIdentity?.avatarUrl || null));
-  const myInitials = myName.substring(0, 2).toUpperCase();
+  const myAvatar = getUserAvatarUrl(currentUser || { avatar_url: guestIdentity?.avatarUrl, username: guestIdentity?.username || 'Tú' }, 80);
   const myBubble = document.createElement('div');
   myBubble.className = 'collab-presence-bubble';
   myBubble.setAttribute('data-client-id', 'me');
-  myBubble.style.backgroundColor = myColor;
   applyAvatarTier(myBubble, currentUser?.subscription_tier || 'free');
   const fullSuffix = isCollabRoomFull ? ' (Sala llena)' : '';
   myBubble.setAttribute('data-tooltip', `${myName} (Tú)${fullSuffix}`);
   myBubble.setAttribute('aria-label', `${myName} (Tú)${fullSuffix}`);
-  if (myAvatar) {
-    myBubble.innerHTML = `<img src="${myAvatar}" alt="${myName}" />`;
-  } else {
-    myBubble.textContent = myInitials;
-  }
+  myBubble.innerHTML = `<img src="${myAvatar}" alt="${myName}" />`;
   presenceContainer.appendChild(myBubble);
 
   for (const peer of remotePeers.values()) {
     const peerBubble = document.createElement('div');
     peerBubble.className = 'collab-presence-bubble';
     peerBubble.setAttribute('data-client-id', peer.clientId);
-    peerBubble.style.backgroundColor = peer.color;
     applyAvatarTier(peerBubble, (peer as any).subscription_tier || (peer as any).subscriptionTier || 'free');
     const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
     peerBubble.setAttribute('data-tooltip', peerLabel);
     peerBubble.setAttribute('aria-label', peerLabel);
-    const peerAvatar = peer.avatarUrl || (peer.username ? `/api/avatar?name=${encodeURIComponent(peer.username)}&size=80` : null);
-    if (peerAvatar) {
-      peerBubble.innerHTML = `<img src="${peerAvatar}" alt="${peer.username}" />`;
-    } else {
-      peerBubble.textContent = peer.username.substring(0, 2).toUpperCase();
-    }
+    const peerAvatar = getUserAvatarUrl({ avatar_url: peer.avatarUrl, subscription_tier: (peer as any).subscription_tier || (peer as any).subscriptionTier, username: peer.username }, 80);
+    peerBubble.innerHTML = `<img src="${peerAvatar}" alt="${peer.username}" />`;
     presenceContainer.appendChild(peerBubble);
   }
 }

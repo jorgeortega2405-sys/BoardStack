@@ -129,11 +129,13 @@ CREATE TABLE IF NOT EXISTS collaborative_documents (
   pdf_filename VARCHAR(255) NULL,
   page_count INT UNSIGNED NOT NULL DEFAULT 1,
   access_level ENUM('restricted', 'anyone_with_link') NOT NULL DEFAULT 'restricted',
+  custom_slug VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_docs (user_id),
   INDEX idx_doc_folder (folder_id),
   INDEX idx_created_at (created_at),
+  UNIQUE INDEX uq_doc_custom_slug (custom_slug),
   FOREIGN KEY (folder_id) REFERENCES project_folders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

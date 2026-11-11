@@ -21,6 +21,7 @@ const API_ROUTES = {
     aiGenerate: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/ai-generate`,
     base: '/api/collaborative-docs',
     byId: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}`,
+    customSlug: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/custom-slug`,
     labels: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/labels`,
     memberDelete: (id: string, userId: number) => `/api/collaborative-docs/${encodeURIComponent(id)}/members/${userId}`,
     members: (id: string) => `/api/collaborative-docs/${encodeURIComponent(id)}/members`,

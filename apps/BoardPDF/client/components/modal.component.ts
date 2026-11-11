@@ -550,10 +550,10 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
             color: '#000000',
             type: 'rounded',
           },
-          height: 196,
+          height: 170,
           margin: 2,
           type: 'svg',
-          width: 196,
+          width: 170,
           data: qrUri,
         });
         qrCode.append(qrContainer);

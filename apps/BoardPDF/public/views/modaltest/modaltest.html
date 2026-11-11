@@ -140,40 +140,42 @@
                   <p class="modal-card__desc" data-i18n="projects.modal_move_doc_desc"></p>
                 </div>
                 <div class="modal-card__body">
-                  <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-move-folder-04" data-selected-folder-id="">
-                    <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-move-folder-04" data-i18n-aria="projects.select_folder_placeholder">
-                      <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-move-folder-04">
-                        <svg class="component-icon dropdown-trigger__icon" data-ref="icon-move-folder-04" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                        <span class="dropdown-trigger__text" data-ref="txt-selected-move-folder-04" data-i18n="projects.select_folder_placeholder"></span>
-                      </div>
-                      <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-                    </button>
-                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-move-folder-04">
-                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-move-folder-04">
-                        <div class="menu-panel__drag-zone" data-ref="drag-zone-move-folder-04" aria-hidden="true">
-                          <div class="menu-panel__drag-handle"></div>
+                  <div class="modal-form-stack" data-ref="modal-form-move-folder-04">
+                    <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-move-folder-04" data-selected-folder-id="">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-move-folder-04" data-i18n-aria="projects.select_folder_placeholder">
+                        <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-move-folder-04">
+                          <svg class="component-icon dropdown-trigger__icon" data-ref="icon-move-folder-04" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                          <span class="dropdown-trigger__text" data-ref="txt-selected-move-folder-04" data-i18n="projects.select_folder_placeholder"></span>
                         </div>
-                        <div class="menu-panel__list menu-panel__list--scrollable" data-ref="move-folders-list-04">
-                          <button type="button" class="menu-item" data-ref="move-option-root-04" data-value="">
-                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-                            <span class="menu-item__text" data-i18n="projects.all_projects"></span>
-                            <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-root-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="move-option-f1-04" data-value="f1">
-                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                            <span class="menu-item__text" data-i18n="modaltest.sample_folder_1"></span>
-                            <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f1-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="move-option-f2-04" data-value="f2">
-                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                            <span class="menu-item__text" data-i18n="modaltest.sample_folder_2"></span>
-                            <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f2-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="move-option-f3-04" data-value="f3">
-                            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                            <span class="menu-item__text" data-i18n="modaltest.sample_folder_3"></span>
-                            <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f3-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                          </button>
+                        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-move-folder-04">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-move-folder-04">
+                          <div class="menu-panel__drag-zone" data-ref="drag-zone-move-folder-04" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list menu-panel__list--scrollable" data-ref="move-folders-list-04">
+                            <button type="button" class="menu-item" data-ref="move-option-root-04" data-value="">
+                              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+                              <span class="menu-item__text" data-i18n="projects.all_projects"></span>
+                              <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-root-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="move-option-f1-04" data-value="f1">
+                              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                              <span class="menu-item__text" data-i18n="modaltest.sample_folder_1"></span>
+                              <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f1-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="move-option-f2-04" data-value="f2">
+                              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                              <span class="menu-item__text" data-i18n="modaltest.sample_folder_2"></span>
+                              <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f2-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="move-option-f3-04" data-value="f3">
+                              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                              <span class="menu-item__text" data-i18n="modaltest.sample_folder_3"></span>
+                              <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-f3-04" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -503,7 +505,7 @@
                   <p class="modal-card__desc" data-i18n="collab.page_size_desc"></p>
                 </div>
                 <div class="modal-card__body">
-                  <div class="collab-page-size-form" data-ref="collab-page-size-form-12">
+                  <div class="modal-form-stack" data-ref="collab-page-size-form-12">
                     <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size-12">
                       <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size-12" data-i18n-aria="collab.select_paper_size">
                         <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size-12">
@@ -593,23 +595,25 @@
                   <p class="modal-card__desc" data-i18n="download.thank_you_desc"></p>
                 </div>
                 <div class="modal-card__body">
-                  <div class="modal-social-share-grid" data-ref="social-share-grid-13">
-                    <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-twitter-13" href="#" target="_blank" rel="noopener noreferrer">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#post_add"></use></svg>
-                      <span data-i18n="download.social_twitter"></span>
-                    </a>
-                    <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-linkedin-13" href="#" target="_blank" rel="noopener noreferrer">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-                      <span data-i18n="download.social_linkedin"></span>
-                    </a>
-                    <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-facebook-13" href="#" target="_blank" rel="noopener noreferrer">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-                      <span data-i18n="download.social_facebook"></span>
-                    </a>
-                    <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-whatsapp-13" href="#" target="_blank" rel="noopener noreferrer">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat"></use></svg>
-                      <span data-i18n="download.social_whatsapp"></span>
-                    </a>
+                  <div class="modal-form-stack" data-ref="modal-form-social-13">
+                    <div class="modal-social-share-grid" data-ref="social-share-grid-13">
+                      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-twitter-13" href="#" target="_blank" rel="noopener noreferrer">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#post_add"></use></svg>
+                        <span data-i18n="download.social_twitter"></span>
+                      </a>
+                      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-linkedin-13" href="#" target="_blank" rel="noopener noreferrer">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                        <span data-i18n="download.social_linkedin"></span>
+                      </a>
+                      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-facebook-13" href="#" target="_blank" rel="noopener noreferrer">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                        <span data-i18n="download.social_facebook"></span>
+                      </a>
+                      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-whatsapp-13" href="#" target="_blank" rel="noopener noreferrer">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat"></use></svg>
+                        <span data-i18n="download.social_whatsapp"></span>
+                      </a>
+                    </div>
                   </div>
                 </div>
                 <div class="modal-card__footer">

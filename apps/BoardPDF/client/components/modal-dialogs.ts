@@ -547,10 +547,10 @@ function openShareDownloadModal(options: { downloadLink: string }): ModalInstanc
           cornersSquareOptions: { color: '#000000', type: 'extra-rounded' },
           data: options.downloadLink,
           dotsOptions: { color: '#000000', type: 'rounded' },
-          height: 196,
+          height: 170,
           margin: 2,
           type: 'svg',
-          width: 196,
+          width: 170,
         });
         qrContainer.innerHTML = '';
         qr.append(qrContainer);

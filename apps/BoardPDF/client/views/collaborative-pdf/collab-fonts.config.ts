@@ -110,15 +110,15 @@ const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
 ];
 
 const WEIGHT_LABELS: Record<number, string> = {
-  100: 'Thin',
-  200: 'Extra Light',
-  300: 'Light',
-  400: 'Regular',
-  500: 'Medium',
-  600: 'Semi Bold',
-  700: 'Bold',
-  800: 'Extra Bold',
-  900: 'Black',
+  100: 'Ultradelgada',
+  200: 'Muy delgada',
+  300: 'Delgada',
+  400: 'Normal',
+  500: 'Media',
+  600: 'Seminegrita',
+  700: 'Negrita',
+  800: 'Extranegrita',
+  900: 'Ultragruesa',
 };
 
 const loadedFontHrefs = new Set<string>();

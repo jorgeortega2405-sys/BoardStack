@@ -68,30 +68,32 @@ function renderMoveFolderOptionsModalBody(options: {
     .join('');
 
   return `
-    <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-move-folder" data-selected-folder-id="${escapeHtml(selectedId)}">
-      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-move-folder" data-i18n-aria="projects.select_folder_placeholder" aria-label="${t('projects.select_folder_placeholder')}">
-        <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-move-folder">
-          <svg class="component-icon dropdown-trigger__icon" data-ref="icon-move-folder" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          ${
-            selectedFolder
-              ? `<span class="dropdown-trigger__text" data-ref="txt-selected-move-folder">${escapeHtml(selectedFolder.name)}</span>`
-              : `<span class="dropdown-trigger__text" data-ref="txt-selected-move-folder" data-i18n="projects.select_folder_placeholder">${t('projects.select_folder_placeholder')}</span>`
-          }
-        </div>
-        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-      </button>
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-move-folder">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-move-folder">
-          <div class="menu-panel__drag-zone" data-ref="drag-zone-move-folder" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
+    <div class="modal-form-stack" data-ref="modal-form-move-folder">
+      <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-move-folder" data-selected-folder-id="${escapeHtml(selectedId)}">
+        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-move-folder" data-i18n-aria="projects.select_folder_placeholder" aria-label="${t('projects.select_folder_placeholder')}">
+          <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-move-folder">
+            <svg class="component-icon dropdown-trigger__icon" data-ref="icon-move-folder" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+            ${
+              selectedFolder
+                ? `<span class="dropdown-trigger__text" data-ref="txt-selected-move-folder">${escapeHtml(selectedFolder.name)}</span>`
+                : `<span class="dropdown-trigger__text" data-ref="txt-selected-move-folder" data-i18n="projects.select_folder_placeholder">${t('projects.select_folder_placeholder')}</span>`
+            }
           </div>
-          <div class="menu-panel__list menu-panel__list--scrollable" data-ref="move-folders-list">
-            <button type="button" class="menu-item" data-ref="move-option-root" data-folder-id="" data-value="">
-              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-              <span class="menu-item__text" data-i18n="${rootKey}">${escapeHtml(rootLabel)}</span>
-              <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-root" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-            </button>
-            ${folderRows}
+          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-move-folder">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-move-folder">
+            <div class="menu-panel__drag-zone" data-ref="drag-zone-move-folder" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list menu-panel__list--scrollable" data-ref="move-folders-list">
+              <button type="button" class="menu-item" data-ref="move-option-root" data-folder-id="" data-value="">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+                <span class="menu-item__text" data-i18n="${rootKey}">${escapeHtml(rootLabel)}</span>
+                <svg class="component-icon menu-item__check is-hidden" data-ref="check-folder-root" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+              </button>
+              ${folderRows}
+            </div>
           </div>
         </div>
       </div>
@@ -218,56 +220,60 @@ function renderCollabPageSizeModalBody(
     .join('');
 
   return `
-    <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size">
-      <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" data-i18n-aria="collab.select_paper_size" aria-label="${t('collab.select_paper_size')}">
-        <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size">
-          <svg class="component-icon dropdown-trigger__icon" data-ref="icon-paper-size" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-          <span class="dropdown-trigger__text" data-ref="txt-selected-paper-size">${escapeHtml(initialPreset.name)} (${escapeHtml(initialPreset.description)})</span>
-        </div>
-        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-      </button>
-
-      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-paper-size">
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-paper-size">
-          <div class="menu-panel__drag-zone" data-ref="drag-zone-paper-size" aria-hidden="true">
-            <div class="menu-panel__drag-handle"></div>
+    <div class="modal-form-stack" data-ref="collab-page-size-form">
+      <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-paper-size">
+        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-paper-size" data-i18n-aria="collab.select_paper_size" aria-label="${t('collab.select_paper_size')}">
+          <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-paper-size">
+            <svg class="component-icon dropdown-trigger__icon" data-ref="icon-paper-size" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+            <span class="dropdown-trigger__text" data-ref="txt-selected-paper-size">${escapeHtml(initialPreset.name)} (${escapeHtml(initialPreset.description)})</span>
           </div>
-          <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-paper-size">
-            ${itemsHtml}
+          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-paper-size">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-paper-size">
+            <div class="menu-panel__drag-zone" data-ref="drag-zone-paper-size" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-paper-size">
+              ${itemsHtml}
+            </div>
           </div>
         </div>
       </div>
+
+      <label class="split-option-card" data-ref="label-apply-all">
+        <div class="split-option-card__content">
+          <span class="split-option-card__title" data-i18n="collab.apply_to_all_pages">${t('collab.apply_to_all_pages')}</span>
+          <span class="split-option-card__subtitle" data-i18n="collab.apply_to_all_pages_desc">${t('collab.apply_to_all_pages_desc')}</span>
+        </div>
+        <input class="component-checkbox" data-ref="chk-apply-all" type="checkbox" />
+      </label>
     </div>
-
-    <label class="split-option-card" data-ref="label-apply-all">
-      <div class="split-option-card__content">
-        <span class="split-option-card__title" data-i18n="collab.apply_to_all_pages">${t('collab.apply_to_all_pages')}</span>
-        <span class="split-option-card__subtitle" data-i18n="collab.apply_to_all_pages_desc">${t('collab.apply_to_all_pages_desc')}</span>
-      </div>
-      <input class="component-checkbox" data-ref="chk-apply-all" type="checkbox" />
-    </label>
   `;
 }
 
 function renderThankYouShareModalBody(): string {
   return `
-    <div class="modal-social-share-grid" data-ref="social-share-grid">
-      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-twitter" href="#" target="_blank" rel="noopener noreferrer">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#post_add"></use></svg>
-        <span data-i18n="download.social_twitter">${t('download.social_twitter')}</span>
-      </a>
-      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-linkedin" href="#" target="_blank" rel="noopener noreferrer">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-        <span data-i18n="download.social_linkedin">${t('download.social_linkedin')}</span>
-      </a>
-      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-facebook" href="#" target="_blank" rel="noopener noreferrer">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-        <span data-i18n="download.social_facebook">${t('download.social_facebook')}</span>
-      </a>
-      <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat"></use></svg>
-        <span data-i18n="download.social_whatsapp">${t('download.social_whatsapp')}</span>
-      </a>
+    <div class="modal-form-stack" data-ref="modal-form-social">
+      <div class="modal-social-share-grid" data-ref="social-share-grid">
+        <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-twitter" href="#" target="_blank" rel="noopener noreferrer">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#post_add"></use></svg>
+          <span data-i18n="download.social_twitter">${t('download.social_twitter')}</span>
+        </a>
+        <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-linkedin" href="#" target="_blank" rel="noopener noreferrer">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+          <span data-i18n="download.social_linkedin">${t('download.social_linkedin')}</span>
+        </a>
+        <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-facebook" href="#" target="_blank" rel="noopener noreferrer">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+          <span data-i18n="download.social_facebook">${t('download.social_facebook')}</span>
+        </a>
+        <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat"></use></svg>
+          <span data-i18n="download.social_whatsapp">${t('download.social_whatsapp')}</span>
+        </a>
+      </div>
     </div>
   `;
 }

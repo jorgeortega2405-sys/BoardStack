@@ -3,7 +3,8 @@ import { currentUser, deleteApi, getApi, patchApi, postApi } from '../../service
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { debounce, setupDropdown } from '../../utils/dom.util.js';
+import { debounce, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { applyAvatarTier } from '../../utils/tier.util.js';
 import { DocMember } from './collaborative-pdf.types.js';
 
 interface CollabShareFindState {
@@ -27,15 +28,17 @@ interface CollabShareFindOptions extends CollabShareFindState {
 
 interface CollabShareModalOptions {
   activePageIndex: number;
+  customSlug?: string | null;
   docAccessLevel: 'anyone_with_link' | 'restricted';
   docId: string;
   docMembers: DocMember[];
   docTitle: string;
   findReplace?: CollabShareFindOptions;
-  initialView?: 'download' | 'find-replace' | 'main';
+  initialView?: 'customize-link' | 'download' | 'find-replace' | 'main';
   isDocOwner: boolean;
   onAccessLevelChange: (level: 'anyone_with_link' | 'restricted') => void;
   onClose: () => void;
+  onCustomSlugChange?: (slug: string) => void;
   onFindOpen?: () => void;
   onMembersChange: (members: DocMember[]) => void;
   pageCount: number;
@@ -45,14 +48,15 @@ interface CollabShareModalOptions {
 interface CollabSharePopoverHandle {
   cleanup: () => void;
   element: HTMLElement;
-  getActiveView: () => 'download' | 'find-replace' | 'main';
-  openView: (view: 'download' | 'find-replace' | 'main') => void;
+  getActiveView: () => 'customize-link' | 'download' | 'find-replace' | 'main';
+  openView: (view: 'customize-link' | 'download' | 'find-replace' | 'main') => void;
   syncFindState: (state: CollabShareFindState) => void;
 }
 
 function createCollabSharePopover(options: CollabShareModalOptions): CollabSharePopoverHandle {
   const {
     activePageIndex,
+    customSlug,
     docAccessLevel,
     docId,
     docTitle,
@@ -61,12 +65,14 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     isDocOwner,
     onAccessLevelChange,
     onClose,
+    onCustomSlugChange,
     onFindOpen,
     onMembersChange,
     pageCount,
     selectedPageIndex,
   } = options;
 
+  let currentCustomSlug = customSlug || null;
   let currentMembers = [...options.docMembers];
 
   const popover = document.createElement('div');
@@ -83,7 +89,9 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-open collab-share-card" data-ref="collab-share-card">
       <div class="tool-sidebar__panel" data-ref="collab-share-view-main">
         <div class="tool-sidebar__header">
-          <h2 class="tool-sidebar__title">Compartir el diseño</h2>
+          <div class="component-title-badge" data-ref="collab-share-title-badge">
+            <h1 class="component-title-badge__text" data-ref="collab-share-title">${t('collaborative.share_design_title')}</h1>
+          </div>
           <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-close" data-i18n-aria="common.close" aria-label="Cerrar">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
@@ -93,9 +101,13 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           <div class="tool-sidebar__section">
             <div class="tool-sidebar__section-title">Personas con acceso</div>
             ${canManagePermissions ? `
-              <div class="collab-share-search-box">
-                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-                <input class="collab-share-search-input" data-ref="input-share-search-user" type="text" placeholder="Agregar personas" autocomplete="off" />
+              <div class="component-search component-search--full" data-ref="share-search-user-box">
+                <div class="component-search__icon">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                </div>
+                <div class="component-search__input-box">
+                  <input class="component-search__input" data-ref="input-share-search-user" type="text" placeholder="${t('collaborative.add_people_placeholder')}" autocomplete="off" />
+                </div>
               </div>
               <div class="collab-share-search-dropdown is-hidden" data-ref="collab-share-search-dropdown"></div>
             ` : ''}
@@ -160,17 +172,15 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
               <span data-ref="txt-copy-link">Copiar el enlace</span>
             </button>
+            <button type="button" class="component-button component-button--ghost component-button--h44 component-button--w-full" data-ref="btn-collab-customize-link">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <span data-ref="txt-customize-link">${t('collaborative.customize_link')}</span>
+            </button>
             <div class="banner banner--danger is-hidden" data-ref="collab-share-error"></div>
           </div>
         </div>
 
         <div class="tool-sidebar__footer">
-          <button type="button" class="collab-share-download-btn" data-ref="btn-collab-open-find-replace">
-            <div class="collab-share-download-icon">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-            </div>
-            <span class="collab-share-download-text">${t('collaborative.find_replace_menu')}</span>
-          </button>
           <button type="button" class="collab-share-download-btn" data-ref="btn-collab-download-pdf">
             <div class="collab-share-download-icon">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
@@ -185,7 +195,9 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-download-back" aria-label="${t('collaborative.back_to_share')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <h2 class="tool-sidebar__title">${t('collaborative.download_menu')}</h2>
+          <div class="component-title-badge" data-ref="collab-download-title-badge">
+            <h1 class="component-title-badge__text" data-ref="collab-download-title">${t('collaborative.download_menu')}</h1>
+          </div>
           <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-download-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
@@ -258,10 +270,9 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
       <div class="tool-sidebar__panel is-hidden" data-ref="collab-share-view-find-replace">
         <div class="tool-sidebar__header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-find-back" aria-label="${t('collaborative.back_to_share')}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-          </button>
-          <h2 class="tool-sidebar__title">${t('collaborative.find_replace_title')}</h2>
+          <div class="component-title-badge" data-ref="collab-find-replace-title-badge">
+            <h1 class="component-title-badge__text" data-ref="collab-find-replace-title">${t('collaborative.find_replace_title')}</h1>
+          </div>
           <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-find-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
@@ -271,9 +282,13 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           <div class="tool-sidebar__section">
             <div class="tool-sidebar__section-title">${t('collaborative.find_label')}</div>
             <div class="collab-share-find-row">
-              <div class="collab-share-search-box collab-share-search-box--find">
-                <svg class="component-icon collab-share-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-                <input class="collab-share-search-input" data-ref="input-find-search" type="text" placeholder="${t('collaborative.find_placeholder')}" autocomplete="off" />
+              <div class="component-search component-search--full collab-share-search-box--find" data-ref="find-search-box">
+                <div class="component-search__icon">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                </div>
+                <div class="component-search__input-box">
+                  <input class="component-search__input" data-ref="input-find-search" type="text" placeholder="${t('collaborative.find_placeholder')}" autocomplete="off" />
+                </div>
                 <span class="collab-share-find-count is-hidden" data-ref="txt-find-status"></span>
               </div>
               <div class="collab-share-find-nav">
@@ -289,20 +304,24 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
           <div class="tool-sidebar__section">
             <div class="tool-sidebar__section-title">${t('collaborative.replace_label')}</div>
-            <div class="collab-share-search-box">
-              <input class="collab-share-search-input" data-ref="input-find-replace" type="text" placeholder="${t('collaborative.replace_placeholder')}" autocomplete="off" />
+            <div class="component-search component-search--full" data-ref="find-replace-box">
+              <div class="component-search__icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#find_replace"></use></svg>
+              </div>
+              <div class="component-search__input-box">
+                <input class="component-search__input" data-ref="input-find-replace" type="text" placeholder="${t('collaborative.replace_placeholder')}" autocomplete="off" />
+              </div>
             </div>
           </div>
 
           <div class="tool-sidebar__section">
-            <div class="collab-download-options-list">
-              <label class="collab-download-checkbox-row collab-share-find-option">
-                <input class="component-checkbox" data-ref="check-find-match-case" type="checkbox" />
-                <div class="collab-download-checkbox-info">
-                  <span class="collab-download-checkbox-title">${t('collaborative.match_case')}</span>
-                </div>
-              </label>
-            </div>
+            <label class="split-option-card" data-ref="card-find-match-case">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title">${t('collaborative.match_case')}</span>
+                <span class="split-option-card__subtitle">${t('collaborative.match_case_subtitle') || 'Diferenciar mayúsculas y minúsculas'}</span>
+              </div>
+              <input class="component-checkbox" data-ref="check-find-match-case" type="checkbox" />
+            </label>
           </div>
         </div>
 
@@ -311,6 +330,50 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <button type="button" class="component-button component-button--secondary component-button--h44 collab-share-find-action-btn" data-ref="btn-find-replace-one">${t('collaborative.replace_one')}</button>
             <button type="button" class="component-button component-button--black component-button--h44 collab-share-find-action-btn" data-ref="btn-find-replace-all">${t('collaborative.replace_all')}</button>
           </div>
+        </div>
+      </div>
+
+      <div class="tool-sidebar__panel is-hidden" data-ref="collab-share-view-customize-link">
+        <div class="tool-sidebar__header">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36" data-ref="btn-share-custom-link-back" aria-label="${t('collaborative.back_to_share')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <div class="component-title-badge" data-ref="collab-custom-link-title-badge">
+            <h1 class="component-title-badge__text" data-ref="collab-custom-link-title">${t('collaborative.custom_link_title')}</h1>
+          </div>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-share-custom-link-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <div class="tool-sidebar__section-title">${t('collaborative.custom_link_section_title')}</div>
+            <p class="tool-sidebar__desc">${t('collaborative.custom_link_desc')}</p>
+
+            <div class="collab-custom-url-field" data-ref="collab-custom-url-field">
+              <span class="collab-custom-url-prefix" data-ref="txt-custom-url-prefix">${window.location.host}/l/</span>
+              <input class="collab-custom-url-input" data-ref="input-custom-slug" type="text" placeholder="${t('collaborative.custom_link_placeholder')}" autocomplete="off" />
+            </div>
+
+            <div class="collab-custom-link-preview is-hidden" data-ref="box-custom-link-active">
+              <div class="tool-sidebar__section-title">${t('collaborative.active_custom_link')}</div>
+              <div class="collab-custom-link-display">
+                <span class="collab-custom-link-text" data-ref="txt-active-custom-link"></span>
+                <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32" data-ref="btn-copy-active-custom-link" data-tooltip="${t('collaborative.copy_link')}" aria-label="${t('collaborative.copy_link')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tool-sidebar__footer">
+          <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-request-custom-link">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+            <span>${t('collaborative.request_custom_link')}</span>
+          </button>
+          <div class="banner banner--danger is-hidden" data-ref="collab-custom-link-error"></div>
         </div>
       </div>
     </aside>
@@ -402,6 +465,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     ownerBubble.className = 'collab-avatar-bubble';
     ownerBubble.setAttribute('data-tooltip', `${ownerName} (Propietario)`);
     ownerBubble.setAttribute('aria-label', `${ownerName} (Propietario)`);
+    applyAvatarTier(ownerBubble, currentUser?.subscription_tier || 'free');
     if (ownerAvatar) {
       ownerBubble.innerHTML = `<img src="${ownerAvatar}" alt="${ownerName}" />`;
     } else {
@@ -414,6 +478,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
       bubble.className = 'collab-avatar-bubble';
       bubble.setAttribute('data-tooltip', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
       bubble.setAttribute('aria-label', `${m.username} (${m.role === 'editor' ? 'Editor' : 'Lector'})`);
+      applyAvatarTier(bubble, m.subscription_tier || (m as any).tier || 'free');
       const memberAvatar = m.avatar_url || (m.username ? `/api/avatar?name=${encodeURIComponent(m.username)}&size=80` : null);
       if (memberAvatar) {
         bubble.innerHTML = `<img src="${memberAvatar}" alt="${m.username}" />`;
@@ -426,6 +491,9 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
         const row = document.createElement('div');
         row.className = 'collab-share-member-row';
         row.innerHTML = `
+          <div class="collab-avatar-bubble collab-avatar-bubble--sm" data-ref="member-avatar">
+            ${memberAvatar ? `<img src="${memberAvatar}" alt="${m.username}" />` : m.username.substring(0, 2).toUpperCase()}
+          </div>
           <div class="collab-share-member-info">
             <span class="collab-share-member-name">${m.username}</span>
             <span class="collab-share-member-badge">${m.email || 'Miembro'} • ${m.role === 'editor' ? 'Editor' : 'Lector'}</span>
@@ -436,6 +504,8 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           </button>
           ` : ''}
         `;
+        const memberAvatarEl = row.querySelector<HTMLElement>('[data-ref="member-avatar"]');
+        applyAvatarTier(memberAvatarEl, m.subscription_tier || (m as any).tier || 'free');
         const removeBtn = row.querySelector<HTMLButtonElement>('.collab-share-remove-btn');
         removeBtn?.addEventListener('click', async () => {
           const res = await deleteApi(API_ROUTES.collaborativeDocs.memberDelete(docId, m.user_id));
@@ -545,10 +615,10 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   copyBtn?.addEventListener('click', () => {
     const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
     void navigator.clipboard.writeText(url).then(() => {
-      if (copyTxt) copyTxt.textContent = '¡Enlace copiado!';
+      if (copyTxt) copyTxt.textContent = t('common.copied');
       showToast(t('toasts.enlace_de_colaboracion_copiado_al_portap'), 'info');
       setTimeout(() => {
-        if (copyTxt) copyTxt.textContent = 'Copiar el enlace';
+        if (copyTxt) copyTxt.textContent = t('collaborative.copy_link');
       }, 2000);
     });
   });
@@ -556,6 +626,16 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   const viewMain = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-main"]');
   const viewDownload = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-download"]');
   const viewFindReplace = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-find-replace"]');
+  const viewCustomizeLink = popover.querySelector<HTMLElement>('[data-ref="collab-share-view-customize-link"]');
+  const btnCustomizeLink = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-customize-link"]');
+  const btnShareCustomLinkBack = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-custom-link-back"]');
+  const btnShareCustomLinkClose = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-custom-link-close"]');
+  const inputCustomSlug = popover.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
+  const boxCustomLinkActive = popover.querySelector<HTMLElement>('[data-ref="box-custom-link-active"]');
+  const txtActiveCustomLink = popover.querySelector<HTMLElement>('[data-ref="txt-active-custom-link"]');
+  const btnCopyActiveCustomLink = popover.querySelector<HTMLButtonElement>('[data-ref="btn-copy-active-custom-link"]');
+  const btnRequestCustomLink = popover.querySelector<HTMLButtonElement>('[data-ref="btn-request-custom-link"]');
+  const collabCustomLinkError = popover.querySelector<HTMLElement>('[data-ref="collab-custom-link-error"]');
   const findOpenBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-open-find-replace"]');
   const downloadBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-download-pdf"]');
   const btnShareDownloadBack = popover.querySelector<HTMLButtonElement>('[data-ref="btn-share-download-back"]');
@@ -582,7 +662,21 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   const downloadError = popover.querySelector<HTMLElement>('[data-ref="collab-download-error"]');
   const btnConfirmDownload = popover.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
 
-  let activeView: 'download' | 'find-replace' | 'main' = 'main';
+  let activeView: 'customize-link' | 'download' | 'find-replace' | 'main' = initialView;
+
+  const updateActiveSlugDisplay = () => {
+    if (!boxCustomLinkActive || !txtActiveCustomLink) return;
+    if (currentCustomSlug) {
+      boxCustomLinkActive.classList.remove('is-hidden');
+      txtActiveCustomLink.textContent = `${window.location.host}/l/${currentCustomSlug}`;
+      if (inputCustomSlug) {
+        inputCustomSlug.value = currentCustomSlug;
+      }
+    } else {
+      boxCustomLinkActive.classList.add('is-hidden');
+      txtActiveCustomLink.textContent = '';
+    }
+  };
 
   const syncFindState = (state: CollabShareFindState) => {
     if (inputFindSearch && inputFindSearch.value !== state.searchTerm) {
@@ -616,16 +710,27 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     syncFindState(findReplace);
   }
 
-  const openView = (view: 'download' | 'find-replace' | 'main') => {
+  const openView = (view: 'customize-link' | 'download' | 'find-replace' | 'main') => {
     activeView = view;
     viewMain?.classList.toggle('is-hidden', view !== 'main');
     viewDownload?.classList.toggle('is-hidden', view !== 'download');
     viewFindReplace?.classList.toggle('is-hidden', view !== 'find-replace');
+    viewCustomizeLink?.classList.toggle('is-hidden', view !== 'customize-link');
     if (view === 'find-replace') {
       onFindOpen?.();
       requestAnimationFrame(() => {
         inputFindSearch?.focus();
         inputFindSearch?.select();
+      });
+    } else if (view === 'customize-link') {
+      updateActiveSlugDisplay();
+      if (collabCustomLinkError) {
+        collabCustomLinkError.classList.add('is-hidden');
+        collabCustomLinkError.textContent = '';
+      }
+      requestAnimationFrame(() => {
+        inputCustomSlug?.focus();
+        inputCustomSlug?.select();
       });
     }
   };
@@ -642,12 +747,87 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     openView('download');
   });
 
+  btnCustomizeLink?.addEventListener('click', () => {
+    openView('customize-link');
+  });
+
   btnShareDownloadBack?.addEventListener('click', () => {
     openView('main');
   });
 
   btnShareFindBack?.addEventListener('click', () => {
     openView('main');
+  });
+
+  btnShareCustomLinkBack?.addEventListener('click', () => {
+    openView('main');
+  });
+
+  btnShareCustomLinkClose?.addEventListener('click', () => {
+    closePopover();
+  });
+
+  btnCopyActiveCustomLink?.addEventListener('click', () => {
+    if (!currentCustomSlug) return;
+    const url = `${window.location.origin}/l/${currentCustomSlug}`;
+    void navigator.clipboard.writeText(url).then(() => {
+      showToast(t('toasts.enlace_copiado_al_portapapeles'), 'info');
+    });
+  });
+
+  btnRequestCustomLink?.addEventListener('click', async () => {
+    if (!inputCustomSlug || !btnRequestCustomLink) return;
+    const rawVal = inputCustomSlug.value.trim().toLowerCase();
+    const cleanSlug = rawVal.replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
+    inputCustomSlug.value = cleanSlug;
+
+    if (!cleanSlug || cleanSlug.length < 3 || cleanSlug.length > 60) {
+      if (collabCustomLinkError) {
+        collabCustomLinkError.textContent = t('collaborative.custom_link_invalid');
+        collabCustomLinkError.classList.remove('is-hidden');
+      }
+      return;
+    }
+
+    if (collabCustomLinkError) {
+      collabCustomLinkError.classList.add('is-hidden');
+      collabCustomLinkError.textContent = '';
+    }
+
+    await withButtonLoading(btnRequestCustomLink, async () => {
+      try {
+        const res = await patchApi(
+          API_ROUTES.collaborativeDocs.customSlug(docId),
+          { slug: cleanSlug },
+        );
+
+        if (res && res.ok) {
+          const json = (await res.json()) as { custom_slug?: string };
+          const updatedSlug = json.custom_slug || cleanSlug;
+          currentCustomSlug = updatedSlug;
+          onCustomSlugChange?.(updatedSlug);
+          updateActiveSlugDisplay();
+          showToast(t('collaborative.custom_link_success'), 'success');
+        } else {
+          if (collabCustomLinkError) {
+            collabCustomLinkError.textContent = t('collaborative.custom_link_already_used');
+            collabCustomLinkError.classList.remove('is-hidden');
+          }
+        }
+      } catch {
+        if (collabCustomLinkError) {
+          collabCustomLinkError.textContent = t('collaborative.custom_link_error');
+          collabCustomLinkError.classList.remove('is-hidden');
+        }
+      }
+    });
+  });
+
+  inputCustomSlug?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnRequestCustomLink?.click();
+    }
   });
 
   inputFindSearch?.addEventListener('input', () => {

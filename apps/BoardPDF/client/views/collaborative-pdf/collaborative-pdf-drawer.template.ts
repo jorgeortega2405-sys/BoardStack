@@ -348,40 +348,48 @@ function createCollaborativeDrawerElement(): HTMLElement {
             <button type="button" class="collaborative-color-swatch collaborative-color-swatch--action collaborative-color-swatch--eyedropper" data-ref="btn-color-eyedropper" data-i18n-tooltip="collaborative.color_eyedropper" data-i18n-aria="collaborative.color_eyedropper">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#colorize"></use></svg>
             </button>
+            <button type="button" class="collaborative-color-swatch collaborative-color-swatch--transparent is-hidden" data-ref="btn-color-transparent" data-color="transparent" data-i18n-tooltip="collaborative.color_transparent" data-i18n-aria="collaborative.color_transparent">
+              <svg class="collaborative-transparent-swatch-icon" viewBox="0 0 24 24" width="24" height="24" fill="none"><circle cx="12" cy="12" r="9.5" fill="#ffffff" stroke="rgba(0, 0, 0, 0.15)" stroke-width="1.5"/><line x1="5.2" y1="5.2" x2="18.8" y2="18.8" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
           </div>
         </div>
 
         <div class="collaborative-color-section">
           <div class="collaborative-color-section__header">
             <span class="collaborative-color-section__title" data-i18n="collaborative.colors_default_solids"></span>
-            <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-solid-colors-more" data-expanded="false" data-i18n="collaborative.show_more"></button>
+            <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-solid-colors-more" data-i18n="collaborative.show_more"></button>
           </div>
           <div class="collaborative-colors-grid" data-ref="grid-solid-colors-compact">
             ${compactSolidSwatches}
-          </div>
-          <div class="collaborative-colors-grid is-hidden" data-ref="grid-solid-colors-expanded">
-            ${fullSolidSwatches}
           </div>
         </div>
 
         <div class="collaborative-color-section">
           <div class="collaborative-color-section__header">
             <span class="collaborative-color-section__title" data-i18n="collaborative.colors_default_gradients"></span>
-            <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-gradient-colors-more" data-expanded="false" data-i18n="collaborative.show_more"></button>
+            <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-gradient-colors-more" data-i18n="collaborative.show_more"></button>
           </div>
           <div class="collaborative-colors-grid" data-ref="grid-gradient-colors-compact">
             ${compactGradientSwatches}
           </div>
-          <div class="collaborative-color-subsections is-hidden" data-ref="gradient-colors-expanded">
-            ${expandedGradientSectionsHtml}
-          </div>
         </div>
       </div>
-      <input class="is-hidden" data-ref="input-custom-color" type="color" value="#000000" />
+
+      <div class="collaborative-colors-category-view is-hidden" data-ref="colors-category-view">
+        <div class="collaborative-shapes-header">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-colors-cat-back" data-tooltip="Volver" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <span class="collaborative-shapes-title" data-ref="colors-cat-title"></span>
+        </div>
+        <div class="collaborative-shapes-content" data-ref="colors-cat-content"></div>
+      </div>
+
+      <input class="is-hidden" data-ref="input-custom-color" type="color" value="#000000" style="display: none;" />
     </div>
 
     <div class="collaborative-panel-section is-hidden" data-ref="panel-section-text">
-      <button type="button" class="component-button component-button--black component-button--h48 component-button--w-full" data-ref="btn-add-text-box">
+      <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-add-text-box">
         <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
         <span class="component-button__text">Agregar caja de texto</span>
       </button>
@@ -692,4 +700,19 @@ function createCollaborativeDrawerElement(): HTMLElement {
   return drawer;
 }
 
-export { createCollaborativeDrawerElement };
+function renderFullSolidSwatchesHtml(): string {
+  return `<div class="collaborative-colors-grid">${FULL_SOLID_COLORS.map(renderSolidSwatch).join('')}</div>`;
+}
+
+function renderFullGradientSwatchesHtml(): string {
+  return `<div class="collaborative-color-subsections">${EXPANDED_GRADIENT_GROUPS.map((group) => `
+    <div class="collaborative-color-subsection" data-gradient-group="${group.id}">
+      <span class="collaborative-color-subsection__title" data-i18n="${group.titleKey}"></span>
+      <div class="collaborative-colors-grid">
+        ${group.gradients.map(renderGradientSwatch).join('')}
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+export { createCollaborativeDrawerElement, renderFullGradientSwatchesHtml, renderFullSolidSwatchesHtml };

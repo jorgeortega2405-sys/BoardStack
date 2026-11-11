@@ -1,4 +1,5 @@
 import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
+import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -36,7 +37,6 @@ class ToolPhaseManager {
   private originalQuerySelectorAll: ((selectors: string) => NodeListOf<Element>) | null = null;
   private processingElement: HTMLElement | null = null;
   public statusManager: ToolStatusManager;
-  private workflowBannerElement: HTMLElement | null = null;
   private workspaceElements: HTMLElement[] = [];
 
   constructor(options: ToolPhaseManagerOptions) {
@@ -88,7 +88,7 @@ class ToolPhaseManager {
 
     const session = getActiveWorkflowSession();
     if (session) {
-      this.renderWorkflowBanner();
+      this.applyWorkflowSessionDropzoneHeader();
       const intermediate = getWorkflowIntermediateFile();
       if (intermediate && this.options.dropzone?.onFilesSelected) {
         setTimeout(() => {
@@ -278,6 +278,7 @@ class ToolPhaseManager {
       if (this.dropzoneElement && !this.container.contains(this.dropzoneElement)) {
         this.container.appendChild(this.dropzoneElement);
       }
+      this.applyWorkflowSessionDropzoneHeader();
       if (this.dropzoneElement) showElement(this.dropzoneElement);
       return;
     }
@@ -314,6 +315,7 @@ class ToolPhaseManager {
         docTitleInput.value = this.getGenericDocumentTitle();
       }
 
+      this.applyWorkflowSessionWorkspaceHeader();
       renderIcons(this.container);
       return;
     }
@@ -340,10 +342,6 @@ class ToolPhaseManager {
           el.remove();
         }
       });
-    }
-
-    if (this.workflowBannerElement && !this.container.contains(this.workflowBannerElement)) {
-      this.container.prepend(this.workflowBannerElement);
     }
   }
 
@@ -509,60 +507,46 @@ class ToolPhaseManager {
       this.processingElement.remove();
       this.processingElement = null;
     }
-    if (this.workflowBannerElement) {
-      this.workflowBannerElement.remove();
-      this.workflowBannerElement = null;
-    }
     this.statusManager.destroy();
     this.dropzoneElement = null;
     this.workspaceElements = [];
   }
 
-  private renderWorkflowBanner(): void {
+  private applyWorkflowSessionDropzoneHeader(): void {
+    const session = getActiveWorkflowSession();
+    if (!session || !this.dropzoneElement) return;
+
+    const titleEl = this.dropzoneElement.querySelector<HTMLElement>('[data-ref="tool-dropzone-title"]');
+    if (titleEl) {
+      titleEl.textContent = session.workflowName;
+    }
+
+    const descEl = this.dropzoneElement.querySelector<HTMLElement>('[data-ref="tool-dropzone-desc"]');
+    if (descEl) {
+      descEl.innerHTML = '';
+      const badgesWrap = document.createElement('div');
+      badgesWrap.className = 'workflow-steps-badges';
+      session.steps.forEach((step, idx) => {
+        const toolDef = WORKFLOW_TOOLS.find((t) => t.id === step.tool);
+        const toolName = toolDef ? toolDef.name : step.tool;
+        const isCurrent = idx === session.currentStepIndex;
+        const badge = document.createElement('span');
+        badge.className = `component-badge component-badge--sm ${isCurrent ? 'component-badge--brand' : ''}`;
+        badge.textContent = `${idx + 1}. ${toolName}`;
+        badgesWrap.appendChild(badge);
+      });
+      descEl.appendChild(badgesWrap);
+    }
+  }
+
+  private applyWorkflowSessionWorkspaceHeader(): void {
     const session = getActiveWorkflowSession();
     if (!session) return;
 
-    if (this.workflowBannerElement) {
-      this.workflowBannerElement.remove();
-      this.workflowBannerElement = null;
+    const topTitle = this.container.querySelector<HTMLElement>('[data-ref="txt-top-tool-name"], .tool-top-bar__title');
+    if (topTitle) {
+      topTitle.textContent = session.workflowName;
     }
-
-    const currentStepNum = session.currentStepIndex + 1;
-    const totalSteps = session.steps.length;
-
-    const banner = document.createElement('div');
-    banner.className = 'workflow-active-banner';
-    banner.setAttribute('data-ref', 'workflow-active-banner');
-
-    banner.innerHTML = `
-      <div class="workflow-active-banner__info" data-ref="workflow-active-info">
-        <span class="component-badge component-badge--brand" data-ref="workflow-badge">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
-          <span data-ref="workflow-name-txt">${this.escape(session.workflowName)}</span>
-        </span>
-        <span class="workflow-active-banner__step" data-ref="workflow-step-txt">
-          ${t('workflows.step_indicator', { step: String(currentStepNum), total: String(totalSteps) })}: <strong>${this.escape(this.options.toolName)}</strong>
-        </span>
-      </div>
-      <div class="workflow-active-banner__actions" data-ref="workflow-active-actions">
-        <button type="button" class="component-button component-button--ghost component-button--sm component-button--danger" data-ref="btn-cancel-workflow">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-          <span data-ref="txt-cancel-workflow" data-i18n="workflows.cancel_workflow">${t('workflows.cancel_workflow')}</span>
-        </button>
-      </div>
-    `;
-
-    const cancelBtn = banner.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-workflow"]');
-    cancelBtn?.addEventListener('click', () => {
-      clearWorkflowSession();
-      banner.remove();
-      this.workflowBannerElement = null;
-      showToast(t('workflows.workflow_cancelled'), 'info');
-    });
-
-    this.workflowBannerElement = banner;
-    this.container.prepend(banner);
-    renderIcons(banner);
   }
 
   private escape(str: string): string {

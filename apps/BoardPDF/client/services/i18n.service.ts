@@ -110,7 +110,10 @@ async function fetchLanguageBundle(norm: string): Promise<Record<string, unknown
 
 async function loadTranslationFile(code: string): Promise<void> {
   const norm = normalizeLanguageCode(code);
-  const bundle = await fetchLanguageBundle(norm);
+  let bundle = await fetchLanguageBundle(norm);
+  if (!bundle && norm !== DEFAULT_LANGUAGE) {
+    bundle = await fetchLanguageBundle(DEFAULT_LANGUAGE);
+  }
   if (bundle) {
     currentTranslations = bundle;
     isLanguageBundleAvailable = true;

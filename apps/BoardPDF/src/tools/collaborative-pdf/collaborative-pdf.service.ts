@@ -534,7 +534,7 @@ async function getCollaborativeDocument(
   try {
     const pool = getDbPool();
     const [rows] = await pool.query<any[]>(
-      'SELECT id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, folder_id, title, content_json, pdf_filename, page_count, access_level, custom_slug, created_at, updated_at FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (Array.isArray(rows) && rows.length > 0) {
@@ -547,6 +547,7 @@ async function getCollaborativeDocument(
         access_level: r.access_level || 'restricted',
         content: typeof r.content_json === 'string' ? JSON.parse(r.content_json) : r.content_json,
         created_at: new Date(r.created_at).toISOString(),
+        custom_slug: r.custom_slug || null,
         folder_id: r.folder_id || null,
         id: r.id,
         labels: labelMap.get(String(id)) ?? [],
@@ -826,4 +827,101 @@ async function getRenderedPdfPath(_id: string): Promise<string | null> {
   return null;
 }
 
-export { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel };
+async function getCollaborativeDocByCustomSlug(slug: string): Promise<string | null> {
+  const clean = slug.trim().toLowerCase();
+  if (!clean) return null;
+  try {
+    const pool = getDbPool();
+    const [rows] = await pool.query<any[]>(
+      'SELECT id FROM collaborative_documents WHERE LOWER(custom_slug) = ? LIMIT 1',
+      [clean]
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      return String(rows[0].id);
+    }
+    return null;
+  } catch (err) {
+    logger.db.error('Error al consultar documento por custom_slug', err);
+    return null;
+  }
+}
+
+async function updateCollaborativeDocCustomSlug(
+  id: string,
+  rawSlug: string,
+  userId?: number | null
+): Promise<{ customSlug?: string; error?: string; success: boolean }> {
+  try {
+    const cleanSlug = rawSlug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    if (cleanSlug.length < 3 || cleanSlug.length > 60) {
+      return {
+        error: 'El enlace debe tener entre 3 y 60 caracteres y contener solo letras, números o guiones.',
+        success: false,
+      };
+    }
+
+    const reservedSlugs = new Set([
+      'admin', 'api', 'auth', 'collab', 'collaborative-pdf', 'cookies',
+      'd', 'download', 'edit', 'help', 'l', 'legal', 'login', 'pdf',
+      'pricing', 'privacy', 'projects', 'register', 'security', 'settings',
+      'terms', 'tools', 'upload', 'uploads', 'users'
+    ]);
+
+    if (reservedSlugs.has(cleanSlug)) {
+      return {
+        error: 'Este nombre de enlace está reservado por el sistema. Por favor elige otro.',
+        success: false,
+      };
+    }
+
+    const pool = getDbPool();
+
+    const [docRows] = await pool.query<any[]>(
+      'SELECT id, user_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+      [id]
+    );
+    if (!Array.isArray(docRows) || docRows.length === 0) {
+      return { error: 'Documento no encontrado.', success: false };
+    }
+
+    const doc = docRows[0];
+    if (userId && doc.user_id && Number(doc.user_id) !== Number(userId)) {
+      const [members] = await pool.query<any[]>(
+        'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
+        [id, userId]
+      );
+      if (!Array.isArray(members) || members.length === 0 || members[0].role !== 'editor') {
+        return { error: 'No tienes permisos para personalizar este enlace.', success: false };
+      }
+    }
+
+    const [existing] = await pool.query<any[]>(
+      'SELECT id FROM collaborative_documents WHERE LOWER(custom_slug) = ? AND id != ? LIMIT 1',
+      [cleanSlug, id]
+    );
+    if (Array.isArray(existing) && existing.length > 0) {
+      return {
+        error: 'Este enlace personalizado ya está en uso. Por favor elige otro.',
+        success: false,
+      };
+    }
+
+    await pool.query(
+      'UPDATE collaborative_documents SET custom_slug = ? WHERE id = ?',
+      [cleanSlug, id]
+    );
+
+    return { customSlug: cleanSlug, success: true };
+  } catch (err) {
+    logger.db.error('Error al actualizar custom_slug de documento', err);
+    return { error: 'Ha ocurrido un error inesperado al procesar la solicitud.', success: false };
+  }
+}
+
+export { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, getRenderedPdfPath, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug };

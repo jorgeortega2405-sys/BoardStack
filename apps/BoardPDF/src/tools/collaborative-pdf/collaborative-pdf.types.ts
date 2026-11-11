@@ -229,6 +229,7 @@ interface CollaborativeDocumentRecord {
   access_level?: 'anyone_with_link' | 'restricted';
   content: CollaborativeDocumentContent;
   created_at: string;
+  custom_slug?: string | null;
   folder_id?: string | null;
   id: string;
   labels?: DocumentLabelRecord[];

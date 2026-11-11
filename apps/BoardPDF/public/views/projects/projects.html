@@ -16,9 +16,6 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
 </button>
 </div>
-<button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-sort" data-i18n-aria="projects.toggle_sort" data-tooltip="Invertir orden" aria-label=" ">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-</button>
 <button type="button" class="component-button component-button--h40 component-button--icon-only is-hidden" data-ref="btn-upload-direct" data-i18n-aria="projects.upload_files" data-tooltip="Subir archivos" aria-label=" ">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
 </button>
@@ -56,10 +53,14 @@
 <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
 </div>
 <div class="projects-search-wrap" data-ref="projects-search-wrap">
-<div class="projects-search-bar" data-ref="projects-search-bar">
-<svg class="component-icon projects-search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-<input class="projects-search-input" data-ref="input-project-search" data-i18n-placeholder="projects.search_placeholder" type="text" placeholder=" " autocomplete="off" />
-<button type="button" class="projects-search-clear is-hidden" data-ref="btn-clear-search" data-i18n-aria="projects.clear_search" aria-label=" ">
+<div class="component-search" data-ref="projects-search-bar">
+<div class="component-search__icon" data-ref="projects-search-icon">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+</div>
+<div class="component-search__input-box" data-ref="projects-search-input-box">
+<input class="component-search__input" data-ref="input-project-search" data-i18n-placeholder="projects.search_placeholder" type="text" placeholder=" " autocomplete="off" />
+</div>
+<button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="projects.clear_search" aria-label=" ">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
 </button>
 </div>

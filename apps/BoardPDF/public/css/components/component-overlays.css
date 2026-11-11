@@ -377,7 +377,9 @@ body.modal-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 100%;
+  width: 525px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
 }
 
 /* Botón de Cierre al Lado del Modal, Arriba a la Derecha */
@@ -450,8 +452,8 @@ body.modal-open {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle-translucent);
   border-radius: 24px;
-  width: 100%;
-  max-width: 525px;
+  width: 525px;
+  max-width: 100%;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -482,7 +484,8 @@ body.modal-open {
 }
 
 .modal-card--sm {
-  max-width: 525px;
+  width: 525px;
+  max-width: 100%;
 }
 
 /* Modal de Confirmación y Advertencia 825x225 px (Eliminar Cuenta) */
@@ -997,7 +1000,7 @@ body.modal-open {
 .modal-card--split {
   width: 525px;
   max-width: calc(100vw - 32px);
-  height: 790px;
+  height: 680px;
   max-height: calc(100vh - 32px);
   padding: 0;
   gap: 0;
@@ -1009,9 +1012,9 @@ body.modal-open {
 }
 
 .modal-split__top {
-  height: 325px;
-  min-height: 325px;
-  flex: 0 0 325px;
+  height: 275px;
+  min-height: 275px;
+  flex: 0 0 275px;
   background: linear-gradient(135deg, #050505, #242424, #0a0a0a);
   position: relative;
   display: flex;
@@ -1019,7 +1022,7 @@ body.modal-open {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 20px;
+  padding: 16px 20px;
   box-sizing: border-box;
   overflow: hidden;
   border-bottom: 1px solid var(--border-color);
@@ -1032,7 +1035,7 @@ body.modal-open {
 .modal-split__bottom {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1241,7 +1244,7 @@ body.modal-open {
 .modal-split__qr-wrapper {
   background: #ffffff;
   border-radius: 18px;
-  padding: 12px;
+  padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1250,13 +1253,19 @@ body.modal-open {
 }
 
 .modal-split__qr-canvas {
-  width: 196px;
-  height: 196px;
+  width: 170px;
+  height: 170px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
   overflow: hidden;
+}
+
+.modal-split__qr-canvas svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 
 .modal-split__top-hint {
@@ -1285,8 +1294,8 @@ body.modal-open {
 }
 
 .modal-split__shield-svg {
-  width: 190px;
-  height: 190px;
+  width: 155px;
+  height: 155px;
   display: block;
 }
 

@@ -289,10 +289,10 @@ class ModalTestController implements ViewController {
             cornersSquareOptions: { color: '#000000', type: 'extra-rounded' },
             data,
             dotsOptions: { color: '#000000', type: 'rounded' },
-            height: 196,
+            height: 170,
             margin: 2,
             type: 'svg',
-            width: 196,
+            width: 170,
           });
           el.innerHTML = '';
           qr.append(el);

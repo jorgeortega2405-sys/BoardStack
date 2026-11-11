@@ -545,7 +545,7 @@ header.view-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: 790px;
+  height: 680px;
   max-height: calc(100vh - 32px);
   max-width: 525px;
   overflow: hidden;
@@ -4296,18 +4296,21 @@ body[data-theme="dark"] .view-backdrop--dots {
   display: flex;
   justify-content: center;
   position: relative;
-  width: auto;
+  width: 525px;
+  max-width: calc(100vw - 32px);
 }
 
 .modaltest-stage .modal-card {
   border: 1px solid var(--border-color);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
   transform: none !important;
+  width: 525px;
+  max-width: 100%;
 }
 
 .modaltest-stage .modal-card--split,
 .modaltest-stage .modal-card--workflow-builder {
-  height: 790px;
+  height: 680px;
   max-height: none;
   max-width: 525px;
   width: 525px;

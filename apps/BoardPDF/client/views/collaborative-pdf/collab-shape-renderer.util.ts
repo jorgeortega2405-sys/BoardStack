@@ -517,7 +517,7 @@ function renderShapeGeometry(el: ElementShape, fill: string, stroke: string, str
 }
 
 function renderShapeInner(el: ElementShape): string {
-  let fill = el.fillColor && el.fillColor !== 'transparent' ? el.fillColor : '#000000';
+  let fill = el.fillColor === 'transparent' ? 'none' : (el.fillColor || '#000000');
   let stroke = el.strokeColor && el.strokeColor !== 'transparent' ? el.strokeColor : 'none';
   const strokeWidth = el.strokeWidth || 0;
   const w = el.width;

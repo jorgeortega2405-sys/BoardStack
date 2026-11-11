@@ -18,6 +18,7 @@ import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import { startColdStorageCron } from './services/storage-quota.service.js';
 import { flushTelemetryQueue, trackApplicationError } from './services/telemetry.service.js';
+import { getCollaborativeDocByCustomSlug } from './tools/collaborative-pdf/collaborative-pdf.service.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -375,6 +376,20 @@ async function startServer(): Promise<void> {
   app.use('/api', subscriptionRoutes);
   app.use('/api', toolsRoutes);
   app.use(seoRoutes);
+
+  app.get('/l/:slug', async (req: Request, res: Response) => {
+    const rawSlug = (req.params.slug || '').trim().toLowerCase();
+    try {
+      const docId = await getCollaborativeDocByCustomSlug(rawSlug);
+      if (docId) {
+        return res.redirect(302, `/d/${docId}`);
+      }
+      return res.redirect(302, '/');
+    } catch (err) {
+      logger.app.error('Error al redirigir custom slug', err);
+      return res.redirect(302, '/');
+    }
+  });
 
   app.get('/uploads/collaborative/:filename', async (req: Request, res: Response) => {
     const filename = path.basename(req.params.filename);

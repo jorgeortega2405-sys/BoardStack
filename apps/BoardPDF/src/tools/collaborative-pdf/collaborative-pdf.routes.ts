@@ -1,6 +1,6 @@
 import { optionalAuth, requireAuth, requireFeature } from '../../middlewares/auth.middleware.js';
 import { removeBackgroundLimiter } from '../../middlewares/rate-limit.middleware.js';
-import { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler } from './collaborative-pdf.controller.js';
+import { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, resolveCollaborativeDocSlugHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, updateCollaborativeDocCustomSlugHandler, uploadCollaborativeAssetHandler } from './collaborative-pdf.controller.js';
 import { Router } from 'express';
 import multer from 'multer';
 
@@ -19,7 +19,9 @@ router.get('/collaborative-docs', requireAuth, listCollaborativeDocsHandler);
 router.get('/collaborative-docs/:id/members', optionalAuth, getCollaborativeDocMembersHandler);
 router.post('/collaborative-docs/:id/members', optionalAuth, addCollaborativeDocMemberHandler);
 router.delete('/collaborative-docs/:id/members/:userId', optionalAuth, removeCollaborativeDocMemberHandler);
+router.get('/collaborative-docs/resolve-slug/:slug', optionalAuth, resolveCollaborativeDocSlugHandler);
 router.patch('/collaborative-docs/:id/access-level', optionalAuth, updateCollaborativeDocAccessLevelHandler);
+router.patch('/collaborative-docs/:id/custom-slug', optionalAuth, updateCollaborativeDocCustomSlugHandler);
 router.post('/collaborative-docs/:id/ai-generate', requireAuth, aiGenerateCollaborativeDocHandler);
 router.get('/collaborative-docs/:id', optionalAuth, getCollaborativeDocHandler);
 router.get('/collaborative-docs/:id/pdf', optionalAuth, downloadCollaborativeDocPdfHandler);

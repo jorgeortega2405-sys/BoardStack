@@ -10,7 +10,7 @@ import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-
 import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { generateCollaborativeDocumentWithAi } from './collaborative-pdf-ai.service.js';
 import { acquireCollaborativeAiLock, getCollaborativeAiLock, releaseCollaborativeAiLock } from './collaborative-pdf-lock.service.js';
-import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel } from './collaborative-pdf.service.js';
+import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug } from './collaborative-pdf.service.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
@@ -1120,5 +1120,76 @@ function createAiGenerateCollaborativeDocHandler(deps: CollaborativeAiController
 
 const aiGenerateCollaborativeDocHandler = createAiGenerateCollaborativeDocHandler();
 
-export { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, createAiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, uploadCollaborativeAssetHandler };
+async function updateCollaborativeDocCustomSlugHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { customSlug } = req.body;
+    if (!id || typeof id !== 'string' || !customSlug || typeof customSlug !== 'string') {
+      res.status(400).json({
+        error: 'Identificador o enlace personalizado inválido.',
+        success: false,
+      });
+      return;
+    }
+
+    const user = getCurrentUser(req);
+    const userId = user?.id ? Number(user.id) : null;
+    const result = await updateCollaborativeDocCustomSlug(id, customSlug, userId);
+
+    if (!result.success) {
+      res.status(result.error?.includes('ya está en uso') ? 409 : 400).json({
+        error: result.error || 'No se pudo actualizar el enlace personalizado.',
+        success: false,
+      });
+      return;
+    }
+
+    res.json({
+      customSlug: result.customSlug,
+      success: true,
+      url: `/l/${result.customSlug}`,
+    });
+  } catch (err) {
+    logger.app.error('Error al actualizar custom slug del documento colaborativo', err);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+async function resolveCollaborativeDocSlugHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { slug } = req.params;
+    if (!slug || typeof slug !== 'string') {
+      res.status(400).json({
+        error: 'Enlace no válido.',
+        success: false,
+      });
+      return;
+    }
+
+    const docId = await getCollaborativeDocByCustomSlug(slug);
+    if (!docId) {
+      res.status(404).json({
+        error: 'Diseño no encontrado.',
+        success: false,
+      });
+      return;
+    }
+
+    res.json({
+      id: docId,
+      success: true,
+    });
+  } catch (err) {
+    logger.app.error('Error al resolver custom slug de documento colaborativo', err);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+export { addCollaborativeDocMemberHandler, aiGenerateCollaborativeDocHandler, createAiGenerateCollaborativeDocHandler, deleteCollaborativeDocHandler, downloadCollaborativeDocPdfHandler, getCollaborativeDocHandler, getCollaborativeDocMembersHandler, listCollaborativeDocsHandler, listCollaborativeUploadsHandler, removeBackgroundHandler, removeCollaborativeDocMemberHandler, resolveCollaborativeDocSlugHandler, saveCollaborativeDocHandler, searchCollaborativeUsersHandler, updateCollaborativeDocAccessLevelHandler, updateCollaborativeDocCustomSlugHandler, uploadCollaborativeAssetHandler };
 export type { CollaborativeAiControllerDeps };

@@ -3,14 +3,14 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, setupDropdown, setupToolSidebarModal, showElement, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType } from './watermark-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class WatermarkPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -117,8 +117,8 @@ class WatermarkPdfController implements ViewController {
         typePill?.setAttribute('data-active', index.toString());
         this.activeTab = (btn.getAttribute('data-type') || 'text') as WatermarkType;
 
-        const textSection = this.container.querySelector<HTMLElement>('[data-ref="section-wm-text"]');
-        const imgSection = this.container.querySelector<HTMLElement>('[data-ref="section-wm-image"]');
+        const textSection = this.container.querySelector<HTMLElement>('[data-ref="section-text-options"], [data-ref="section-wm-text"]');
+        const imgSection = this.container.querySelector<HTMLElement>('[data-ref="section-image-options"], [data-ref="section-wm-image"]');
         if (this.activeTab === 'text') {
           showElement(textSection);
           hideElement(imgSection);
@@ -128,6 +128,11 @@ class WatermarkPdfController implements ViewController {
         }
       }, { signal });
     });
+
+    const textInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-wm-text"]');
+    textInput?.addEventListener('input', () => {
+      this.updateIndicators();
+    }, { signal });
 
     const layerToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-layer"]');
     const layerButtons = layerToggle?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
@@ -140,7 +145,7 @@ class WatermarkPdfController implements ViewController {
       }, { signal });
     });
 
-    const posGrid = this.container.querySelector<HTMLElement>('[data-ref="grid-wm-position"]');
+    const posGrid = this.container.querySelector<HTMLElement>('[data-ref="wm-position-box"], [data-ref="grid-wm-position"]');
     const posCells = posGrid?.querySelectorAll<HTMLButtonElement>('.wm-position-cell');
     posCells?.forEach((cell) => {
       cell.addEventListener('click', () => {
@@ -174,39 +179,65 @@ class WatermarkPdfController implements ViewController {
   }
 
   private setupDropdowns(signal: AbortSignal): void {
-    const rotWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-rotation"]');
+    const rotWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-rotation"], [data-ref="dropdown-wrapper-wm-rotation"]');
     if (rotWrap) {
       const ctrl = setupDropdown(rotWrap, {
         isSelect: true,
         onSelect: (val) => {
           this.rotation = Number(val) || 0;
-          const text = rotWrap.querySelector<HTMLElement>('[data-ref="wm-rotation-selected-text"]');
-          if (text) text.textContent = `${val}°`;
+          const text = rotWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-rotation-selected-text"]');
+          if (text) text.textContent = val === '0' ? 'No rotar' : `${val}°`;
+          this.updateIndicators();
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const transWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-transparency"]');
+    const transWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-transparency"], [data-ref="dropdown-wrapper-wm-transparency"]');
     if (transWrap) {
       const ctrl = setupDropdown(transWrap, {
         isSelect: true,
         onSelect: (val) => {
           this.transparency = Number(val) || 0;
-          const text = transWrap.querySelector<HTMLElement>('[data-ref="wm-transparency-selected-text"]');
-          if (text) text.textContent = val === '0' ? 'Sin transparencia (0%)' : `${val}%`;
+          const text = transWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-transparency-selected-text"]');
+          if (text) text.textContent = val === '0' ? 'Sin transparencia' : `${val}%`;
+          this.updateIndicators();
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const layerWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-layer"]');
+    const fontWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-font"]');
+    if (fontWrap) {
+      const ctrl = setupDropdown(fontWrap, {
+        isSelect: true,
+        onSelect: (val) => {
+          this.fontFamily = val as any;
+          this.updateIndicators();
+        },
+      });
+      this.dropdownControllers.push(ctrl);
+    }
+
+    const sizeWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-size"]');
+    if (sizeWrap) {
+      const ctrl = setupDropdown(sizeWrap, {
+        isSelect: true,
+        onSelect: (val) => {
+          this.fontSize = Number(val) || 36;
+          this.updateIndicators();
+        },
+      });
+      this.dropdownControllers.push(ctrl);
+    }
+
+    const layerWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-layer"], [data-ref="dropdown-wrapper-wm-layer"]');
     if (layerWrap) {
       const ctrl = setupDropdown(layerWrap, {
         isSelect: true,
         onSelect: (val) => {
           this.layer = val as 'over' | 'under';
-          const text = layerWrap.querySelector<HTMLElement>('[data-ref="wm-layer-selected-text"]');
+          const text = layerWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-layer-selected-text"]');
           if (text) text.textContent = val === 'over' ? 'Sobre el contenido del PDF' : 'Debajo del contenido del PDF';
         },
       });

@@ -97,6 +97,7 @@ interface ElementTable {
   cellSpacing: number;
   cells: ElementTableCell[][];
   cols: number;
+  colWidths?: number[];
   headerColor: string;
   height: number;
   id: string;
@@ -198,6 +199,7 @@ interface DocMember {
   email?: string;
   id?: number;
   role: 'editor' | 'viewer';
+  subscription_tier?: string;
   user_id: number;
   username: string;
 }

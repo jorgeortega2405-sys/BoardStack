@@ -31,7 +31,7 @@ import { renderShapeGeometry, renderShapeInner } from './collab-shape-renderer.u
 import { SHAPES_CATALOG } from './collab-shapes.config.js';
 import { CollabShareFindState, CollabSharePopoverHandle, createCollabSharePopover } from './collab-share-modal.util.js';
 import { applySmartGuides, clearSmartGuides, renderActiveSmartGuides } from './collab-smart-guides.util.js';
-import { createCollaborativeDrawerElement } from './collaborative-pdf-drawer.template.js';
+import { createCollaborativeDrawerElement, renderFullGradientSwatchesHtml, renderFullSolidSwatchesHtml } from './collaborative-pdf-drawer.template.js';
 import { applyListFormatting, CHART_PALETTES, ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, ManualGuide, PAGE_HEIGHT, PAGE_WIDTH, PagePdfSource, RemotePeer, UploadedAsset } from './collaborative-pdf.types.js';
 
 class CollaborativePdfEditorController implements ViewController {
@@ -52,6 +52,7 @@ class CollaborativePdfEditorController implements ViewController {
   private container: HTMLElement;
   private dispatcher!: CollabActionDispatcher;
   private docAccessLevel: 'anyone_with_link' | 'restricted' = 'restricted';
+  private docCustomSlug: string | null = null;
   private docDefaultPageSize: PageDimension = { height: 1123, width: 794 };
   private initialUrlDimensions: PageDimension | null = null;
   private isLoadingDocument = false;
@@ -129,6 +130,10 @@ class CollaborativePdfEditorController implements ViewController {
   private showRulersAndGuides = false;
   private contextMenuTargetPage = 0;
   private contextMenuTargetElementId: string | null = null;
+  private contextMenuTargetTableId: string | null = null;
+  private contextMenuTargetRowIndex = 0;
+  private contextMenuTargetColIndex = 0;
+  private drawOpacity = 1.0;
   private isLayersPanelOpen = false;
   private aiLockPollTimer: ReturnType<typeof setInterval> | null = null;
   private aiLockedBy: string | null = null;
@@ -274,6 +279,11 @@ class CollaborativePdfEditorController implements ViewController {
 
   destroy(): void {
     this.isDestroyed = true;
+    const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
+    const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+    if (layoutNav) layoutNav.style.display = '';
+    if (layoutContent) layoutContent.style.paddingLeft = '';
+    document.body.classList.remove('is-dragging-element');
     if (this.unsubAuth) {
       this.unsubAuth();
       this.unsubAuth = null;
@@ -481,32 +491,42 @@ class CollaborativePdfEditorController implements ViewController {
 
     this.queryPanel<HTMLButtonElement>('[data-ref="btn-shapes-back"]')?.addEventListener('click', restoreAllElementsMain, { signal });
 
+    const colorsContainer = this.queryPanel<HTMLElement>('[data-ref="colors-container"]');
+    const colorsCatView = this.queryPanel<HTMLElement>('[data-ref="colors-category-view"]');
+    const colorsCatTitle = this.queryPanel<HTMLElement>('[data-ref="colors-cat-title"]');
+    const colorsCatContent = this.queryPanel<HTMLElement>('[data-ref="colors-cat-content"]');
+    const btnColorsCatBack = this.queryPanel<HTMLButtonElement>('[data-ref="btn-colors-cat-back"]');
+
+    const openColorsCategory = (title: string, swatchesHtml: string) => {
+      if (!colorsContainer || !colorsCatView || !colorsCatTitle || !colorsCatContent) return;
+      colorsCatTitle.textContent = title;
+      colorsCatContent.innerHTML = swatchesHtml;
+      colorsContainer.classList.add('is-hidden');
+      colorsCatView.classList.remove('is-hidden');
+      const swatches = colorsCatContent.querySelectorAll<HTMLButtonElement>('.collaborative-color-swatch[data-color]');
+      swatches.forEach((sw) => {
+        sw.addEventListener('click', () => {
+          const c = sw.getAttribute('data-color');
+          if (c) this.applyColorToCurrentTarget(c);
+        });
+      });
+    };
+
+    const closeColorsCategory = () => {
+      colorsCatView?.classList.add('is-hidden');
+      colorsContainer?.classList.remove('is-hidden');
+    };
+
+    btnColorsCatBack?.addEventListener('click', closeColorsCategory, { signal });
+
     const btnSolidColorsMore = this.queryPanel<HTMLButtonElement>('[data-ref="btn-solid-colors-more"]');
     btnSolidColorsMore?.addEventListener('click', () => {
-      const compactGrid = this.queryPanel<HTMLElement>('[data-ref="grid-solid-colors-compact"]');
-      const expandedGrid = this.queryPanel<HTMLElement>('[data-ref="grid-solid-colors-expanded"]');
-      const isCurrentlyExpanded = btnSolidColorsMore.getAttribute('data-expanded') === 'true';
-      const nextExpanded = !isCurrentlyExpanded;
-      compactGrid?.classList.toggle('is-hidden', nextExpanded);
-      expandedGrid?.classList.toggle('is-hidden', !nextExpanded);
-      btnSolidColorsMore.setAttribute('data-expanded', nextExpanded ? 'true' : 'false');
-      const labelKey = nextExpanded ? 'collaborative.show_less' : 'collaborative.show_more';
-      btnSolidColorsMore.setAttribute('data-i18n', labelKey);
-      btnSolidColorsMore.textContent = t(labelKey);
+      openColorsCategory(t('collaborative.colors_default_solids'), renderFullSolidSwatchesHtml());
     }, { signal });
 
     const btnGradientColorsMore = this.queryPanel<HTMLButtonElement>('[data-ref="btn-gradient-colors-more"]');
     btnGradientColorsMore?.addEventListener('click', () => {
-      const compactGrid = this.queryPanel<HTMLElement>('[data-ref="grid-gradient-colors-compact"]');
-      const expandedWrapper = this.queryPanel<HTMLElement>('[data-ref="gradient-colors-expanded"]');
-      const isCurrentlyExpanded = btnGradientColorsMore.getAttribute('data-expanded') === 'true';
-      const nextExpanded = !isCurrentlyExpanded;
-      compactGrid?.classList.toggle('is-hidden', nextExpanded);
-      expandedWrapper?.classList.toggle('is-hidden', !nextExpanded);
-      btnGradientColorsMore.setAttribute('data-expanded', nextExpanded ? 'true' : 'false');
-      const labelKey = nextExpanded ? 'collaborative.show_less' : 'collaborative.show_more';
-      btnGradientColorsMore.setAttribute('data-i18n', labelKey);
-      btnGradientColorsMore.textContent = t(labelKey);
+      openColorsCategory(t('collaborative.colors_default_gradients'), renderFullGradientSwatchesHtml());
     }, { signal });
 
     const shapeMoreBtns = this.queryPanelAll<HTMLButtonElement>('[data-shape-cat]');
@@ -619,6 +639,15 @@ class CollaborativePdfEditorController implements ViewController {
         return;
       }
       void this.activateZoomEyeDropper();
+    }, { signal });
+
+    const btnTransparent = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-transparent"]');
+    btnTransparent?.addEventListener('click', () => {
+      if (this.isAiLocked) {
+        showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
+        return;
+      }
+      this.applyColorToCurrentTarget('transparent');
     }, { signal });
 
     const btnUpload = this.queryPanel<HTMLButtonElement>('[data-ref="btn-upload-file"]');
@@ -1591,6 +1620,7 @@ class CollaborativePdfEditorController implements ViewController {
               this.isLocalOnly = false;
               this.docTitle = data.document.title || t('collaborative.untitled_doc');
               this.docAccessLevel = data.document.access_level || 'anyone_with_link';
+              this.docCustomSlug = data.document.custom_slug || null;
               this.isDocOwner = false;
               this.canEditDoc = data.canEdit ?? (this.docAccessLevel === 'anyone_with_link');
               this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
@@ -1637,6 +1667,7 @@ class CollaborativePdfEditorController implements ViewController {
               this.isLocalOnly = false;
               this.docTitle = data.document.title || t('collaborative.untitled_doc');
               this.docAccessLevel = data.document.access_level || 'restricted';
+              this.docCustomSlug = data.document.custom_slug || null;
               this.isDocOwner = data.isOwner ?? true;
               this.canEditDoc = data.canEdit ?? true;
               this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
@@ -2002,24 +2033,29 @@ class CollaborativePdfEditorController implements ViewController {
         sheet.appendChild(pGuidesSvg);
       }
 
+      const elementsContainer = document.createElement('div');
+      elementsContainer.className = 'collaborative-page-elements';
+      elementsContainer.setAttribute('data-ref', `page-elements-${p}`);
+
       const pageElements = this.elements.filter((el) => (el.pageIndex ?? 0) === p);
       for (const el of pageElements) {
         if (el.type === 'text') {
-          sheet.appendChild(this.createTextElement(el));
+          elementsContainer.appendChild(this.createTextElement(el));
         } else if (el.type === 'shape') {
           if (el.shapeType === 'line' || el.shapeType === 'line-flexible' || el.shapeType === 'line-multiconnect') {
             svg.appendChild(this.createLineSvgElement(el));
           } else {
-            sheet.appendChild(this.createShapeElement(el));
+            elementsContainer.appendChild(this.createShapeElement(el));
           }
         } else if (el.type === 'image') {
-          sheet.appendChild(this.createImageElement(el));
+          elementsContainer.appendChild(this.createImageElement(el));
         } else if (el.type === 'table') {
-          sheet.appendChild(this.createTableElement(el));
+          elementsContainer.appendChild(this.createTableElement(el));
         } else if (el.type === 'chart') {
-          sheet.appendChild(this.createChartElement(el));
+          elementsContainer.appendChild(this.createChartElement(el));
         }
       }
+      sheet.appendChild(elementsContainer);
 
       const scaler = document.createElement('div');
       scaler.className = 'collaborative-page-sheet-scaler';
@@ -2273,7 +2309,7 @@ class CollaborativePdfEditorController implements ViewController {
       ctx.beginPath();
       ctx.strokeStyle = this.drawColor;
       ctx.lineWidth = this.getEffectiveDrawWidth();
-      ctx.globalAlpha = this.drawMode === 'highlighter' ? 0.35 : 1.0;
+      ctx.globalAlpha = (this.drawMode === 'highlighter' ? 0.35 : 1.0) * this.drawOpacity;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.moveTo(p1.x, p1.y);
@@ -2289,7 +2325,7 @@ class CollaborativePdfEditorController implements ViewController {
         const newDrawing: ElementDrawing = {
           color: this.drawColor,
           id: `draw_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
-          opacity: this.drawMode === 'highlighter' ? 0.35 : 1.0,
+          opacity: (this.drawMode === 'highlighter' ? 0.35 : 1.0) * this.drawOpacity,
           pageIndex,
           points: currentStroke,
           type: 'drawing',
@@ -2384,6 +2420,9 @@ class CollaborativePdfEditorController implements ViewController {
         el.text = bodyEl.innerText;
         this.setModified(true);
         this.broadcastElementUpdate(el);
+        if (this.selectedElementId === el.id) {
+          this.updateTransformBoxPosition();
+        }
       });
 
       bodyEl.addEventListener('blur', () => {
@@ -2839,8 +2878,13 @@ class CollaborativePdfEditorController implements ViewController {
     const setupCell = (cellEl: HTMLTableCellElement, cellData: ElementTableCell) => {
       cellEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (!div.classList.contains('is-editing')) {
-          this.selectElement(el.id);
+        if (this.isAiLocked || this.editorMode === 'view') return;
+        this.selectElement(el.id);
+        if (!cellEl.isContentEditable) {
+          div.classList.add('is-editing');
+          cellEl.classList.add('is-editing');
+          cellEl.contentEditable = 'true';
+          cellEl.focus();
         }
       });
 
@@ -2864,6 +2908,9 @@ class CollaborativePdfEditorController implements ViewController {
         cellData.text = cellEl.innerText;
         this.setModified(true);
         this.broadcastElementUpdate(el);
+        if (this.selectedElementId === el.id) {
+          this.updateTransformBoxPosition();
+        }
       });
 
       cellEl.addEventListener('blur', () => {
@@ -3062,6 +3109,7 @@ class CollaborativePdfEditorController implements ViewController {
     let initialY = 0;
     let lastClientX = 0;
     let lastClientY = 0;
+    let hasMoved = false;
     const initialPositions = new Map<string, { x: number; y: number }>();
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
 
@@ -3107,6 +3155,11 @@ class CollaborativePdfEditorController implements ViewController {
 
     const onMouseMove = (e: MouseEvent) => {
       if (this.isAiLocked || this.activeTool !== 'select') return;
+      if (!hasMoved) {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) < 5) return;
+        hasMoved = true;
+        document.body.classList.add('is-dragging-element');
+      }
       e.preventDefault();
       lastClientX = e.clientX;
       lastClientY = e.clientY;
@@ -3123,7 +3176,7 @@ class CollaborativePdfEditorController implements ViewController {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
       workspace?.removeEventListener('scroll', onScroll);
-      if (this.isAiLocked) return;
+      if (this.isAiLocked || !hasMoved) return;
 
       const sheets = this.container.querySelectorAll<HTMLElement>('.collaborative-page-sheet');
       let targetSheet: HTMLElement | null = null;
@@ -3193,7 +3246,7 @@ class CollaborativePdfEditorController implements ViewController {
       const target = e.target as HTMLElement;
       if (target?.isContentEditable || target?.closest('.collaborative-table-row-divider') || target?.closest('.is-editing')) return;
       if (e.button !== 0) return;
-      document.body.classList.add('is-dragging-element');
+      hasMoved = false;
       this.activateSelectTool();
       if (!this.selectedElementIds.has(item.id)) {
         this.selectElement(item.id);
@@ -3586,9 +3639,15 @@ class CollaborativePdfEditorController implements ViewController {
     if (!el || el.type === 'drawing') return;
 
     const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${el.id}"]`);
-    if (elNode && el.type === 'text' && !el.isStickyNote && (!el.width || !el.height)) {
-      el.width = Math.ceil((elNode.offsetWidth || elNode.scrollWidth) + 8);
-      el.height = Math.ceil(elNode.offsetHeight || elNode.scrollHeight);
+    if (elNode) {
+      const renderedW = elNode.offsetWidth;
+      const renderedH = elNode.offsetHeight;
+      if (renderedW > 0 && Math.abs((el.width || 0) - renderedW) > 1) {
+        el.width = renderedW;
+      }
+      if (renderedH > 0 && Math.abs((el.height || 0) - renderedH) > 1) {
+        el.height = renderedH;
+      }
     }
 
     const width = el.width || 100;
@@ -3753,48 +3812,65 @@ class CollaborativePdfEditorController implements ViewController {
           this.updateContextToolbar();
         }
       } else {
+        const minW = el.type === 'text' && el.isStickyNote ? 80 : (el.type === 'table' ? 60 : 10);
+        const minH = el.type === 'text' && el.isStickyNote ? 50 : (el.type === 'table' ? 40 : 10);
+
         if (handleType === 'se') {
           el.x = initialX;
           el.y = initialY;
-          el.width = Math.max(10, initialW + dx);
-          el.height = Math.max(10, initialH + dy);
+          el.width = Math.max(minW, initialW + dx);
+          el.height = Math.max(minH, initialH + dy);
         } else if (handleType === 'ne') {
-          const nextH = Math.max(10, initialH - dy);
+          const nextH = Math.max(minH, initialH - dy);
           el.x = initialX;
           el.y = (initialY + initialH) - nextH;
-          el.width = Math.max(10, initialW + dx);
+          el.width = Math.max(minW, initialW + dx);
           el.height = nextH;
         } else if (handleType === 'sw') {
-          const nextW = Math.max(10, initialW - dx);
+          const nextW = Math.max(minW, initialW - dx);
           el.x = (initialX + initialW) - nextW;
           el.y = initialY;
           el.width = nextW;
-          el.height = Math.max(10, initialH + dy);
+          el.height = Math.max(minH, initialH + dy);
         } else if (handleType === 'nw') {
-          const nextW = Math.max(10, initialW - dx);
-          const nextH = Math.max(10, initialH - dy);
+          const nextW = Math.max(minW, initialW - dx);
+          const nextH = Math.max(minH, initialH - dy);
           el.x = (initialX + initialW) - nextW;
           el.y = (initialY + initialH) - nextH;
           el.width = nextW;
           el.height = nextH;
         } else if (handleType === 'e') {
           el.x = initialX;
-          el.width = Math.max(10, initialW + dx);
+          el.width = Math.max(minW, initialW + dx);
         } else if (handleType === 'w') {
-          const nextW = Math.max(10, initialW - dx);
+          const nextW = Math.max(minW, initialW - dx);
           el.x = (initialX + initialW) - nextW;
           el.width = nextW;
         } else if (handleType === 's') {
           el.y = initialY;
-          el.height = Math.max(10, initialH + dy);
+          el.height = Math.max(minH, initialH + dy);
         } else if (handleType === 'n') {
-          const nextH = Math.max(10, initialH - dy);
+          const nextH = Math.max(minH, initialH - dy);
           el.y = (initialY + initialH) - nextH;
           el.height = nextH;
         }
 
         elNode.style.width = `${el.width}px`;
         elNode.style.height = `${el.height}px`;
+        const renderedW = elNode.offsetWidth;
+        const renderedH = elNode.offsetHeight;
+        if (renderedW > (el.width ?? 0)) {
+          el.width = renderedW;
+          if (handleType === 'w' || handleType === 'sw' || handleType === 'nw') {
+            el.x = (initialX + initialW) - renderedW;
+          }
+        }
+        if (renderedH > (el.height ?? 0)) {
+          el.height = renderedH;
+          if (handleType === 'n' || handleType === 'ne' || handleType === 'nw') {
+            el.y = (initialY + initialH) - renderedH;
+          }
+        }
         if (el.type === 'table') {
           const scaleY = el.height / initialH;
           el.rowHeights = el.rowHeights.map((h) => Math.max(20, Math.round(h * scaleY)));
@@ -4101,12 +4177,18 @@ class CollaborativePdfEditorController implements ViewController {
 
         const previewFill = toolbar.querySelector<HTMLElement>('[data-ref="preview-shape-fill"]');
         if (previewFill) {
-          if (el.fillColor?.startsWith('linear-gradient')) {
+          if (el.fillColor === 'transparent') {
+            previewFill.style.backgroundImage = 'none';
+            previewFill.style.backgroundColor = 'transparent';
+            previewFill.classList.add('is-transparent');
+          } else if (el.fillColor?.startsWith('linear-gradient')) {
             previewFill.style.backgroundImage = el.fillColor;
             previewFill.style.backgroundColor = 'transparent';
+            previewFill.classList.remove('is-transparent');
           } else {
             previewFill.style.backgroundImage = 'none';
             previewFill.style.backgroundColor = el.fillColor || '#000000';
+            previewFill.classList.remove('is-transparent');
           }
         }
 
@@ -4643,14 +4725,20 @@ class CollaborativePdfEditorController implements ViewController {
 
       const variantsHtml = isExpanded ? `
         <div class="collaborative-font-variants-inline" data-ref="font-variants-${f.family.replace(/\s+/g, '-')}">
-          <div class="collaborative-font-weights-grid">
+          <div class="collaborative-font-weights-menu">
             ${f.weights.map((w) => {
               const isAct = w === curWeight;
               const label = WEIGHT_LABELS[w] || `${w}`;
-              return `<button type="button" class="collaborative-weight-pill${isAct ? ' is-active' : ''}" data-font-family="${f.family}" data-weight="${w}" style="font-family: '${f.family}', sans-serif; font-weight: ${w};">${w} ${label}</button>`;
+              return `<button type="button" class="menu-item collaborative-weight-pill${isAct ? ' is-active' : ''}" data-font-family="${f.family}" data-weight="${w}">
+                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-weight: ${w};">${label}</span>
+                ${isAct ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+              </button>`;
             }).join('')}
             ${f.hasItalic ? `
-              <button type="button" class="collaborative-weight-pill${isItalic ? ' is-active' : ''}" data-font-family="${f.family}" data-action="toggle-italic" style="font-family: '${f.family}', sans-serif; font-style: italic;">Cursiva</button>
+              <button type="button" class="menu-item collaborative-weight-pill${isItalic ? ' is-active' : ''}" data-font-family="${f.family}" data-action="toggle-italic">
+                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-style: italic;">Cursiva</span>
+                ${isItalic ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+              </button>
             ` : ''}
           </div>
         </div>
@@ -4658,12 +4746,9 @@ class CollaborativePdfEditorController implements ViewController {
 
       return `
         <div class="collaborative-font-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ''}" data-ref="font-card-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-          <button type="button" class="collaborative-font-card__header collaborative-text-preset" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-            <div class="collaborative-font-card__info">
-              <span class="collaborative-font-card__name" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
-              <span class="collaborative-font-card__meta">${f.category} • ${f.weights.length} variantes</span>
-            </div>
-            <svg class="component-icon collaborative-font-card__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          <button type="button" class="menu-item collaborative-font-card__header" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
+            <span class="menu-item__text" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
+            <svg class="component-icon collaborative-font-card__chevron menu-item__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </button>
           ${variantsHtml}
         </div>
@@ -4903,6 +4988,15 @@ class CollaborativePdfEditorController implements ViewController {
       btn.classList.toggle('is-active', ref === `btn-${target}`);
     });
 
+    const btnTransparent = this.queryPanel<HTMLElement>('[data-ref="btn-color-transparent"]');
+    if (btnTransparent) {
+      if (target === 'shape-fill') {
+        btnTransparent.classList.remove('is-hidden');
+      } else {
+        btnTransparent.classList.add('is-hidden');
+      }
+    }
+
     this.highlightActiveColorSwatch();
     if (this.drawer) {
       renderIcons(this.drawer);
@@ -4991,12 +5085,18 @@ class CollaborativePdfEditorController implements ViewController {
         el.fillColor = color;
         const preview = this.container.querySelector<HTMLElement>('[data-ref="preview-shape-fill"]');
         if (preview) {
-          if (color.startsWith('linear-gradient')) {
+          if (color === 'transparent') {
+            preview.style.backgroundImage = 'none';
+            preview.style.backgroundColor = 'transparent';
+            preview.classList.add('is-transparent');
+          } else if (color.startsWith('linear-gradient')) {
             preview.style.backgroundImage = color;
             preview.style.backgroundColor = 'transparent';
+            preview.classList.remove('is-transparent');
           } else {
             preview.style.backgroundImage = 'none';
             preview.style.backgroundColor = color;
+            preview.classList.remove('is-transparent');
           }
         }
         this.renderPages();
@@ -5131,6 +5231,11 @@ class CollaborativePdfEditorController implements ViewController {
       const color = sw.getAttribute('data-color');
       sw.classList.toggle('is-active', !!color && normalizeColor(color) === normalizedActive);
     });
+
+    const btnTransparent = this.queryPanel<HTMLButtonElement>('[data-ref="btn-color-transparent"]');
+    if (btnTransparent) {
+      btnTransparent.classList.toggle('is-active', normalizedActive === 'transparent');
+    }
   }
 
   private async activateZoomEyeDropper(): Promise<void> {
@@ -5488,16 +5593,7 @@ class CollaborativePdfEditorController implements ViewController {
       this.handleOpenAiGenerateModal();
     }, { signal });
 
-    const cloudBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cloud-status"]');
-    cloudBtn?.addEventListener('click', async () => {
-      if (this.isAiLocked) {
-        showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
-        return;
-      }
-      await withButtonLoading(cloudBtn, async () => {
-        await this.flushAutoSave();
-      });
-    }, { signal });
+    // btn-cloud-status is purely an autosave indicator
 
     const shareBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-link"]');
     shareBtn?.addEventListener('click', () => {
@@ -5614,20 +5710,67 @@ class CollaborativePdfEditorController implements ViewController {
 
     const btnDrawThickness = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-draw-thickness"]');
     const dotThickness = this.container.querySelector<HTMLElement>('[data-ref="dot-thickness"]');
-    const thicknesses = [2, 4, 8, 16];
-    btnDrawThickness?.addEventListener('click', () => {
-      if (this.isAiLocked) {
-        showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
-        return;
-      }
-      const curIndex = thicknesses.indexOf(this.drawThickness);
-      const nextIndex = (curIndex + 1) % thicknesses.length;
-      this.drawThickness = thicknesses[nextIndex];
-      btnDrawThickness.setAttribute('data-tooltip', `Grosor: ${this.drawThickness}px`);
+    const popoverDrawThickness = this.container.querySelector<HTMLElement>('[data-ref="popover-draw-thickness"]');
+    const sliderDrawThickness = this.container.querySelector<HTMLInputElement>('[data-ref="slider-draw-thickness"]');
+    const inputDrawThickness = this.container.querySelector<HTMLInputElement>('[data-ref="input-draw-thickness"]');
+    const sliderDrawOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="slider-draw-opacity"]');
+    const inputDrawOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="input-draw-opacity"]');
+
+    const updateDrawThicknessUI = () => {
+      if (sliderDrawThickness) sliderDrawThickness.value = `${this.drawThickness}`;
+      if (inputDrawThickness) inputDrawThickness.value = `${this.drawThickness}`;
+      if (sliderDrawOpacity) sliderDrawOpacity.value = `${Math.round(this.drawOpacity * 100)}`;
+      if (inputDrawOpacity) inputDrawOpacity.value = `${Math.round(this.drawOpacity * 100)}`;
       if (dotThickness) {
         const sz = Math.min(18, Math.max(4, this.drawThickness * 1.5));
         dotThickness.style.width = `${sz}px`;
         dotThickness.style.height = `${sz}px`;
+        dotThickness.style.opacity = `${this.drawOpacity}`;
+      }
+    };
+
+    btnDrawThickness?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.isAiLocked) return;
+      if (popoverDrawThickness) {
+        popoverDrawThickness.classList.toggle('is-hidden');
+        if (!popoverDrawThickness.classList.contains('is-hidden')) {
+          updateDrawThicknessUI();
+        }
+      }
+    }, { signal });
+
+    sliderDrawThickness?.addEventListener('input', () => {
+      this.drawThickness = Math.max(1, parseInt(sliderDrawThickness.value, 10) || 2);
+      if (inputDrawThickness) inputDrawThickness.value = `${this.drawThickness}`;
+      updateDrawThicknessUI();
+    }, { signal });
+
+    inputDrawThickness?.addEventListener('input', () => {
+      this.drawThickness = Math.max(1, Math.min(100, parseInt(inputDrawThickness.value, 10) || 2));
+      if (sliderDrawThickness) sliderDrawThickness.value = `${this.drawThickness}`;
+      updateDrawThicknessUI();
+    }, { signal });
+
+    sliderDrawOpacity?.addEventListener('input', () => {
+      const val = Math.max(0, Math.min(100, parseInt(sliderDrawOpacity.value, 10) || 100));
+      this.drawOpacity = val / 100;
+      if (inputDrawOpacity) inputDrawOpacity.value = `${val}`;
+      updateDrawThicknessUI();
+    }, { signal });
+
+    inputDrawOpacity?.addEventListener('input', () => {
+      const val = Math.max(0, Math.min(100, parseInt(inputDrawOpacity.value, 10) || 100));
+      this.drawOpacity = val / 100;
+      if (sliderDrawOpacity) sliderDrawOpacity.value = `${val}`;
+      updateDrawThicknessUI();
+    }, { signal });
+
+    window.addEventListener('pointerdown', (e) => {
+      if (popoverDrawThickness && !popoverDrawThickness.classList.contains('is-hidden')) {
+        if (!popoverDrawThickness.contains(e.target as Node) && !btnDrawThickness?.contains(e.target as Node)) {
+          popoverDrawThickness.classList.add('is-hidden');
+        }
       }
     }, { signal });
 
@@ -6739,7 +6882,7 @@ class CollaborativePdfEditorController implements ViewController {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.08 : -0.08;
-        this.setZoom(this.zoomLevel + delta);
+        this.setZoom(this.zoomLevel + delta, { clientX: e.clientX, clientY: e.clientY });
       }
     }, { passive: false, signal });
 
@@ -6756,6 +6899,19 @@ class CollaborativePdfEditorController implements ViewController {
         }
       }
     }, { signal });
+
+    const tableActions = [
+      'copy', 'paste', 'duplicate', 'delete-table',
+      'add-row', 'delete-row', 'move-row-up', 'move-row-down', 'fit-row',
+      'add-col', 'delete-col', 'move-col-left', 'move-col-right', 'fit-col',
+    ];
+    for (const act of tableActions) {
+      const btn = this.container.querySelector<HTMLButtonElement>(`[data-ref="ctx-table-${act}"]`);
+      btn?.addEventListener('click', () => {
+        this.handleTableAction(act);
+        this.closeContextMenu();
+      }, { signal });
+    }
 
     const btnCtxElemCopy = this.container.querySelector<HTMLButtonElement>('[data-ref="ctx-elem-copy"]');
     btnCtxElemCopy?.addEventListener('click', () => {
@@ -6953,8 +7109,30 @@ class CollaborativePdfEditorController implements ViewController {
     } catch {}
   }
 
-  private setZoom(level: number): void {
+  private setZoom(level: number, anchor?: { clientX: number; clientY: number }): void {
+    const oldZoom = this.zoomLevel || 1.0;
     const clamped = Math.max(0.10, Math.min(3.0, Math.round(level * 100) / 100));
+    if (Math.abs(clamped - oldZoom) < 0.001) return;
+
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
+    let pivotX = 0;
+    let pivotY = 0;
+    let scrollAnchorX = 0;
+    let scrollAnchorY = 0;
+
+    if (workspace) {
+      if (anchor) {
+        const rect = workspace.getBoundingClientRect();
+        scrollAnchorX = anchor.clientX - rect.left;
+        scrollAnchorY = anchor.clientY - rect.top;
+      } else {
+        scrollAnchorX = workspace.clientWidth / 2;
+        scrollAnchorY = workspace.clientHeight / 2;
+      }
+      pivotX = (workspace.scrollLeft + scrollAnchorX) / oldZoom;
+      pivotY = (workspace.scrollTop + scrollAnchorY) / oldZoom;
+    }
+
     this.zoomLevel = clamped;
 
     const txtZoomLevel = this.container.querySelector<HTMLElement>('[data-ref="txt-zoom-level"]');
@@ -6997,6 +7175,11 @@ class CollaborativePdfEditorController implements ViewController {
       const scaledW = Math.round(dim.width * this.zoomLevel);
       h.style.width = `${Math.max(340, scaledW)}px`;
     });
+
+    if (workspace) {
+      workspace.scrollLeft = Math.max(0, Math.round(pivotX * this.zoomLevel - scrollAnchorX));
+      workspace.scrollTop = Math.max(0, Math.round(pivotY * this.zoomLevel - scrollAnchorY));
+    }
 
     this.updateTransformBoxPosition();
     if (this.showRulersAndGuides) {
@@ -7706,6 +7889,7 @@ class CollaborativePdfEditorController implements ViewController {
 
     const handle = createCollabSharePopover({
       activePageIndex: this.activePageIndex,
+      customSlug: this.docCustomSlug,
       docAccessLevel: this.docAccessLevel,
       docId: this.docId,
       docMembers: this.docMembers,
@@ -7745,6 +7929,9 @@ class CollaborativePdfEditorController implements ViewController {
         this.sharePopoverHandle = null;
         this.findMatches = [];
         this.findCurrentIndex = -1;
+      },
+      onCustomSlugChange: (slug) => {
+        this.docCustomSlug = slug;
       },
       onFindOpen: () => {
         this.executeSearch();
@@ -8011,6 +8198,10 @@ class CollaborativePdfEditorController implements ViewController {
 
     if (mode === 'view') {
       this.container.classList.add('collaborative-mode-view');
+      const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
+      const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+      if (layoutNav) layoutNav.style.display = 'none';
+      if (layoutContent) layoutContent.style.paddingLeft = '6px';
       if (txtTopEdit) txtTopEdit.textContent = 'Ver';
       iconTopEdit?.setAttribute('href', '/icons.svg#visibility');
       checkEdit?.classList.add('is-hidden');
@@ -8028,6 +8219,10 @@ class CollaborativePdfEditorController implements ViewController {
       showToast(t('toasts.read_only_mode_enabled'), 'info');
     } else {
       this.container.classList.remove('collaborative-mode-view');
+      const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
+      const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+      if (layoutNav) layoutNav.style.display = '';
+      if (layoutContent) layoutContent.style.paddingLeft = '';
       if (txtTopEdit) txtTopEdit.textContent = 'Editar';
       iconTopEdit?.setAttribute('href', '/icons.svg#edit');
       checkEdit?.classList.remove('is-hidden');
@@ -8041,6 +8236,224 @@ class CollaborativePdfEditorController implements ViewController {
     this.syncShareFindState();
   }
 
+  private handleTableAction(action: string): void {
+    if (this.isAiLocked || this.editorMode === 'view') return;
+    if (!this.contextMenuTargetTableId) return;
+    const tableEl = this.elements.find((e): e is ElementTable => e.id === this.contextMenuTargetTableId && e.type === 'table');
+    if (!tableEl) return;
+    if (!tableEl.colWidths || tableEl.colWidths.length !== tableEl.cols) {
+      tableEl.colWidths = Array.from({ length: tableEl.cols }, () => Math.round(tableEl.width / tableEl.cols));
+    }
+    const r = Math.max(0, Math.min(tableEl.rows - 1, this.contextMenuTargetRowIndex));
+    const c = Math.max(0, Math.min(tableEl.cols - 1, this.contextMenuTargetColIndex));
+    switch (action) {
+      case 'copy': {
+        this.selectElement(tableEl.id);
+        this.copySelectedElements();
+        break;
+      }
+      case 'paste': {
+        void this.pasteFromClipboard();
+        break;
+      }
+      case 'duplicate': {
+        const dup = JSON.parse(JSON.stringify(tableEl)) as ElementTable;
+        dup.id = `table_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        dup.x += 24;
+        dup.y += 24;
+        this.pushElement(dup);
+        this.renderPages();
+        this.selectElement(dup.id);
+        this.setModified(true);
+        this.recordHistory();
+        void this.flushAutoSave();
+        break;
+      }
+      case 'delete-table': {
+        this.elements = this.elements.filter((e) => e.id !== tableEl.id);
+        this.selectedElementId = null;
+        this.selectedElementIds.clear();
+        this.removeTransformBox();
+        this.renderPages();
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementDelete(tableEl.id, tableEl.pageIndex ?? 0);
+        void this.flushAutoSave();
+        break;
+      }
+      case 'add-row': {
+        const newRow: ElementTableCell[] = Array.from({ length: tableEl.cols }, () => ({ text: '' }));
+        tableEl.cells.splice(r + 1, 0, newRow);
+        tableEl.rowHeights.splice(r + 1, 0, 40);
+        tableEl.rows++;
+        tableEl.height = tableEl.rowHeights.reduce((a, b) => a + b, 0) + (tableEl.rows + 1) * tableEl.cellSpacing;
+        this.renderPages();
+        this.selectElement(tableEl.id);
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementUpdate(tableEl);
+        void this.flushAutoSave();
+        break;
+      }
+      case 'delete-row': {
+        if (tableEl.rows <= 1) {
+          showToast(t('collaborative.table_min_rows_warning') || 'La tabla debe tener al menos una fila', 'warning');
+          return;
+        }
+        tableEl.cells.splice(r, 1);
+        tableEl.rowHeights.splice(r, 1);
+        tableEl.rows--;
+        tableEl.height = tableEl.rowHeights.reduce((a, b) => a + b, 0) + (tableEl.rows + 1) * tableEl.cellSpacing;
+        this.renderPages();
+        this.selectElement(tableEl.id);
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementUpdate(tableEl);
+        void this.flushAutoSave();
+        break;
+      }
+      case 'move-row-up': {
+        if (r > 0) {
+          const tempCells = tableEl.cells[r];
+          tableEl.cells[r] = tableEl.cells[r - 1];
+          tableEl.cells[r - 1] = tempCells;
+          const tempH = tableEl.rowHeights[r];
+          tableEl.rowHeights[r] = tableEl.rowHeights[r - 1];
+          tableEl.rowHeights[r - 1] = tempH;
+          this.contextMenuTargetRowIndex = r - 1;
+          this.renderPages();
+          this.selectElement(tableEl.id);
+          this.setModified(true);
+          this.recordHistory();
+          this.broadcastElementUpdate(tableEl);
+          void this.flushAutoSave();
+        }
+        break;
+      }
+      case 'move-row-down': {
+        if (r < tableEl.rows - 1) {
+          const tempCells = tableEl.cells[r];
+          tableEl.cells[r] = tableEl.cells[r + 1];
+          tableEl.cells[r + 1] = tempCells;
+          const tempH = tableEl.rowHeights[r];
+          tableEl.rowHeights[r] = tableEl.rowHeights[r + 1];
+          tableEl.rowHeights[r + 1] = tempH;
+          this.contextMenuTargetRowIndex = r + 1;
+          this.renderPages();
+          this.selectElement(tableEl.id);
+          this.setModified(true);
+          this.recordHistory();
+          this.broadcastElementUpdate(tableEl);
+          void this.flushAutoSave();
+        }
+        break;
+      }
+      case 'fit-row': {
+        const domTable = this.container.querySelector<HTMLElement>(`[data-element-id="${tableEl.id}"]`);
+        const trs = domTable?.querySelectorAll<HTMLTableRowElement>('tr');
+        if (trs && trs[r]) {
+          tableEl.rowHeights[r] = Math.max(32, trs[r].offsetHeight);
+          tableEl.height = tableEl.rowHeights.reduce((a, b) => a + b, 0) + (tableEl.rows + 1) * tableEl.cellSpacing;
+          this.renderPages();
+          this.selectElement(tableEl.id);
+          this.setModified(true);
+          this.recordHistory();
+          this.broadcastElementUpdate(tableEl);
+          void this.flushAutoSave();
+        }
+        break;
+      }
+      case 'add-col': {
+        const colWidths = tableEl.colWidths;
+        tableEl.cells.forEach((row) => row.splice(c + 1, 0, { text: '' }));
+        const defaultW = Math.round(tableEl.width / (tableEl.cols + 1));
+        colWidths.splice(c + 1, 0, defaultW);
+        tableEl.cols++;
+        tableEl.width = colWidths.reduce((a: number, b: number) => a + b, 0) + (tableEl.cols + 1) * tableEl.cellSpacing;
+        this.renderPages();
+        this.selectElement(tableEl.id);
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementUpdate(tableEl);
+        void this.flushAutoSave();
+        break;
+      }
+      case 'delete-col': {
+        if (tableEl.cols <= 1) {
+          showToast(t('collaborative.table_min_cols_warning') || 'La tabla debe tener al menos una columna', 'warning');
+          return;
+        }
+        const colWidths = tableEl.colWidths;
+        tableEl.cells.forEach((row) => row.splice(c, 1));
+        colWidths.splice(c, 1);
+        tableEl.cols--;
+        tableEl.width = colWidths.reduce((a: number, b: number) => a + b, 0) + (tableEl.cols + 1) * tableEl.cellSpacing;
+        this.renderPages();
+        this.selectElement(tableEl.id);
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementUpdate(tableEl);
+        void this.flushAutoSave();
+        break;
+      }
+      case 'move-col-left': {
+        const colWidths = tableEl.colWidths;
+        if (c > 0) {
+          tableEl.cells.forEach((row) => {
+            const tempCell = row[c];
+            row[c] = row[c - 1];
+            row[c - 1] = tempCell;
+          });
+          const tempW = colWidths[c];
+          colWidths[c] = colWidths[c - 1];
+          colWidths[c - 1] = tempW;
+          this.contextMenuTargetColIndex = c - 1;
+          this.renderPages();
+          this.selectElement(tableEl.id);
+          this.setModified(true);
+          this.recordHistory();
+          this.broadcastElementUpdate(tableEl);
+          void this.flushAutoSave();
+        }
+        break;
+      }
+      case 'move-col-right': {
+        const colWidths = tableEl.colWidths;
+        if (c < tableEl.cols - 1) {
+          tableEl.cells.forEach((row) => {
+            const tempCell = row[c];
+            row[c] = row[c + 1];
+            row[c + 1] = tempCell;
+          });
+          const tempW = colWidths[c];
+          colWidths[c] = colWidths[c + 1];
+          colWidths[c + 1] = tempW;
+          this.contextMenuTargetColIndex = c + 1;
+          this.renderPages();
+          this.selectElement(tableEl.id);
+          this.setModified(true);
+          this.recordHistory();
+          this.broadcastElementUpdate(tableEl);
+          void this.flushAutoSave();
+        }
+        break;
+      }
+      case 'fit-col': {
+        const colWidths = tableEl.colWidths;
+        const maxLen = Math.max(...tableEl.cells.map((row) => (row[c]?.text || '').length), 4);
+        colWidths[c] = Math.max(50, Math.min(300, maxLen * 10 + 24));
+        tableEl.width = colWidths.reduce((a: number, b: number) => a + b, 0) + (tableEl.cols + 1) * tableEl.cellSpacing;
+        this.renderPages();
+        this.selectElement(tableEl.id);
+        this.setModified(true);
+        this.recordHistory();
+        this.broadcastElementUpdate(tableEl);
+        void this.flushAutoSave();
+        break;
+      }
+    }
+  }
+
   private handleContextMenu(e: MouseEvent): void {
     if (this.isAiLocked || this.editorMode === 'view') {
       return;
@@ -8050,22 +8463,57 @@ class CollaborativePdfEditorController implements ViewController {
 
     const elementNode = target.closest<HTMLElement | SVGElement>('[data-element-id]');
     const pageSheet = target.closest<HTMLElement>('.collaborative-page-sheet, .collaborative-page-wrapper');
+    const targetCell = target.closest<HTMLTableCellElement>('.collaborative-table-cell');
+    const tableElemNode = target.closest<HTMLElement>('.collaborative-table-item');
 
     const ctxElemSection = this.container.querySelector<HTMLElement>('[data-ref="ctx-section-element"]');
     const ctxPageSection = this.container.querySelector<HTMLElement>('[data-ref="ctx-section-page"]');
+    const ctxTableSection = this.container.querySelector<HTMLElement>('[data-ref="ctx-section-table"]');
     const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
 
     if (!contextMenu || !ctxElemSection || !ctxPageSection) return;
+
+    if (tableElemNode) {
+      const tableId = tableElemNode.getAttribute('data-element-id');
+      const tableEl = this.elements.find((el): el is ElementTable => el.id === tableId && el.type === 'table');
+      if (tableEl) {
+        e.preventDefault();
+        this.contextMenuTargetTableId = tableEl.id;
+        this.contextMenuTargetElementId = tableEl.id;
+        this.contextMenuTargetPage = tableEl.pageIndex ?? 0;
+        this.selectElement(tableEl.id);
+
+        if (targetCell) {
+          const rowEl = targetCell.closest('tr');
+          const rowIdx = rowEl ? Array.from(rowEl.parentElement?.children || []).indexOf(rowEl) : 0;
+          const actualRowIdx = rowEl?.parentElement?.tagName.toLowerCase() === 'tbody' ? rowIdx + 1 : rowIdx;
+          const colIdx = Array.from(rowEl?.children || []).indexOf(targetCell);
+          this.contextMenuTargetRowIndex = Math.max(0, actualRowIdx);
+          this.contextMenuTargetColIndex = Math.max(0, colIdx);
+        } else {
+          this.contextMenuTargetRowIndex = 0;
+          this.contextMenuTargetColIndex = 0;
+        }
+
+        ctxTableSection?.classList.remove('is-hidden');
+        ctxElemSection?.classList.add('is-hidden');
+        ctxPageSection?.classList.add('is-hidden');
+        this.positionContextMenu(e.clientX, e.clientY);
+        return;
+      }
+    }
 
     if (elementNode) {
       const elementId = elementNode.getAttribute('data-element-id');
       if (!elementId) return;
       e.preventDefault();
       this.contextMenuTargetElementId = elementId;
+      this.contextMenuTargetTableId = null;
       const targetElem = this.elements.find((el) => el.id === elementId);
       this.contextMenuTargetPage = targetElem?.pageIndex ?? 0;
       this.selectElement(elementId);
 
+      ctxTableSection?.classList.add('is-hidden');
       ctxElemSection.classList.remove('is-hidden');
       ctxPageSection.classList.add('is-hidden');
       this.positionContextMenu(e.clientX, e.clientY);
@@ -8131,6 +8579,7 @@ class CollaborativePdfEditorController implements ViewController {
   private closeContextMenu(): void {
     const contextMenu = this.container.querySelector<HTMLElement>('[data-ref="collab-context-menu"]');
     contextMenu?.classList.add('is-hidden');
+    this.container.querySelector('[data-ref="ctx-section-table"]')?.classList.add('is-hidden');
     const submenus = this.container.querySelectorAll<HTMLElement>('.collab-context-submenu');
     submenus.forEach((sub) => sub.classList.add('is-hidden'));
   }

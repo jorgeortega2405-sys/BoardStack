@@ -98,22 +98,16 @@ function renderActiveSmartGuides(
     }
   }
 
-  if (isClose(myLeft, margin) || isClose(myRight, margin) || isClose(myCenter, margin)) {
-    const snapX = isClose(myLeft, margin) ? myLeft : (isClose(myRight, margin) ? myRight : myCenter);
-    linesToDraw.push({ x1: snapX, x2: snapX, y1: 0, y2: pageH });
-  }
-  if (isClose(myRight, pageW - margin) || isClose(myLeft, pageW - margin) || isClose(myCenter, pageW - margin)) {
-    const snapX = isClose(myRight, pageW - margin) ? myRight : (isClose(myLeft, pageW - margin) ? myLeft : myCenter);
-    linesToDraw.push({ x1: snapX, x2: snapX, y1: 0, y2: pageH });
-  }
+  const hitsMarginLeft = isClose(myLeft, margin) || isClose(myRight, margin) || isClose(myCenter, margin);
+  const hitsMarginRight = isClose(myRight, pageW - margin) || isClose(myLeft, pageW - margin) || isClose(myCenter, pageW - margin);
+  const hitsMarginTop = isClose(myTop, margin) || isClose(myBottom, margin) || isClose(myMiddle, margin);
+  const hitsMarginBottom = isClose(myBottom, pageH - margin) || isClose(myTop, pageH - margin) || isClose(myMiddle, pageH - margin);
 
-  if (isClose(myTop, margin) || isClose(myBottom, margin) || isClose(myMiddle, margin)) {
-    const snapY = isClose(myTop, margin) ? myTop : (isClose(myBottom, margin) ? myBottom : myMiddle);
-    linesToDraw.push({ x1: 0, x2: pageW, y1: snapY, y2: snapY });
-  }
-  if (isClose(myBottom, pageH - margin) || isClose(myTop, pageH - margin) || isClose(myMiddle, pageH - margin)) {
-    const snapY = isClose(myBottom, pageH - margin) ? myBottom : (isClose(myTop, pageH - margin) ? myTop : myMiddle);
-    linesToDraw.push({ x1: 0, x2: pageW, y1: snapY, y2: snapY });
+  if (hitsMarginLeft || hitsMarginRight || hitsMarginTop || hitsMarginBottom) {
+    linesToDraw.push({ x1: margin, x2: margin, y1: margin, y2: pageH - margin });
+    linesToDraw.push({ x1: pageW - margin, x2: pageW - margin, y1: margin, y2: pageH - margin });
+    linesToDraw.push({ x1: margin, x2: pageW - margin, y1: margin, y2: margin });
+    linesToDraw.push({ x1: margin, x2: pageW - margin, y1: pageH - margin, y2: pageH - margin });
   }
 
   const vCoords = [myLeft, myCenter, myRight];
