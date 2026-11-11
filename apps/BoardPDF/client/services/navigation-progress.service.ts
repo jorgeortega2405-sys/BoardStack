@@ -9,10 +9,9 @@ function resolveWrapper(container?: HTMLElement | null): HTMLElement | null {
     }
     const inner = container.querySelector<HTMLElement>(selector);
     if (inner) return inner;
+    return container;
   }
-  const inDoc = document.querySelector<HTMLElement>(selector);
-  if (inDoc) return inDoc;
-  return document.querySelector<HTMLElement>('.layout-content') || document.body;
+  return document.querySelector<HTMLElement>(selector);
 }
 
 function createProgressBar(): HTMLElement {

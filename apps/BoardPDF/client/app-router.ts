@@ -154,7 +154,9 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
 
   const navId = ++currentNavigation;
   let nextViewElement: HTMLElement | null = null;
-  startNavigationProgress(activeViewElement);
+  if (activeViewElement) {
+    startNavigationProgress(activeViewElement);
+  }
 
   if (options?.updateHistory) {
     if (options.updateHistory.replace) {
