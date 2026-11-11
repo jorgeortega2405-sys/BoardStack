@@ -91,6 +91,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
+      - ./apps/BoardPDF/scripts:/app/scripts:ro
       - ./database/cassandra/init.cql:/app/init.cql:ro
     environment:
       AWS_S3_ENDPOINT: http://s3:80

@@ -82,6 +82,11 @@ header.view-section {
   z-index: 10;
 }
 
+footer.view-section,
+.view-section:last-child {
+  margin-top: auto;
+}
+
 .component-block {
   background-color: var(--bg-surface, #ffffff);
   border: 1px solid var(--border-subtle, #e2e8f0);
@@ -3801,7 +3806,7 @@ body[data-theme="dark"] .view-backdrop--dots {
   justify-content: center;
   margin: 0;
   overflow: visible;
-  padding: 48px 24px 36px;
+  padding: 48px;
   position: relative;
   text-align: center;
   width: 100%;
@@ -3919,7 +3924,7 @@ body[data-theme="dark"] .view-backdrop--dots {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 0;
   width: 100%;
 }
 

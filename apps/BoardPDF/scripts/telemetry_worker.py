@@ -99,8 +99,12 @@ def handle_signal(signum: int, _frame: Any) -> None:
     stop_event.set()
 
 
-signal.signal(signal.SIGINT, handle_signal)
-signal.signal(signal.SIGTERM, handle_signal)
+if threading.current_thread() is threading.main_thread():
+    try:
+        signal.signal(signal.SIGINT, handle_signal)
+        signal.signal(signal.SIGTERM, handle_signal)
+    except (ValueError, AttributeError):
+        pass
 
 
 def parse_timestamp(raw_value: Any) -> datetime:

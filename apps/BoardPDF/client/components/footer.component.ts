@@ -12,9 +12,8 @@ function getFooterHtml(): string {
   const currentLangName = getLanguageName(currentLang);
 
   return `
-    <footer class="home-feature-section" data-ref="footer-section">
-      <div class="site-footer" data-ref="site-footer">
-        <div class="site-footer__grid" data-ref="site-footer-grid">
+    <div class="site-footer" data-ref="site-footer">
+      <div class="site-footer__grid" data-ref="site-footer-grid">
           <div class="footer-col footer-col--brand" data-ref="footer-col-brand">
             <a class="footer-brand" data-ref="footer-brand-logo" href="${getLocalizedPath('home', currentLang)}" aria-label="BoardPDF">
               <svg class="footer-brand__logo" data-ref="footer-brand-svg" viewBox="0 0 210 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,7 +141,7 @@ function getFooterHtml(): string {
           </div>
         </div>
       </div>
-    </footer>
+    </div>
   `;
 }
 
