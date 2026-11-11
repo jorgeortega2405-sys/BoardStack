@@ -3,6 +3,7 @@ import { closeAllModals } from './components/modal.component.js';
 import { findRoute } from './config/routes.config.js';
 import { getLocalizedPath, updateDomSeo } from './config/seo.config.js';
 import { getCurrentLanguage, setLanguage, translateElement } from './services/i18n.service.js';
+import { finishNavigationProgress, startNavigationProgress, transferNavigationProgress } from './services/navigation-progress.service.js';
 import { setLanguageSwitchHandler, setNavigationHandler } from './services/navigation.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { consumeTransferFile } from './services/transfer.service.js';
@@ -147,10 +148,13 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
   } else {
     sidebar.classList.remove('is-hidden');
     showElement(sidebar);
+    const targetInternal = matched ? matched.internalPath : path;
+    updateSidebarActiveState(sidebar, targetInternal);
   }
 
   const navId = ++currentNavigation;
   let nextViewElement: HTMLElement | null = null;
+  startNavigationProgress(activeViewElement);
 
   if (options?.updateHistory) {
     if (options.updateHistory.replace) {
@@ -198,6 +202,8 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
     return;
   }
 
+  transferNavigationProgress(activeViewElement, nextViewElement);
+
   if (activeViewElement) {
     const controller = (activeViewElement as any)?.__controller as ViewController | undefined;
     if (controller && typeof controller.destroy === 'function') {
@@ -215,6 +221,7 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
   activeViewElement = nextViewElement;
   translateElement(nextViewElement);
   layoutContent.appendChild(nextViewElement);
+  finishNavigationProgress(nextViewElement);
 
   const internalPath = matched ? matched.internalPath : path;
   const currentSidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
