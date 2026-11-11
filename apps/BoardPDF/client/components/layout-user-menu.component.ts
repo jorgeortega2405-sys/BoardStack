@@ -33,6 +33,7 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
   const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
   const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
   const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
+  const btnPricing = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-pricing"]');
   const btnLogout = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout"]');
   const btnLogoutAll = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout-all"]');
   const accountSwitcherList = avatarContainer.querySelector<HTMLElement>('[data-ref="account-switcher-list"]');
@@ -228,6 +229,12 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
     e.preventDefault();
     closeMenu();
     navigate('/settings/your-account');
+  });
+
+  btnPricing?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMenu();
+    navigate('/pricing');
   });
 
   btnLogout?.addEventListener('click', async (e) => {

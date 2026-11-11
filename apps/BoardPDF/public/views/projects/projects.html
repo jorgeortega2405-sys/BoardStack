@@ -44,7 +44,7 @@
 </div>
 </div>
 </header>
-<section class="view-section" data-ref="projects-hero-section">
+<section class="view-section projects-hero-section" data-ref="projects-hero-section">
 <div class="component-block" data-ref="projects-hero">
 <div class="view-hero__content projects-hero__header" data-ref="projects-hero-header">
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h36 projects-hero__back-btn is-hidden" data-ref="btn-folder-back" data-i18n-aria="projects.back_to_projects" aria-label=" ">
@@ -53,23 +53,7 @@
 <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
 <p class="view-hero__subtitle projects-hero__subtitle" data-ref="projects-main-subtitle" data-i18n="projects.subtitle"></p>
 </div>
-<div class="categories-bar projects-categories-bar" data-ref="projects-categories-bar"></div>
-</div>
-</section>
-<section class="view-section" data-ref="section-toolbar">
-<div class="projects-toolbar" data-ref="projects-toolbar">
-<div class="component-search projects-search-bar" data-ref="projects-search-bar">
-<div class="component-search__icon" data-ref="projects-search-icon">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-</div>
-<div class="component-search__input-box" data-ref="projects-search-input-box">
-<input class="component-search__input" data-ref="input-project-search" data-i18n-placeholder="projects.search_placeholder" type="text" placeholder=" " autocomplete="off" />
-</div>
-<button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="projects.clear_search" aria-label=" ">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="projects-toolbar__actions" data-ref="projects-toolbar-actions">
+<div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
 <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
 <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-category">
 <span data-ref="label-filter-category" data-i18n="projects.filter_category"></span>
@@ -104,7 +88,7 @@
 <svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
 </button>
 <div class="menu-panel menu-panel--dropdown menu-panel--w-200" data-ref="menu-filter-date">
-<div class="menu-panel__list" >
+<div class="menu-panel__list">
 <button type="button" class="menu-item is-active" data-ref="item-date-recent" data-sort="recent">
 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
 <span class="menu-item__text" data-i18n="projects.sort_recent"></span>
@@ -124,6 +108,21 @@
 </div>
 </div>
 </div>
+</div>
+</div>
+</section>
+<section class="view-section" data-ref="section-toolbar">
+<div class="projects-toolbar" data-ref="projects-toolbar">
+<div class="component-search" data-ref="projects-search-bar">
+<div class="component-search__icon" data-ref="projects-search-icon">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+</div>
+<div class="component-search__input-box" data-ref="projects-search-input-box">
+<input class="component-search__input" data-ref="input-project-search" data-i18n-placeholder="projects.search_placeholder" type="text" placeholder=" " autocomplete="off" />
+</div>
+<button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" data-i18n-aria="projects.clear_search" aria-label=" ">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
 </div>
 </div>
 </section>

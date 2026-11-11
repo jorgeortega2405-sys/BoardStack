@@ -26,9 +26,7 @@ function csrfProtection(req: Request, res: Response, next: NextFunction): void {
 
   if (
     req.path === '/api/subscription/webhook' ||
-    req.originalUrl.startsWith('/api/subscription/webhook') ||
-    req.path === '/api/sso/saml/acs' ||
-    req.originalUrl.startsWith('/api/sso/saml/acs')
+    req.originalUrl.startsWith('/api/subscription/webhook')
   ) {
     return next();
   }

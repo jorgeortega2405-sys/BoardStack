@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 485 565" width="970" height="1130" fill="none">
+<defs>
+<pattern id="qr-dots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#FFFFFF" fill-opacity="0.24"/></pattern>
+<filter id="qr-s2" filterUnits="userSpaceOnUse" x="-80" y="-80" width="645" height="725"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/></filter>
+</defs>
+
+<circle cx="242" cy="282" r="196" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.2"/>
+<rect x="24" y="36" width="84" height="60" fill="url(#qr-dots)"/>
+<rect x="377" y="468" width="84" height="60" fill="url(#qr-dots)"/>
+<g stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="1.4" stroke-linecap="round"><path d="M424 66v12M418 72h12"/><path d="M54 406v12M48 412h12"/></g>
+<circle cx="442" cy="180" r="4" fill="#FFFFFF" fill-opacity="0.85"/>
+<circle cx="46" cy="226" r="3" fill="#FFFFFF" fill-opacity="0.35"/>
+<circle cx="364" cy="48" r="3" fill="#FFFFFF" fill-opacity="0.35"/>
+
+<g transform="rotate(5 242 282)">
+  <rect x="122" y="130" width="240" height="304" rx="18" fill="#FFFFFF" fill-opacity="0.09" stroke="#FFFFFF" stroke-opacity="0.22"/>
+</g>
+
+<g transform="rotate(4 366 106)">
+  <rect x="308" y="80" width="118" height="50" rx="12" fill="#FFFFFF" stroke="#E4E4E7" filter="url(#qr-s2)"/>
+  <rect x="322" y="95" width="20" height="20" rx="4" fill="#111111"/>
+  <rect x="326" y="99" width="5" height="5" rx="1" fill="#FFFFFF"/>
+  <rect x="333" y="99" width="5" height="5" rx="1" fill="#FFFFFF"/>
+  <rect x="326" y="106" width="5" height="5" rx="1" fill="#FFFFFF"/>
+  <rect x="352" y="99" width="58" height="5" rx="2.5" fill="#111111"/>
+  <rect x="352" y="109" width="38" height="3.5" rx="1.75" fill="#9CA3AF"/>
+</g>
+
+<g transform="rotate(-4 108 456)">
+  <rect x="44" y="432" width="128" height="48" rx="12" fill="#FFFFFF" stroke="#E4E4E7" filter="url(#qr-s2)"/>
+  <circle cx="66" cy="456" r="8" fill="#111111"/>
+  <path d="M62.5 456L64.8 458.3L69.5 453.6" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="84" y="451" width="68" height="4.5" rx="2.25" fill="#111111"/>
+  <rect x="84" y="460" width="46" height="3.5" rx="1.75" fill="#9CA3AF"/>
+</g>
+</svg>

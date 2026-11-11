@@ -4,7 +4,6 @@ import { logger } from '../services/logger.service.js';
 import { sendVerificationCodeEmail, sendWelcomeEmail } from '../services/mail.service.js';
 import { permissionService } from '../services/permission.service.js';
 import { purchaseService } from '../services/purchase.service.js';
-import { ssoService } from '../services/sso.service.js';
 import { trackSecurityEvent } from '../services/telemetry.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserLastLogin, verifyAndConsumeBackupCode } from '../services/user.service.js';
@@ -33,7 +32,6 @@ function sanitizeUser(user: any): UserPayload {
     google_email: user.google_email || null,
     has_password: Boolean(user.password_hash || user.has_password),
     id: user.id,
-    is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
     storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
@@ -324,7 +322,6 @@ async function login(req: Request, res: Response): Promise<void> {
     userRow.permissions = permissions;
 
     const user = sanitizeUser(userRow);
-    user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
     const clientIp = getClientIp(req);
     void updateUserLastLogin(user.id, clientIp);
 
@@ -422,7 +419,6 @@ async function loginWith2FA(req: Request, res: Response): Promise<void> {
     userRow.permissions = permissions;
 
     const user = sanitizeUser(userRow);
-    user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
     const clientIp = getClientIp(req);
     void updateUserLastLogin(user.id, clientIp);
 
@@ -481,7 +477,6 @@ async function me(req: Request, res: Response): Promise<void> {
         user.subscription_tier,
         user.subscription_status
       );
-      user.is_sso = await ssoService.isUserSsoManaged(user.id, user.email);
       updateActiveAccountInSession(res, req, {
         ai_tokens_balance: user.ai_tokens_balance,
         avatar_url: user.avatar_url,
@@ -489,7 +484,6 @@ async function me(req: Request, res: Response): Promise<void> {
         google_connected: user.google_connected,
         google_email: user.google_email,
         has_password: user.has_password,
-        is_sso: user.is_sso,
         permissions: user.permissions,
         subscription_status: user.subscription_status,
         subscription_tier: user.subscription_tier,
@@ -498,12 +492,7 @@ async function me(req: Request, res: Response): Promise<void> {
       });
     }
 
-    const sanitizedAccounts = await Promise.all(
-      accounts.map(async (acc) => {
-        const isSso = typeof acc.id === 'number' ? await ssoService.isUserSsoManaged(acc.id, acc.email) : false;
-        return sanitizeUser({ ...acc, is_sso: isSso });
-      })
-    );
+    const sanitizedAccounts = accounts.map(sanitizeUser);
 
     res.status(200).json({
       accounts: sanitizedAccounts,

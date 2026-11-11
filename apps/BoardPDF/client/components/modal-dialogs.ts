@@ -571,7 +571,7 @@ function openShareDownloadModal(options: { downloadLink: string }): ModalInstanc
 
   return {
     backdrop,
-    body: backdrop.querySelector<HTMLElement>('[data-ref="modal-split-bottom"]') || backdrop,
+    body: backdrop.querySelector<HTMLElement>('[data-ref="modal-split-left"]') || backdrop,
     btnCancel: null,
     btnConfirm: bottomCloseBtn,
     cancelBtn: null,

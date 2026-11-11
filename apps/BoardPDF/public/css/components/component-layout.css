@@ -1178,10 +1178,6 @@ html, body {
   color: rgba(255, 255, 255, 0.75) !important;
 }
 
-.home-floating-top--gradient [data-ref="sso-switch-text"] {
-  color: #ffffff !important;
-}
-
 .table-user-avatar {
   align-items: center;
   background-color: var(--bg-surface-raised, #f3f4f6);

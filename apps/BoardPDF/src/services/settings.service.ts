@@ -4,7 +4,6 @@ import { validateEmail, validatePassword, validateUsername } from '../utils/vali
 import { hashPassword, verifyPassword } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { sendEmailChangeCodeEmail } from './mail.service.js';
-import { ssoService } from './sso.service.js';
 import { deleteUserPermanently as deleteUserPermanentlyInDb, findUserById, getUserPreferences as getUserPrefsFromDb, updateUserAvatar as updateUserAvatarInDb, updateUserEmail as updateUserEmailInDb, updateUserPassword as updateUserPasswordInDb, updateUserPreferences as updateUserPrefsInDb, updateUsername as updateUsernameInDb } from './user.service.js';
 import { consumeEmailChangeAuthorization, consumePasswordChangeAuth, generateSixDigitCode, isEmailChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, verifyEmailChangeCode } from './verification.service.js';
 import { DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -244,16 +243,6 @@ async function requestEmailChangeCode(
     return { error: 'Usuario no encontrado.', status: 404, success: false };
   }
 
-  const ssoBlocked = await ssoService.isUserSsoManaged(userId, user.email);
-  if (ssoBlocked) {
-    logger.security.warn('Intento bloqueado de cambio de correo para cuenta gestionada por SSO', { email: user.email, userId });
-    return {
-      error: 'Tu correo electrónico está administrado por tu organización mediante SSO y no puede ser modificado.',
-      status: 403,
-      success: false,
-    };
-  }
-
   const alreadyAuthorized = await isEmailChangeAuthorized(userId);
   if (alreadyAuthorized) {
     return { alreadyAuthorized: true, success: true };
@@ -299,16 +288,6 @@ async function updateEmail(
   const user = await findUserById(userId);
   if (!user) {
     return { error: 'Usuario no encontrado.', status: 404, success: false };
-  }
-
-  const ssoBlocked = await ssoService.isUserSsoManaged(userId, user.email);
-  if (ssoBlocked) {
-    logger.security.warn('Intento bloqueado de actualización de correo para cuenta gestionada por SSO', { email: user.email, userId });
-    return {
-      error: 'Tu correo electrónico está administrado por tu organización mediante SSO y no puede ser modificado.',
-      status: 403,
-      success: false,
-    };
   }
 
   const authValidation = await consumeEmailChangeAuthorization(userId);

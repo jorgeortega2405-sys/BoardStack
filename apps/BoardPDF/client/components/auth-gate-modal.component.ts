@@ -27,79 +27,65 @@ function getFeatureConfig(featureKey: AuthGateFeature = 'generic') {
   switch (featureKey) {
     case 'ai_tools':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.ai_tools_desc',
         feat1Key: 'auth_gate.benefit_ai',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'auto_awesome',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.ai_tools_title',
       };
     case 'ai_designer':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.ai_designer_desc',
         feat1Key: 'auth_gate.benefit_ai',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'auto_awesome',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.ai_designer_title',
       };
     case 'ai_bg_remove':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.ai_bg_remove_desc',
         feat1Key: 'auth_gate.benefit_ai',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'auto_awesome',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.ai_bg_remove_title',
       };
     case 'labels':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.labels_desc',
         feat1Key: 'auth_gate.benefit_labels',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'label',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.labels_title',
       };
     case 'cloud_uploads':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.cloud_uploads_desc',
         feat1Key: 'auth_gate.benefit_storage',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'cloud_upload',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.cloud_uploads_title',
       };
     case 'collaborative_share':
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.collaborative_share_desc',
         feat1Key: 'auth_gate.benefit_collab',
         feat2Key: 'auth_gate.benefit_cloud',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'share',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.collaborative_share_title',
       };
     case 'generic':
     default:
       return {
-        badgeTextKey: 'auth_gate.badge_account_required',
         descKey: 'auth_gate.generic_desc',
         feat1Key: 'auth_gate.benefit_cloud',
         feat2Key: 'auth_gate.benefit_ai',
         feat3Key: 'auth_gate.benefit_free',
-        icon: 'lock',
         pillTextKey: 'auth_gate.pill_free_account',
         titleKey: 'auth_gate.generic_title',
       };
@@ -122,7 +108,6 @@ export function showAuthGateModal(options: AuthGateModalOptions = {}): ModalInst
   const config = getFeatureConfig(featureKey);
   const title = t(customTitleKey || config.titleKey);
   const desc = t(customDescKey || config.descKey);
-  const badgeText = t(config.badgeTextKey);
   const pillText = t(config.pillTextKey);
   const feat1 = t(config.feat1Key);
   const feat2 = t(config.feat2Key);
@@ -137,24 +122,11 @@ export function showAuthGateModal(options: AuthGateModalOptions = {}): ModalInst
       <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="common.close" aria-label="${t('common.close')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
-      <div class="modal-card modal-card--split modal-card--auth-gate" data-ref="modal-card-auth-gate">
+      <div class="modal-card modal-card--split" data-ref="modal-card-auth-gate">
         <div class="modal-card__drag-zone" data-ref="modal-auth-gate-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="modal-split__top modal-split__top--auth-gate" data-ref="modal-split-top">
-          <div class="modal-split__visual-stage" data-ref="auth-gate-visual-stage">
-            <div class="modal-split__icon-badge" data-ref="auth-gate-icon-badge">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${config.icon}"></use></svg>
-            </div>
-            <div class="modal-split__top-status" data-ref="status-badge">
-              <span class="modal-split__badge-check">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-              </span>
-              <span class="modal-split__badge-text" data-ref="badge-text">${badgeText}</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-split__bottom" data-ref="modal-split-bottom">
+        <div class="modal-split__left" data-ref="modal-split-left">
           <div class="modal-split__content" data-ref="auth-gate-content">
             <div class="modal-split__header" data-ref="auth-gate-header">
               <div class="component-badge modal-split__pill" data-ref="auth-gate-pill">
@@ -191,6 +163,11 @@ export function showAuthGateModal(options: AuthGateModalOptions = {}): ModalInst
             <p class="modal-split__footnote" data-ref="auth-gate-footnote">
               ${t('auth_gate.footnote_free')}
             </p>
+          </div>
+        </div>
+        <div class="modal-split__right" data-ref="modal-split-right">
+          <div class="modal-split__visual-stage" data-ref="auth-gate-visual-stage">
+            <img class="modal-split__illustration" data-ref="auth-gate-banner-img" src="/images/modals/auth-gate-banner.svg" alt="BoardPDF" />
           </div>
         </div>
       </div>

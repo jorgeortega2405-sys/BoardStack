@@ -34,16 +34,8 @@
 </div>
 <div class="checkout-benefits" data-ref="checkout-benefits-list">
 <div class="checkout-benefit-item" data-ref="benefit-item-1">
-<span class="checkout-benefit-item__icon" ><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
-<span data-ref="benefit-text-1">Cancela cuando quieras. Sin compromisos a largo plazo.</span>
-</div>
-<div class="checkout-benefit-item" data-ref="benefit-item-2">
-<span class="checkout-benefit-item__icon" ><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
-<span data-ref="benefit-text-2">Acceso inmediato e ilimitado a todas las herramientas avanzadas.</span>
-</div>
-<div class="checkout-benefit-item" data-ref="benefit-item-3">
-<span class="checkout-benefit-item__icon" ><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
-<span data-ref="benefit-text-3">Facturación automática para que nunca pierdas el acceso a tus archivos.</span>
+<span class="checkout-benefit-item__icon"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>
+<span data-ref="benefit-text-1" data-i18n="checkout.benefit_recurring"></span>
 </div>
 </div>
 <div class="checkout-options-group" data-ref="checkout-options-container">
@@ -121,46 +113,50 @@
 </div>
 </div>
 </div>
-<aside class="checkout-sidebar" >
-<div class="checkout-summary-card" >
-<div class="checkout-summary-card__header" >
+<aside class="checkout-sidebar">
+<div class="checkout-summary-card">
+<div class="checkout-summary-card__header">
 <div class="checkout-summary-card__icon" data-ref="summary-plan-icon">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
 </div>
 <div>
-<h3 class="checkout-summary-card__title" data-ref="summary-plan-title">BoardPDF Pro</h3>
-<p class="checkout-summary-card__type" data-ref="summary-plan-type">Facturación recurrente</p>
+<h3 class="checkout-summary-card__title" data-ref="summary-plan-title" data-i18n="checkout.summary_info_title"></h3>
 </div>
 </div>
 <ul class="checkout-summary-items">
 <li class="checkout-summary-item">
-<span class="checkout-summary-item__bullet" ></span>
-<span data-ref="summary-feat-1">Acceso ilimitado a todas las herramientas</span>
+<span class="checkout-summary-item__bullet"></span>
+<span data-ref="summary-feat-1"></span>
 </li>
 <li class="checkout-summary-item">
-<span class="checkout-summary-item__bullet" ></span>
-<span data-ref="summary-feat-2">Almacenamiento y procesamiento prioritario</span>
+<span class="checkout-summary-item__bullet"></span>
+<span data-ref="summary-feat-2"></span>
 </li>
 <li class="checkout-summary-item">
-<span class="checkout-summary-item__bullet" ></span>
-<span data-ref="summary-feat-3">Sin marcas de agua ni límites diarios</span>
+<span class="checkout-summary-item__bullet"></span>
+<span data-ref="summary-feat-3" data-i18n="checkout.summary_seats_single"></span>
 </li>
 </ul>
 </div>
-<div class="checkout-summary-card" >
-<div class="checkout-summary-price-row" >
-<span class="checkout-summary-price-row__label" >A pagar hoy</span>
+<div class="checkout-summary-card">
+<div class="checkout-summary-price-row">
+<span class="checkout-summary-price-row__label" data-i18n="checkout.pay_today"></span>
 <span class="checkout-summary-price-row__val" data-ref="summary-price-val">USD $9.99</span>
 </div>
-<p class="checkout-summary-notice" data-ref="summary-notice-text"> Próximo cobro programado automáticamente al concluir el ciclo. </p>
 <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-checkout-next">
-<span>Siguiente</span>
+<span data-i18n="checkout.btn_next"></span>
 </button>
 <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full is-hidden" data-ref="btn-submit-payment" disabled>
 <span data-ref="btn-submit-text">Pagar USD $9.99</span>
 </button>
-<div class="banner banner--danger" data-ref="checkout-error-banner" class="is-hidden component-block--w-full"></div>
-<p class="checkout-terms-note" > Al continuar, aceptas las Condiciones de uso y la Política de privacidad de BoardPDF. </p>
+<div class="banner banner--danger is-hidden component-block--w-full" data-ref="checkout-error-banner"></div>
+<p class="checkout-terms-note" data-ref="checkout-terms-note">
+<span data-ref="terms-prefix" data-i18n="checkout.terms_prefix"></span>
+<a class="checkout-terms-link" data-ref="link-checkout-terms" data-i18n="checkout.terms_link" href="/help/terms" target="_blank" rel="noopener noreferrer"></a>
+<span data-ref="terms-middle" data-i18n="checkout.terms_middle"></span>
+<a class="checkout-terms-link" data-ref="link-checkout-privacy" data-i18n="checkout.privacy_link" href="/help/privacy" target="_blank" rel="noopener noreferrer"></a>
+<span data-ref="terms-suffix"></span>
+</p>
 </div>
 </aside>
 </div>

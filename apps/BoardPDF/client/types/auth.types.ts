@@ -8,7 +8,6 @@ interface User {
   google_email?: string | null;
   has_password?: boolean;
   id: number | string;
-  is_sso?: boolean;
   language?: string;
   permissions?: string[];
   storage_limit_bytes?: number;

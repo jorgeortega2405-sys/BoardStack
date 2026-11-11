@@ -67,13 +67,11 @@ class ProjectsController implements ViewController {
   private files: UploadFileItem[] = [];
   private filterCategory: string = 'all';
   private filterLabelId: number | null = null;
-  private filterType: 'all' | 'docs' | 'folders' | 'images' | 'pdfs' | 'uploads' = 'all';
   private folders: ProjectFolder[] = [];
   private maxCustomLabels: number = 3;
   private searchQuery: string = '';
   private sortAscending: boolean = false;
   private sortOption: 'az' | 'oldest' | 'recent' | 'za' = 'recent';
-  private uploadsActiveTab: 'all' | 'images' | 'pdfs' = 'all';
   private uploadsFolder: ProjectFolder | null = null;
   private userLabels: DocumentLabel[] = [];
 
@@ -330,12 +328,6 @@ class ProjectsController implements ViewController {
   private getFilteredAndSortedUploads(): UploadFileItem[] {
     let list = [...this.files];
 
-    if (this.filterType === 'images' || this.uploadsActiveTab === 'images') {
-      list = list.filter((f) => f.type === 'image' || f.mimeType?.startsWith('image/'));
-    } else if (this.filterType === 'pdfs' || this.uploadsActiveTab === 'pdfs') {
-      list = list.filter((f) => f.type === 'pdf' || f.mimeType?.includes('pdf'));
-    }
-
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
       list = list.filter((f) => (f.name || '').toLowerCase().includes(q));
@@ -378,9 +370,6 @@ class ProjectsController implements ViewController {
       }
     }
 
-    const btnFilterType = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-type"]');
-    btnFilterType?.classList.toggle('is-active', this.filterType !== 'all');
-
     const btnFilterCat = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-category"]');
     btnFilterCat?.classList.toggle('is-active', this.filterCategory !== 'all');
 
@@ -407,7 +396,6 @@ class ProjectsController implements ViewController {
       if (dropdownCategory) dropdownCategory.classList.remove('is-hidden');
       if (dropdownLabel) dropdownLabel.classList.toggle('is-hidden', this.userLabels.length === 0);
 
-      this.renderTypeFilterMenu('root');
       this.renderRootFoldersGrid();
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'project') {
@@ -425,7 +413,6 @@ class ProjectsController implements ViewController {
       if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
       if (dropdownLabel) dropdownLabel.classList.toggle('is-hidden', this.userLabels.length === 0);
 
-      this.renderTypeFilterMenu('project');
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
       if (mainTitle) mainTitle.textContent = t('projects.uploads_title');
@@ -441,7 +428,6 @@ class ProjectsController implements ViewController {
       if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
       if (dropdownLabel) dropdownLabel.classList.add('is-hidden');
 
-      this.renderTypeFilterMenu('uploads');
       this.renderUploadSubfoldersGrid();
       this.renderUploadsGrid();
     } else if (this.currentFolder.folder_type === 'upload_folder') {
@@ -459,62 +445,11 @@ class ProjectsController implements ViewController {
       if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
       if (dropdownLabel) dropdownLabel.classList.add('is-hidden');
 
-      this.renderTypeFilterMenu('uploads');
       this.renderUploadsGrid();
     }
 
     this.renderCategoryFilterItems();
     this.renderLabelFilterItems();
-  }
-
-  private renderTypeFilterMenu(context: 'root' | 'project' | 'uploads'): void {
-    const bar = this.container.querySelector<HTMLElement>('[data-ref="projects-categories-bar"]');
-    if (!bar) return;
-
-    if (context === 'uploads') {
-      bar.innerHTML = `
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
-          ${t('projects.tab_all')}
-        </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'images' ? 'is-active' : ''}" data-ref="pill-type-images" data-type="images">
-          ${t('projects.tab_images')}
-        </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'pdfs' ? 'is-active' : ''}" data-ref="pill-type-pdfs" data-type="pdfs">
-          ${t('projects.tab_pdfs')}
-        </button>
-      `;
-    } else if (context === 'project') {
-      bar.innerHTML = `
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
-          ${t('projects.tab_all')}
-        </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="pill-type-docs" data-type="docs">
-          ${t('projects.tab_docs')}
-        </button>
-      `;
-    } else {
-      const uploadsTabHtml = currentUser
-        ? `
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="pill-type-uploads" data-type="uploads">
-          ${t('projects.tab_uploads')}
-        </button>
-      `
-        : '';
-      bar.innerHTML = `
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
-          ${t('projects.tab_all')}
-        </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="pill-type-docs" data-type="docs">
-          ${t('projects.tab_docs')}
-        </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'folders' ? 'is-active' : ''}" data-ref="pill-type-folders" data-type="folders">
-          ${t('projects.tab_folders')}
-        </button>
-        ${uploadsTabHtml}
-      `;
-    }
-
-    renderIcons(bar);
   }
 
   private renderCategoryFilterItems(): void {
@@ -595,18 +530,6 @@ class ProjectsController implements ViewController {
     const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-documents"]');
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-documents"]');
     if (!grid || !empty) return;
-
-    if (this.filterType === 'folders' || this.filterType === 'uploads') {
-      grid.innerHTML = '';
-      const filteredFolders = this.getFilteredAndSortedFolders();
-      const hasFolders = (this.uploadsFolder ? 1 : 0) + filteredFolders.length > 0;
-      if (!hasFolders) {
-        empty.classList.remove('is-hidden');
-      } else {
-        empty.classList.add('is-hidden');
-      }
-      return;
-    }
 
     const filteredDocs = this.getFilteredAndSortedDocs();
     const filteredFolders = this.getFilteredAndSortedFolders();
@@ -724,15 +647,7 @@ class ProjectsController implements ViewController {
     const empty = this.container.querySelector<HTMLElement>('[data-ref="empty-folders"]');
     if (!grid) return;
 
-    if (this.filterType === 'docs') {
-      grid.innerHTML = '';
-      return;
-    }
-
-    let filteredFolders = this.getFilteredAndSortedFolders();
-    if (this.filterType === 'uploads') {
-      filteredFolders = [];
-    }
+    const filteredFolders = this.getFilteredAndSortedFolders();
     const totalCount = (this.uploadsFolder ? 1 : 0) + filteredFolders.length;
 
     if (counter) {
@@ -1081,26 +996,6 @@ class ProjectsController implements ViewController {
         clearBtn.classList.add('is-hidden');
         this.renderView();
         searchInput.focus();
-      }, { signal: this.abortController?.signal });
-    }
-
-    const categoriesBar = this.container.querySelector<HTMLElement>('[data-ref="projects-categories-bar"]');
-    if (categoriesBar) {
-      categoriesBar.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-type]');
-        if (!btn) return;
-        const type = (btn.getAttribute('data-type') || 'all') as any;
-        this.filterType = type;
-        if (type === 'images' || type === 'pdfs') {
-          this.uploadsActiveTab = type;
-        } else {
-          this.uploadsActiveTab = 'all';
-        }
-        if (type === 'uploads' && this.uploadsFolder && !this.currentFolderId) {
-          navigate(`/projects/${this.uploadsFolder.id}`);
-          return;
-        }
-        this.renderView();
       }, { signal: this.abortController?.signal });
     }
 

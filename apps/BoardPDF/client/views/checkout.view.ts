@@ -1,5 +1,5 @@
 import { confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, currentUser, updateUserSubscriptionTier } from '../services/api.service.js';
-import { t } from '../services/i18n.service.js';
+import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.js';
@@ -119,7 +119,10 @@ class CheckoutController implements ViewController {
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-active-title"]');
     const descEl = this.container.querySelector<HTMLElement>('[data-ref="checkout-active-desc"]');
     const summaryPriceRow = this.container.querySelector<HTMLElement>('.checkout-summary-price-row');
-    const summaryNotice = this.container.querySelector<HTMLElement>('[data-ref="summary-notice-text"]');
+    const summaryTermsNote = this.container.querySelector<HTMLElement>('[data-ref="checkout-terms-note"]');
+    const feat1El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-1"]');
+    const feat2El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-2"]');
+    const planIconEl = this.container.querySelector<HTMLElement>('[data-ref="summary-plan-icon"]');
 
     if (step1El) step1El.classList.add('is-hidden');
     if (step2El) step2El.classList.add('is-hidden');
@@ -130,8 +133,25 @@ class CheckoutController implements ViewController {
       activeBlock.classList.remove('is-hidden');
     }
 
-    const planName = targetTier === 'business' ? 'BoardPDF Negocios' : 'BoardPDF Pro';
+    const planName = targetTier === 'business'
+      ? t('checkout.summary_plan_business')
+      : t('checkout.summary_plan_pro');
     const currentName = getTierDisplayName(userTier);
+
+    if (planIconEl) {
+      const iconName = targetTier === 'business' ? 'business_center' : 'rocket_launch';
+      planIconEl.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>`;
+    }
+
+    if (feat1El) {
+      feat1El.textContent = planName;
+    }
+
+    if (feat2El) {
+      feat2El.textContent = isExactSame
+        ? t('checkout.already_active_status')
+        : t('ui.plan_superior_activo_en_tu_cuenta').replace('${currentName}', currentName);
+    }
 
     if (titleEl) {
       titleEl.textContent = isExactSame
@@ -149,10 +169,8 @@ class CheckoutController implements ViewController {
       summaryPriceRow.classList.add('is-hidden');
     }
 
-    if (summaryNotice) {
-      summaryNotice.textContent = isExactSame
-        ? t('ui.plan_actualmente_activo_en_tu_cuenta')
-        : t('ui.plan_superior_activo_en_tu_cuenta');
+    if (summaryTermsNote) {
+      summaryTermsNote.classList.add('is-hidden');
     }
 
     const signal = this.abortController?.signal;
@@ -343,12 +361,7 @@ class CheckoutController implements ViewController {
 
   private updatePlanView(): void {
     const isBusiness = this.currentPlan === 'business';
-    const planTitleEl = this.container.querySelector<HTMLElement>('[data-ref="summary-plan-title"]');
     const planIconEl = this.container.querySelector<HTMLElement>('[data-ref="summary-plan-icon"]');
-
-    if (planTitleEl) {
-      planTitleEl.textContent = isBusiness ? 'BoardPDF Negocios' : 'BoardPDF Pro';
-    }
 
     if (planIconEl) {
       const iconName = isBusiness ? 'business_center' : 'rocket_launch';
@@ -361,20 +374,39 @@ class CheckoutController implements ViewController {
     this.updateSummary();
   }
 
+  private getPlanDisplayName(): string {
+    return this.currentPlan === 'business'
+      ? t('checkout.summary_plan_business')
+      : t('checkout.summary_plan_pro');
+  }
+
+  private formatBillingDate(monthsToAdd: number): string {
+    const date = new Date();
+    const targetMonth = date.getMonth() + monthsToAdd;
+    const day = date.getDate();
+    date.setDate(1);
+    date.setMonth(targetMonth);
+    const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    date.setDate(Math.min(day, lastDayOfMonth));
+    const lang = getCurrentLanguage();
+    const locale = lang === 'es' ? 'es-ES' : lang;
+    return new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+      .format(date)
+      .replace(/\./g, '');
+  }
+
   private updateBenefits(): void {
     const isRecurring = this.currentMode === 'recurring';
     const text1 = this.container.querySelector<HTMLElement>('[data-ref="benefit-text-1"]');
-    const text2 = this.container.querySelector<HTMLElement>('[data-ref="benefit-text-2"]');
-    const text3 = this.container.querySelector<HTMLElement>('[data-ref="benefit-text-3"]');
 
-    if (isRecurring) {
-      if (text1) text1.textContent = 'Cancela cuando quieras. Sin compromisos a largo plazo.';
-      if (text2) text2.textContent = t('ui.acceso_inmediato_e_ilimitado_a_todas_las');
-      if (text3) text3.textContent = t('ui.facturacion_automatica_para_que_nunca_pi');
-    } else {
-      if (text1) text1.textContent = 'Sin pagos recurrentes. Renueva únicamente cuando tú lo decidas.';
-      if (text2) text2.textContent = t('ui.sin_cargos_automaticos_posteriores_en_tu');
-      if (text3) text3.textContent = t('ui.acceso_completo_garantizado_durante_todo');
+    if (text1) {
+      text1.textContent = isRecurring
+        ? t('checkout.benefit_recurring')
+        : t('checkout.benefit_one_time');
     }
   }
 
@@ -446,32 +478,51 @@ class CheckoutController implements ViewController {
       }
     }
 
-    const typeEl = this.container.querySelector<HTMLElement>('[data-ref="summary-plan-type"]');
-    if (typeEl) {
-      typeEl.textContent = isRecurring ? 'Facturación recurrente' : 'Facturación prepaga (Pago único)';
+    const planName = this.getPlanDisplayName();
+    const formattedPrice = `USD $${amount.toFixed(2)}`;
+
+    const feat1El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-1"]');
+    if (feat1El) {
+      feat1El.textContent = planName;
+    }
+
+    const feat2El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-2"]');
+    if (feat2El) {
+      if (isRecurring) {
+        const isYearly = this.recurringCycle === 'yearly';
+        const nextDate = this.formatBillingDate(isYearly ? 12 : 1);
+        feat2El.textContent = isYearly
+          ? t('checkout.summary_billing_yearly', { date: nextDate, price: formattedPrice })
+          : t('checkout.summary_billing_monthly', { date: nextDate, price: formattedPrice });
+      } else {
+        const isTwelveMonths = this.oneTimeDuration === '12_months';
+        const endDate = this.formatBillingDate(isTwelveMonths ? 12 : 1);
+        feat2El.textContent = isTwelveMonths
+          ? t('checkout.summary_billing_one_time_12m', { date: endDate, price: formattedPrice })
+          : t('checkout.summary_billing_one_time_1m', { date: endDate, price: formattedPrice });
+      }
+    }
+
+    const feat3El = this.container.querySelector<HTMLElement>('[data-ref="summary-feat-3"]');
+    if (feat3El) {
+      feat3El.textContent = t('checkout.summary_seats_single');
     }
 
     const priceValEl = this.container.querySelector<HTMLElement>('[data-ref="summary-price-val"]');
     if (priceValEl) {
-      priceValEl.textContent = `USD $${amount.toFixed(2)}`;
+      priceValEl.textContent = formattedPrice;
     }
 
-    const noticeEl = this.container.querySelector<HTMLElement>('[data-ref="summary-notice-text"]');
-    if (noticeEl) {
-      if (isRecurring) {
-        noticeEl.textContent = this.recurringCycle === 'yearly'
-          ? 'Renovación automática cada año. Cancela cuando quieras desde tu configuración.'
-          : 'Renovación automática cada mes. Cancela cuando quieras desde tu configuración.';
-      } else {
-        noticeEl.textContent = this.oneTimeDuration === '12_months'
-          ? 'Acceso completo durante 1 año. No se aplicará ninguna renovación automática.'
-          : 'Acceso completo durante 1 mes. No se aplicará ninguna renovación automática.';
-      }
+    const termsSuffixEl = this.container.querySelector<HTMLElement>('[data-ref="terms-suffix"]');
+    if (termsSuffixEl) {
+      termsSuffixEl.textContent = isRecurring
+        ? t('checkout.terms_suffix_recurring', { plan: planName })
+        : t('checkout.terms_suffix_one_time', { plan: planName });
     }
 
     const btnSubmitText = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-text"]');
     if (btnSubmitText && !this.isSubmitting) {
-      btnSubmitText.textContent = `Pagar USD $${amount.toFixed(2)}`;
+      btnSubmitText.textContent = `Pagar ${formattedPrice}`;
     }
   }
 

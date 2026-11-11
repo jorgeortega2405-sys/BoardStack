@@ -11,7 +11,6 @@ function sanitizeUser(user: any): UserPayload {
     created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
     email: user.email,
     id: user.id,
-    is_sso: user.is_sso !== undefined ? Boolean(user.is_sso) : undefined,
     subscription_tier: tier,
     two_factor_enabled: Boolean(user.two_factor_enabled),
     username: user.username,

@@ -32,8 +32,6 @@ interface PlanBenefitsDefinition {
   hasAdvancedAi: boolean;
   hasBatchProcessing: boolean;
   hasOrganization: boolean;
-  hasSaml: boolean;
-  hasSso: boolean;
   id: SubscriptionTierKey;
   isPopular?: boolean;
   maxWorkflows: number;
@@ -279,8 +277,6 @@ const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinition> = 
     hasAdvancedAi: true,
     hasBatchProcessing: true,
     hasOrganization: true,
-    hasSaml: false,
-    hasSso: false,
     id: 'business',
     maxWorkflows: 200,
     name: 'BoardPDF Negocios',
@@ -320,8 +316,6 @@ const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinition> = 
     hasAdvancedAi: false,
     hasBatchProcessing: false,
     hasOrganization: false,
-    hasSaml: false,
-    hasSso: false,
     id: 'free',
     maxWorkflows: 5,
     name: 'BoardPDF Free',
@@ -362,8 +356,6 @@ const PLAN_TIER_BENEFITS: Record<SubscriptionTierKey, PlanBenefitsDefinition> = 
     hasAdvancedAi: true,
     hasBatchProcessing: true,
     hasOrganization: false,
-    hasSaml: false,
-    hasSso: false,
     id: 'pro',
     isPopular: true,
     maxWorkflows: 50,

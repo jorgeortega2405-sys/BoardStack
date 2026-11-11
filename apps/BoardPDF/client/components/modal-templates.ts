@@ -1,4 +1,3 @@
-import { MODAL_2FA_SHIELD_SVG } from '../graphics/modal-illustrations.graphics.js';
 import { t } from '../services/i18n.service.js';
 import { DocumentLabel, LabelColorKey } from '../types/common.types.js';
 
@@ -288,18 +287,7 @@ function renderShareDownloadModalContent(shareUrl: string): string {
         <div class="modal-card__drag-zone" data-ref="modal-share-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="modal-split__top" data-ref="modal-split-top">
-          <div class="modal-split__visual-stage" data-ref="share-visual-stage">
-            <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
-              <div class="modal-split__qr-canvas" data-ref="share-qr-container"></div>
-            </div>
-            <div class="modal-split__top-hint" data-ref="qr-hint">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
-              <span data-i18n="download_ready.share_qr_hint">${t('download_ready.share_qr_hint')}</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-split__bottom" data-ref="modal-split-bottom">
+        <div class="modal-split__left" data-ref="modal-split-left">
           <div class="modal-split__content" data-ref="share-content">
             <div class="modal-split__header" data-ref="share-header">
               <h2 class="modal-split__title" data-ref="share-title" data-i18n="download_ready.share_title">${t('download_ready.share_title')}</h2>
@@ -315,6 +303,20 @@ function renderShareDownloadModalContent(shareUrl: string): string {
           </div>
           <div class="modal-split__actions" data-ref="share-actions">
             <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-close-share-modal" data-i18n="common.close">${t('common.close')}</button>
+          </div>
+        </div>
+        <div class="modal-split__right modal-split__right--qr" data-ref="modal-split-right">
+          <div class="modal-split__visual-stage modal-split__visual-stage--qr" data-ref="share-visual-stage">
+            <img class="modal-split__qr-backdrop" data-ref="share-qr-backdrop" src="/images/modals/qr-stage-backdrop.svg" alt="" aria-hidden="true" />
+            <div class="modal-split__qr-card" data-ref="qr-card">
+              <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
+                <div class="modal-split__qr-canvas" data-ref="share-qr-container"></div>
+              </div>
+              <div class="modal-split__visual-hint" data-ref="qr-hint">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
+                <span data-i18n="download_ready.share_qr_hint">${t('download_ready.share_qr_hint')}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -333,31 +335,7 @@ function renderTwoFactorModalContent(): string {
           <div class="modal-card__drag-handle"></div>
         </div>
 
-        <div class="modal-split__top" data-ref="modal-split-top">
-          <div class="modal-split__visual-stage" data-ref="visual-stage-1">
-            <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
-              <div class="modal-split__qr-canvas" data-ref="qr-container"></div>
-            </div>
-            <div class="modal-split__top-hint" data-ref="qr-hint">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
-              <span data-i18n="settings.security.two_factor_qr_hint">${t('settings.security.two_factor_qr_hint')}</span>
-            </div>
-          </div>
-
-          <div class="modal-split__visual-stage is-hidden" data-ref="visual-stage-2">
-            <div class="modal-split__svg-wrapper" data-ref="svg-wrapper">
-              ${MODAL_2FA_SHIELD_SVG}
-            </div>
-            <div class="modal-split__top-status" data-ref="status-badge">
-              <span class="modal-split__badge-check">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
-              </span>
-              <span class="modal-split__badge-text" data-i18n="settings.security.two_factor_active_badge">${t('settings.security.two_factor_active_badge')}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-split__bottom" data-ref="modal-split-bottom">
+        <div class="modal-split__left" data-ref="modal-split-left">
           <div class="modal-split__stage" data-ref="stage-1-container">
             <div class="modal-split__content" data-ref="stage-1-content">
               <div class="modal-split__header" data-ref="stage-1-header">
@@ -383,12 +361,11 @@ function renderTwoFactorModalContent(): string {
                   </button>
                 </div>
               </div>
-
-              <div class="banner banner--danger is-hidden" data-ref="modal-2fa-error"></div>
             </div>
 
             <div class="modal-split__actions" data-ref="stage-1-actions">
               <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-continue-2fa" data-i18n="common.continue">${t('common.continue')}</button>
+              <div class="banner banner--danger is-hidden" data-ref="modal-2fa-error"></div>
             </div>
           </div>
 
@@ -409,6 +386,25 @@ function renderTwoFactorModalContent(): string {
               </button>
               <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-finish-2fa" data-i18n="settings.security.two_factor_finish">${t('settings.security.two_factor_finish')}</button>
             </div>
+          </div>
+        </div>
+
+        <div class="modal-split__right" data-ref="modal-split-right">
+          <div class="modal-split__visual-stage modal-split__visual-stage--qr" data-ref="visual-stage-1">
+            <img class="modal-split__qr-backdrop" data-ref="2fa-qr-backdrop" src="/images/modals/qr-stage-backdrop.svg" alt="" aria-hidden="true" />
+            <div class="modal-split__qr-card" data-ref="qr-card">
+              <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
+                <div class="modal-split__qr-canvas" data-ref="qr-container"></div>
+              </div>
+              <div class="modal-split__visual-hint" data-ref="qr-hint">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code_scanner"></use></svg>
+                <span data-i18n="settings.security.two_factor_qr_hint">${t('settings.security.two_factor_qr_hint')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-split__visual-stage is-hidden" data-ref="visual-stage-2">
+            <img class="modal-split__illustration" data-ref="two-factor-shield-img" src="/images/modals/two-factor-backup-banner.svg" alt="BoardPDF 2FA" />
           </div>
         </div>
       </div>

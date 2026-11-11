@@ -349,10 +349,6 @@ class SettingsAccountController implements ViewController {
 
     btnSaveEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (currentUser?.is_sso) {
-        this.showBanner('item-email', 'email-error', t('settings.your_account.sso_email_blocked_toast') || t('ui.tu_correo_electronico_esta_gestionado_po'));
-        return;
-      }
       const newEmail = inputEmail?.value?.trim() || '';
 
       const validation = validateEmail(newEmail);
@@ -390,10 +386,6 @@ class SettingsAccountController implements ViewController {
 
     btnEditEmail?.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (currentUser?.is_sso) {
-        showToast(t('settings.your_account.sso_email_blocked_toast') || t('ui.tu_correo_electronico_esta_gestionado_po'), 'warning');
-        return;
-      }
       this.hideBanner('email-error');
 
       await withButtonLoading(btnEditEmail, t('common.loading') || 'Cargando...', async () => {
@@ -624,22 +616,11 @@ class SettingsAccountController implements ViewController {
     const displayEmail = this.container.querySelector<HTMLElement>('[data-ref="display-email"]');
     const avatarPreviewBox = this.container.querySelector<HTMLElement>('[data-ref="avatar-preview-box"]');
     const btnEditEmail = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-edit-email"]');
-    const badgeSsoEmail = this.container.querySelector<HTMLElement>('[data-ref="badge-sso-email"]');
 
     if (currentUser) {
       if (displayUsername) displayUsername.textContent = currentUser.username;
       if (displayEmail) displayEmail.textContent = currentUser.email;
-
-      if (currentUser.is_sso) {
-        if (btnEditEmail) btnEditEmail.classList.add('is-hidden');
-        if (badgeSsoEmail) {
-          badgeSsoEmail.classList.remove('is-hidden');
-          renderIcons(badgeSsoEmail);
-        }
-      } else {
-        if (btnEditEmail) btnEditEmail.classList.remove('is-hidden');
-        if (badgeSsoEmail) badgeSsoEmail.classList.add('is-hidden');
-      }
+      if (btnEditEmail) btnEditEmail.classList.remove('is-hidden');
 
       const avatarUrl = currentUser.avatar_url || this.getDefaultAvatarUrl(currentUser.username);
       this.refreshAvatarsInDom(avatarUrl);
@@ -649,7 +630,6 @@ class SettingsAccountController implements ViewController {
       if (displayUsername) displayUsername.textContent = '—';
       if (displayEmail) displayEmail.textContent = '—';
       if (btnEditEmail) btnEditEmail.classList.remove('is-hidden');
-      if (badgeSsoEmail) badgeSsoEmail.classList.add('is-hidden');
       this.refreshAvatarsInDom(null);
       this.updateAvatarButtonsState('default');
       applyAvatarTier(avatarPreviewBox, 'free');

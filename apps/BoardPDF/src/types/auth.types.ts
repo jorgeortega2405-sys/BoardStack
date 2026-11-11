@@ -8,7 +8,6 @@ interface UserPayload {
   google_email?: string | null;
   has_password?: boolean;
   id: number;
-  is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
   storage_limit_bytes?: number;
@@ -28,7 +27,6 @@ interface SessionAccount {
   google_email?: string | null;
   has_password?: boolean;
   id: number;
-  is_sso?: boolean;
   last_accessed?: number;
   permissions?: string[];
   sessionId?: string;

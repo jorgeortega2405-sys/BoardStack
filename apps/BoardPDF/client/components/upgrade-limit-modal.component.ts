@@ -205,10 +205,15 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
   const feat3 = t('pricing.limit_modal_feat_limits');
 
   const pillHtml = isMaxTier
-    ? `<div class="component-badge component-badge--warning modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg><span data-i18n="pricing.current_plan">${t('pricing.current_plan')}</span></div>`
+    ? `<div class="component-badge modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg><span data-i18n="pricing.current_plan">${t('pricing.current_plan')}</span></div>`
     : targetTier === 'business'
       ? `<div class="component-badge modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg><span data-i18n="pricing.plan_business_label">${t('pricing.plan_business_label')}</span></div>`
       : `<div class="component-badge modal-split__pill" data-ref="upgrade-pill"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg><span data-i18n="pricing.plan_pro_label">${t('pricing.plan_pro_label')}</span></div>`;
+
+  const bannerImgSrc = targetTier === 'business'
+    ? '/images/modals/upgrade-business-banner.svg'
+    : '/images/modals/upgrade-pro-banner.svg';
+  const bannerAlt = targetTier === 'business' ? 'BoardPDF Business' : 'BoardPDF Pro';
 
   const actionText = !isLoggedIn
     ? t('nav.login')
@@ -237,20 +242,7 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
         <div class="modal-card__drag-zone" data-ref="modal-upgrade-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="modal-split__top modal-split__top--upgrade" data-ref="modal-split-top">
-          <div class="modal-split__visual-stage" data-ref="upgrade-visual-stage">
-            <div class="modal-split__media-wrapper" data-ref="media-wrapper">
-              <img class="modal-split__media-img" data-ref="upgrade-banner-img" src="/images/pro-banner.webp" alt="BoardPDF" />
-            </div>
-            <div class="modal-split__top-status" data-ref="status-badge">
-              <span class="modal-split__badge-check">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-              </span>
-              <span class="modal-split__badge-text" data-ref="badge-text" data-i18n="pricing.limit_modal_status_badge">${t('pricing.limit_modal_status_badge')}</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-split__bottom" data-ref="modal-split-bottom">
+        <div class="modal-split__left" data-ref="modal-split-left">
           <div class="modal-split__content" data-ref="upgrade-content">
             <div class="modal-split__header" data-ref="upgrade-header">
               ${pillHtml}
@@ -278,6 +270,11 @@ function showUpgradeLimitModal(options: UpgradeLimitModalOptions): ModalInstance
           <div class="modal-split__actions" data-ref="upgrade-actions">
             <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-upgrade-submit">${actionText}</button>
             ${footnoteHtml}
+          </div>
+        </div>
+        <div class="modal-split__right" data-ref="modal-split-right">
+          <div class="modal-split__visual-stage" data-ref="upgrade-visual-stage">
+            <img class="modal-split__illustration" data-ref="upgrade-banner-img" src="${bannerImgSrc}" alt="${bannerAlt}" />
           </div>
         </div>
       </div>
