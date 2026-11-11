@@ -1,11 +1,14 @@
 import { getDbPool } from '../../config/database.config.js';
+import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config.js';
 import { getLabelsForDocumentIds } from '../../services/document-labels.service.js';
 import { logger } from '../../services/logger.service.js';
+import { getProjectFolderById } from '../../services/project-folders.service.js';
 import { reclaimDocumentStorage, syncDocumentStorage } from '../../services/storage-quota.service.js';
 import { getTeamContextForUser } from '../../services/team.service.js';
 import { trackAiCollabEvent } from '../../services/telemetry.service.js';
 import { cleanTextForWinAnsi, parseHexColor } from '../../utils/pdf.util.js';
 import { CollaborativeDocumentContent, CollaborativeDocumentRecord, CollaborativeMember } from './design-pdf.types.js';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
@@ -14,12 +17,60 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function readPublicAsset(relPath: string): Buffer | null {
-  const cleanRel = relPath.replace(/^\//, '');
-  const candidate1 = path.resolve(__dirname, '../../../public', cleanRel);
-  if (fs.existsSync(candidate1)) return fs.readFileSync(candidate1);
-  const candidate2 = path.resolve(process.cwd(), 'public', cleanRel);
-  if (fs.existsSync(candidate2)) return fs.readFileSync(candidate2);
+async function streamBodyToBuffer(body: any): Promise<Buffer | null> {
+  if (!body) return null;
+  if (typeof body.transformToByteArray === 'function') {
+    const bytes = await body.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+async function readPublicAsset(relPath: string): Promise<Buffer | null> {
+  const withoutQuery = String(relPath || '').split('?')[0].split('#')[0];
+  let decoded = withoutQuery;
+  try {
+    decoded = decodeURIComponent(withoutQuery);
+  } catch {
+    return null;
+  }
+  if (!decoded || decoded.includes('\0')) return null;
+
+  const cleanRel = decoded.replace(/\\/g, '/').replace(/^\/+/, '');
+  const segments = cleanRel.split('/');
+  if (segments.some((seg) => !seg || seg === '.' || seg === '..')) {
+    return null;
+  }
+
+  const publicRoots = [
+    path.resolve(__dirname, '../../../public'),
+    path.resolve(process.cwd(), 'public'),
+  ];
+  for (const root of publicRoots) {
+    const resolved = path.resolve(root, cleanRel);
+    if (resolved !== root && resolved.startsWith(root + path.sep) && fs.existsSync(resolved)) {
+      return fs.readFileSync(resolved);
+    }
+  }
+
+  if (cleanRel.startsWith('uploads/') && isS3Configured()) {
+    try {
+      const s3Res = await s3Client.send(
+        new GetObjectCommand({
+          Bucket: S3_BUCKET_NAME,
+          Key: cleanRel,
+        })
+      );
+      return await streamBodyToBuffer(s3Res.Body);
+    } catch {
+      return null;
+    }
+  }
+
   return null;
 }
 
@@ -141,7 +192,7 @@ async function renderCollaborativePdf(
     const pageSource = content.pagePdfSources?.[i];
     if (pageSource && pageSource.pdfUrl) {
       try {
-        const sourceBytes = readPublicAsset(pageSource.pdfUrl);
+        const sourceBytes = await readPublicAsset(pageSource.pdfUrl);
         if (sourceBytes) {
           const sourceDoc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
           const sourcePageIdx = Math.max(0, (pageSource.pageNumber || 1) - 1);
@@ -308,7 +359,7 @@ async function renderCollaborativePdf(
           const parts = el.url.split(',');
           if (parts[1]) imgBytes = Buffer.from(parts[1], 'base64');
         } else {
-          imgBytes = readPublicAsset(el.url);
+          imgBytes = await readPublicAsset(el.url);
         }
         if (imgBytes) {
           let embeddedImg: any = null;
@@ -854,6 +905,7 @@ async function searchRegisteredUsers(
          FROM team_members tm
          INNER JOIN users u ON u.id = tm.user_id
          WHERE tm.team_id = ?
+           AND tm.status = 'active'
            AND (? = '' OR LOWER(u.username) LIKE ? OR LOWER(u.email) LIKE ?)
          ORDER BY u.username ASC
          LIMIT 25`,
@@ -962,10 +1014,14 @@ async function updateCollaborativeDocCustomSlug(
       };
     }
 
+    if (!userId) {
+      return { error: 'Debes iniciar sesión para personalizar este enlace.', success: false };
+    }
+
     const pool = getDbPool();
 
     const [docRows] = await pool.query<any[]>(
-      'SELECT id, user_id, team_id, team_access FROM collaborative_documents WHERE id = ? LIMIT 1',
+      'SELECT id, user_id, team_id, team_access, folder_id FROM collaborative_documents WHERE id = ? LIMIT 1',
       [id]
     );
     if (!Array.isArray(docRows) || docRows.length === 0) {
@@ -973,12 +1029,28 @@ async function updateCollaborativeDocCustomSlug(
     }
 
     const doc = docRows[0];
-    if (userId && doc.user_id && Number(doc.user_id) !== Number(userId)) {
+    const isOwner = doc.user_id !== null && doc.user_id !== undefined && Number(doc.user_id) === Number(userId);
+    if (!isOwner) {
       let authorized = false;
       if (doc.team_id) {
         const teamCtx = await getTeamContextForUser(Number(doc.team_id), Number(userId));
-        if (teamCtx && (doc.team_access === 'editor' || teamCtx.permissions.includes('team:folders:manage'))) {
-          authorized = true;
+        if (teamCtx) {
+          const isTeamAdmin = teamCtx.permissions.includes('team:folders:manage');
+          if (isTeamAdmin) {
+            authorized = true;
+          } else if (doc.team_access === 'editor') {
+            if (!doc.folder_id) {
+              authorized = true;
+            } else {
+              const accessibleFolder = await getProjectFolderById(
+                String(doc.folder_id),
+                Number(userId),
+                Number(doc.team_id),
+                teamCtx.permissions
+              );
+              authorized = Boolean(accessibleFolder && accessibleFolder.user_role === 'editor');
+            }
+          }
         }
       }
       if (!authorized) {
@@ -986,7 +1058,7 @@ async function updateCollaborativeDocCustomSlug(
           'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
           [id, userId]
         );
-        if (!Array.isArray(members) || members.length === 0 || members[0].role !== 'editor') {
+        if (!Array.isArray(members) || members.length === 0 || (members[0].role !== 'editor' && members[0].role !== 'owner')) {
           return { error: 'No tienes permisos para personalizar este enlace.', success: false };
         }
       }

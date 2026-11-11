@@ -203,9 +203,9 @@ async function reclaimDocumentStorage(
   try {
     await conn.beginTransaction();
 
-    await conn.query('DELETE FROM user_storage_assets WHERE document_id = ?', [documentId]);
+    const [delAssetsRes] = await conn.query<any>('DELETE FROM user_storage_assets WHERE document_id = ?', [documentId]);
 
-    if (totalReclaimed > 0) {
+    if (totalReclaimed > 0 && delAssetsRes && delAssetsRes.affectedRows > 0) {
       if (targetTeamId) {
         await conn.query(
           'UPDATE teams SET storage_used_bytes = GREATEST(0, CAST(storage_used_bytes AS SIGNED) - ?) WHERE id = ?',
@@ -241,15 +241,20 @@ async function reclaimDocumentStorage(
   return { reclaimedBytes: totalReclaimed };
 }
 
-async function reclaimUserAsset(assetId: string, userId: number, teamId?: number | null): Promise<boolean> {
+async function reclaimUserAsset(
+  assetId: string,
+  userId: number,
+  teamId?: number | null,
+  canManageTeamAssets = false
+): Promise<boolean> {
   const pool = getDbPool();
   const [rows] = teamId
     ? await pool.query<any[]>(
-        'SELECT id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND team_id = ?',
+        'SELECT id, user_id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND team_id = ? LIMIT 1',
         [assetId, teamId]
       )
     : await pool.query<any[]>(
-        'SELECT id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL',
+        'SELECT id, user_id, file_path, s3_key, byte_size, team_id FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL LIMIT 1',
         [assetId, userId]
       );
 
@@ -258,36 +263,29 @@ async function reclaimUserAsset(assetId: string, userId: number, teamId?: number
 
   const byteSize = Number(asset.byte_size) || 0;
   const assetTeamId = asset.team_id ? Number(asset.team_id) : null;
-
-  if (asset.file_path && fs.existsSync(asset.file_path)) {
-    try {
-      fs.unlinkSync(asset.file_path);
-    } catch (err) {
-      logger.app.warn(`No se pudo eliminar archivo de asset ${asset.file_path}`, err);
-    }
-  }
-
-  if (asset.s3_key && isS3Configured()) {
-    try {
-      await s3Client.send(
-        new DeleteObjectCommand({
-          Bucket: S3_BUCKET_NAME,
-          Key: asset.s3_key,
-        })
-      );
-    } catch (s3Err) {
-      logger.app.warn(`No se pudo eliminar asset de S3: ${asset.s3_key}`, s3Err);
-    }
+  if (assetTeamId && Number(asset.user_id) !== Number(userId) && !canManageTeamAssets) {
+    return false;
   }
 
   const conn = await pool.getConnection();
+  let deleted = false;
   try {
     await conn.beginTransaction();
-    if (assetTeamId) {
-      await conn.query('DELETE FROM user_storage_assets WHERE id = ? AND team_id = ?', [assetId, assetTeamId]);
-    } else {
-      await conn.query('DELETE FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL', [assetId, userId]);
+    const [delRes] = assetTeamId
+      ? await conn.query<any>(
+          'DELETE FROM user_storage_assets WHERE id = ? AND team_id = ? AND (user_id = ? OR ? = 1)',
+          [assetId, assetTeamId, userId, canManageTeamAssets ? 1 : 0]
+        )
+      : await conn.query<any>(
+          'DELETE FROM user_storage_assets WHERE id = ? AND user_id = ? AND team_id IS NULL',
+          [assetId, userId]
+        );
+
+    if (!delRes || delRes.affectedRows <= 0) {
+      await conn.rollback();
+      return false;
     }
+
     if (byteSize > 0) {
       if (assetTeamId) {
         await conn.query(
@@ -302,6 +300,37 @@ async function reclaimUserAsset(assetId: string, userId: number, teamId?: number
       }
     }
     await conn.commit();
+    deleted = true;
+  } catch (err) {
+    await conn.rollback();
+    logger.db.error('Error al descontar asset de almacenamiento en BD', err);
+    return false;
+  } finally {
+    conn.release();
+  }
+
+  if (deleted) {
+    if (asset.file_path && fs.existsSync(asset.file_path)) {
+      try {
+        fs.unlinkSync(asset.file_path);
+      } catch (err) {
+        logger.app.warn(`No se pudo eliminar archivo de asset ${asset.file_path}`, err);
+      }
+    }
+
+    if (asset.s3_key && isS3Configured()) {
+      try {
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: S3_BUCKET_NAME,
+            Key: asset.s3_key,
+          })
+        );
+      } catch (s3Err) {
+        logger.app.warn(`No se pudo eliminar asset de S3: ${asset.s3_key}`, s3Err);
+      }
+    }
+
     trackStorageEvent({
       bytesDelta: -byteSize,
       eventType: 'user_asset_reclaimed',
@@ -312,14 +341,9 @@ async function reclaimUserAsset(assetId: string, userId: number, teamId?: number
       storageTier: asset.s3_key ? 's3_hot' : 'virtual_doc',
       userId,
     });
-    return true;
-  } catch (err) {
-    await conn.rollback();
-    logger.db.error('Error al descontar asset de almacenamiento en BD', err);
-    return false;
-  } finally {
-    conn.release();
   }
+
+  return deleted;
 }
 
 async function reconcileUserStorage(userId: number, teamId?: number | null): Promise<number> {

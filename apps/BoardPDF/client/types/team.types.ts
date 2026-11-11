@@ -33,6 +33,7 @@ interface TeamMemberRecord {
   joined_at: string;
   role: TeamRole;
   status: 'active' | 'suspended';
+  subscription_tier?: string;
   team_id: number;
   user_id: number;
   username: string;
@@ -53,11 +54,20 @@ interface TeamInvitationRecord {
   token: string;
 }
 
+interface TeamSeatPaymentMethodPreview {
+  brand: string;
+  expMonth: number | null;
+  expYear: number | null;
+  last4: string;
+}
+
 interface TeamSeatPreview {
   amountDueNow: number;
   billingPeriod: string;
   currency: string;
   currentSeats: number;
+  defaultPaymentMethod?: TeamSeatPaymentMethodPreview | null;
+  hasDefaultPaymentMethod?: boolean;
   isOneTime: boolean;
   newSeats: number;
   nextCycleAmount: number;
@@ -147,4 +157,4 @@ interface FolderSharingDetailsResponse {
   visibility?: 'restricted' | 'team';
 }
 
-export type { FolderSharingDetailsResponse, ProjectFolderMemberRecord, TeamBillingDetailsResponse, TeamDetailResponse, TeamInvitationRecord, TeamInvitationStatus, TeamInviteInspectResponse, TeamListResponse, TeamMemberRecord, TeamMemberRole, TeamRole, TeamSeatPreview, TeamSeatPreviewResponse, TeamSeatUpdateResponse, TeamSummary };
+export type { FolderSharingDetailsResponse, ProjectFolderMemberRecord, TeamBillingDetailsResponse, TeamDetailResponse, TeamInvitationRecord, TeamInvitationStatus, TeamInviteInspectResponse, TeamListResponse, TeamMemberRecord, TeamMemberRole, TeamRole, TeamSeatPaymentMethodPreview, TeamSeatPreview, TeamSeatPreviewResponse, TeamSeatUpdateResponse, TeamSummary };

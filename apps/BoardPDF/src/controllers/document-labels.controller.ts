@@ -1,25 +1,25 @@
 import { resolveLabelLimit } from '../config/subscription-plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { getWorkspaceTeamId } from '../middlewares/workspace.middleware.js';
-import { DocumentLabelError, createUserLabel, deleteUserLabel, getUserLabels, setDocumentLabels } from '../services/document-labels.service.js';
+import { createUserLabel, deleteUserLabel, DocumentLabelError, getUserLabels, setDocumentLabels } from '../services/document-labels.service.js';
 import { logger } from '../services/logger.service.js';
 import { permissionService } from '../services/permission.service.js';
 import type { Request, Response } from 'express';
 
 async function resolveUserPermissions(req: Request, userId: number, fallbackPerms?: string[]): Promise<string[]> {
-  if (Array.isArray((req as any).workspacePermissions) && (req as any).workspacePermissions.length > 0) {
-    return (req as any).workspacePermissions as string[];
+  const workspacePerms = Array.isArray((req as any).workspacePermissions) ? ((req as any).workspacePermissions as string[]) : [];
+  const reqUserPerms = Array.isArray((req as any).userPermissions) ? ((req as any).userPermissions as string[]) : [];
+  if (reqUserPerms.length > 0) {
+    return Array.from(new Set([...reqUserPerms, ...workspacePerms]));
+  }
+  if (Array.isArray(fallbackPerms) && fallbackPerms.length > 0) {
+    return Array.from(new Set([...fallbackPerms, ...workspacePerms]));
   }
   try {
-    return await permissionService.getUserPermissions(userId);
+    const dbPerms = await permissionService.getUserPermissions(userId);
+    return Array.from(new Set([...dbPerms, ...workspacePerms]));
   } catch {
-    if (Array.isArray(fallbackPerms) && fallbackPerms.length > 0) {
-      return fallbackPerms;
-    }
-    if (Array.isArray((req as any).userPermissions)) {
-      return (req as any).userPermissions as string[];
-    }
-    return [];
+    return workspacePerms;
   }
 }
 
@@ -142,7 +142,9 @@ async function updateDocumentLabelsHandler(req: Request, res: Response): Promise
     }
 
     const teamId = getWorkspaceTeamId(req);
-    const labels = await setDocumentLabels(Number(user.id), documentId, labelIds, teamId);
+    const workspacePerms = Array.isArray((req as any).workspacePermissions) ? ((req as any).workspacePermissions as string[]) : [];
+    const canManageTeamFolders = workspacePerms.includes('team:folders:manage');
+    const labels = await setDocumentLabels(Number(user.id), documentId, labelIds, teamId, canManageTeamFolders);
     res.json({
       documentId,
       labels,

@@ -53,6 +53,7 @@ interface TeamMemberRecord {
   joined_at: string;
   role: TeamMemberRole;
   status: 'active' | 'suspended';
+  subscription_tier?: string;
   team_id: number;
   user_id: number;
   username: string;
@@ -71,15 +72,24 @@ interface TeamInvitationRecord {
   token: string;
 }
 
+interface TeamSeatPaymentMethodPreview {
+  brand: string;
+  expMonth: number;
+  expYear: number;
+  last4: string;
+}
+
 interface TeamSeatPreview {
   amountDueNow: number;
   billingPeriod: string;
   currency: string;
   currentSeats: number;
+  defaultPaymentMethod: TeamSeatPaymentMethodPreview | null;
+  hasDefaultPaymentMethod: boolean;
   isOneTime: boolean;
   newSeats: number;
   nextCycleAmount: number;
   pricePerSeat: number;
 }
 
-export type { TeamInvitationRecord, TeamInvitationStatus, TeamMemberRecord, TeamMemberRole, TeamRecord, TeamSeatPreview, TeamSummary };
+export type { TeamInvitationRecord, TeamInvitationStatus, TeamMemberRecord, TeamMemberRole, TeamRecord, TeamSeatPaymentMethodPreview, TeamSeatPreview, TeamSummary };

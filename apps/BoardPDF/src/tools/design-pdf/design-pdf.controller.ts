@@ -3,22 +3,22 @@ import { isS3Configured, S3_BUCKET_NAME, s3Client } from '../../config/s3.config
 import { resolveToolLimits } from '../../config/subscription-plans.config.js';
 import { getCurrentUser, hasSubscriptionFeature } from '../../middlewares/auth.middleware.js';
 import { getWorkspaceTeam, getWorkspaceTeamId } from '../../middlewares/workspace.middleware.js';
-import { MIN_AI_GENERATE_COST, calculateAiGenerateCost, calculatePdfCost, consumeAiTokens, consumeCustomAiTokens, getUserTokenBalance } from '../../services/ai-token.service.js';
+import { calculateAiGenerateCost, calculatePdfCost, consumeAiTokens, consumeCustomAiTokens, getUserTokenBalance, MIN_AI_GENERATE_COST } from '../../services/ai-token.service.js';
 import { logger } from '../../services/logger.service.js';
 import { permissionService } from '../../services/permission.service.js';
 import { removeBackground } from '../../services/photoroom.service.js';
 import { getProjectFolderById } from '../../services/project-folders.service.js';
 import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-quota.service.js';
 import { getTeamContextForUser } from '../../services/team.service.js';
-import { validatePdfUpload } from '../../utils/tool-handler.util.js';
-import { generateCollaborativeDocumentWithAi } from './design-pdf-ai.service.js';
-import { acquireCollaborativeAiLock, getCollaborativeAiLock, releaseCollaborativeAiLock } from './design-pdf-lock.service.js';
 import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug, updateCollaborativeDocTeamAccess } from './design-pdf.service.js';
 import type { CollaborativeDocumentRecord } from './design-pdf.types.js';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { generateCollaborativeDocumentWithAi } from './design-pdf-ai.service.js';
+import { acquireCollaborativeAiLock, getCollaborativeAiLock, releaseCollaborativeAiLock } from './design-pdf-lock.service.js';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import dns from 'dns/promises';
 import type { Request, Response } from 'express';
-import fs from 'fs';
+import net from 'net';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 
@@ -33,11 +33,149 @@ interface CollaborativeAiControllerDeps {
   saveDocument?: typeof saveCollaborativeDocument;
 }
 
-const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative');
+const MAX_REMOTE_IMAGE_BYTES = 15 * 1024 * 1024;
 
-function ensureUploadsDir(): void {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+function isPrivateOrReservedIpv4(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
+    return true;
+  }
+  const [a, b] = parts;
+  if (a === 0 || a === 10 || a === 127) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 192 && b === 0) return true;
+  if (a === 198 && (b === 18 || b === 19)) return true;
+  if (a >= 224) return true;
+  return false;
+}
+
+function isPrivateOrReservedIp(ip: string): boolean {
+  const version = net.isIP(ip);
+  if (version === 4) {
+    return isPrivateOrReservedIpv4(ip);
+  }
+  if (version === 6) {
+    const normalized = ip.toLowerCase();
+    if (normalized === '::' || normalized === '::1') return true;
+    if (normalized.startsWith('::ffff:')) {
+      const v4Part = normalized.slice(7);
+      if (net.isIP(v4Part) === 4) {
+        return isPrivateOrReservedIpv4(v4Part);
+      }
+    }
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+    if (/^fe[89ab]/.test(normalized)) return true;
+    if (normalized.startsWith('ff')) return true;
+    return false;
+  }
+  return true;
+}
+
+async function readUploadFromS3(imageUrl: string): Promise<{ buffer: Buffer; mimeType: string; originalName: string } | null> {
+  if (!isS3Configured()) return null;
+  const cleanQuery = imageUrl.split('?')[0].split('#')[0];
+  let decoded = cleanQuery;
+  try {
+    decoded = decodeURIComponent(cleanQuery);
+  } catch {
+    return null;
+  }
+  if (!decoded || decoded.includes('\0')) return null;
+
+  const cleanRel = decoded.replace(/\\/g, '/').replace(/^\/+/, '');
+  const segments = cleanRel.split('/');
+  if (!cleanRel.startsWith('uploads/') || segments.some((s) => !s || s === '.' || s === '..')) {
+    return null;
+  }
+
+  try {
+    const s3Res = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: S3_BUCKET_NAME,
+        Key: cleanRel,
+      })
+    );
+    if (!s3Res.Body) return null;
+
+    let buffer: Buffer;
+    if (typeof (s3Res.Body as any).transformToByteArray === 'function') {
+      buffer = Buffer.from(await (s3Res.Body as any).transformToByteArray());
+    } else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of s3Res.Body as any) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      buffer = Buffer.concat(chunks);
+    }
+
+    const originalName = path.basename(cleanRel);
+    const ext = path.extname(originalName).toLowerCase();
+    const mimeType = ext === '.jpg' || ext === '.jpeg'
+      ? 'image/jpeg'
+      : ext === '.webp'
+        ? 'image/webp'
+        : 'image/png';
+    return { buffer, mimeType, originalName };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchExternalImageSafely(rawUrl: string): Promise<{ buffer: Buffer; mimeType: string; originalName: string } | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  if (parsed.username || parsed.password) return null;
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
+    return null;
+  }
+
+  if (net.isIP(hostname) !== 0) {
+    if (isPrivateOrReservedIp(hostname)) return null;
+  } else {
+    try {
+      const records = await dns.lookup(hostname, { all: true });
+      if (!records || records.length === 0 || records.some((r) => isPrivateOrReservedIp(r.address))) {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const response = await fetch(parsed.toString(), {
+      redirect: 'error',
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+
+    const headerType = (response.headers.get('content-type') || '').toLowerCase();
+    if (!headerType.startsWith('image/')) return null;
+
+    const contentLength = Number(response.headers.get('content-length') || 0);
+    if (contentLength > MAX_REMOTE_IMAGE_BYTES) return null;
+
+    const ab = await response.arrayBuffer();
+    if (ab.byteLength > MAX_REMOTE_IMAGE_BYTES) return null;
+
+    return {
+      buffer: Buffer.from(ab),
+      mimeType: headerType.split(';')[0].trim(),
+      originalName: path.basename(parsed.pathname) || 'downloaded.png',
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -281,6 +419,38 @@ async function saveCollaborativeDocHandler(req: Request, res: Response): Promise
 
     const title = typeof req.body.title === 'string' && req.body.title.trim().length > 0 ? req.body.title.trim() : (existingDoc?.title || 'Documento sin título');
     const content = req.body.content && typeof req.body.content === 'object' ? req.body.content : (existingDoc?.content || { elements: [], pageCount: 1 });
+    let resolvedFolderId: string | null | undefined = undefined;
+    if (req.body.folderId !== undefined) {
+      const requestedFolderId = typeof req.body.folderId === 'string' ? req.body.folderId.trim() : '';
+      if (!requestedFolderId) {
+        resolvedFolderId = null;
+      } else {
+        if (!user?.id) {
+          res.status(403).json({
+            error: 'No tienes permisos para guardar en esta carpeta.',
+            success: false,
+          });
+          return;
+        }
+        const targetTeamScope = existingDoc ? existingDoc.team_id : activeTeamId;
+        const targetTeamCtx = targetTeamScope ? await getTeamContextForUser(targetTeamScope, Number(user.id)) : null;
+        const folder = await getProjectFolderById(
+          requestedFolderId,
+          Number(user.id),
+          targetTeamScope || null,
+          targetTeamCtx?.permissions || []
+        );
+        if (!folder || folder.folder_type !== 'project' || folder.user_role !== 'editor') {
+          res.status(403).json({
+            error: 'No tienes permisos para guardar en esta carpeta.',
+            success: false,
+          });
+          return;
+        }
+        resolvedFolderId = requestedFolderId;
+      }
+    }
+
     let accessLevel = existingDoc?.access_level || 'restricted';
     if (req.body.accessLevel === 'anyone_with_link' || req.body.accessLevel === 'restricted') {
       const isOwner = user?.id != null && existingDoc?.user_id != null && String(existingDoc.user_id) === String(user.id);
@@ -302,7 +472,7 @@ async function saveCollaborativeDocHandler(req: Request, res: Response): Promise
     const document = await saveCollaborativeDocument({
       accessLevel,
       content,
-      folderId: req.body.folderId !== undefined ? req.body.folderId : undefined,
+      folderId: resolvedFolderId,
       id,
       teamAccess: teamAccessLevel,
       teamId: existingDoc ? existingDoc.team_id : activeTeamId,
@@ -330,7 +500,20 @@ async function getCollaborativeDocMembersHandler(req: Request, res: Response): P
       res.status(400).json({ error: 'Identificador de documento no válido.', success: false });
       return;
     }
-    const members = await getCollaborativeDocMembers(id);
+    const user = getCurrentUser(req);
+    const doc = await getCollaborativeDocument(id, user?.id ? Number(user.id) : null);
+    if (!doc) {
+      res.status(404).json({ error: 'Documento no encontrado.', success: false });
+      return;
+    }
+    const isOwner = user?.id != null && doc.user_id != null && String(doc.user_id) === String(user.id);
+    const isMember = Boolean(user?.id && doc.members?.some((m) => String(m.user_id) === String(user.id)));
+    const teamAccess = await resolveDocTeamAccess(doc, user?.id ? Number(user.id) : null);
+    if (doc.access_level === 'restricted' && !isOwner && !isMember && !teamAccess.canViewByTeam) {
+      res.status(403).json({ error: 'No tienes permisos para ver los colaboradores de este documento.', success: false });
+      return;
+    }
+    const members = doc.members || await getCollaborativeDocMembers(id);
     res.json({ members, success: true });
   } catch (err) {
     logger.app.error('Error al obtener miembros del documento colaborativo', err);
@@ -345,21 +528,42 @@ async function addCollaborativeDocMemberHandler(req: Request, res: Response): Pr
   try {
     const { id } = req.params;
     const { role = 'editor', userId } = req.body;
-    if (!id || !userId || typeof userId !== 'number') {
+    if (!id || !userId || !Number.isInteger(userId) || userId <= 0) {
       res.status(400).json({ error: 'Parámetros no válidos para agregar colaborador.', success: false });
       return;
     }
     const user = getCurrentUser(req);
+    if (!user?.id) {
+      res.status(401).json({ error: 'Debes iniciar sesión para gestionar colaboradores.', success: false });
+      return;
+    }
     const doc = await getCollaborativeDocument(id);
-    const teamAccess = doc ? await resolveDocTeamAccess(doc, user?.id ? Number(user.id) : null) : { canEditByTeam: false, canViewByTeam: false, isTeamAdmin: false };
-    if (doc?.user_id && (!user?.id || (String(doc.user_id) !== String(user.id) && !teamAccess.isTeamAdmin))) {
+    if (!doc) {
+      res.status(404).json({ error: 'Documento no encontrado.', success: false });
+      return;
+    }
+    const teamAccess = await resolveDocTeamAccess(doc, Number(user.id));
+    const isOwner = doc.user_id != null && String(doc.user_id) === String(user.id);
+    if (!isOwner && !teamAccess.isTeamAdmin) {
       res.status(403).json({ error: 'Solo el propietario del documento puede agregar miembros.', success: false });
       return;
     }
 
-    const userPermissions = await resolveRequestUserPermissions(req, user);
+    let userPermissions = await resolveRequestUserPermissions(req, user);
+    if (doc.team_id) {
+      const targetCtx = await getTeamContextForUser(doc.team_id, Number(userId));
+      if (!targetCtx) {
+        res.status(400).json({ error: 'El usuario seleccionado debe pertenecer al equipo.', success: false });
+        return;
+      }
+      const actorCtx = await getTeamContextForUser(doc.team_id, Number(user.id));
+      if (actorCtx?.subscription_status === 'active' && !userPermissions.includes('subscription:feature:business')) {
+        userPermissions = [...userPermissions, 'subscription:feature:business'];
+      }
+    }
+
     const limits = resolveToolLimits('collaborative-pdf', userPermissions);
-    const currentMembers = doc?.members || await getCollaborativeDocMembers(id);
+    const currentMembers = doc.members || await getCollaborativeDocMembers(id);
     const isAlreadyMember = currentMembers.some((m) => m.user_id === userId);
     if (!isAlreadyMember && limits.maxCollaborators && currentMembers.length >= limits.maxCollaborators) {
       res.status(403).json({
@@ -369,7 +573,7 @@ async function addCollaborativeDocMemberHandler(req: Request, res: Response): Pr
       return;
     }
 
-    const member = await addCollaborativeDocMember(id, userId, role === 'viewer' ? 'viewer' : 'editor', user?.id);
+    const member = await addCollaborativeDocMember(id, userId, role === 'viewer' ? 'viewer' : 'editor', user.id);
     res.json({ member, success: true });
   } catch (err) {
     logger.app.error('Error al agregar miembro al documento colaborativo', err);
@@ -384,20 +588,28 @@ async function removeCollaborativeDocMemberHandler(req: Request, res: Response):
   try {
     const { id, userId } = req.params;
     const targetUserId = parseInt(userId, 10);
-    if (!id || isNaN(targetUserId)) {
+    if (!id || isNaN(targetUserId) || targetUserId <= 0) {
       res.status(400).json({ error: 'Identificadores no válidos.', success: false });
       return;
     }
     const user = getCurrentUser(req);
+    if (!user?.id) {
+      res.status(401).json({ error: 'Debes iniciar sesión para gestionar colaboradores.', success: false });
+      return;
+    }
     const doc = await getCollaborativeDocument(id);
-    const teamAccess = doc ? await resolveDocTeamAccess(doc, user?.id ? Number(user.id) : null) : { canEditByTeam: false, canViewByTeam: false, isTeamAdmin: false };
-    const isOwner = doc?.user_id && user?.id && String(doc.user_id) === String(user.id);
-    const isSelf = user?.id && String(user.id) === String(targetUserId);
-    if (doc?.user_id && !isOwner && !isSelf && !teamAccess.isTeamAdmin) {
+    if (!doc) {
+      res.status(404).json({ error: 'Documento no encontrado.', success: false });
+      return;
+    }
+    const teamAccess = await resolveDocTeamAccess(doc, Number(user.id));
+    const isOwner = doc.user_id != null && String(doc.user_id) === String(user.id);
+    const isSelf = String(user.id) === String(targetUserId);
+    if (!isOwner && !isSelf && !teamAccess.isTeamAdmin) {
       res.status(403).json({ error: 'Solo el propietario del documento puede remover colaboradores.', success: false });
       return;
     }
-    await removeCollaborativeDocMember(id, targetUserId, user?.id);
+    await removeCollaborativeDocMember(id, targetUserId, user.id);
     res.json({ success: true });
   } catch (err) {
     logger.app.error('Error al remover miembro del documento colaborativo', err);
@@ -427,13 +639,22 @@ async function updateCollaborativeDocAccessLevelHandler(req: Request, res: Respo
       return;
     }
     const user = getCurrentUser(req);
+    if (!user?.id) {
+      res.status(401).json({ error: 'Debes iniciar sesión para modificar los permisos del documento.', success: false });
+      return;
+    }
     const doc = await getCollaborativeDocument(id);
-    const teamAccess = doc ? await resolveDocTeamAccess(doc, user?.id ? Number(user.id) : null) : { canEditByTeam: false, canViewByTeam: false, isTeamAdmin: false };
-    if (doc?.user_id && (!user?.id || (String(doc.user_id) !== String(user.id) && !teamAccess.isTeamAdmin))) {
+    if (!doc) {
+      res.status(404).json({ error: 'Documento no encontrado.', success: false });
+      return;
+    }
+    const teamAccess = await resolveDocTeamAccess(doc, Number(user.id));
+    const isOwner = doc.user_id != null && String(doc.user_id) === String(user.id);
+    if (!isOwner && !teamAccess.isTeamAdmin) {
       res.status(403).json({ error: 'Solo el propietario del documento puede modificar el nivel de acceso.', success: false });
       return;
     }
-    await updateCollaborativeDocAccessLevel(id, accessLevel, user?.id);
+    await updateCollaborativeDocAccessLevel(id, accessLevel, user.id);
     res.json({ accessLevel, success: true });
   } catch (err) {
     logger.app.error('Error al actualizar nivel de acceso del documento colaborativo', err);
@@ -463,7 +684,7 @@ async function updateCollaborativeDocTeamAccessHandler(req: Request, res: Respon
       return;
     }
     const resolvedAccess = await resolveDocTeamAccess(doc, Number(user.id));
-    const isOwner = doc.user_id && String(doc.user_id) === String(user.id);
+    const isOwner = doc.user_id != null && String(doc.user_id) === String(user.id);
     if (!isOwner && !resolvedAccess.isTeamAdmin) {
       res.status(403).json({ error: 'Solo el propietario o administrador del equipo puede cambiar el acceso del equipo.', success: false });
       return;
@@ -552,17 +773,37 @@ async function deleteCollaborativeDocHandler(req: Request, res: Response): Promi
 async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
+    const user = getCurrentUser(req);
     let title = typeof req.body?.title === 'string' && req.body.title.trim() ? req.body.title.trim() : 'document';
     let pdfBuffer: Buffer | null = null;
 
-    if (req.body && req.body.content) {
-      pdfBuffer = await renderCollaborativePdf(title, req.body.content);
-    } else if (id && typeof id === 'string') {
-      const doc = await getCollaborativeDocument(id);
-      if (doc) {
-        title = doc.title || title;
+    if (id && typeof id === 'string') {
+      const doc = await getCollaborativeDocument(id, user?.id ? Number(user.id) : null);
+      if (!doc) {
+        res.status(404).json({
+          error: 'El documento solicitado no existe.',
+          success: false,
+        });
+        return;
+      }
+      const isOwner = user?.id != null && doc.user_id != null && String(doc.user_id) === String(user.id);
+      const isMember = Boolean(user?.id && doc.members?.some((m) => String(m.user_id) === String(user.id)));
+      const teamAccess = await resolveDocTeamAccess(doc, user?.id ? Number(user.id) : null);
+      if (doc.access_level === 'restricted' && !isOwner && !isMember && !teamAccess.canViewByTeam) {
+        res.status(403).json({
+          error: 'No tienes permisos para descargar este documento.',
+          success: false,
+        });
+        return;
+      }
+      title = typeof req.body?.title === 'string' && req.body.title.trim() ? req.body.title.trim() : (doc.title || title);
+      if (req.body && req.body.content) {
+        pdfBuffer = await renderCollaborativePdf(title, req.body.content);
+      } else {
         pdfBuffer = await getRenderedPdfBuffer(id);
       }
+    } else if (req.body && req.body.content) {
+      pdfBuffer = await renderCollaborativePdf(title, req.body.content);
     } else {
       res.status(400).json({
         error: 'Identificador de documento no válido.',
@@ -635,12 +876,21 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
       return;
     }
 
+    if (!isS3Configured()) {
+      res.status(503).json({
+        error: 'El almacenamiento en la nube no está disponible en este momento.',
+        success: false,
+      });
+      return;
+    }
+
     const user = getCurrentUser(req);
     const totalIncomingBytes = targetFiles.reduce((acc, f) => acc + (f.size || f.buffer?.length || 0), 0);
     let targetUserId: number | null = user?.id ? Number(user.id) : null;
     let targetDocId: string | null = null;
 
     let targetTeamId: number | null = getWorkspaceTeamId(req);
+    const targetFolderId = typeof req.body.folderId === 'string' && req.body.folderId.trim().length > 0 ? req.body.folderId.trim() : null;
 
     if (!targetUserId) {
       const docId = typeof req.body.docId === 'string' ? req.body.docId.trim() : null;
@@ -687,12 +937,48 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
     } else {
       if (typeof req.body.docId === 'string' && req.body.docId.trim().length > 0) {
         const requestedDocId = req.body.docId.trim();
+        const docForUpload = await getCollaborativeDocument(requestedDocId, targetUserId);
+        if (!docForUpload) {
+          res.status(404).json({
+            error: 'Documento no encontrado.',
+            success: false,
+          });
+          return;
+        }
+        const isOwner = docForUpload.user_id != null && String(docForUpload.user_id) === String(targetUserId);
+        const isMemberEditor = docForUpload.members?.some((m) => String(m.user_id) === String(targetUserId) && m.role === 'editor');
+        const isPublicLink = docForUpload.access_level === 'anyone_with_link';
+        const teamAccess = await resolveDocTeamAccess(docForUpload, targetUserId);
+        if (!isOwner && !isMemberEditor && !isPublicLink && !teamAccess.canEditByTeam) {
+          res.status(403).json({
+            error: 'No tienes permisos para adjuntar archivos a este documento.',
+            success: false,
+          });
+          return;
+        }
         targetDocId = requestedDocId;
-        const docForUpload = await getCollaborativeDocument(requestedDocId);
-        if (docForUpload?.team_id) {
+        if (docForUpload.team_id) {
           targetTeamId = docForUpload.team_id;
         }
       }
+
+      if (targetFolderId) {
+        const targetTeamCtx = targetTeamId ? await getTeamContextForUser(targetTeamId, targetUserId) : null;
+        const folder = await getProjectFolderById(
+          targetFolderId,
+          targetUserId,
+          targetTeamId || null,
+          targetTeamCtx?.permissions || []
+        );
+        if (!folder || (folder.folder_type !== 'uploads' && folder.folder_type !== 'upload_folder') || folder.user_role !== 'editor') {
+          res.status(403).json({
+            error: 'No tienes permisos para subir archivos en esta carpeta.',
+            success: false,
+          });
+          return;
+        }
+      }
+
       const userPermissions = await resolveRequestUserPermissions(req, user);
       const limits = resolveToolLimits('collaborative-pdf', userPermissions);
       const maxFileBytes = limits.maxFileSizeMB * 1024 * 1024;
@@ -717,6 +1003,7 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
 
     const uploadedRecords: Array<{
       createdAt: string;
+      folderId?: string | null;
       id: string;
       mimeType: string;
       name: string;
@@ -726,8 +1013,6 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
       url: string;
       userId?: number | null;
     }> = [];
-
-    const targetFolderId = typeof req.body.folderId === 'string' && req.body.folderId.trim().length > 0 ? req.body.folderId.trim() : null;
 
     for (const item of targetFiles) {
       const ext = path.extname(item.originalname).toLowerCase();
@@ -748,24 +1033,22 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
       const uniqueFilename = `${Date.now()}_${randomId}_${safeBasename}${ext}`;
       const s3Key = `uploads/collaborative/${uniqueFilename}`;
 
-      if (isS3Configured()) {
-        try {
-          await s3Client.send(
-            new PutObjectCommand({
-              Body: item.buffer,
-              Bucket: S3_BUCKET_NAME,
-              ContentType: item.mimetype || 'application/octet-stream',
-              Key: s3Key,
-            })
-          );
-        } catch (s3Err) {
-          logger.app.error('Error al subir archivo colaborativo a S3/MinIO', s3Err);
-          res.status(500).json({
-            error: 'No se pudo guardar el archivo en el almacenamiento en la nube.',
-            success: false,
-          });
-          return;
-        }
+      try {
+        await s3Client.send(
+          new PutObjectCommand({
+            Body: item.buffer,
+            Bucket: S3_BUCKET_NAME,
+            ContentType: item.mimetype || 'application/octet-stream',
+            Key: s3Key,
+          })
+        );
+      } catch (s3Err) {
+        logger.app.error('Error al subir archivo colaborativo a S3/MinIO', s3Err);
+        res.status(500).json({
+          error: 'No se pudo guardar el archivo en el almacenamiento en la nube.',
+          success: false,
+        });
+        return;
       }
 
       const assetRecordId = `upl_${randomId}`;
@@ -778,7 +1061,7 @@ async function uploadCollaborativeAssetHandler(req: Request, res: Response): Pro
           filePath: s3Key,
           folderId: targetFolderId,
           mimeType: item.mimetype || (isPdf ? 'application/pdf' : 'image/png'),
-          s3Key: isS3Configured() ? s3Key : null,
+          s3Key,
           teamId: targetTeamId,
           userId: targetUserId,
         });
@@ -828,20 +1111,45 @@ async function listCollaborativeUploadsHandler(req: Request, res: Response): Pro
       return;
     }
     const folderIdParam = req.query.folderId as string | undefined;
-    const teamId = getWorkspaceTeamId(req);
+    const teamCtx = getWorkspaceTeam(req);
+    const teamId = teamCtx?.id || null;
+    const teamPerms = teamCtx?.permissions || [];
+    const canManageTeamFolders = teamPerms.includes('team:folders:manage');
+
+    if (folderIdParam && folderIdParam !== 'root' && folderIdParam !== 'all') {
+      const folder = await getProjectFolderById(folderIdParam, Number(user.id), teamId, teamPerms);
+      if (!folder) {
+        res.status(403).json({
+          error: 'No tienes permisos para consultar los archivos de esta carpeta.',
+          success: false,
+        });
+        return;
+      }
+    }
+
     const pool = getDbPool();
     let query = teamId
-      ? 'SELECT id, user_id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at FROM user_storage_assets WHERE team_id = ? AND asset_type IN ("upload_image", "upload_pdf")'
-      : 'SELECT id, user_id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at FROM user_storage_assets WHERE user_id = ? AND team_id IS NULL AND asset_type IN ("upload_image", "upload_pdf")';
-    const params: any[] = [teamId || user.id];
+      ? `SELECT usa.id, usa.user_id, usa.file_name, usa.s3_key, usa.mime_type, usa.byte_size, usa.asset_type, usa.folder_id, usa.created_at
+         FROM user_storage_assets usa
+         LEFT JOIN project_folders pf ON pf.id = usa.folder_id
+         LEFT JOIN project_folder_members pfm ON pfm.folder_id = usa.folder_id AND pfm.user_id = ?
+         WHERE usa.team_id = ?
+           AND usa.asset_type IN ("upload_image", "upload_pdf")
+           AND (? = 1 OR usa.user_id = ? OR pf.id IS NULL OR pf.visibility != 'restricted' OR pf.user_id = ? OR pfm.user_id IS NOT NULL)`
+      : `SELECT id, user_id, file_name, s3_key, mime_type, byte_size, asset_type, folder_id, created_at
+         FROM user_storage_assets
+         WHERE user_id = ? AND team_id IS NULL AND asset_type IN ("upload_image", "upload_pdf")`;
+    const params: any[] = teamId
+      ? [Number(user.id), teamId, canManageTeamFolders ? 1 : 0, Number(user.id), Number(user.id)]
+      : [Number(user.id)];
 
     if (folderIdParam === 'root') {
-      query += ' AND folder_id IS NULL';
+      query += teamId ? ' AND usa.folder_id IS NULL' : ' AND folder_id IS NULL';
     } else if (folderIdParam && folderIdParam !== 'all') {
-      query += ' AND folder_id = ?';
+      query += teamId ? ' AND usa.folder_id = ?' : ' AND folder_id = ?';
       params.push(folderIdParam);
     }
-    query += ' ORDER BY created_at DESC';
+    query += teamId ? ' ORDER BY usa.created_at DESC' : ' ORDER BY created_at DESC';
 
     const [rows] = await pool.query<any[]>(query, params);
     const records = (Array.isArray(rows) ? rows : []).map((r) => ({
@@ -891,6 +1199,14 @@ async function removeBackgroundHandler(req: Request, res: Response): Promise<voi
       return;
     }
 
+    if (!isS3Configured()) {
+      res.status(503).json({
+        error: 'El almacenamiento en la nube no está disponible en este momento.',
+        success: false,
+      });
+      return;
+    }
+
     let buffer: Buffer | null = null;
     let mimeType = 'image/png';
     let originalName = 'image.png';
@@ -909,28 +1225,18 @@ async function removeBackgroundHandler(req: Request, res: Response): Promise<voi
           originalName = `canvas_image.${mimeType.split('/')[1] || 'png'}`;
         }
       } else if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
-        const cleanUrl = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
-        const localPath = path.resolve(process.cwd(), 'public', cleanUrl);
-        if (fs.existsSync(localPath)) {
-          buffer = fs.readFileSync(localPath);
-          originalName = path.basename(localPath);
-          const ext = path.extname(originalName).toLowerCase();
-          mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+        const loaded = await readUploadFromS3(imageUrl);
+        if (loaded) {
+          buffer = loaded.buffer;
+          mimeType = loaded.mimeType;
+          originalName = loaded.originalName;
         }
       } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        try {
-          const response = await fetch(imageUrl);
-          if (response.ok) {
-            const ab = await response.arrayBuffer();
-            buffer = Buffer.from(ab);
-            const headerType = response.headers.get('content-type');
-            if (headerType && headerType.startsWith('image/')) {
-              mimeType = headerType.split(';')[0];
-            }
-            originalName = path.basename(new URL(imageUrl).pathname) || 'downloaded.png';
-          }
-        } catch (fetchErr) {
-          logger.app.warn('No se pudo descargar imagen remota para quitar fondo', fetchErr);
+        const loaded = await fetchExternalImageSafely(imageUrl);
+        if (loaded) {
+          buffer = loaded.buffer;
+          mimeType = loaded.mimeType;
+          originalName = loaded.originalName;
         }
       }
     }
@@ -967,38 +1273,29 @@ async function removeBackgroundHandler(req: Request, res: Response): Promise<voi
       return;
     }
 
-    ensureUploadsDir();
     const randomId = crypto.randomBytes(6).toString('hex');
     const ext = path.extname(originalName);
     const safeBasename = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 40) || 'image';
     const uniqueFilename = `${Date.now()}_${randomId}_${safeBasename}_nobg.png`;
-    const filePath = path.join(UPLOADS_DIR, uniqueFilename);
+    const s3Key = `uploads/collaborative/${uniqueFilename}`;
 
-    fs.writeFileSync(filePath, segmentedBuffer);
-
-    if (isS3Configured()) {
-      try {
-        await s3Client.send(
-          new PutObjectCommand({
-            Body: segmentedBuffer,
-            Bucket: S3_BUCKET_NAME,
-            ContentType: 'image/png',
-            Key: `uploads/collaborative/${uniqueFilename}`,
-          })
-        );
-      } catch (s3Err) {
-        logger.app.warn('Error al subir copia de imagen sin fondo a S3/MinIO', s3Err);
-      }
-    }
+    await s3Client.send(
+      new PutObjectCommand({
+        Body: segmentedBuffer,
+        Bucket: S3_BUCKET_NAME,
+        ContentType: 'image/png',
+        Key: s3Key,
+      })
+    );
 
     try {
       await recordUserAsset({
         assetType: 'upload_image',
         byteSize: segmentedBuffer.length,
         fileName: `${safeBasename}_nobg.png`,
-        filePath,
+        filePath: s3Key,
         mimeType: 'image/png',
-        s3Key: isS3Configured() ? `uploads/collaborative/${uniqueFilename}` : null,
+        s3Key,
         teamId: activeTeamId,
         userId: Number(user.id),
       });
@@ -1017,9 +1314,6 @@ async function removeBackgroundHandler(req: Request, res: Response): Promise<voi
       url: `/uploads/collaborative/${uniqueFilename}`,
       userId: Number(user.id),
     };
-
-    const metaPath = path.join(UPLOADS_DIR, `${uniqueFilename}.meta.json`);
-    fs.writeFileSync(metaPath, JSON.stringify(record, null, 2), 'utf-8');
 
     const consumeResult = await consumeAiTokens({
       fileSizeBytes: segmentedBuffer.length,

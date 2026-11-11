@@ -11,10 +11,14 @@ function getCurrentUser(req: Request): UserPayload | null {
   const session = getMultiAccountSession(req);
   if (!session) return null;
 
-  const active = session.accounts.find((a) => a.id === session.activeId) || session.accounts[0] || null;
-  if (active) {
-    (req as any).user = active;
-  }
+  const rawActive = session.accounts.find((a) => a.id === session.activeId) || session.accounts[0] || null;
+  if (!rawActive) return null;
+
+  const active: UserPayload = {
+    ...rawActive,
+    permissions: Array.isArray(rawActive.permissions) ? [...rawActive.permissions] : [],
+  };
+  (req as any).user = active;
   return active;
 }
 
@@ -40,6 +44,7 @@ async function requireAuth(req: Request, res: Response, next: NextFunction): Pro
   }
 
   const wsResult = await hydrateWorkspaceForRequest(req, user.id);
+  (req as any)._workspaceHydrated = true;
   if (wsResult.error) {
     res.status(wsResult.statusCode || 403).json({ error: wsResult.error, success: false });
     return;
@@ -64,6 +69,7 @@ async function optionalAuth(req: Request, _res: Response, next: NextFunction): P
       } catch {}
     }
     const wsResult = await hydrateWorkspaceForRequest(req, user.id);
+    (req as any)._workspaceHydrated = true;
     if (!wsResult.error && req.workspaceTeam && Array.isArray(req.workspacePermissions)) {
       user.permissions = req.workspacePermissions;
       (req as any).userPermissions = req.workspacePermissions;
@@ -95,9 +101,25 @@ function requirePermission(permission: string) {
       res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
       return;
     }
+    if (!(req as any)._workspaceHydrated) {
+      const wsResult = await hydrateWorkspaceForRequest(req, user.id);
+      (req as any)._workspaceHydrated = true;
+      if (wsResult.error) {
+        res.status(wsResult.statusCode || 403).json({ error: wsResult.error, success: false });
+        return;
+      }
+      if (req.workspaceTeam && Array.isArray(req.workspacePermissions)) {
+        user.permissions = req.workspacePermissions;
+        (req as any).userPermissions = req.workspacePermissions;
+      }
+    }
     let permissions: string[] = (user as any).permissions || [];
     if (!permissions || permissions.length === 0) {
-      permissions = await permissionService.getUserPermissions(user.id, user.subscription_tier);
+      permissions = await permissionService.getUserPermissions(
+        user.id,
+        user.subscription_tier,
+        user.subscription_status
+      );
       (user as any).permissions = permissions;
     }
     if (!permissions.includes(permission)) {

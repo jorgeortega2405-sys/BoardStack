@@ -1,15 +1,16 @@
-import { navigate } from '../../app-router.js';
 import { openModal } from '../../components/modal.component.js';
 import { openInviteTeamMemberModal } from '../../components/team-invite-modal.component.js';
-import { checkAuthSession, currentUser, escapeHtml, getActiveWorkspaceTeam, getCurrentTeamApi, hasTeamPermission, removeTeamMemberApi, revokeTeamInvitationApi, updateTeamMemberRoleApi } from '../../services/api.service.js';
+import { checkAuthSession, currentUser, escapeHtml, getActiveWorkspaceTeam, getCurrentTeamApi, removeTeamMemberApi, revokeTeamInvitationApi, updateTeamMemberRoleApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
+import { renderIcons } from '../../services/icon.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { onWorkspaceChange } from '../../services/workspace.service.js';
+import { onWorkspaceChange, setActiveTeamId } from '../../services/workspace.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { TeamDetailResponse, TeamInvitationRecord, TeamMemberRecord, TeamRole } from '../../types/team.types.js';
 import { getUserAvatarUrl } from '../../utils/avatar.util.js';
-import { removeEmptyState, renderEmptyState } from '../../utils/dom.util.js';
+import { removeEmptyState, renderEmptyState, setupDropdown } from '../../utils/dom.util.js';
+import { normalizeTier } from '../../utils/tier.util.js';
 
 interface DirectoryEntry {
   dateIso: string;
@@ -40,6 +41,7 @@ class TeamMembersController {
   async init(): Promise<void> {
     this.abortController = new AbortController();
     this.bindEvents();
+    this.ensureDefaultTeamSelection();
     this.unsubWorkspace = onWorkspaceChange(() => {
       if (!this.isDestroyed) {
         this.selectedKey = null;
@@ -59,13 +61,24 @@ class TeamMembersController {
     }
   }
 
+  private ensureDefaultTeamSelection(): void {
+    if (getActiveWorkspaceTeam()) return;
+    const teams = Array.isArray(currentUser?.teams) ? currentUser.teams : [];
+    if (teams.length === 0) return;
+
+    const requestedId = Number(new URLSearchParams(window.location.search).get('teamId') || 0);
+    const preferred = teams.find((team) => Number(team.id) === requestedId) || teams[0];
+    if (preferred) {
+      setActiveTeamId(preferred.id);
+    }
+  }
+
   private bindEvents(): void {
     const signal = this.abortController?.signal;
     if (!signal) return;
 
-    const btnBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-team"]');
     const btnInvite = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-members-invite"]');
-    const btnToggleRole = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-toggle-role"]');
+    const btnManageRole = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-manage-role"]');
     const btnRemoveMember = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-remove-member"]');
     const btnCopyInvite = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-copy-invite"]');
     const btnRevokeInvite = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-revoke-invite"]');
@@ -75,17 +88,10 @@ class TeamMembersController {
     const btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="team-members-tbody"]');
 
-    btnBack?.addEventListener(
-      'click',
-      () => {
-        navigate('/settings/team');
-      },
-      { signal }
-    );
-
     btnInvite?.addEventListener(
       'click',
       () => {
+        if (!this.resolvePermissions().includes('team:members:invite')) return;
         openInviteTeamMemberModal({
           onInvited: async () => {
             await this.loadMembersData();
@@ -95,12 +101,12 @@ class TeamMembersController {
       { signal }
     );
 
-    btnToggleRole?.addEventListener(
+    btnManageRole?.addEventListener(
       'click',
       () => {
         const entry = this.getSelectedEntry();
-        if (entry?.member) {
-          void this.handleToggleMemberRole(entry.member);
+        if (entry?.member && this.canManageMemberRole(entry.member)) {
+          this.openManageMemberRoleModal(entry.member);
         }
       },
       { signal }
@@ -110,7 +116,7 @@ class TeamMembersController {
       'click',
       () => {
         const entry = this.getSelectedEntry();
-        if (entry?.member) {
+        if (entry?.member && this.canSelectEntry(entry)) {
           this.handleRemoveMemberPrompt(entry.member);
         }
       },
@@ -121,7 +127,7 @@ class TeamMembersController {
       'click',
       () => {
         const entry = this.getSelectedEntry();
-        if (entry?.invitation) {
+        if (entry?.invitation && this.canSelectEntry(entry)) {
           const inviteUrl = `${window.location.origin}/teams/invite?token=${encodeURIComponent(entry.invitation.token)}`;
           void this.copyText(inviteUrl, t('settings.team.toast_invite_link_copied'));
         }
@@ -133,7 +139,7 @@ class TeamMembersController {
       'click',
       () => {
         const entry = this.getSelectedEntry();
-        if (entry?.invitation) {
+        if (entry?.invitation && this.canSelectEntry(entry)) {
           this.handleRevokeInvitePrompt(entry.invitation);
         }
       },
@@ -194,12 +200,64 @@ class TeamMembersController {
         if (!row) return;
         const key = row.getAttribute('data-entry-key');
         if (!key) return;
+        const entry = this.entries.find((item) => item.key === key);
+        if (!entry || !this.canSelectEntry(entry)) return;
         this.selectedKey = this.selectedKey === key ? null : key;
         this.syncSelectedRowsDom();
         this.updateHeaderActions();
       },
       { signal }
     );
+  }
+
+  private resolvePermissions(): string[] {
+    if (Array.isArray(this.currentDetail?.permissions) && this.currentDetail.permissions.length > 0) {
+      return this.currentDetail.permissions;
+    }
+    return getActiveWorkspaceTeam()?.permissions || [];
+  }
+
+  private canManageMemberRole(member: TeamMemberRecord): boolean {
+    if (!this.currentDetail) return false;
+    const perms = this.resolvePermissions();
+    const actingUserId = Number(currentUser?.id || 0);
+    const ownerId = Number(this.currentDetail.team.owner_id || 0);
+    const isTeamOwner = actingUserId > 0 && actingUserId === ownerId;
+    const isSelf = Number(member.user_id) === actingUserId;
+    const isTargetOwner = ownerId > 0 && Number(member.user_id) === ownerId;
+    return (
+      perms.includes('team:members:manage') &&
+      isTeamOwner &&
+      !isSelf &&
+      !isTargetOwner &&
+      member.role !== 'owner'
+    );
+  }
+
+  private canSelectEntry(entry: DirectoryEntry): boolean {
+    if (!this.currentDetail) return false;
+    const perms = this.resolvePermissions();
+    const canManageMembers = perms.includes('team:members:manage');
+    const canInvite = perms.includes('team:members:invite');
+    const actingUserId = Number(currentUser?.id || 0);
+    const ownerId = Number(this.currentDetail.team.owner_id || 0);
+    const isTeamOwner = actingUserId > 0 && actingUserId === ownerId;
+
+    if (entry.kind === 'member' && entry.member) {
+      const isSelf = Number(entry.member.user_id) === actingUserId;
+      const isTargetOwner = ownerId > 0 && Number(entry.member.user_id) === ownerId;
+      if (!canManageMembers || isSelf || isTargetOwner || entry.member.role === 'owner') return false;
+      if (!isTeamOwner && entry.member.role === 'admin') return false;
+      return true;
+    }
+
+    if (entry.kind === 'invitation' && entry.invitation) {
+      if (!canInvite && !canManageMembers) return false;
+      if (!isTeamOwner && entry.invitation.role === 'admin') return false;
+      return true;
+    }
+
+    return false;
   }
 
   private clearSearchFilter(): void {
@@ -244,8 +302,11 @@ class TeamMembersController {
     this.currentDetail = res;
     this.entries = this.buildDirectoryEntries(res);
 
-    if (this.selectedKey && !this.entries.some((entry) => entry.key === this.selectedKey)) {
-      this.selectedKey = null;
+    if (this.selectedKey) {
+      const stillValid = this.entries.find((entry) => entry.key === this.selectedKey);
+      if (!stillValid || !this.canSelectEntry(stillValid)) {
+        this.selectedKey = null;
+      }
     }
 
     if (summaryBadge) {
@@ -256,7 +317,8 @@ class TeamMembersController {
       summaryBadge.classList.remove('is-hidden');
     }
 
-    btnInvite?.classList.toggle('is-hidden', !hasTeamPermission('team:members:invite'));
+    const canInvite = this.resolvePermissions().includes('team:members:invite');
+    btnInvite?.classList.toggle('is-hidden', !canInvite);
     this.renderTable();
     this.updateHeaderActions();
   }
@@ -368,7 +430,7 @@ class TeamMembersController {
         desc: isSearchEmpty ? t('settings.team.members_search_no_results') : t('settings.team.members_empty_desc'),
         graphicType: isSearchEmpty ? 'search' : 'subscriptions',
         isTable: true,
-        title: isSearchEmpty ? t('settings.team.members_empty_title') : t('settings.team.members_empty_title'),
+        title: t('settings.team.members_empty_title'),
       });
       if (this.selectedKey) {
         this.selectedKey = null;
@@ -382,7 +444,8 @@ class TeamMembersController {
 
     tbody.innerHTML = filtered
       .map((entry) => {
-        const isSelected = entry.key === this.selectedKey;
+        const selectable = this.canSelectEntry(entry);
+        const isSelected = selectable && entry.key === this.selectedKey;
         const roleLabel = this.resolveRoleLabel(entry.role);
         const statusLabel = this.resolveStatusLabel(entry.status);
         const statusBadgeClass = entry.status === 'active' ? 'component-badge--success' : 'component-badge--warning';
@@ -399,9 +462,12 @@ class TeamMembersController {
             },
             64
           );
+          const tier = normalizeTier(entry.member.subscription_tier);
           leadingHtml = `
             <div class="team-table-member">
-              <img class="team-table-member__avatar" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(entry.name)}" />
+              <div class="table-user-avatar table-user-avatar--${escapeHtml(tier)}" data-tier="${escapeHtml(tier)}">
+                <img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(entry.name)}" />
+              </div>
               <span class="team-table-member__name">${escapeHtml(entry.name)}</span>
             </div>
           `;
@@ -416,8 +482,9 @@ class TeamMembersController {
           `;
         }
 
+        const rowClass = `component-table__row${selectable ? ' component-cursor-pointer' : ''}${isSelected ? ' is-selected' : ''}`;
         return `
-          <tr class="component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}" data-entry-key="${escapeHtml(entry.key)}">
+          <tr class="${rowClass}" data-entry-key="${escapeHtml(entry.key)}">
             <td class="component-table__cell component-table__cell--pl20">${leadingHtml}</td>
             <td class="component-table__cell">${escapeHtml(entry.email)}</td>
             <td class="component-table__cell">
@@ -442,35 +509,26 @@ class TeamMembersController {
   }
 
   private updateHeaderActions(): void {
-    const btnToggleRole = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-toggle-role"]');
-    const btnToggleRoleText = this.container.querySelector<HTMLElement>('[data-ref="btn-row-toggle-role-text"]');
+    const btnManageRole = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-manage-role"]');
     const btnRemoveMember = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-remove-member"]');
     const btnCopyInvite = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-copy-invite"]');
     const btnRevokeInvite = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-revoke-invite"]');
 
-    btnToggleRole?.classList.add('is-hidden');
+    btnManageRole?.classList.add('is-hidden');
     btnRemoveMember?.classList.add('is-hidden');
     btnCopyInvite?.classList.add('is-hidden');
     btnRevokeInvite?.classList.add('is-hidden');
 
     const entry = this.getSelectedEntry();
-    if (!entry || !this.currentDetail) return;
+    if (!entry || !this.currentDetail || !this.canSelectEntry(entry)) return;
 
-    const canManageMembers = hasTeamPermission('team:members:manage');
-    const canInvite = hasTeamPermission('team:members:invite');
-    const actingUserId = Number(currentUser?.id || 0);
+    const perms = this.resolvePermissions();
+    const canManageMembers = perms.includes('team:members:manage');
+    const canInvite = perms.includes('team:members:invite');
 
     if (entry.kind === 'member' && entry.member) {
-      const isSelf = Number(entry.member.user_id) === actingUserId;
-      const isOwner = entry.member.role === 'owner';
-      if (canManageMembers && !isSelf && !isOwner) {
-        if (btnToggleRole && btnToggleRoleText) {
-          btnToggleRoleText.textContent =
-            entry.member.role === 'admin' ? t('settings.team.btn_make_member') : t('settings.team.btn_make_admin');
-          btnToggleRole.classList.remove('is-hidden');
-        }
-        btnRemoveMember?.classList.remove('is-hidden');
-      }
+      btnManageRole?.classList.toggle('is-hidden', !this.canManageMemberRole(entry.member));
+      btnRemoveMember?.classList.remove('is-hidden');
       return;
     }
 
@@ -482,23 +540,120 @@ class TeamMembersController {
     }
   }
 
-  private async handleToggleMemberRole(member: TeamMemberRecord): Promise<void> {
-    const nextRole: 'admin' | 'member' = member.role === 'admin' ? 'member' : 'admin';
-    const btnToggleRole = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-row-toggle-role"]');
-    if (btnToggleRole) btnToggleRole.disabled = true;
+  private openManageMemberRoleModal(member: TeamMemberRecord): void {
+    if (!this.canManageMemberRole(member)) return;
+    let selectedRole: 'admin' | 'member' = member.role === 'admin' ? 'admin' : 'member';
+    let dropdownCtrl: { destroy: () => void } | null = null;
 
-    try {
-      const res = await updateTeamMemberRoleApi(member.user_id, nextRole);
-      if (this.isDestroyed) return;
-      if (!res.success) {
-        showToast(res.error || t('teams.errors.update_role'), 'error');
-        return;
-      }
-      await checkAuthSession();
-      await this.loadMembersData();
-      showToast(t('settings.team.toast_role_updated'), 'success');
-    } finally {
-      if (btnToggleRole && !this.isDestroyed) btnToggleRole.disabled = false;
+    const roleDisplay = selectedRole === 'admin'
+      ? t('settings.team.invite_role_admin')
+      : t('settings.team.invite_role_member');
+    const roleIcon = selectedRole === 'admin' ? 'verified_user' : 'person';
+    const roleDesc = selectedRole === 'admin'
+      ? t('settings.team.invite_role_admin_desc')
+      : t('settings.team.invite_role_member_desc');
+
+    const bodyHtml = `
+      <div class="team-role-modal" data-ref="team-role-modal-body">
+        <span class="team-invite-modal__label">${escapeHtml(t('settings.team.modal_manage_role_label'))}</span>
+        <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-member-role">
+          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-member-role" aria-label="${escapeHtml(t('settings.team.modal_manage_role_label'))}">
+            <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-member-role">
+              <svg class="component-icon dropdown-trigger__icon" data-ref="icon-selected-member-role" aria-hidden="true"><use href="/icons.svg#${roleIcon}"></use></svg>
+              <span class="dropdown-trigger__text" data-ref="txt-selected-member-role">${escapeHtml(roleDisplay)}</span>
+            </div>
+            <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-member-role">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-member-role">
+              <div class="menu-panel__drag-zone" data-ref="drag-zone-member-role" aria-hidden="true">
+                <div class="menu-panel__drag-handle"></div>
+              </div>
+              <div class="menu-panel__list menu-panel__list--scrollable" data-ref="member-roles-list">
+                <button type="button" class="menu-item ${selectedRole === 'member' ? 'is-selected is-active' : ''}" data-ref="member-role-option-member" data-value="member">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                  <span class="menu-item__text">${escapeHtml(t('settings.team.invite_role_member'))}</span>
+                  <svg class="component-icon menu-item__check ${selectedRole === 'member' ? '' : 'is-hidden'}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                </button>
+                <button type="button" class="menu-item ${selectedRole === 'admin' ? 'is-selected is-active' : ''}" data-ref="member-role-option-admin" data-value="admin">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+                  <span class="menu-item__text">${escapeHtml(t('settings.team.invite_role_admin'))}</span>
+                  <svg class="component-icon menu-item__check ${selectedRole === 'admin' ? '' : 'is-hidden'}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="team-seats-field__hint" data-ref="member-role-desc">${escapeHtml(roleDesc)}</p>
+      </div>
+    `;
+
+    const modal = openModal({
+      bodyHtml,
+      cancelText: t('settings.team.btn_cancel'),
+      confirmClass: 'component-button--black',
+      confirmText: t('settings.team.modal_manage_role_submit'),
+      description: t('settings.team.modal_manage_role_desc', {
+        name: member.username || member.email,
+      }),
+      onClose: () => {
+        dropdownCtrl?.destroy();
+        dropdownCtrl = null;
+      },
+      onConfirm: async (inst) => {
+        inst.clearError();
+        if (selectedRole === member.role) {
+          return true;
+        }
+        inst.setConfirmLoading(true);
+        const res = await updateTeamMemberRoleApi(member.user_id, selectedRole);
+        if (this.isDestroyed) return false;
+        if (!res.success) {
+          inst.setConfirmLoading(false);
+          inst.showError(res.error || t('teams.errors.update_role'));
+          return false;
+        }
+        await checkAuthSession();
+        await this.loadMembersData();
+        inst.close();
+        showToast(t('settings.team.toast_role_updated'), 'success');
+        return true;
+      },
+      showCancel: true,
+      showConfirm: true,
+      size: 'sm',
+      title: t('settings.team.modal_manage_role_title'),
+    });
+
+    renderIcons(modal.body);
+    const wrapper = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-member-role"]');
+    const trigger = modal.body.querySelector<HTMLElement>('[data-ref="btn-trigger-member-role"]');
+    const backdrop = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-member-role"]');
+    const menu = modal.body.querySelector<HTMLElement>('[data-ref="dropdown-menu-member-role"]');
+    const roleDescEl = modal.body.querySelector<HTMLElement>('[data-ref="member-role-desc"]');
+
+    if (wrapper) {
+      dropdownCtrl = setupDropdown(wrapper, {
+        backdrop,
+        isSelect: true,
+        menu,
+        onSelect: (val, item) => {
+          selectedRole = val === 'admin' ? 'admin' : 'member';
+          if (roleDescEl) {
+            roleDescEl.textContent = selectedRole === 'admin'
+              ? t('settings.team.invite_role_admin_desc')
+              : t('settings.team.invite_role_member_desc');
+          }
+          const items = modal.body.querySelectorAll<HTMLElement>('[data-ref="member-roles-list"] .menu-item');
+          items.forEach((it) => {
+            const isMatch = it === item;
+            it.classList.toggle('is-selected', isMatch);
+            it.querySelector<HTMLElement>('.menu-item__check')?.classList.toggle('is-hidden', !isMatch);
+          });
+        },
+        placement: 'bottom-start',
+        trigger,
+      });
     }
   }
 

@@ -2,8 +2,6 @@ import { getDbPool } from '../config/database.config.js';
 import { FOLDER_LIMITS } from '../config/subscription-plans.config.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 
 interface ProjectFolderMemberRecord {
   avatar_url: string | null;
@@ -29,13 +27,11 @@ interface ProjectFolderRecord {
   visibility?: 'restricted' | 'team';
 }
 
-const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative');
-
 async function isActiveTeamMember(teamId: number, userId: number | null): Promise<boolean> {
   if (!teamId || !userId) return false;
   const pool = getDbPool();
   const [rows] = await pool.query<any[]>(
-    'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? LIMIT 1',
+    'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? AND status = "active" LIMIT 1',
     [teamId, userId]
   );
   return Array.isArray(rows) && rows.length > 0;
@@ -216,22 +212,6 @@ async function listProjectFolders(
       rootUploadsCount = 0;
     }
 
-    if (!effectiveTeamId && fs.existsSync(UPLOADS_DIR)) {
-      try {
-        const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-        let diskUploadsCount = 0;
-        for (const mf of metaFiles) {
-          try {
-            const data = JSON.parse(fs.readFileSync(path.join(UPLOADS_DIR, mf), 'utf-8'));
-            if (!userId || data.userId === userId) {
-              diskUploadsCount++;
-            }
-          } catch {}
-        }
-        rootUploadsCount = Math.max(rootUploadsCount, diskUploadsCount);
-      } catch {}
-    }
-
     uploadsFolder.file_count = rootUploadsCount;
 
     const enrichedFolders = folderList
@@ -364,7 +344,7 @@ async function createProjectFolder(payload: {
       payload.parentId = uploadsFolder.id;
     } else {
       const parent = await getProjectFolderById(payload.parentId, payload.userId, effectiveTeamId, payload.teamPermissions || []);
-      if (!parent || parent.folder_type !== 'uploads') {
+      if (!parent || parent.folder_type !== 'uploads' || parent.user_role !== 'editor') {
         throw new Error('Solo se permite un nivel de carpetas dentro de la carpeta de subidos.');
       }
     }
@@ -453,6 +433,10 @@ async function deleteProjectFolder(
     throw new Error('No se puede eliminar la carpeta de subidos del sistema.');
   }
 
+  if (folder.user_role !== 'editor') {
+    throw new Error('No tienes permisos para eliminar esta carpeta.');
+  }
+
   if (effectiveTeamId && folder.user_id !== userId && !teamPermissions.includes('team:folders:manage')) {
     throw new Error('No tienes permisos para eliminar esta carpeta.');
   }
@@ -462,26 +446,10 @@ async function deleteProjectFolder(
   await pool.query('UPDATE user_storage_assets SET folder_id = NULL WHERE folder_id = ?', [id]);
   await pool.query('DELETE FROM project_folder_members WHERE folder_id = ?', [id]);
 
-  if (!effectiveTeamId && fs.existsSync(UPLOADS_DIR)) {
-    try {
-      const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-      for (const mf of metaFiles) {
-        try {
-          const filePath = path.join(UPLOADS_DIR, mf);
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          if (data.folderId === id) {
-            data.folderId = null;
-            fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-          }
-        } catch {}
-      }
-    } catch {}
-  }
-
   if (effectiveTeamId) {
     await pool.query('DELETE FROM project_folders WHERE id = ? AND team_id = ?', [id, effectiveTeamId]);
   } else {
-    await pool.query('DELETE FROM project_folders WHERE id = ? AND team_id IS NULL AND (user_id <=> ? OR user_id IS NULL)', [id, userId]);
+    await pool.query('DELETE FROM project_folders WHERE id = ? AND team_id IS NULL AND user_id = ?', [id, userId]);
   }
   return true;
 }
@@ -493,10 +461,55 @@ async function moveDocToFolder(
   teamId?: number | null,
   teamPermissions: string[] = []
 ): Promise<boolean> {
+  if (!userId) {
+    return false;
+  }
   const pool = getDbPool();
   const effectiveTeamId = teamId || null;
+
+  const [docRows] = await pool.query<any[]>(
+    'SELECT id, user_id, team_id, team_access, folder_id FROM collaborative_documents WHERE id = ? LIMIT 1',
+    [docId]
+  );
+  if (!Array.isArray(docRows) || docRows.length === 0) {
+    return false;
+  }
+  const doc = docRows[0];
+
+  if (effectiveTeamId) {
+    if (Number(doc.team_id || 0) !== Number(effectiveTeamId)) {
+      return false;
+    }
+    const canManageTeamFolders = teamPermissions.includes('team:folders:manage');
+    const isOwner = doc.user_id !== null && Number(doc.user_id) === Number(userId);
+    if (!canManageTeamFolders && !isOwner) {
+      if (doc.folder_id) {
+        const srcFolder = await getProjectFolderById(String(doc.folder_id), userId, effectiveTeamId, teamPermissions);
+        if (!srcFolder || srcFolder.user_role !== 'editor') {
+          throw new Error('No tienes permisos de edición sobre esta carpeta.');
+        }
+      }
+      if (doc.team_access !== 'editor') {
+        const [memberRows] = await pool.query<any[]>(
+          'SELECT role FROM collaborative_document_members WHERE document_id = ? AND user_id = ? LIMIT 1',
+          [docId, userId]
+        );
+        if (!Array.isArray(memberRows) || memberRows.length === 0 || memberRows[0].role !== 'editor') {
+          throw new Error('No tienes permisos para mover este documento.');
+        }
+      }
+    }
+  } else {
+    if (doc.team_id !== null && doc.team_id !== undefined) {
+      return false;
+    }
+    if (doc.user_id === null || Number(doc.user_id) !== Number(userId)) {
+      throw new Error('No tienes permisos para mover este documento.');
+    }
+  }
+
   if (folderId) {
-    const targetFolder = await getProjectFolderById(folderId, userId ?? null, effectiveTeamId, teamPermissions);
+    const targetFolder = await getProjectFolderById(folderId, userId, effectiveTeamId, teamPermissions);
     if (!targetFolder || targetFolder.folder_type !== 'project' || targetFolder.user_role !== 'editor') {
       throw new Error('Carpeta de destino no válida para documentos PDF.');
     }
@@ -508,10 +521,10 @@ async function moveDocToFolder(
         [folderId || null, docId, effectiveTeamId]
       )
     : await pool.query<any>(
-        'UPDATE collaborative_documents SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id IS NULL AND (user_id <=> ? OR user_id IS NULL)',
-        [folderId || null, docId, userId ?? null]
+        'UPDATE collaborative_documents SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id IS NULL AND user_id = ?',
+        [folderId || null, docId, userId]
       );
-  return res && res.affectedRows > 0;
+  return Boolean(res && res.affectedRows > 0);
 }
 
 async function moveUploadToFolder(
@@ -521,45 +534,65 @@ async function moveUploadToFolder(
   teamId?: number | null,
   teamPermissions: string[] = []
 ): Promise<boolean> {
+  if (!userId) {
+    return false;
+  }
   const pool = getDbPool();
   const effectiveTeamId = teamId || null;
+
+  const [assetRows] = await pool.query<any[]>(
+    'SELECT id, user_id, team_id, folder_id FROM user_storage_assets WHERE id = ? LIMIT 1',
+    [uploadId]
+  );
+  if (!Array.isArray(assetRows) || assetRows.length === 0) {
+    return false;
+  }
+  const asset = assetRows[0];
+
+  if (effectiveTeamId) {
+    if (Number(asset.team_id || 0) !== Number(effectiveTeamId)) {
+      return false;
+    }
+    const canManageTeamFolders = teamPermissions.includes('team:folders:manage');
+    const isOwner = asset.user_id !== null && Number(asset.user_id) === Number(userId);
+    if (!canManageTeamFolders) {
+      if (asset.folder_id) {
+        const srcFolder = await getProjectFolderById(String(asset.folder_id), userId, effectiveTeamId, teamPermissions);
+        if (!srcFolder || srcFolder.user_role !== 'editor') {
+          throw new Error('No tienes permisos para mover este archivo.');
+        }
+      }
+      if (!isOwner) {
+        throw new Error('No tienes permisos para mover este archivo.');
+      }
+    }
+  } else {
+    if (asset.team_id !== null && asset.team_id !== undefined) {
+      return false;
+    }
+    if (Number(asset.user_id) !== Number(userId)) {
+      throw new Error('No tienes permisos para mover este archivo.');
+    }
+  }
+
   if (folderId) {
-    const targetFolder = await getProjectFolderById(folderId, userId ?? null, effectiveTeamId, teamPermissions);
+    const targetFolder = await getProjectFolderById(folderId, userId, effectiveTeamId, teamPermissions);
     if (!targetFolder || (targetFolder.folder_type !== 'uploads' && targetFolder.folder_type !== 'upload_folder') || targetFolder.user_role !== 'editor') {
       throw new Error('Carpeta de destino no válida para archivos subidos.');
     }
   }
 
-  if (effectiveTeamId) {
-    await pool.query(
-      'UPDATE user_storage_assets SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id = ?',
-      [folderId || null, uploadId, effectiveTeamId]
-    );
-  } else {
-    await pool.query(
-      'UPDATE user_storage_assets SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id IS NULL AND (user_id <=> ? OR user_id IS NULL)',
-      [folderId || null, uploadId, userId ?? null]
-    );
-  }
+  const [res] = effectiveTeamId
+    ? await pool.query<any>(
+        'UPDATE user_storage_assets SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id = ?',
+        [folderId || null, uploadId, effectiveTeamId]
+      )
+    : await pool.query<any>(
+        'UPDATE user_storage_assets SET folder_id = ?, updated_at = NOW() WHERE id = ? AND team_id IS NULL AND user_id = ?',
+        [folderId || null, uploadId, userId]
+      );
 
-  if (!effectiveTeamId && fs.existsSync(UPLOADS_DIR)) {
-    try {
-      const metaFiles = fs.readdirSync(UPLOADS_DIR).filter((f) => f.endsWith('.meta.json'));
-      for (const mf of metaFiles) {
-        try {
-          const filePath = path.join(UPLOADS_DIR, mf);
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          if (data.id === uploadId) {
-            data.folderId = folderId || null;
-            fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-            break;
-          }
-        } catch {}
-      }
-    } catch {}
-  }
-
-  return true;
+  return Boolean(res && res.affectedRows > 0);
 }
 
 async function getFolderSharingDetails(

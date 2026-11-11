@@ -451,5 +451,29 @@ const contactLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
 });
 
-export { avatarLimiter, comparePdfLimiter, contactLimiter, createRateLimiter, emailCodeLimiter, forgotPasswordLimiter, getClientIp, getUserOrIpKey, loginLimiter, paymentLimiter, pdfCompressLimiter, pdfMergeLimiter, pdfOcrLimiter, pdfOrganizeLimiter, pdfRemovePagesLimiter, pdfRepairLimiter, pdfSplitLimiter, pdfToMarkdownLimiter, preferencesLimiter, redactPdfLimiter, registerLimiter, removeBackgroundLimiter, resetPasswordLimiter, sendCodeLimiter, summarizePdfLimiter, translatePdfLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyCodeLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter };
+const teamInspectLimiter = createRateLimiter({
+  keyGenerator: getClientIp,
+  max: 30,
+  message: 'Has consultado demasiadas invitaciones en poco tiempo. Por favor espera unos minutos.',
+  prefix: 'team_inspect',
+  windowMs: 5 * 60 * 1000,
+});
+
+const teamInviteLimiter = createRateLimiter({
+  keyGenerator: getUserOrIpKey,
+  max: 20,
+  message: 'Has enviado demasiadas invitaciones de equipo en poco tiempo. Por favor espera unos minutos.',
+  prefix: 'team_invite',
+  windowMs: 15 * 60 * 1000,
+});
+
+const teamActionLimiter = createRateLimiter({
+  keyGenerator: getUserOrIpKey,
+  max: 40,
+  message: 'Has realizado demasiadas operaciones en tu equipo en poco tiempo. Por favor espera unos minutos.',
+  prefix: 'team_action',
+  windowMs: 5 * 60 * 1000,
+});
+
+export { avatarLimiter, comparePdfLimiter, contactLimiter, createRateLimiter, emailCodeLimiter, forgotPasswordLimiter, getClientIp, getUserOrIpKey, loginLimiter, paymentLimiter, pdfCompressLimiter, pdfMergeLimiter, pdfOcrLimiter, pdfOrganizeLimiter, pdfRemovePagesLimiter, pdfRepairLimiter, pdfSplitLimiter, pdfToMarkdownLimiter, preferencesLimiter, redactPdfLimiter, registerLimiter, removeBackgroundLimiter, resetPasswordLimiter, sendCodeLimiter, summarizePdfLimiter, teamActionLimiter, teamInspectLimiter, teamInviteLimiter, translatePdfLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyCodeLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter };
 export type { RateLimiterOptions };

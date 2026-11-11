@@ -261,7 +261,8 @@ async function setDocumentLabels(
   userId: number,
   documentId: string,
   rawLabelIds: unknown[],
-  teamId?: number | null
+  teamId?: number | null,
+  canManageTeamFolders = false
 ): Promise<DocumentLabelRecord[]> {
   const pool = getDbPool();
   const effectiveTeamId = teamId || null;
@@ -270,18 +271,30 @@ async function setDocumentLabels(
         `SELECT cd.id
          FROM collaborative_documents cd
          LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id AND cdm.user_id = ?
-         LEFT JOIN team_members tm ON tm.team_id = cd.team_id AND tm.user_id = ?
-         WHERE cd.id = ? AND (cd.user_id = ? OR cdm.user_id = ? OR (cd.team_id = ? AND tm.user_id IS NOT NULL))
+         INNER JOIN team_members tm ON tm.team_id = cd.team_id AND tm.user_id = ? AND tm.status = 'active'
+         LEFT JOIN project_folders pf ON pf.id = cd.folder_id
+         LEFT JOIN project_folder_members pfm ON pfm.folder_id = cd.folder_id AND pfm.user_id = ?
+         WHERE cd.id = ?
+           AND cd.team_id = ?
+           AND (
+             ? = 1
+             OR cd.user_id = ?
+             OR cdm.role IN ('editor', 'owner')
+             OR (
+               cd.team_access = 'editor'
+               AND (pf.id IS NULL OR pf.visibility != 'restricted' OR pf.user_id = ? OR pfm.role = 'editor')
+             )
+           )
          LIMIT 1`,
-        [userId, userId, documentId, userId, userId, effectiveTeamId]
+        [userId, userId, userId, documentId, effectiveTeamId, canManageTeamFolders ? 1 : 0, userId, userId]
       )
     : await pool.query<RowDataPacket[]>(
         `SELECT cd.id
          FROM collaborative_documents cd
          LEFT JOIN collaborative_document_members cdm ON cdm.document_id = cd.id AND cdm.user_id = ?
-         WHERE cd.id = ? AND cd.team_id IS NULL AND (cd.user_id = ? OR cdm.user_id = ?)
+         WHERE cd.id = ? AND cd.team_id IS NULL AND (cd.user_id = ? OR cdm.role IN ('editor', 'owner'))
          LIMIT 1`,
-        [userId, documentId, userId, userId]
+        [userId, documentId, userId]
       );
 
   if (!Array.isArray(docRows) || docRows.length === 0) {

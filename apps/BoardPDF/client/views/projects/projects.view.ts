@@ -30,6 +30,7 @@ interface ProjectFolder {
   parent_id?: string | null;
   updated_at: string;
   user_id?: number | null;
+  user_role?: 'editor' | 'viewer';
 }
 
 interface DocItem {
@@ -71,6 +72,7 @@ class ProjectsController implements ViewController {
   private filterCategory: string = 'all';
   private filterLabelId: number | null = null;
   private folders: ProjectFolder[] = [];
+  private loadSequence: number = 0;
   private maxCustomLabels: number = 3;
   private searchQuery: string = '';
   private sortAscending: boolean = false;
@@ -88,17 +90,20 @@ class ProjectsController implements ViewController {
   public async init(): Promise<void> {
     this.abortController = new AbortController();
     await this.loadData();
+    if (!this.abortController || this.abortController.signal.aborted) return;
     this.renderView();
     this.renderFooter();
     renderIcons(this.container);
     this.bindEvents();
 
     this.workspaceUnsubscribe = onWorkspaceChange(() => {
+      if (!this.abortController || this.abortController.signal.aborted) return;
       if (this.currentFolderId) {
         navigate('/projects');
         return;
       }
       void this.loadData().then(() => {
+        if (!this.abortController || this.abortController.signal.aborted) return;
         this.renderView();
         renderIcons(this.container);
       });
@@ -133,15 +138,17 @@ class ProjectsController implements ViewController {
   }
 
   private async loadData(): Promise<void> {
+    const seq = ++this.loadSequence;
     if (!this.currentFolderId) {
-      await Promise.all([this.loadRootProjectsData(), this.loadLabelsCatalog()]);
+      await Promise.all([this.loadRootProjectsData(seq), this.loadLabelsCatalog(seq)]);
     } else {
-      await Promise.all([this.loadFolderDetailData(this.currentFolderId), this.loadLabelsCatalog()]);
+      await Promise.all([this.loadFolderDetailData(this.currentFolderId, seq), this.loadLabelsCatalog(seq)]);
     }
   }
 
-  private async loadLabelsCatalog(): Promise<void> {
+  private async loadLabelsCatalog(seq: number = this.loadSequence): Promise<void> {
     if (!currentUser) {
+      if (seq !== this.loadSequence) return;
       this.userLabels = [];
       this.customLabelsCount = 0;
       this.maxCustomLabels = 0;
@@ -149,8 +156,10 @@ class ProjectsController implements ViewController {
     }
     try {
       const res = await getApi(API_ROUTES.documentLabels.base);
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       if (res.ok) {
         const data = await res.json();
+        if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
         this.userLabels = Array.isArray(data.labels) ? data.labels : [];
         this.customLabelsCount = typeof data.customCount === 'number'
           ? data.customCount
@@ -161,9 +170,10 @@ class ProjectsController implements ViewController {
     }
   }
 
-  private async loadRootProjectsData(): Promise<void> {
+  private async loadRootProjectsData(seq: number): Promise<void> {
     this.currentFolder = null;
     if (!currentUser) {
+      if (seq !== this.loadSequence) return;
       const drafts = listLocalDrafts();
       this.documents = drafts.filter((d) => !d.folderId).map((d) => ({
         access_level: 'private',
@@ -196,32 +206,39 @@ class ProjectsController implements ViewController {
     }
     try {
       const docsRes = await getApi(API_ROUTES.collaborativeDocs.base);
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       if (docsRes.ok) {
         const data = await docsRes.json();
+        if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
         const serverDocs: DocItem[] = Array.isArray(data.documents) ? data.documents : [];
         this.documents = serverDocs.filter((d) => !d.folder_id);
       } else {
         this.documents = [];
       }
     } catch {
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       this.documents = [];
     }
 
     try {
       const foldersRes = await getApi(API_ROUTES.projectFolders.base);
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       if (foldersRes.ok) {
         const fData = await foldersRes.json();
+        if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
         this.folders = Array.isArray(fData.folders) ? fData.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
         this.uploadsFolder = fData.uploadsFolder || null;
       }
     } catch {
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       this.folders = [];
       this.uploadsFolder = null;
     }
   }
 
-  private async loadFolderDetailData(folderId: string): Promise<void> {
+  private async loadFolderDetailData(folderId: string, seq: number): Promise<void> {
     if (!currentUser) {
+      if (seq !== this.loadSequence) return;
       const localFolder = getLocalFolderById(folderId);
       if (!localFolder) {
         showToast(t('projects.folder_not_found'), 'warning');
@@ -271,17 +288,20 @@ class ProjectsController implements ViewController {
     }
     try {
       const res = await getApi(API_ROUTES.projectFolders.byId(folderId));
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       if (!res.ok) {
         showToast(t('projects.folder_not_found'), 'warning');
         navigate('/projects');
         return;
       }
       const data = await res.json();
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       this.currentFolder = data.folder || null;
       this.documents = Array.isArray(data.documents) ? data.documents : [];
       this.files = Array.isArray(data.files) ? data.files : [];
       this.folders = Array.isArray(data.subfolders) ? data.subfolders : [];
     } catch {
+      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
       showToast(t('projects.folder_load_error'), 'danger');
       navigate('/projects');
     }
@@ -390,9 +410,11 @@ class ProjectsController implements ViewController {
     const activeTeam = getActiveWorkspaceTeam();
     if (activeTeam) {
       iconUse?.setAttribute('href', '/icons.svg#groups');
+      labelEl.removeAttribute('data-i18n');
       labelEl.textContent = t('projects.workspace_team_badge', { name: activeTeam.name });
     } else {
       iconUse?.setAttribute('href', '/icons.svg#person');
+      labelEl.setAttribute('data-i18n', 'projects.workspace_personal_badge');
       labelEl.textContent = t('projects.workspace_personal_badge');
     }
 
@@ -435,8 +457,13 @@ class ProjectsController implements ViewController {
     const mainTitle = this.container.querySelector<HTMLElement>('[data-ref="projects-main-title"]');
     const folderHeaderActions = this.container.querySelector<HTMLElement>('[data-ref="folder-header-actions"]');
     const btnFolderShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-share"]');
+    const btnRenameFolder = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-rename"]');
+    const btnDeleteFolder = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-folder-delete"]');
     const btnFolderBack = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-back"]');
     const btnUploadDirect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-upload-direct"]');
+    const plusDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-new-action"]');
+    const btnEmptyCreate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-empty-create-pdf"]');
+    const btnEmptyUpload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-empty-upload"]');
 
     const sectionFolders = this.container.querySelector<HTMLElement>('[data-ref="section-folders"]');
     const sectionDocs = this.container.querySelector<HTMLElement>('[data-ref="section-documents"]');
@@ -472,14 +499,26 @@ class ProjectsController implements ViewController {
       currentUser &&
       (Number(this.currentFolder.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
     );
+    const isFolderReadOnly = Boolean(activeTeam && this.currentFolder && this.currentFolder.user_role === 'viewer');
 
     if (!this.currentFolderId || !this.currentFolder) {
-      if (mainTitle) mainTitle.textContent = t('projects.title');
-      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle');
+      if (mainTitle) {
+        mainTitle.setAttribute('data-i18n', 'projects.title');
+        mainTitle.textContent = t('projects.title');
+      }
+      if (mainSubtitle) {
+        mainSubtitle.setAttribute('data-i18n', 'projects.subtitle');
+        mainSubtitle.textContent = t('projects.subtitle');
+      }
       btnFolderBack?.classList.add('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       btnFolderShare?.classList.add('is-hidden');
+      btnRenameFolder?.classList.remove('is-hidden');
+      btnDeleteFolder?.classList.remove('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
+      plusDropdown?.classList.remove('is-hidden');
+      btnEmptyCreate?.classList.remove('is-hidden');
+      btnEmptyUpload?.classList.remove('is-hidden');
 
       sectionDocs?.classList.remove('is-hidden');
       sectionUploads?.classList.add('is-hidden');
@@ -491,12 +530,24 @@ class ProjectsController implements ViewController {
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'project') {
       const folderName = this.currentFolder.name;
-      if (mainTitle) mainTitle.textContent = folderName;
-      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_project_folder');
+      const showFolderHeaderActions = !isFolderReadOnly || canShareCurrentFolder;
+      if (mainTitle) {
+        mainTitle.removeAttribute('data-i18n');
+        mainTitle.textContent = folderName;
+      }
+      if (mainSubtitle) {
+        mainSubtitle.setAttribute('data-i18n', 'projects.subtitle_project_folder');
+        mainSubtitle.textContent = t('projects.subtitle_project_folder');
+      }
       btnFolderBack?.classList.remove('is-hidden');
-      folderHeaderActions?.classList.remove('is-hidden');
+      folderHeaderActions?.classList.toggle('is-hidden', !showFolderHeaderActions);
       btnFolderShare?.classList.toggle('is-hidden', !canShareCurrentFolder);
+      btnRenameFolder?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnDeleteFolder?.classList.toggle('is-hidden', isFolderReadOnly);
       btnUploadDirect?.classList.add('is-hidden');
+      plusDropdown?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnEmptyCreate?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnEmptyUpload?.classList.add('is-hidden');
 
       sectionFolders?.classList.add('is-hidden');
       sectionDocs?.classList.remove('is-hidden');
@@ -507,12 +558,23 @@ class ProjectsController implements ViewController {
 
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
-      if (mainTitle) mainTitle.textContent = t('projects.uploads_title');
-      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
+      if (mainTitle) {
+        mainTitle.setAttribute('data-i18n', 'projects.uploads_title');
+        mainTitle.textContent = t('projects.uploads_title');
+      }
+      if (mainSubtitle) {
+        mainSubtitle.setAttribute('data-i18n', 'projects.subtitle_uploads');
+        mainSubtitle.textContent = t('projects.subtitle_uploads');
+      }
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       btnFolderShare?.classList.add('is-hidden');
+      btnRenameFolder?.classList.add('is-hidden');
+      btnDeleteFolder?.classList.add('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
+      plusDropdown?.classList.remove('is-hidden');
+      btnEmptyCreate?.classList.add('is-hidden');
+      btnEmptyUpload?.classList.remove('is-hidden');
 
       sectionFolders?.classList.remove('is-hidden');
       sectionDocs?.classList.add('is-hidden');
@@ -525,12 +587,24 @@ class ProjectsController implements ViewController {
       this.renderUploadsGrid();
     } else if (this.currentFolder.folder_type === 'upload_folder') {
       const folderName = this.currentFolder.name;
-      if (mainTitle) mainTitle.textContent = folderName;
-      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
+      const showFolderHeaderActions = !isFolderReadOnly || canShareCurrentFolder;
+      if (mainTitle) {
+        mainTitle.removeAttribute('data-i18n');
+        mainTitle.textContent = folderName;
+      }
+      if (mainSubtitle) {
+        mainSubtitle.setAttribute('data-i18n', 'projects.subtitle_uploads');
+        mainSubtitle.textContent = t('projects.subtitle_uploads');
+      }
       btnFolderBack?.classList.remove('is-hidden');
-      folderHeaderActions?.classList.remove('is-hidden');
+      folderHeaderActions?.classList.toggle('is-hidden', !showFolderHeaderActions);
       btnFolderShare?.classList.toggle('is-hidden', !canShareCurrentFolder);
-      btnUploadDirect?.classList.remove('is-hidden');
+      btnRenameFolder?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnDeleteFolder?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnUploadDirect?.classList.toggle('is-hidden', isFolderReadOnly);
+      plusDropdown?.classList.toggle('is-hidden', isFolderReadOnly);
+      btnEmptyCreate?.classList.add('is-hidden');
+      btnEmptyUpload?.classList.toggle('is-hidden', isFolderReadOnly);
 
       sectionFolders?.classList.add('is-hidden');
       sectionDocs?.classList.add('is-hidden');
@@ -645,6 +719,9 @@ class ProjectsController implements ViewController {
 
     empty.classList.add('is-hidden');
 
+    const activeTeam = getActiveWorkspaceTeam();
+    const isFolderReadOnly = Boolean(activeTeam && this.currentFolder && this.currentFolder.user_role === 'viewer');
+
     grid.innerHTML = filteredDocs.map((doc) => {
       const isLocal = doc.isLocalOnly || !currentUser;
       const isPublic = !isLocal && doc.access_level === 'anyone_with_link';
@@ -659,13 +736,14 @@ class ProjectsController implements ViewController {
             .map((lbl) => `<span class="pdf-card__label-dot label-dot--${lbl.color}" title="${this.escapeHtml(getLabelDisplayName(lbl))}"></span>`)
             .join('')}</div>`
         : '';
+      const moreLabel = this.escapeHtml(t('projects.more_options'));
 
       return `
         <div class="tool-card tool-card--collab-doc" data-ref="card-doc-${doc.id}" data-doc-id="${doc.id}">
           <div class="tool-card__preview-box" data-ref="thumb-box-${doc.id}">
             <div class="pdf-card__actions" data-ref="actions-doc-${doc.id}">
               <div class="dropdown" data-ref="dropdown-doc-${doc.id}">
-                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-pdf" data-id="${doc.id}" data-tooltip="Más opciones" aria-label="Más opciones">
+                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-pdf" data-id="${doc.id}" data-tooltip="${moreLabel}" aria-label="${moreLabel}">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--doc-actions" data-ref="menu-doc-${doc.id}">
@@ -674,10 +752,12 @@ class ProjectsController implements ViewController {
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.action_open_tab'))}</span>
                     </button>
-                    <button type="button" class="menu-item" data-ref="item-move-doc-${doc.id}" data-action="move-doc" data-id="${doc.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
-                    </button>
+                    ${!isFolderReadOnly ? `
+                      <button type="button" class="menu-item" data-ref="item-move-doc-${doc.id}" data-action="move-doc" data-id="${doc.id}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
+                      </button>
+                    ` : ''}
                     <button type="button" class="menu-item" data-ref="item-copy-doc-${doc.id}" data-action="copy-doc" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.action_copy_doc'))}</span>
@@ -694,11 +774,13 @@ class ProjectsController implements ViewController {
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#label"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.add_label'))}</span>
                     </button>
-                    <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
-                    <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
-                    </button>
+                    ${!isFolderReadOnly ? `
+                      <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
+                      <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
               </div>
@@ -798,36 +880,42 @@ class ProjectsController implements ViewController {
         currentUser &&
         (Number(f.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
       );
+      const canModifyFolder = !activeTeam || f.user_role !== 'viewer';
+      const hasMenuActions = canShareFolder || canModifyFolder;
       cardsHtml += `
         <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-folder-${f.id}" data-folder-id="${f.id}">
           <div class="tool-card__preview-box project-folder-preview-box">
-            <div class="pdf-card__actions" data-ref="actions-folder-${f.id}">
-              <div class="dropdown" data-ref="dropdown-folder-${f.id}">
-                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
-                </button>
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-folder-${f.id}">
-                  <div class="menu-panel__list">
-                    ${canShareFolder ? `
-                      <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
-                      </button>
-                      <div class="menu-divider"></div>
-                    ` : ''}
-                    <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
-                    </button>
-                    <div class="menu-divider"></div>
-                    <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
-                    </button>
+            ${hasMenuActions ? `
+              <div class="pdf-card__actions" data-ref="actions-folder-${f.id}">
+                <div class="dropdown" data-ref="dropdown-folder-${f.id}">
+                  <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="${this.escapeHtml(t('projects.more_options'))}" aria-label="${this.escapeHtml(t('projects.more_options'))}">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+                  </button>
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-folder-${f.id}">
+                    <div class="menu-panel__list">
+                      ${canShareFolder ? `
+                        <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
+                        </button>
+                        ${canModifyFolder ? '<div class="menu-divider"></div>' : ''}
+                      ` : ''}
+                      ${canModifyFolder ? `
+                        <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
+                        </button>
+                        <div class="menu-divider"></div>
+                        <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ` : ''}
 
             <div class="project-folder-illustration">
               <svg class="project-folder-illustration__svg" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -890,36 +978,42 @@ class ProjectsController implements ViewController {
         currentUser &&
         (Number(f.user_id) === Number(currentUser.id) || hasTeamPermission('team:folders:manage'))
       );
+      const canModifyFolder = !activeTeam || f.user_role !== 'viewer';
+      const hasMenuActions = canShareFolder || canModifyFolder;
       cardsHtml += `
         <div class="tool-card tool-card--collab-doc project-folder-card" data-ref="card-subfolder-${f.id}" data-folder-id="${f.id}">
           <div class="tool-card__preview-box project-folder-preview-box">
-            <div class="pdf-card__actions" data-ref="actions-subfolder-${f.id}">
-              <div class="dropdown" data-ref="dropdown-subfolder-${f.id}">
-                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-subfolder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="Más opciones" aria-label="Más opciones">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
-                </button>
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-subfolder-${f.id}">
-                  <div class="menu-panel__list">
-                    ${canShareFolder ? `
-                      <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
-                      </button>
-                      <div class="menu-divider"></div>
-                    ` : ''}
-                    <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
-                    </button>
-                    <div class="menu-divider"></div>
-                    <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
-                    </button>
+            ${hasMenuActions ? `
+              <div class="pdf-card__actions" data-ref="actions-subfolder-${f.id}">
+                <div class="dropdown" data-ref="dropdown-subfolder-${f.id}">
+                  <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-subfolder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}" data-tooltip="${this.escapeHtml(t('projects.more_options'))}" aria-label="${this.escapeHtml(t('projects.more_options'))}">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+                  </button>
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-subfolder-${f.id}">
+                    <div class="menu-panel__list">
+                      ${canShareFolder ? `
+                        <button type="button" class="menu-item" data-action="share-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_share_folder'))}</span>
+                        </button>
+                        ${canModifyFolder ? '<div class="menu-divider"></div>' : ''}
+                      ` : ''}
+                      ${canModifyFolder ? `
+                        <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
+                        </button>
+                        <div class="menu-divider"></div>
+                        <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
+                          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                          <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ` : ''}
 
             <div class="project-folder-illustration">
               <svg class="project-folder-illustration__svg" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -974,6 +1068,10 @@ class ProjectsController implements ViewController {
 
     empty.classList.add('is-hidden');
 
+    const activeTeam = getActiveWorkspaceTeam();
+    const isFolderReadOnly = Boolean(activeTeam && this.currentFolder && this.currentFolder.user_role === 'viewer');
+    const moreLabel = this.escapeHtml(t('projects.more_options'));
+
     grid.innerHTML = filteredFiles.map((file) => {
       const isImg = file.type === 'image' || file.mimeType?.startsWith('image/');
       const badge = isImg ? 'IMG' : 'PDF';
@@ -984,24 +1082,28 @@ class ProjectsController implements ViewController {
           <div class="tool-card__preview-box">
             <div class="pdf-card__actions" data-ref="actions-up-${file.id}">
               <div class="dropdown" data-ref="dropdown-up-${file.id}">
-                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-upload" data-id="${file.id}" data-tooltip="Más opciones" aria-label="Más opciones">
+                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-upload" data-id="${file.id}" data-tooltip="${moreLabel}" aria-label="${moreLabel}">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--doc-actions" data-ref="menu-up-${file.id}">
                   <div class="menu-panel__list">
-                    <button type="button" class="menu-item" data-action="move-upload" data-id="${file.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
-                    </button>
+                    ${!isFolderReadOnly ? `
+                      <button type="button" class="menu-item" data-action="move-upload" data-id="${file.id}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
+                      </button>
+                    ` : ''}
                     <button type="button" class="menu-item" data-action="download-upload" data-url="${file.url}" data-name="${this.escapeHtml(file.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                       <span class="menu-item__text">${this.escapeHtml(t('projects.action_download_pdf'))}</span>
                     </button>
-                    <div class="menu-divider"></div>
-                    <button type="button" class="menu-item menu-item--danger" data-action="delete-upload" data-id="${file.id}">
-                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
-                    </button>
+                    ${!isFolderReadOnly ? `
+                      <div class="menu-divider"></div>
+                      <button type="button" class="menu-item menu-item--danger" data-action="delete-upload" data-id="${file.id}">
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                        <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
               </div>

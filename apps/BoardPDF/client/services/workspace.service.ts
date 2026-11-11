@@ -1,33 +1,30 @@
 import type { User } from '../types/auth.types.js';
 import type { TeamSummary } from '../types/team.types.js';
 
-const ACTIVE_TEAM_STORAGE_KEY = 'boardpdf_active_team_id';
+const LEGACY_ACTIVE_TEAM_STORAGE_KEY = 'boardpdf_active_team_id';
 const workspaceListeners = new Set<(teamId: number | null) => void>();
 
-function getActiveTeamId(): number | null {
+let activeTeamId: number | null = null;
+
+function clearLegacyWorkspaceStorage(): void {
   try {
-    if (typeof window === 'undefined' || !window.localStorage) return null;
-    const raw = window.localStorage.getItem(ACTIVE_TEAM_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = Number(raw);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-  } catch {
-    return null;
-  }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(LEGACY_ACTIVE_TEAM_STORAGE_KEY);
+    }
+  } catch {}
+}
+
+clearLegacyWorkspaceStorage();
+
+function getActiveTeamId(): number | null {
+  return activeTeamId;
 }
 
 function setActiveTeamId(teamId: number | null): void {
   const normalized = teamId && Number.isInteger(Number(teamId)) && Number(teamId) > 0 ? Number(teamId) : null;
-  const previous = getActiveTeamId();
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      if (normalized) {
-        window.localStorage.setItem(ACTIVE_TEAM_STORAGE_KEY, String(normalized));
-      } else {
-        window.localStorage.removeItem(ACTIVE_TEAM_STORAGE_KEY);
-      }
-    }
-  } catch {}
+  const previous = activeTeamId;
+  activeTeamId = normalized;
+  clearLegacyWorkspaceStorage();
 
   if (previous !== normalized) {
     workspaceListeners.forEach((cb) => {
@@ -46,15 +43,14 @@ function onWorkspaceChange(callback: (teamId: number | null) => void): () => voi
 }
 
 function resolveActiveWorkspace(user?: User | null): TeamSummary | null {
-  const activeId = getActiveTeamId();
-  if (!activeId || !user || !Array.isArray(user.teams)) {
-    if (activeId && user && !Array.isArray(user.teams)) {
+  if (!activeTeamId || !user || !Array.isArray(user.teams)) {
+    if (activeTeamId && user && !Array.isArray(user.teams)) {
       setActiveTeamId(null);
     }
     return null;
   }
 
-  const found = user.teams.find((t) => Number(t.id) === activeId);
+  const found = user.teams.find((t) => Number(t.id) === activeTeamId);
   if (!found) {
     setActiveTeamId(null);
     return null;

@@ -707,9 +707,17 @@ async function previewTeamSeatsApi(seats: number): Promise<TeamSeatPreviewRespon
   }
 }
 
-async function updateTeamSeatsApi(seats: number): Promise<TeamSeatUpdateResponse> {
+interface UpdateTeamSeatsPayload {
+  confirmed: boolean;
+  currentPassword?: string;
+  seats: number;
+  useNewCard?: boolean;
+  verificationEmail?: string;
+}
+
+async function updateTeamSeatsApi(payload: UpdateTeamSeatsPayload): Promise<TeamSeatUpdateResponse> {
   try {
-    const res = await postApi(API_ROUTES.teams.currentSeats, { seats });
+    const res = await postApi(API_ROUTES.teams.currentSeats, payload);
     return await res.json();
   } catch {
     return { error: t('teams.errors.update_seats'), success: false };
@@ -803,4 +811,4 @@ async function updateDocTeamAccessApi(
 }
 
 export { acceptTeamInvitationApi, addFolderMemberApi, cancelSubscriptionImmediateApi, cancelTeamSubscriptionImmediateApi, checkAuthSession, clearUserState, confirmOneTimePaymentApi, confirmSubscriptionPaymentApi, confirmTeamSeatUpgradeIntentApi, createCheckoutApi, createOneTimePaymentIntentApi, createSubscriptionIntentApi, createTeamApi, currentUser, deleteApi, downloadInvoiceApi, ensureCsrfToken, escapeHtml, estimateAiTokens, fetchAiTokenBalance, getActiveWorkspaceTeam, getApi, getBillingDetailsApi, getCsrfToken, getCurrentTeamApi, getFolderMembersApi, getPurchaseHistoryApi, getTeamBillingDetailsApi, getWorkspaceHeaders, hasPermission, hasSubscriptionFeature, hasTeamPermission, inspectTeamInvitationApi, inviteTeamMemberApi, leaveCurrentTeamApi, linkedAccounts, listMyTeamsApi, logoutAllApi, logoutApi, onAuthChange, patchApi, postApi, postFormApi, postFormWithProgress, previewTeamSeatsApi, putApi, removeFolderMemberApi, removeTeamMemberApi, revokeTeamInvitationApi, searchCurrentTeamMembersApi, setAuthState, setCurrentUser, setLinkedAccounts, switchAccountApi, updateAutoRenewalApi, updateCurrentTeamApi, updateDocTeamAccessApi, updateFolderVisibilityApi, updateTeamMemberRoleApi, updateTeamRenewalApi, updateTeamSeatsApi, updateUserAiTokens, updateUserSubscriptionTier, verifySubscriptionSessionApi };
-export type { UploadProgressInfo };
+export type { UpdateTeamSeatsPayload, UploadProgressInfo };

@@ -1,5 +1,6 @@
 import { getDbPool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
+import { normalizeTierKey } from '../config/plans.config.js';
 import { TeamInvitationRecord, TeamMemberRecord, TeamMemberRole, TeamRecord, TeamSummary } from '../types/team.types.js';
 import { CACHE_KEYS, CACHE_TTL, cacheService } from './cache.service.js';
 import { logger } from './logger.service.js';
@@ -10,6 +11,25 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 const TEAM_STORAGE_LIMIT_BYTES = 500 * 1024 * 1024 * 1024;
 const TEAM_MONTHLY_TOKENS = 5000;
 const INVITATION_TTL_DAYS = 7;
+
+function resolveEffectiveMemberTier(
+  tier?: string | null,
+  status?: string | null,
+  periodEnd?: Date | string | null
+): 'business' | 'free' | 'pro' {
+  const normalized = normalizeTierKey(tier);
+  if (normalized === 'free') {
+    return 'free';
+  }
+  const cleanStatus = String(status || '').toLowerCase();
+  if (cleanStatus !== 'active' && cleanStatus !== 'trialing') {
+    return 'free';
+  }
+  if (periodEnd && new Date(periodEnd).getTime() <= Date.now()) {
+    return 'free';
+  }
+  return normalized;
+}
 
 class TeamServiceError extends Error {
   code: string;
@@ -52,7 +72,7 @@ async function getTeamRolePermissions(role: TeamMemberRole, isSubscriptionActive
     const [subRows] = await pool.query<RowDataPacket[]>(
       `SELECT p.name FROM subscription_tier_permissions stp
        INNER JOIN permissions p ON p.id = stp.permission_id
-       WHERE stp.tier = 'business'`
+       WHERE stp.tier = 'business' AND p.name LIKE 'subscription:%'`
     );
     for (const row of subRows) {
       if (row.name) perms.add(String(row.name));
@@ -97,6 +117,7 @@ async function listUserTeams(userId: number): Promise<TeamSummary[]> {
          WHERE tm.user_id = ?
            AND tm.status = 'active'
            AND t.subscription_status = 'active'
+           AND (t.subscription_period_end IS NULL OR t.subscription_period_end > NOW() OR (t.stripe_subscription_id IS NOT NULL AND t.subscription_period_end > DATE_SUB(NOW(), INTERVAL 2 DAY)))
          ORDER BY t.created_at ASC`,
         [userId]
       );
@@ -146,7 +167,8 @@ async function getPendingInvitationsCountForEmail(email: string): Promise<number
      WHERE LOWER(ti.email) = LOWER(?)
        AND ti.status = 'pending'
        AND ti.expires_at > NOW()
-       AND t.subscription_status = 'active'`,
+       AND t.subscription_status = 'active'
+       AND (t.subscription_period_end IS NULL OR t.subscription_period_end > NOW() OR (t.stripe_subscription_id IS NOT NULL AND t.subscription_period_end > DATE_SUB(NOW(), INTERVAL 2 DAY)))`,
     [email.trim()]
   );
   return Number(rows[0]?.cnt || 0);
@@ -172,6 +194,7 @@ async function listPendingInvitationsForUser(email: string): Promise<Array<{
        AND ti.status = 'pending'
        AND ti.expires_at > NOW()
        AND t.subscription_status = 'active'
+       AND (t.subscription_period_end IS NULL OR t.subscription_period_end > NOW() OR (t.stripe_subscription_id IS NOT NULL AND t.subscription_period_end > DATE_SUB(NOW(), INTERVAL 2 DAY)))
      ORDER BY ti.created_at DESC`,
     [email.trim()]
   );
@@ -309,7 +332,7 @@ async function createTeamFromPersonalBusiness(ownerId: number, rawName: string):
       slug,
       ownerId,
       user.stripe_customer_id || null,
-      user.stripe_subscription_id || null,
+      null,
       periodEnd,
       TEAM_STORAGE_LIMIT_BYTES,
       TEAM_MONTHLY_TOKENS,
@@ -413,7 +436,7 @@ async function getTeamMembersAndInvitations(teamId: number): Promise<{
 
   const [memberRows] = await pool.query<RowDataPacket[]>(
     `SELECT tm.id, tm.team_id, tm.user_id, tm.role, tm.status, tm.invited_by, tm.joined_at,
-            u.username, u.email, u.avatar_url
+            u.username, u.email, u.avatar_url, u.subscription_tier, u.subscription_status, u.subscription_period_end
      FROM team_members tm
      INNER JOIN users u ON u.id = tm.user_id
      WHERE tm.team_id = ? AND tm.status = 'active'
@@ -439,6 +462,7 @@ async function getTeamMembersAndInvitations(teamId: number): Promise<{
     joined_at: new Date(r.joined_at).toISOString(),
     role: r.role as TeamMemberRole,
     status: r.status as 'active' | 'suspended',
+    subscription_tier: resolveEffectiveMemberTier(r.subscription_tier, r.subscription_status, r.subscription_period_end),
     team_id: Number(r.team_id),
     user_id: Number(r.user_id),
     username: String(r.username),
@@ -508,55 +532,116 @@ async function inviteMemberToTeam(options: {
     throw new TeamServiceError('INVALID_EMAIL', 'Ingresa un correo electrónico válido.', 400);
   }
 
-  const team = await getTeamById(options.teamId);
-  if (!team || team.subscription_status !== 'active') {
-    throw new TeamServiceError('TEAM_INACTIVE', 'El equipo no cuenta con una suscripción activa.', 403);
-  }
-
-  const [existingMemberRows] = await pool.query<RowDataPacket[]>(
-    `SELECT tm.id FROM team_members tm
-     INNER JOIN users u ON u.id = tm.user_id
-     WHERE tm.team_id = ? AND LOWER(u.email) = ? AND tm.status = 'active' LIMIT 1`,
-    [options.teamId, normalizedEmail]
-  );
-  if (existingMemberRows.length > 0) {
-    throw new TeamServiceError('ALREADY_MEMBER', 'Esta persona ya forma parte del equipo.', 409);
-  }
-
-  const [existingInviteRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id FROM team_invitations
-     WHERE team_id = ? AND LOWER(email) = ? AND status = 'pending' AND expires_at > NOW()
-     LIMIT 1`,
-    [options.teamId, normalizedEmail]
-  );
-  if (existingInviteRows.length > 0) {
-    throw new TeamServiceError('ALREADY_INVITED', 'Ya existe una invitación pendiente para este correo.', 409);
-  }
-
-  const snapshot = await getTeamMembersAndInvitations(options.teamId);
-  if (snapshot.seatsAvailable <= 0) {
-    throw new TeamServiceError(
-      'SEAT_LIMIT_REACHED',
-      'No hay asientos disponibles. Agrega más asientos o revoca una invitación pendiente.',
-      409
-    );
-  }
-
+  const role: 'admin' | 'member' = options.role === 'admin' ? 'admin' : 'member';
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  const role: 'admin' | 'member' = options.role === 'admin' ? 'admin' : 'member';
+  const conn = await pool.getConnection();
+  let teamName = '';
+  let invitationId = 0;
 
-  const [insertRes] = await pool.query<ResultSetHeader>(
-    `INSERT INTO team_invitations (team_id, email, role, token, invited_by, status, expires_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-    [options.teamId, normalizedEmail, role, token, options.invitedByUserId, expiresAt]
-  );
+  try {
+    await conn.beginTransaction();
+
+    const [teamRows] = await conn.query<RowDataPacket[]>(
+      `SELECT id, owner_id, name, seat_limit, subscription_status, subscription_period_end
+       FROM teams WHERE id = ? LIMIT 1 FOR UPDATE`,
+      [options.teamId]
+    );
+    if (teamRows.length === 0) {
+      await conn.rollback();
+      throw new TeamServiceError('TEAM_INACTIVE', 'El equipo no cuenta con una suscripción activa.', 403);
+    }
+    const lockedTeam = teamRows[0];
+    const isExpired =
+      lockedTeam.subscription_period_end &&
+      new Date(lockedTeam.subscription_period_end).getTime() <= Date.now();
+    if (lockedTeam.subscription_status !== 'active' || isExpired) {
+      await conn.rollback();
+      throw new TeamServiceError('TEAM_INACTIVE', 'El equipo no cuenta con una suscripción activa.', 403);
+    }
+    teamName = String(lockedTeam.name || '');
+
+    const [actingRows] = await conn.query<RowDataPacket[]>(
+      `SELECT role FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
+      [options.teamId, options.invitedByUserId]
+    );
+    const actingRole = actingRows[0]?.role as TeamMemberRole | undefined;
+    if (!actingRole) {
+      await conn.rollback();
+      throw new TeamServiceError('FORBIDDEN', 'No perteneces a este equipo.', 403);
+    }
+    if (role === 'admin' && Number(lockedTeam.owner_id) !== Number(options.invitedByUserId)) {
+      await conn.rollback();
+      throw new TeamServiceError(
+        'CANNOT_INVITE_ADMIN',
+        'Solo el propietario del equipo puede invitar administradores.',
+        403
+      );
+    }
+
+    const [existingMemberRows] = await conn.query<RowDataPacket[]>(
+      `SELECT tm.id FROM team_members tm
+       INNER JOIN users u ON u.id = tm.user_id
+       WHERE tm.team_id = ? AND LOWER(u.email) = ? AND tm.status = 'active' LIMIT 1`,
+      [options.teamId, normalizedEmail]
+    );
+    if (existingMemberRows.length > 0) {
+      await conn.rollback();
+      throw new TeamServiceError('ALREADY_MEMBER', 'Esta persona ya forma parte del equipo.', 409);
+    }
+
+    const [existingInviteRows] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM team_invitations
+       WHERE team_id = ? AND LOWER(email) = ? AND status = 'pending' AND expires_at > NOW()
+       LIMIT 1`,
+      [options.teamId, normalizedEmail]
+    );
+    if (existingInviteRows.length > 0) {
+      await conn.rollback();
+      throw new TeamServiceError('ALREADY_INVITED', 'Ya existe una invitación pendiente para este correo.', 409);
+    }
+
+    const [usedRows] = await conn.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS cnt FROM team_members WHERE team_id = ? AND status = 'active'`,
+      [options.teamId]
+    );
+    const [pendingRows] = await conn.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS cnt FROM team_invitations WHERE team_id = ? AND status = 'pending' AND expires_at > NOW()`,
+      [options.teamId]
+    );
+    const seatsUsed = Number(usedRows[0]?.cnt || 0);
+    const pendingCount = Number(pendingRows[0]?.cnt || 0);
+    const seatLimit = Number(lockedTeam.seat_limit || 1);
+    if (seatLimit - seatsUsed - pendingCount <= 0) {
+      await conn.rollback();
+      throw new TeamServiceError(
+        'SEAT_LIMIT_REACHED',
+        'No hay asientos disponibles. Agrega más asientos o revoca una invitación pendiente.',
+        409
+      );
+    }
+
+    const [insertRes] = await conn.query<ResultSetHeader>(
+      `INSERT INTO team_invitations (team_id, email, role, token, invited_by, status, expires_at)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+      [options.teamId, normalizedEmail, role, token, options.invitedByUserId, expiresAt]
+    );
+    invitationId = insertRes.insertId;
+    await conn.commit();
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch {}
+    throw err;
+  } finally {
+    conn.release();
+  }
 
   const inviteUrl = `${config.baseUrl}/teams/invite?token=${encodeURIComponent(token)}`;
   const roleLabel = role === 'admin' ? 'Administrador' : 'Miembro';
   let emailSent = false;
   try {
-    await sendTeamInvitationEmail(normalizedEmail, options.inviterName, team.name, roleLabel, inviteUrl);
+    await sendTeamInvitationEmail(normalizedEmail, options.inviterName, teamName, roleLabel, inviteUrl);
     emailSent = true;
   } catch (err) {
     logger.app.warn('No se pudo enviar correo de invitación SMTP (se entrega enlace directo)', {
@@ -572,7 +657,7 @@ async function inviteMemberToTeam(options: {
       created_at: new Date().toISOString(),
       email: normalizedEmail,
       expires_at: expiresAt.toISOString(),
-      id: insertRes.insertId,
+      id: invitationId,
       invited_by: options.invitedByUserId,
       invited_by_name: options.inviterName,
       role,
@@ -584,8 +669,21 @@ async function inviteMemberToTeam(options: {
   };
 }
 
-async function revokeInvitation(teamId: number, invitationId: number): Promise<void> {
+async function revokeInvitation(teamId: number, invitationId: number, actingUserId?: number): Promise<void> {
   const pool = getDbPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT ti.role, t.owner_id
+     FROM team_invitations ti
+     INNER JOIN teams t ON t.id = ti.team_id
+     WHERE ti.id = ? AND ti.team_id = ? AND ti.status = 'pending' LIMIT 1`,
+    [invitationId, teamId]
+  );
+  if (rows.length === 0) {
+    throw new TeamServiceError('INVITE_NOT_FOUND', 'Invitación pendiente no encontrada.', 404);
+  }
+  if (actingUserId && rows[0].role === 'admin' && Number(rows[0].owner_id) !== Number(actingUserId)) {
+    throw new TeamServiceError('CANNOT_REVOKE_ADMIN_INVITE', 'Solo el propietario del equipo puede revocar invitaciones de administrador.', 403);
+  }
   const [res] = await pool.query<ResultSetHeader>(
     `UPDATE team_invitations SET status = 'revoked', updated_at = NOW()
      WHERE id = ? AND team_id = ? AND status = 'pending'`,
@@ -632,72 +730,100 @@ async function acceptTeamInvitation(token: string, userId: number, userEmail: st
   team: TeamSummary;
 }> {
   const pool = getDbPool();
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT ti.*, t.name AS team_name, t.subscription_status, t.seat_limit
-     FROM team_invitations ti
-     INNER JOIN teams t ON t.id = ti.team_id
-     WHERE ti.token = ? LIMIT 1`,
-    [token.trim()]
-  );
+  const conn = await pool.getConnection();
+  let teamId = 0;
 
-  if (rows.length === 0) {
-    throw new TeamServiceError('INVITE_NOT_FOUND', 'La invitación no existe o ya no es válida.', 404);
-  }
+  try {
+    await conn.beginTransaction();
 
-  const inv = rows[0];
-  if (inv.status !== 'pending') {
-    throw new TeamServiceError('INVITE_USED', 'Esta invitación ya fue utilizada o revocada.', 409);
-  }
-  if (new Date(inv.expires_at).getTime() <= Date.now()) {
-    await pool.query(`UPDATE team_invitations SET status = 'expired' WHERE id = ?`, [inv.id]);
-    throw new TeamServiceError('INVITE_EXPIRED', 'Esta invitación ha expirado.', 410);
-  }
-  if (inv.subscription_status !== 'active') {
-    throw new TeamServiceError('TEAM_INACTIVE', 'El equipo de esta invitación no está activo.', 403);
-  }
-
-  if (String(inv.email).toLowerCase() !== String(userEmail).trim().toLowerCase()) {
-    throw new TeamServiceError(
-      'INVITE_EMAIL_MISMATCH',
-      `Esta invitación fue enviada a ${inv.email}. Inicia sesión con esa cuenta para aceptarla.`,
-      403
+    const [rows] = await conn.query<RowDataPacket[]>(
+      `SELECT ti.*, t.name AS team_name, t.subscription_status, t.subscription_period_end, t.seat_limit
+       FROM team_invitations ti
+       INNER JOIN teams t ON t.id = ti.team_id
+       WHERE ti.token = ? LIMIT 1 FOR UPDATE`,
+      [token.trim()]
     );
-  }
 
-  const teamId = Number(inv.team_id);
-  const [existingRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
-    [teamId, userId]
-  );
+    if (rows.length === 0) {
+      await conn.rollback();
+      throw new TeamServiceError('INVITE_NOT_FOUND', 'La invitación no existe o ya no es válida.', 404);
+    }
 
-  if (existingRows.length === 0) {
-    const [activeCountRows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) AS cnt FROM team_members WHERE team_id = ? AND status = 'active'`,
-      [teamId]
-    );
-    const used = Number(activeCountRows[0]?.cnt || 0);
-    if (used >= Number(inv.seat_limit || 1)) {
+    const inv = rows[0];
+    if (inv.status !== 'pending') {
+      await conn.rollback();
+      throw new TeamServiceError('INVITE_USED', 'Esta invitación ya fue utilizada o revocada.', 409);
+    }
+    if (new Date(inv.expires_at).getTime() <= Date.now()) {
+      await conn.query(`UPDATE team_invitations SET status = 'expired' WHERE id = ?`, [inv.id]);
+      await conn.commit();
+      throw new TeamServiceError('INVITE_EXPIRED', 'Esta invitación ha expirado.', 410);
+    }
+    const teamExpired =
+      inv.subscription_period_end && new Date(inv.subscription_period_end).getTime() <= Date.now();
+    if (inv.subscription_status !== 'active' || teamExpired) {
+      await conn.rollback();
+      throw new TeamServiceError('TEAM_INACTIVE', 'El equipo de esta invitación no está activo.', 403);
+    }
+
+    if (String(inv.email).toLowerCase() !== String(userEmail).trim().toLowerCase()) {
+      await conn.rollback();
       throw new TeamServiceError(
-        'SEAT_LIMIT_REACHED',
-        'El equipo alcanzó el límite de asientos comprados. Pide al propietario ampliar los asientos.',
-        409
+        'INVITE_EMAIL_MISMATCH',
+        `Esta invitación fue enviada a ${inv.email}. Inicia sesión con esa cuenta para aceptarla.`,
+        403
       );
     }
 
-    await pool.query(
-      `INSERT INTO team_members (team_id, user_id, role, status, invited_by)
-       VALUES (?, ?, ?, 'active', ?)
-       ON DUPLICATE KEY UPDATE status = 'active', role = VALUES(role), invited_by = VALUES(invited_by), joined_at = NOW()`,
-      [teamId, userId, inv.role, inv.invited_by]
+    teamId = Number(inv.team_id);
+    const [existingRows] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
+      [teamId, userId]
     );
-  }
 
-  await pool.query(
-    `UPDATE team_invitations
-     SET status = 'accepted', accepted_by = ?, accepted_at = NOW(), updated_at = NOW()
-     WHERE id = ?`,
-    [userId, inv.id]
-  );
+    if (existingRows.length === 0) {
+      const [activeCountRows] = await conn.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS cnt FROM team_members WHERE team_id = ? AND status = 'active'`,
+        [teamId]
+      );
+      const used = Number(activeCountRows[0]?.cnt || 0);
+      if (used >= Number(inv.seat_limit || 1)) {
+        await conn.rollback();
+        throw new TeamServiceError(
+          'SEAT_LIMIT_REACHED',
+          'El equipo alcanzó el límite de asientos comprados. Pide al propietario ampliar los asientos.',
+          409
+        );
+      }
+
+      await conn.query(
+        `INSERT INTO team_members (team_id, user_id, role, status, invited_by)
+         VALUES (?, ?, ?, 'active', ?)
+         ON DUPLICATE KEY UPDATE status = 'active', role = VALUES(role), invited_by = VALUES(invited_by), joined_at = NOW()`,
+        [teamId, userId, inv.role, inv.invited_by]
+      );
+    }
+
+    const [updateRes] = await conn.query<ResultSetHeader>(
+      `UPDATE team_invitations
+       SET status = 'accepted', accepted_by = ?, accepted_at = NOW(), updated_at = NOW()
+       WHERE id = ? AND status = 'pending'`,
+      [userId, inv.id]
+    );
+    if (updateRes.affectedRows !== 1) {
+      await conn.rollback();
+      throw new TeamServiceError('INVITE_USED', 'Esta invitación ya fue utilizada o revocada.', 409);
+    }
+
+    await conn.commit();
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch {}
+    throw err;
+  } finally {
+    conn.release();
+  }
 
   const memberIds = await getTeamMemberUserIds(teamId);
   await cacheService.invalidateTeam(teamId, [...memberIds, userId]);
@@ -716,21 +842,45 @@ async function updateTeamMemberRole(
   actingUserId: number
 ): Promise<void> {
   const pool = getDbPool();
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT role FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
-    [teamId, targetUserId]
+  const [teamRows] = await pool.query<RowDataPacket[]>(
+    `SELECT owner_id FROM teams WHERE id = ? LIMIT 1`,
+    [teamId]
   );
-  if (rows.length === 0) {
+  if (teamRows.length === 0) {
+    throw new TeamServiceError('TEAM_NOT_FOUND', 'Equipo no encontrado.', 404);
+  }
+  const teamOwnerId = Number(teamRows[0].owner_id);
+  const isActingOwner = teamOwnerId === Number(actingUserId);
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT user_id, role FROM team_members WHERE team_id = ? AND user_id IN (?, ?) AND status = 'active'`,
+    [teamId, targetUserId, actingUserId]
+  );
+  const targetRow = rows.find((r) => Number(r.user_id) === Number(targetUserId));
+  const actingRow = rows.find((r) => Number(r.user_id) === Number(actingUserId));
+
+  if (!targetRow) {
     throw new TeamServiceError('MEMBER_NOT_FOUND', 'Miembro del equipo no encontrado.', 404);
   }
-  if (rows[0].role === 'owner') {
+  if (!actingRow) {
+    throw new TeamServiceError('FORBIDDEN', 'No perteneces a este equipo.', 403);
+  }
+  if (Number(targetUserId) === teamOwnerId || targetRow.role === 'owner') {
     throw new TeamServiceError('CANNOT_DEMOTE_OWNER', 'No puedes cambiar el rol del propietario del equipo.', 403);
   }
-  if (targetUserId === actingUserId) {
+  if (Number(targetUserId) === Number(actingUserId)) {
     throw new TeamServiceError('CANNOT_EDIT_SELF_ROLE', 'No puedes modificar tu propio rol.', 400);
   }
 
   const safeRole: 'admin' | 'member' = newRole === 'admin' ? 'admin' : 'member';
+  if (!isActingOwner && (targetRow.role === 'admin' || safeRole === 'admin')) {
+    throw new TeamServiceError(
+      'CANNOT_MANAGE_ADMIN',
+      'Solo el propietario del equipo puede gestionar roles de administrador.',
+      403
+    );
+  }
+
   await pool.query(
     `UPDATE team_members SET role = ?, updated_at = NOW() WHERE team_id = ? AND user_id = ?`,
     [safeRole, teamId, targetUserId]
@@ -739,17 +889,48 @@ async function updateTeamMemberRole(
   await cacheService.invalidateTeam(teamId, [targetUserId]);
 }
 
-async function removeTeamMember(teamId: number, targetUserId: number, actingUserId: number): Promise<void> {
+async function removeTeamMember(
+  teamId: number,
+  targetUserId: number,
+  actingUserId: number,
+  allowSelf = false
+): Promise<void> {
   const pool = getDbPool();
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT role FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
-    [teamId, targetUserId]
+  const [teamRows] = await pool.query<RowDataPacket[]>(
+    `SELECT owner_id FROM teams WHERE id = ? LIMIT 1`,
+    [teamId]
   );
-  if (rows.length === 0) {
+  if (teamRows.length === 0) {
+    throw new TeamServiceError('TEAM_NOT_FOUND', 'Equipo no encontrado.', 404);
+  }
+  const teamOwnerId = Number(teamRows[0].owner_id);
+  const isActingOwner = teamOwnerId === Number(actingUserId);
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT user_id, role FROM team_members WHERE team_id = ? AND user_id IN (?, ?) AND status = 'active'`,
+    [teamId, targetUserId, actingUserId]
+  );
+  const targetRow = rows.find((r) => Number(r.user_id) === Number(targetUserId));
+  const actingRow = rows.find((r) => Number(r.user_id) === Number(actingUserId));
+
+  if (!targetRow) {
     throw new TeamServiceError('MEMBER_NOT_FOUND', 'Miembro del equipo no encontrado.', 404);
   }
-  if (rows[0].role === 'owner') {
+  if (!actingRow) {
+    throw new TeamServiceError('FORBIDDEN', 'No perteneces a este equipo.', 403);
+  }
+  if (Number(targetUserId) === teamOwnerId || targetRow.role === 'owner') {
     throw new TeamServiceError('CANNOT_REMOVE_OWNER', 'No puedes eliminar al propietario del equipo.', 403);
+  }
+  if (!allowSelf && Number(targetUserId) === Number(actingUserId)) {
+    throw new TeamServiceError('CANNOT_REMOVE_SELF', 'Usa la opción de salir del equipo para abandonar el equipo.', 400);
+  }
+  if (!allowSelf && !isActingOwner && targetRow.role === 'admin') {
+    throw new TeamServiceError(
+      'CANNOT_REMOVE_ADMIN',
+      'Solo el propietario del equipo puede eliminar a un administrador.',
+      403
+    );
   }
 
   await pool.query(
@@ -775,13 +956,16 @@ async function removeTeamMember(teamId: number, targetUserId: number, actingUser
 async function leaveTeam(teamId: number, userId: number): Promise<void> {
   const pool = getDbPool();
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT role FROM team_members WHERE team_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
+    `SELECT tm.role, t.owner_id
+     FROM team_members tm
+     INNER JOIN teams t ON t.id = tm.team_id
+     WHERE tm.team_id = ? AND tm.user_id = ? AND tm.status = 'active' LIMIT 1`,
     [teamId, userId]
   );
   if (rows.length === 0) {
     throw new TeamServiceError('MEMBER_NOT_FOUND', 'No formas parte de este equipo.', 404);
   }
-  if (rows[0].role === 'owner') {
+  if (Number(rows[0].owner_id) === Number(userId) || rows[0].role === 'owner') {
     throw new TeamServiceError(
       'OWNER_CANNOT_LEAVE',
       'Como propietario, cancela la suscripción del equipo si deseas darlo de baja.',
@@ -789,7 +973,7 @@ async function leaveTeam(teamId: number, userId: number): Promise<void> {
     );
   }
 
-  await removeTeamMember(teamId, userId, userId);
+  await removeTeamMember(teamId, userId, userId, true);
 }
 
 async function searchTeamMembers(teamId: number, query: string): Promise<Array<{

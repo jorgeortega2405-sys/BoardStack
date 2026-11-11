@@ -1,11 +1,15 @@
+import { getDbPool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { PLAN_TIER_CONFIGS } from '../config/plans.config.js';
 import { BillingDetailsResponse } from '../types/subscription.types.js';
-import { TeamSeatPreview } from '../types/team.types.js';
+import { TeamSeatPaymentMethodPreview, TeamSeatPreview } from '../types/team.types.js';
+import { verifyPassword } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
 import { stripeService } from './stripe.service.js';
 import { getTeamById, getTeamMembersAndInvitations, TeamServiceError, updateTeamSubscriptionState } from './team.service.js';
+import { trackSecurityEvent } from './telemetry.service.js';
+import type { RowDataPacket } from 'mysql2';
 import Stripe from 'stripe';
 
 function resolveTeamUnitPrice(billingPeriod: string | null): number {
@@ -14,6 +18,129 @@ function resolveTeamUnitPrice(billingPeriod: string | null): number {
     return Math.round(business.priceYearly * 12 * 100) / 100;
   }
   return business.priceMonthly;
+}
+
+async function resolveDefaultCardPreview(
+  customerId: string | null,
+  subscriptionId: string | null
+): Promise<TeamSeatPaymentMethodPreview | null> {
+  if (!customerId && !subscriptionId) {
+    return null;
+  }
+  try {
+    const stripe = stripeService.getStripeClient();
+    let resolvedPm: Stripe.PaymentMethod | null = null;
+
+    if (subscriptionId) {
+      const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['default_payment_method'],
+      });
+      if (sub.default_payment_method && typeof sub.default_payment_method === 'object') {
+        resolvedPm = sub.default_payment_method as Stripe.PaymentMethod;
+      } else if (typeof sub.default_payment_method === 'string') {
+        resolvedPm = await stripe.paymentMethods.retrieve(sub.default_payment_method);
+      }
+    }
+
+    if (!resolvedPm && customerId) {
+      const customer = await stripe.customers.retrieve(customerId, {
+        expand: ['invoice_settings.default_payment_method'],
+      });
+      if (typeof customer !== 'string' && !customer.deleted) {
+        const custPm = customer.invoice_settings?.default_payment_method;
+        if (custPm && typeof custPm === 'object') {
+          resolvedPm = custPm as Stripe.PaymentMethod;
+        } else if (typeof custPm === 'string') {
+          resolvedPm = await stripe.paymentMethods.retrieve(custPm);
+        }
+      }
+    }
+
+    if (resolvedPm?.card) {
+      return {
+        brand: resolvedPm.card.brand || 'card',
+        expMonth: resolvedPm.card.exp_month || 0,
+        expYear: resolvedPm.card.exp_year || 0,
+        last4: resolvedPm.card.last4 || '••••',
+      };
+    }
+  } catch (err) {
+    logger.app.warn('No se pudo obtener la tarjeta predeterminada del equipo en Stripe', err);
+  }
+  return null;
+}
+
+async function verifySeatActionSecurity(
+  teamId: number,
+  actingUserId: number,
+  actingUserEmail: string,
+  options: {
+    confirmed?: boolean;
+    currentPassword?: string;
+    ip?: string;
+    userAgent?: string;
+    verificationEmail?: string;
+  }
+): Promise<void> {
+  if (!options.confirmed) {
+    throw new TeamServiceError(
+      'CONFIRMATION_REQUIRED',
+      'Debes confirmar explícitamente la modificación de asientos antes de continuar.',
+      400
+    );
+  }
+
+  const pool = getDbPool();
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT email, password_hash FROM users WHERE id = ? LIMIT 1',
+    [actingUserId]
+  );
+  if (userRows.length === 0) {
+    throw new TeamServiceError('USER_NOT_FOUND', 'Usuario no encontrado.', 404);
+  }
+
+  const dbUser = userRows[0];
+  const hasPassword = Boolean(dbUser.password_hash);
+  let verified = false;
+
+  if (hasPassword) {
+    const candidatePwd = typeof options.currentPassword === 'string' ? options.currentPassword : '';
+    if (candidatePwd.length > 0) {
+      verified = await verifyPassword(candidatePwd, String(dbUser.password_hash));
+    }
+  } else {
+    const candidateEmail =
+      typeof options.verificationEmail === 'string' ? options.verificationEmail.trim().toLowerCase() : '';
+    const expectedEmail = String(dbUser.email || actingUserEmail || '').trim().toLowerCase();
+    verified = candidateEmail.length > 0 && candidateEmail === expectedEmail;
+  }
+
+  if (!verified) {
+    logger.security.warn('Fallo de verificación de seguridad al actualizar asientos de equipo', {
+      hasPassword,
+      teamId,
+      userId: actingUserId,
+    });
+    trackSecurityEvent({
+      actorIdentifier: actingUserEmail,
+      eventType: 'team_seat_verification_failed',
+      ip: options.ip || '',
+      metadata: { teamId },
+      outcome: 'blocked',
+      reason: hasPassword ? 'invalid_password' : 'invalid_email_confirmation',
+      routePattern: '/api/teams/current/seats',
+      severity: 'warn',
+      userAgent: options.userAgent || '',
+      userId: actingUserId,
+    });
+    throw new TeamServiceError(
+      'SEAT_VERIFICATION_FAILED',
+      hasPassword
+        ? 'Contraseña incorrecta. Verifica tu identidad para continuar.'
+        : 'El correo electrónico de confirmación no coincide con tu cuenta.',
+      403
+    );
+  }
 }
 
 async function getTeamBillingDetails(teamId: number): Promise<BillingDetailsResponse> {
@@ -116,12 +243,16 @@ async function getTeamBillingDetails(teamId: number): Promise<BillingDetailsResp
 }
 
 async function previewTeamSeatChange(teamId: number, rawNewSeats: number): Promise<TeamSeatPreview> {
+  if (!Number.isInteger(rawNewSeats) || rawNewSeats < 1 || rawNewSeats > 100) {
+    throw new TeamServiceError('INVALID_SEATS', 'La cantidad de asientos debe ser un número entero entre 1 y 100.', 400);
+  }
+
   const team = await getTeamById(teamId);
   if (!team || team.subscription_status !== 'active') {
     throw new TeamServiceError('TEAM_INACTIVE', 'El equipo no tiene una suscripción activa.', 403);
   }
 
-  const newSeats = Math.max(1, Math.min(100, Math.floor(Number(rawNewSeats) || 1)));
+  const newSeats = rawNewSeats;
   const snapshot = await getTeamMembersAndInvitations(teamId);
   const minimumRequired = Math.max(1, snapshot.seatsUsed + snapshot.pendingCount);
   if (newSeats < minimumRequired) {
@@ -135,6 +266,10 @@ async function previewTeamSeatChange(teamId: number, rawNewSeats: number): Promi
   const pricePerSeat = resolveTeamUnitPrice(team.billing_period);
   const nextCycleAmount = Math.round(pricePerSeat * newSeats * 100) / 100;
   const isOneTime = Boolean(team.billing_period?.includes('one_time') || !team.stripe_subscription_id);
+  const defaultPaymentMethod = !isOneTime && team.stripe_subscription_id
+    ? await resolveDefaultCardPreview(team.stripe_customer_id, team.stripe_subscription_id)
+    : null;
+  const hasDefaultPaymentMethod = Boolean(defaultPaymentMethod);
 
   if (newSeats <= team.seat_limit) {
     return {
@@ -142,6 +277,8 @@ async function previewTeamSeatChange(teamId: number, rawNewSeats: number): Promi
       billingPeriod: team.billing_period || 'monthly',
       currency: 'USD',
       currentSeats: team.seat_limit,
+      defaultPaymentMethod,
+      hasDefaultPaymentMethod,
       isOneTime,
       newSeats,
       nextCycleAmount,
@@ -169,6 +306,8 @@ async function previewTeamSeatChange(teamId: number, rawNewSeats: number): Promi
           billingPeriod: team.billing_period || 'monthly',
           currency: (preview.currency || 'USD').toUpperCase(),
           currentSeats: team.seat_limit,
+          defaultPaymentMethod,
+          hasDefaultPaymentMethod,
           isOneTime: false,
           newSeats,
           nextCycleAmount,
@@ -193,6 +332,8 @@ async function previewTeamSeatChange(teamId: number, rawNewSeats: number): Promi
     billingPeriod: team.billing_period || 'monthly',
     currency: 'USD',
     currentSeats: team.seat_limit,
+    defaultPaymentMethod,
+    hasDefaultPaymentMethod,
     isOneTime,
     newSeats,
     nextCycleAmount,
@@ -204,7 +345,15 @@ async function updateTeamSeats(
   teamId: number,
   actingUserId: number,
   actingUserEmail: string,
-  rawNewSeats: number
+  rawNewSeats: number,
+  options: {
+    confirmed?: boolean;
+    currentPassword?: string;
+    ip?: string;
+    useNewCard?: boolean;
+    userAgent?: string;
+    verificationEmail?: string;
+  } = {}
 ): Promise<{
   amountCharged: number;
   clientSecret?: string;
@@ -213,6 +362,8 @@ async function updateTeamSeats(
   requiresPaymentAction?: boolean;
   seatLimit: number;
 }> {
+  await verifySeatActionSecurity(teamId, actingUserId, actingUserEmail, options);
+
   const preview = await previewTeamSeatChange(teamId, rawNewSeats);
   const team = await getTeamById(teamId);
   if (!team) {
@@ -227,14 +378,22 @@ async function updateTeamSeats(
 
   if (preview.newSeats < team.seat_limit) {
     if (!preview.isOneTime && team.stripe_subscription_id) {
-      const sub = await stripe.subscriptions.retrieve(team.stripe_subscription_id);
-      const itemId = sub.items?.data?.[0]?.id;
-      if (itemId) {
-        await stripe.subscriptions.update(team.stripe_subscription_id, {
-          items: [{ id: itemId, quantity: preview.newSeats }],
-          metadata: { ...sub.metadata, teamSeats: String(preview.newSeats) },
-          proration_behavior: 'none',
+      try {
+        const sub = await stripe.subscriptions.retrieve(team.stripe_subscription_id);
+        const itemId = sub.items?.data?.[0]?.id;
+        if (itemId) {
+          await stripe.subscriptions.update(team.stripe_subscription_id, {
+            items: [{ id: itemId, quantity: preview.newSeats }],
+            metadata: { ...sub.metadata, teamSeats: String(preview.newSeats) },
+            proration_behavior: 'none',
+          });
+        }
+      } catch (stripeErr) {
+        logger.security.warn('Error al reducir asientos de suscripción en Stripe', {
+          error: stripeErr instanceof Error ? stripeErr.message : String(stripeErr),
+          teamId,
         });
+        throw new TeamServiceError('SEAT_UPDATE_FAILED', 'No se pudo actualizar la suscripción en Stripe.', 502);
       }
     }
     await updateTeamSubscriptionState(teamId, { seatLimit: preview.newSeats });
@@ -242,6 +401,38 @@ async function updateTeamSeats(
   }
 
   if (!preview.isOneTime && team.stripe_subscription_id) {
+    const mustPromptNewCard = (Boolean(options.useNewCard) || !preview.hasDefaultPaymentMethod) && preview.amountDueNow > 0;
+    if (mustPromptNewCard) {
+      const amountCents = Math.max(50, Math.round(preview.amountDueNow * 100));
+      const customerId = team.stripe_customer_id
+        || (await stripe.customers.create({ email: actingUserEmail, metadata: { userId: String(actingUserId) } })).id;
+
+      const pi = await stripe.paymentIntents.create({
+        amount: amountCents,
+        currency: 'usd',
+        customer: customerId,
+        metadata: {
+          newSeats: String(preview.newSeats),
+          previousSeats: String(team.seat_limit),
+          subscriptionId: team.stripe_subscription_id,
+          teamId: String(teamId),
+          type: 'team_seat_upgrade_sub',
+          userId: String(actingUserId),
+        },
+        payment_method_types: ['card'],
+        setup_future_usage: 'off_session',
+      } as any);
+
+      return {
+        amountCharged: amountCents / 100,
+        clientSecret: pi.client_secret || '',
+        paymentIntentId: pi.id,
+        publishableKey: config.stripe.publishableKey,
+        requiresPaymentAction: true,
+        seatLimit: team.seat_limit,
+      };
+    }
+
     const sub = await stripe.subscriptions.retrieve(team.stripe_subscription_id);
     const itemId = sub.items?.data?.[0]?.id;
     if (!itemId) {
@@ -251,10 +442,10 @@ async function updateTeamSeats(
     let updatedSub: Stripe.Subscription;
     try {
       updatedSub = await stripe.subscriptions.update(team.stripe_subscription_id, {
-        expand: ['latest_invoice'],
+        expand: ['latest_invoice.payment_intent'],
         items: [{ id: itemId, quantity: preview.newSeats }],
         metadata: { ...sub.metadata, teamSeats: String(preview.newSeats) },
-        payment_behavior: 'error_if_incomplete',
+        payment_behavior: 'pending_if_incomplete',
         proration_behavior: 'always_invoice',
       });
     } catch (stripeErr: any) {
@@ -264,12 +455,45 @@ async function updateTeamSeats(
       });
       throw new TeamServiceError(
         'SEAT_PAYMENT_FAILED',
-        stripeErr?.message || 'No se pudo procesar el cobro de los asientos adicionales con tu tarjeta predeterminada.',
+        'No se pudo procesar el cobro de los asientos adicionales con tu tarjeta predeterminada.',
         402
       );
     }
 
     const latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
+    const rawPi = latestInvoice && typeof latestInvoice === 'object' ? (latestInvoice as any).payment_intent : null;
+    let piObj: Stripe.PaymentIntent | null =
+      rawPi && typeof rawPi === 'object' ? (rawPi as Stripe.PaymentIntent) : null;
+    if (!piObj && typeof rawPi === 'string') {
+      try {
+        piObj = await stripe.paymentIntents.retrieve(rawPi);
+      } catch {}
+    }
+
+    if (latestInvoice && typeof latestInvoice === 'object' && latestInvoice.status !== 'paid') {
+      if (
+        piObj &&
+        piObj.client_secret &&
+        (piObj.status === 'requires_action' ||
+          piObj.status === 'requires_confirmation' ||
+          piObj.status === 'requires_payment_method')
+      ) {
+        return {
+          amountCharged: Math.max(0, (piObj.amount || Math.round(preview.amountDueNow * 100)) / 100),
+          clientSecret: piObj.client_secret,
+          paymentIntentId: piObj.id,
+          publishableKey: config.stripe.publishableKey,
+          requiresPaymentAction: true,
+          seatLimit: team.seat_limit,
+        };
+      }
+      throw new TeamServiceError(
+        'SEAT_PAYMENT_FAILED',
+        'No se pudo completar el cobro con la tarjeta predeterminada. Intenta usar otra tarjeta.',
+        402
+      );
+    }
+
     const paidAmount = latestInvoice && typeof latestInvoice === 'object'
       ? Math.max(0, (latestInvoice.amount_paid ?? 0) / 100)
       : preview.amountDueNow;
@@ -286,9 +510,7 @@ async function updateTeamSeats(
           purchase_scope: 'team',
           status: 'completed',
           stripe_customer_id: team.stripe_customer_id,
-          stripe_payment_intent_id: typeof (latestInvoice as any).payment_intent === 'string'
-            ? (latestInvoice as any).payment_intent
-            : null,
+          stripe_payment_intent_id: piObj ? piObj.id : typeof rawPi === 'string' ? rawPi : null,
           stripe_session_id: latestInvoice.id,
           stripe_subscription_id: team.stripe_subscription_id,
           team_id: teamId,
@@ -338,15 +560,22 @@ async function confirmTeamSeatUpgradeIntent(
   actingUserId: number,
   paymentIntentId: string
 ): Promise<{ seatLimit: number }> {
+  const pool = getDbPool();
+  const [existingPurchases] = await pool.query<RowDataPacket[]>(
+    `SELECT team_seats FROM purchases
+     WHERE team_id = ? AND (stripe_payment_intent_id = ? OR stripe_session_id = ?) AND status = 'completed'
+     LIMIT 1`,
+    [teamId, paymentIntentId, paymentIntentId]
+  );
+  if (existingPurchases.length > 0) {
+    const teamNow = await getTeamById(teamId);
+    return { seatLimit: Number(existingPurchases[0].team_seats || teamNow?.seat_limit || 1) };
+  }
+
   const stripe = stripeService.getStripeClient();
   const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
   if (pi.status !== 'succeeded' && pi.status !== 'processing') {
     throw new TeamServiceError('PAYMENT_NOT_SUCCEEDED', 'El pago aún no se ha completado.', 402);
-  }
-  const metaTeamId = Number(pi.metadata?.teamId || 0);
-  const newSeats = Number(pi.metadata?.newSeats || 0);
-  if (pi.metadata?.type !== 'team_seat_upgrade' || metaTeamId !== teamId || newSeats <= 0) {
-    throw new TeamServiceError('INVALID_SEAT_PAYMENT', 'El pago no corresponde a una ampliación de asientos para este equipo.', 400);
   }
 
   const team = await getTeamById(teamId);
@@ -354,30 +583,120 @@ async function confirmTeamSeatUpgradeIntent(
     throw new TeamServiceError('TEAM_NOT_FOUND', 'Equipo no encontrado.', 404);
   }
 
-  await purchaseService.fulfillPurchase(
-    actingUserId,
-    'business',
-    {
-      amount_total: pi.amount / 100,
-      billing_period: (team.billing_period as any) || 'one_time_monthly',
-      currency: (pi.currency || 'USD').toUpperCase(),
-      plan_id: 'business',
-      purchase_scope: 'team',
-      status: 'completed',
-      stripe_customer_id: typeof pi.customer === 'string' ? pi.customer : null,
-      stripe_payment_intent_id: pi.id,
-      stripe_session_id: pi.id,
-      team_id: teamId,
-      team_seats: newSeats,
-      user_id: actingUserId,
-    },
-    team.subscription_period_end ? new Date(team.subscription_period_end) : undefined,
-    team.stripe_subscription_id || null,
-    'active'
-  );
+  const metaType = pi.metadata?.type;
+  const customerId = typeof pi.customer === 'string' ? pi.customer : (pi.customer as Stripe.Customer)?.id || null;
 
-  await updateTeamSubscriptionState(teamId, { seatLimit: newSeats });
-  return { seatLimit: newSeats };
+  if (metaType === 'team_seat_upgrade' || metaType === 'team_seat_upgrade_sub') {
+    const metaTeamId = Number(pi.metadata?.teamId || 0);
+    const metaUserId = Number(pi.metadata?.userId || 0);
+    const newSeats = Number(pi.metadata?.newSeats || 0);
+    if (
+      metaTeamId !== teamId ||
+      (metaUserId > 0 && metaUserId !== actingUserId) ||
+      !Number.isInteger(newSeats) ||
+      newSeats <= 0 ||
+      newSeats > 100
+    ) {
+      throw new TeamServiceError('INVALID_SEAT_PAYMENT', 'El pago no corresponde a una ampliación de asientos para este equipo.', 400);
+    }
+
+    if (metaType === 'team_seat_upgrade_sub' && team.stripe_subscription_id) {
+      const paymentMethodId = typeof pi.payment_method === 'string' ? pi.payment_method : null;
+      if (customerId && paymentMethodId) {
+        await stripe.customers.update(customerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        }).catch(() => {});
+      }
+
+      const sub = await stripe.subscriptions.retrieve(team.stripe_subscription_id);
+      const itemId = sub.items?.data?.[0]?.id;
+      if (itemId) {
+        await stripe.subscriptions.update(team.stripe_subscription_id, {
+          ...(paymentMethodId ? { default_payment_method: paymentMethodId } : {}),
+          items: [{ id: itemId, quantity: newSeats }],
+          metadata: { ...sub.metadata, teamSeats: String(newSeats) },
+          proration_behavior: 'none',
+        });
+      }
+    }
+
+    await purchaseService.fulfillPurchase(
+      actingUserId,
+      'business',
+      {
+        amount_total: pi.amount / 100,
+        billing_period: (team.billing_period as any) || 'one_time_monthly',
+        currency: (pi.currency || 'USD').toUpperCase(),
+        plan_id: 'business',
+        purchase_scope: 'team',
+        status: 'completed',
+        stripe_customer_id: customerId || team.stripe_customer_id,
+        stripe_payment_intent_id: pi.id,
+        stripe_session_id: pi.id,
+        stripe_subscription_id: team.stripe_subscription_id || null,
+        team_id: teamId,
+        team_seats: newSeats,
+        user_id: actingUserId,
+      },
+      team.subscription_period_end ? new Date(team.subscription_period_end) : undefined,
+      team.stripe_subscription_id || null,
+      'active'
+    );
+
+    await updateTeamSubscriptionState(teamId, {
+      seatLimit: newSeats,
+      stripeCustomerId: customerId || team.stripe_customer_id,
+    });
+    return { seatLimit: newSeats };
+  }
+
+  const rawInvoiceId = typeof (pi as any).invoice === 'string'
+    ? (pi as any).invoice
+    : (pi as any).invoice?.id || '';
+  if (rawInvoiceId && team.stripe_subscription_id) {
+    const invoice = await stripe.invoices.retrieve(rawInvoiceId);
+    const invoiceSubId = typeof (invoice as any).subscription === 'string'
+      ? (invoice as any).subscription
+      : (invoice as any).subscription?.id || '';
+    if (invoiceSubId !== team.stripe_subscription_id) {
+      throw new TeamServiceError('INVALID_SEAT_PAYMENT', 'El pago no corresponde a la suscripción de este equipo.', 400);
+    }
+
+    const sub = await stripe.subscriptions.retrieve(team.stripe_subscription_id);
+    const pendingQty = (sub as any).pending_update?.subscription_items?.[0]?.quantity;
+    const resolvedSeats = Math.max(
+      1,
+      Number(pendingQty || sub.items?.data?.[0]?.quantity || sub.metadata?.teamSeats || team.seat_limit)
+    );
+
+    await purchaseService.fulfillPurchase(
+      actingUserId,
+      'business',
+      {
+        amount_total: pi.amount / 100,
+        billing_period: (team.billing_period as any) || 'monthly',
+        currency: (pi.currency || 'USD').toUpperCase(),
+        plan_id: 'business',
+        purchase_scope: 'team',
+        status: 'completed',
+        stripe_customer_id: customerId || team.stripe_customer_id,
+        stripe_payment_intent_id: pi.id,
+        stripe_session_id: invoice.id,
+        stripe_subscription_id: team.stripe_subscription_id,
+        team_id: teamId,
+        team_seats: resolvedSeats,
+        user_id: actingUserId,
+      },
+      team.subscription_period_end ? new Date(team.subscription_period_end) : undefined,
+      team.stripe_subscription_id,
+      'active'
+    );
+
+    await updateTeamSubscriptionState(teamId, { seatLimit: resolvedSeats });
+    return { seatLimit: resolvedSeats };
+  }
+
+  throw new TeamServiceError('INVALID_SEAT_PAYMENT', 'El pago no corresponde a una ampliación de asientos para este equipo.', 400);
 }
 
 async function updateTeamRenewal(
@@ -399,7 +718,7 @@ async function updateTeamRenewal(
 
   await updateTeamSubscriptionState(teamId, {
     subscriptionPeriodEnd: periodEnd,
-    subscriptionStatus: cancelAtPeriodEnd ? 'active' : 'active',
+    subscriptionStatus: 'active',
   });
 
   return {

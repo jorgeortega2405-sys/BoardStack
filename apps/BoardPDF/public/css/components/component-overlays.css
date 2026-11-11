@@ -845,14 +845,19 @@ body.modal-open {
   box-sizing: border-box;
   cursor: pointer;
   display: flex;
-  gap: 12px;
-  min-height: 70px;
+  gap: 10px;
+  min-height: 58px;
   height: auto !important;
-  padding: 14px !important;
+  padding: 10px 12px !important;
   text-align: left;
   text-decoration: none;
   transition: background-color var(--sl-transition-fast, 0.15s ease), border-color var(--sl-transition-fast, 0.15s ease);
   width: 100%;
+}
+
+.account-item.is-hidden,
+.avatar-menu__section-header.is-hidden {
+  display: none !important;
 }
 
 .account-item:hover,
@@ -885,13 +890,13 @@ body.modal-open {
   box-shadow: 0 0 0 2px var(--bg-surface, #ffffff);
   display: flex;
   flex-shrink: 0;
-  height: 38px;
+  height: 34px;
   justify-content: center;
   margin: 0;
-  min-width: 38px;
+  min-width: 34px;
   overflow: visible !important;
   position: relative;
-  width: 38px;
+  width: 34px;
 }
 
 .account-item__avatar .avatar-img,
@@ -960,6 +965,14 @@ body.modal-open {
   width: 18px;
 }
 
+.account-item__check {
+  color: var(--text-primary, #111827);
+  flex-shrink: 0;
+  height: 18px;
+  margin-left: auto;
+  width: 18px;
+}
+
 .account-switcher__list {
   box-sizing: border-box;
   display: flex;
@@ -974,7 +987,9 @@ body.modal-open {
 .avatar-menu__section-header {
   align-items: center;
   display: flex;
-  padding: 6px 12px 4px 12px;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 4px 12px 2px 12px;
 }
 
 @media (max-width: 768px) {
@@ -1769,20 +1784,30 @@ body.modal-open {
   background-color: var(--bg-hover);
   border: 1px solid var(--border-color);
   border-radius: 50%;
+  box-shadow: none;
+  box-sizing: border-box;
   color: var(--text-primary);
   display: inline-flex;
-  height: 36px;
+  flex-shrink: 0;
+  height: 34px;
   justify-content: center;
-  width: 36px;
+  min-width: 34px;
+  width: 34px;
+}
+
+.workspace-item__avatar::before {
+  content: none;
+  display: none;
 }
 
 .workspace-item__avatar--team {
   background-color: var(--action-primary, #111827);
   border-color: var(--action-primary, #111827);
-  color: #ffffff;
+  color: var(--action-primary-text, #ffffff);
 }
 
 .workspace-item__icon {
+  flex-shrink: 0;
   height: 18px;
   width: 18px;
 }
@@ -2088,6 +2113,7 @@ body.modal-open {
 }
 
 .team-invite-modal,
+.team-role-modal,
 .team-seats-modal {
   display: flex;
   flex-direction: column;
@@ -2106,15 +2132,82 @@ body.modal-open {
   font-weight: 600;
 }
 
-.team-invite-modal__roles {
-  display: grid;
+.team-seats-payment,
+.team-seats-security {
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.team-seats-payment__title {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.team-seats-payment__card {
+  align-items: center;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 10px);
+  display: flex;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px 12px;
+}
+
+.team-seats-payment__card .component-icon {
+  color: var(--text-primary);
+  flex-shrink: 0;
+  height: 20px;
+  width: 20px;
+}
+
+.team-seats-payment__card-info {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.team-seats-payment__card-brand {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.team-seats-payment__card-exp {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.team-confirm-check {
+  align-items: flex-start;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  user-select: none;
+}
+
+.team-confirm-check .component-checkbox {
+  margin-top: 1px;
+}
+
+.team-confirm-check__text {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 600px) {
-  .team-folder-share__visibility-grid,
-  .team-invite-modal__roles {
+  .team-folder-share__visibility-grid {
     grid-template-columns: 1fr;
   }
 

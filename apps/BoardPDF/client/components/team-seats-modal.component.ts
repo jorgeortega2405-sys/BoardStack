@@ -1,10 +1,11 @@
-import { checkAuthSession, confirmTeamSeatUpgradeIntentApi, escapeHtml, previewTeamSeatsApi, updateTeamSeatsApi } from '../services/api.service.js';
+import { checkAuthSession, confirmTeamSeatUpgradeIntentApi, currentUser, escapeHtml, previewTeamSeatsApi, updateTeamSeatsApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance } from '../types/common.types.js';
-import { TeamDetailResponse } from '../types/team.types.js';
-import { debounce } from '../utils/dom.util.js';
+import { TeamDetailResponse, TeamSeatPreview } from '../types/team.types.js';
+import { debounce, setupPasswordToggle } from '../utils/dom.util.js';
 import { openModal } from './modal.component.js';
 
 const MAX_SEATS = 100;
@@ -113,8 +114,12 @@ function openManageTeamSeatsModal(options: {
   const { detail } = options;
   const minSeats = Math.max(1, detail.seatsUsed + detail.pendingCount);
   const currentLimit = Math.max(minSeats, Number(detail.seatLimit || detail.team.seat_limit || 1));
+  const requiresPassword = currentUser?.has_password !== false;
   let seatDraft = currentLimit;
   let isClosed = false;
+  let lastPreview: TeamSeatPreview | null = null;
+  let confirmedChecked = false;
+  let useNewCard = false;
 
   const minHint = t('settings.team.seats_modal_min_hint', {
     active: detail.seatsUsed,
@@ -122,9 +127,27 @@ function openManageTeamSeatsModal(options: {
     pending: detail.pendingCount,
   });
 
+  const securityFieldHtml = requiresPassword
+    ? `
+      <label class="field" data-ref="field-seats-password">
+        <input class="field__input field__input--has-action" data-ref="input-seats-password" type="password" placeholder=" " autocomplete="current-password" />
+        <span class="field__label">${escapeHtml(t('settings.team.seats_security_password_label'))}</span>
+        <button type="button" class="field__action" data-ref="btn-toggle-seats-password" data-tooltip="${escapeHtml(t('common.show_password'))}" aria-label="${escapeHtml(t('auth.login.toggle_password'))}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+        </button>
+      </label>
+    `
+    : `
+      <p class="team-seats-field__hint" data-ref="seats-security-email-hint">${escapeHtml(t('settings.team.seats_security_email_hint', { email: currentUser?.email || '' }))}</p>
+      <label class="field" data-ref="field-seats-email">
+        <input class="field__input" data-ref="input-seats-email" type="email" placeholder=" " autocomplete="email" />
+        <span class="field__label">${escapeHtml(t('settings.team.seats_security_email_label'))}</span>
+      </label>
+    `;
+
   const bodyHtml = `
     <div class="team-seats-modal" data-ref="team-seats-modal-body">
-      <div class="team-seats-field">
+      <div class="team-seats-field" data-ref="modal-seats-stepper-box">
         <div class="team-seats-field__header">
           <span class="team-seats-field__label">${escapeHtml(t('settings.team.seats_step_label'))}</span>
           <div class="team-seats-stepper" data-ref="modal-seats-stepper">
@@ -140,6 +163,14 @@ function openManageTeamSeatsModal(options: {
         <p class="team-seats-field__hint">${escapeHtml(minHint)}</p>
       </div>
       <div class="banner banner--info is-hidden" data-ref="modal-seats-preview-banner"></div>
+      <div class="team-seats-payment is-hidden" data-ref="modal-seats-payment-box"></div>
+      <div class="team-seats-security is-hidden" data-ref="modal-seats-security-box">
+        <label class="team-confirm-check" data-ref="label-seats-confirm">
+          <input class="component-checkbox" data-ref="checkbox-seats-confirm" type="checkbox" />
+          <span class="team-confirm-check__text">${escapeHtml(t('settings.team.seats_security_confirm_label'))}</span>
+        </label>
+        ${securityFieldHtml}
+      </div>
     </div>
   `;
 
@@ -158,8 +189,35 @@ function openManageTeamSeatsModal(options: {
         return false;
       }
 
+      if (!confirmedChecked) {
+        inst.showError(t('settings.team.validation_confirm_required'));
+        return false;
+      }
+
+      const passwordVal = (passwordInput?.value || '').trim();
+      const emailVal = (emailInput?.value || '').trim().toLowerCase();
+      if (requiresPassword) {
+        if (!passwordVal) {
+          inst.showError(t('settings.team.validation_password_required'));
+          passwordInput?.focus();
+          return false;
+        }
+      } else {
+        const expectedEmail = (currentUser?.email || '').trim().toLowerCase();
+        if (!emailVal || (expectedEmail && emailVal !== expectedEmail)) {
+          inst.showError(t('settings.team.validation_email_confirm_required'));
+          emailInput?.focus();
+          return false;
+        }
+      }
+
       inst.setConfirmLoading(true);
-      const res = await updateTeamSeatsApi(seatDraft);
+      const res = await updateTeamSeatsApi({
+        confirmed: true,
+        ...(requiresPassword ? { currentPassword: passwordVal } : { verificationEmail: emailVal }),
+        seats: seatDraft,
+        useNewCard: seatDraft > currentLimit && useNewCard,
+      });
       if (isClosed) return false;
 
       if (!res.success) {
@@ -196,16 +254,90 @@ function openManageTeamSeatsModal(options: {
     title: t('settings.team.seats_modal_title'),
   });
 
+  renderIcons(modal.body);
+
   const btnDec = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-dec"]');
   const btnInc = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-inc"]');
   const inputSeats = modal.body.querySelector<HTMLInputElement>('[data-ref="input-modal-seats"]');
   const previewBanner = modal.body.querySelector<HTMLElement>('[data-ref="modal-seats-preview-banner"]');
+  const paymentBox = modal.body.querySelector<HTMLElement>('[data-ref="modal-seats-payment-box"]');
+  const securityBox = modal.body.querySelector<HTMLElement>('[data-ref="modal-seats-security-box"]');
+  const confirmCheckbox = modal.body.querySelector<HTMLInputElement>('[data-ref="checkbox-seats-confirm"]');
+  const passwordInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-seats-password"]');
+  const btnTogglePassword = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-seats-password"]');
+  const emailInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-seats-email"]');
+
+  setupPasswordToggle(btnTogglePassword, passwordInput, {
+    hideTooltip: t('common.hide_password'),
+    showTooltip: t('common.show_password'),
+  });
+
+  const renderPaymentBox = () => {
+    if (!paymentBox) return;
+    if (seatDraft <= currentLimit || !lastPreview) {
+      paymentBox.classList.add('is-hidden');
+      paymentBox.innerHTML = '';
+      return;
+    }
+
+    if (lastPreview.isOneTime) {
+      paymentBox.innerHTML = `<p class="team-seats-field__hint" data-ref="seats-one-time-note">${escapeHtml(t('settings.team.seats_payment_one_time_card_note'))}</p>`;
+      paymentBox.classList.remove('is-hidden');
+      return;
+    }
+
+    if (lastPreview.defaultPaymentMethod) {
+      const pm = lastPreview.defaultPaymentMethod;
+      const brandLabel = (pm.brand || 'CARD').toUpperCase();
+      const expiryHtml = pm.expMonth && pm.expYear
+        ? `<span class="team-seats-payment__card-exp">${escapeHtml(t('settings.team.seats_payment_card_expires', {
+            month: String(pm.expMonth).padStart(2, '0'),
+            year: String(pm.expYear).slice(-2),
+          }))}</span>`
+        : '';
+
+      paymentBox.innerHTML = `
+        <div class="team-seats-payment__title">${escapeHtml(t('settings.team.seats_payment_card_title'))}</div>
+        <div class="team-seats-payment__card" data-ref="seats-default-card-row">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          <div class="team-seats-payment__card-info">
+            <span class="team-seats-payment__card-brand">${escapeHtml(t('settings.team.seats_payment_card_masked', { brand: brandLabel, last4: pm.last4 }))}</span>
+            ${expiryHtml}
+          </div>
+        </div>
+        <label class="team-confirm-check" data-ref="label-seats-use-new-card">
+          <input class="component-checkbox" data-ref="checkbox-seats-use-new-card" type="checkbox" ${useNewCard ? 'checked' : ''} />
+          <span class="team-confirm-check__text">${escapeHtml(t('settings.team.seats_payment_use_new_card'))}</span>
+        </label>
+      `;
+      renderIcons(paymentBox);
+      paymentBox.classList.remove('is-hidden');
+      return;
+    }
+
+    paymentBox.innerHTML = `<p class="team-seats-field__hint" data-ref="seats-no-card-note">${escapeHtml(t('settings.team.seats_payment_no_card'))}</p>`;
+    paymentBox.classList.remove('is-hidden');
+  };
 
   const syncControls = () => {
+    const hasSeatChange = seatDraft !== currentLimit;
     if (inputSeats) inputSeats.value = String(seatDraft);
     if (btnDec) btnDec.disabled = seatDraft <= minSeats;
     if (btnInc) btnInc.disabled = seatDraft >= MAX_SEATS;
-    if (modal.confirmBtn) modal.confirmBtn.disabled = seatDraft === currentLimit;
+    if (!hasSeatChange) {
+      useNewCard = false;
+    }
+
+    securityBox?.classList.toggle('is-hidden', !hasSeatChange);
+    renderPaymentBox();
+
+    const hasCred = requiresPassword
+      ? Boolean((passwordInput?.value || '').trim())
+      : Boolean((emailInput?.value || '').trim());
+
+    if (modal.confirmBtn) {
+      modal.confirmBtn.disabled = !hasSeatChange || !confirmedChecked || !hasCred;
+    }
   };
 
   const refreshPreview = debounce(async () => {
@@ -213,6 +345,7 @@ function openManageTeamSeatsModal(options: {
     const requested = seatDraft;
     if (requested === currentLimit) {
       previewBanner?.classList.add('is-hidden');
+      renderPaymentBox();
       return;
     }
 
@@ -227,6 +360,7 @@ function openManageTeamSeatsModal(options: {
 
     modal.clearError();
     const p = res.preview;
+    lastPreview = p;
     const formattedAmount = Number(p.amountDueNow || 0).toFixed(2);
     const formattedNext = Number(p.nextCycleAmount || 0).toFixed(2);
 
@@ -248,7 +382,17 @@ function openManageTeamSeatsModal(options: {
       }
       previewBanner.classList.remove('is-hidden');
     }
+    renderPaymentBox();
   }, 240);
+
+  const loadBaselinePreview = async () => {
+    const res = await previewTeamSeatsApi(currentLimit);
+    if (isClosed || !res.success || !res.preview) return;
+    lastPreview = res.preview;
+    if (seatDraft !== currentLimit) {
+      renderPaymentBox();
+    }
+  };
 
   const adjustDraft = (target: number) => {
     const clamped = Math.max(minSeats, Math.min(MAX_SEATS, Math.floor(target)));
@@ -271,7 +415,38 @@ function openManageTeamSeatsModal(options: {
     }
   });
 
+  paymentBox?.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement | null;
+    if (target?.getAttribute('data-ref') === 'checkbox-seats-use-new-card') {
+      useNewCard = Boolean(target.checked);
+    }
+  });
+
+  confirmCheckbox?.addEventListener('change', () => {
+    confirmedChecked = Boolean(confirmCheckbox.checked);
+    modal.clearError();
+    syncControls();
+  });
+
+  const handleCredInput = () => {
+    modal.clearError();
+    syncControls();
+  };
+
+  const handleCredKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && modal.confirmBtn && !modal.confirmBtn.disabled) {
+      e.preventDefault();
+      modal.confirmBtn.click();
+    }
+  };
+
+  passwordInput?.addEventListener('input', handleCredInput);
+  passwordInput?.addEventListener('keydown', handleCredKeydown);
+  emailInput?.addEventListener('input', handleCredInput);
+  emailInput?.addEventListener('keydown', handleCredKeydown);
+
   syncControls();
+  void loadBaselinePreview();
   return modal;
 }
 

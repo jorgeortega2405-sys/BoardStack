@@ -1,4 +1,4 @@
-import { currentUser, linkedAccounts, listMyTeamsApi, logoutAllApi, logoutApi, onAuthChange, switchAccountApi } from '../services/api.service.js';
+import { currentUser, hasSubscriptionFeature, linkedAccounts, listMyTeamsApi, logoutAllApi, logoutApi, onAuthChange, switchAccountApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -57,11 +57,13 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
   const activeAvatarBox = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-avatar-box"]');
   const activeName = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-name"]');
   const activeEmail = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-email"]');
+  const sectionHeaderWorkspace = avatarContainer.querySelector<HTMLElement>('[data-ref="section-header-workspace"]');
   const activeWorkspaceName = avatarContainer.querySelector<HTMLElement>('[data-ref="active-workspace-name"]');
   const activeWorkspaceMeta = avatarContainer.querySelector<HTMLElement>('[data-ref="active-workspace-meta"]');
   const activeWorkspaceIconUse = avatarContainer.querySelector<SVGUseElement>('[data-ref="active-workspace-icon"] use');
   const activeWorkspaceBox = avatarContainer.querySelector<HTMLElement>('[data-ref="active-workspace-avatar-box"]');
 
+  let hasLoadedPendingInvites = false;
   let pendingInvitations: TeamInvitationRecord[] = [];
 
   const getRoleLabel = (role: string): string => {
@@ -228,29 +230,41 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
 
   const loadPendingInvites = async () => {
     if (!currentUser) {
+      hasLoadedPendingInvites = false;
       pendingInvitations = [];
       return;
     }
+    const targetUserId = currentUser.id;
     const res = await listMyTeamsApi();
+    if (!currentUser || currentUser.id !== targetUserId) return;
     if (res.success && Array.isArray(res.pendingInvitations)) {
+      hasLoadedPendingInvites = true;
       pendingInvitations = res.pendingInvitations;
     } else {
+      hasLoadedPendingInvites = false;
       pendingInvitations = [];
     }
-    if (workspacePendingBadge) {
-      const count = pendingInvitations.length || Number(currentUser.pending_invitations_count || 0);
-      if (count > 0) {
-        workspacePendingBadge.textContent = t('teams.badge_pending_invites', { count });
-        workspacePendingBadge.classList.remove('is-hidden');
-      } else {
-        workspacePendingBadge.classList.add('is-hidden');
-      }
-    }
-    renderWorkspaceSwitcher();
+    renderWorkspaceHeader();
   };
 
   const renderWorkspaceHeader = () => {
     const activeTeam = resolveActiveWorkspace(currentUser);
+    const teams = Array.isArray(currentUser?.teams) ? currentUser.teams : [];
+    const pendingCount = hasLoadedPendingInvites
+      ? pendingInvitations.length
+      : Number(currentUser?.pending_invitations_count || 0);
+    const canShowWorkspaceSection = Boolean(
+      currentUser && (hasSubscriptionFeature('business') || teams.length > 0 || pendingCount > 0)
+    );
+
+    sectionHeaderWorkspace?.classList.toggle('is-hidden', !canShowWorkspaceSection);
+    btnSwitchWorkspaceMenu?.classList.toggle('is-hidden', !canShowWorkspaceSection);
+
+    if (!canShowWorkspaceSection && panelWorkspaceSwitcher && !panelWorkspaceSwitcher.classList.contains('is-hidden')) {
+      panelWorkspaceSwitcher.classList.add('is-hidden');
+      panelMain?.classList.remove('is-hidden');
+    }
+
     if (activeTeam) {
       if (activeWorkspaceName) activeWorkspaceName.textContent = activeTeam.name;
       if (activeWorkspaceMeta) {
@@ -271,7 +285,6 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
       btnMenuTeamSettings?.classList.add('is-hidden');
     }
 
-    const pendingCount = Number(currentUser?.pending_invitations_count || pendingInvitations.length || 0);
     if (workspacePendingBadge) {
       if (pendingCount > 0) {
         workspacePendingBadge.textContent = t('teams.badge_pending_invites', { count: pendingCount });
@@ -388,6 +401,8 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
         activeEmail.textContent = currentUser.email || '';
       }
 
+      hasLoadedPendingInvites = false;
+      pendingInvitations = [];
       renderAccountList();
       renderWorkspaceHeader();
       void loadPendingInvites();
@@ -395,7 +410,11 @@ function setupUserMenu(sidebar: HTMLElement): () => void {
       itemProjects?.classList.add('is-hidden');
       avatarContainer.classList.add('is-hidden');
       railItemLogin.classList.remove('is-hidden');
+      hasLoadedPendingInvites = false;
       pendingInvitations = [];
+      sectionHeaderWorkspace?.classList.add('is-hidden');
+      btnSwitchWorkspaceMenu?.classList.add('is-hidden');
+      btnMenuTeamSettings?.classList.add('is-hidden');
       closeMenu();
     }
   };

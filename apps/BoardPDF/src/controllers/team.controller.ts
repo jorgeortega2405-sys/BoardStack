@@ -15,6 +15,11 @@ function maskEmailAddress(email: string): string {
   return `${visible}***@${domain}`;
 }
 
+function sanitizePublicTeamRecord<T extends Record<string, any>>(team: T): Omit<T, 'stripe_customer_id' | 'stripe_subscription_id'> {
+  const { stripe_customer_id: _cid, stripe_subscription_id: _sid, ...publicTeam } = team;
+  return publicTeam;
+}
+
 function handleTeamControllerError(res: Response, error: unknown, context: string, fallbackMsg: string): void {
   if (error instanceof TeamServiceError) {
     res.status(error.statusCode).json({
@@ -153,7 +158,7 @@ async function handleGetCurrentTeam(req: Request, res: Response): Promise<void> 
 
     sendSuccess(res, {
       invitations: teamCtx.permissions.includes('team:members:invite') ? snapshot.invitations : [],
-      members: snapshot.members,
+      members: teamCtx.permissions.includes('team:members:view') ? snapshot.members : [],
       pendingCount: snapshot.pendingCount,
       permissions: teamCtx.permissions,
       role: teamCtx.role,
@@ -162,7 +167,7 @@ async function handleGetCurrentTeam(req: Request, res: Response): Promise<void> 
       seatsUsed: snapshot.seatsUsed,
       success: true,
       team: {
-        ...team,
+        ...sanitizePublicTeamRecord(team),
         permissions: teamCtx.permissions,
         role: teamCtx.role,
       },
@@ -186,7 +191,7 @@ async function handleUpdateCurrentTeam(req: Request, res: Response): Promise<voi
     sendSuccess(res, {
       message: 'Datos del equipo actualizados exitosamente.',
       success: true,
-      team: updated,
+      team: sanitizePublicTeamRecord(updated),
     });
   } catch (error) {
     handleTeamControllerError(res, error, 'Error al actualizar equipo', 'No se pudo actualizar el equipo.');
@@ -246,8 +251,9 @@ async function handleInviteTeamMember(req: Request, res: Response): Promise<void
 
 async function handleRevokeInvitation(req: Request, res: Response): Promise<void> {
   try {
+    const user = getCurrentUser(req);
     const teamCtx = getWorkspaceTeam(req);
-    if (!teamCtx) {
+    if (!user || !teamCtx) {
       sendUnauthorized(res);
       return;
     }
@@ -258,7 +264,7 @@ async function handleRevokeInvitation(req: Request, res: Response): Promise<void
       return;
     }
 
-    await revokeInvitation(teamCtx.id, invitationId);
+    await revokeInvitation(teamCtx.id, invitationId, user.id);
     sendSuccess(res, {
       message: 'Invitación revocada. El asiento ha quedado disponible.',
       success: true,
@@ -370,7 +376,12 @@ async function handlePreviewTeamSeats(req: Request, res: Response): Promise<void
       return;
     }
 
-    const seats = Number(req.body?.seats || 1);
+    const seats = Number(req.body?.seats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 100) {
+      sendBadRequest(res, 'La cantidad de asientos debe ser un número entero entre 1 y 100.');
+      return;
+    }
+
     const preview = await previewTeamSeatChange(teamCtx.id, seats);
 
     sendSuccess(res, {
@@ -391,8 +402,20 @@ async function handleUpdateTeamSeats(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const seats = Number(req.body?.seats || 1);
-    const result = await updateTeamSeats(teamCtx.id, user.id, user.email, seats);
+    const seats = Number(req.body?.seats);
+    if (!Number.isInteger(seats) || seats < 1 || seats > 100) {
+      sendBadRequest(res, 'La cantidad de asientos debe ser un número entero entre 1 y 100.');
+      return;
+    }
+
+    const result = await updateTeamSeats(teamCtx.id, user.id, user.email, seats, {
+      confirmed: Boolean(req.body?.confirmed),
+      currentPassword: typeof req.body?.currentPassword === 'string' ? req.body.currentPassword : '',
+      ip: req.ip || req.socket?.remoteAddress || '',
+      useNewCard: Boolean(req.body?.useNewCard),
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : '',
+      verificationEmail: typeof req.body?.verificationEmail === 'string' ? req.body.verificationEmail : '',
+    });
 
     sendSuccess(res, {
       ...result,

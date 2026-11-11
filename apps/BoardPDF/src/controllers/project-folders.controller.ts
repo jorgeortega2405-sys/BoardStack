@@ -1,15 +1,12 @@
 import { getDbPool } from '../config/database.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { getWorkspaceTeam, getWorkspaceTeamId } from '../middlewares/workspace.middleware.js';
+import { getWorkspaceTeam } from '../middlewares/workspace.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { addOrUpdateFolderMember, createProjectFolder, deleteProjectFolder, getFolderSharingDetails, getProjectFolderById, listProjectFolders, moveDocToFolder, moveUploadToFolder, removeFolderMember, renameProjectFolder, updateFolderVisibility } from '../services/project-folders.service.js';
 import { reclaimUserAsset } from '../services/storage-quota.service.js';
 import { listCollaborativeDocuments } from '../tools/design-pdf/design-pdf.service.js';
 import type { Request, Response } from 'express';
-import fs from 'fs';
 import path from 'path';
-
-const UPLOADS_DIR = path.resolve(process.cwd(), 'public', 'uploads', 'collaborative');
 
 const KNOWN_SAFE_MESSAGES = new Set([
   'Carpeta de destino no válida para archivos subidos.',
@@ -33,6 +30,8 @@ const KNOWN_SAFE_MESSAGES = new Set([
   'No tienes permisos para compartir esta carpeta.',
   'No tienes permisos para eliminar esta carpeta.',
   'No tienes permisos para modificar miembros de esta carpeta.',
+  'No tienes permisos para mover este archivo.',
+  'No tienes permisos para mover este documento.',
   'Solo se permite un nivel de carpetas dentro de la carpeta de subidos.',
 ]);
 
@@ -260,6 +259,10 @@ async function moveDocFolderHandler(req: Request, res: Response): Promise<void> 
     const user = getCurrentUser(req);
     const teamCtx = getWorkspaceTeam(req);
     const moved = await moveDocToFolder(id, folderId || null, user?.id ?? null, teamCtx?.id || null, teamCtx?.permissions || []);
+    if (!moved) {
+      res.status(404).json({ error: 'Documento no encontrado en el espacio activo.', success: false });
+      return;
+    }
     res.json({ moved, success: true });
   } catch (err: any) {
     logger.app.error('Error al mover documento a carpeta', err);
@@ -282,6 +285,10 @@ async function moveUploadFolderHandler(req: Request, res: Response): Promise<voi
     const user = getCurrentUser(req);
     const teamCtx = getWorkspaceTeam(req);
     const moved = await moveUploadToFolder(id, folderId || null, user?.id ?? null, teamCtx?.id || null, teamCtx?.permissions || []);
+    if (!moved) {
+      res.status(404).json({ error: 'Archivo no encontrado en el espacio activo.', success: false });
+      return;
+    }
     res.json({ moved, success: true });
   } catch (err: any) {
     logger.app.error('Error al mover archivo a carpeta', err);
@@ -301,9 +308,20 @@ async function deleteUploadAssetHandler(req: Request, res: Response): Promise<vo
     }
 
     const user = getCurrentUser(req);
-    const teamId = getWorkspaceTeamId(req);
-    if (user?.id) {
-      await reclaimUserAsset(id, Number(user.id), teamId);
+    if (!user?.id) {
+      res.status(401).json({ error: 'No autorizado.', success: false });
+      return;
+    }
+
+    const teamCtx = getWorkspaceTeam(req);
+    const canManageTeamAssets = Boolean(teamCtx?.permissions?.includes('team:folders:manage'));
+    const deleted = await reclaimUserAsset(id, Number(user.id), teamCtx?.id || null, canManageTeamAssets);
+    if (!deleted) {
+      res.status(403).json({
+        error: 'No tienes permisos para eliminar este archivo o no existe.',
+        success: false,
+      });
+      return;
     }
 
     res.json({ success: true });

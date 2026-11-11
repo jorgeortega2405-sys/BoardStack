@@ -1,6 +1,6 @@
 import { getLocalizedPath, resolveRouteFromSlug } from '../config/seo.config.js';
 import { TOOLS_REGISTRY } from '../config/tools.registry.js';
-import { currentUser, escapeHtml, onAuthChange } from '../services/api.service.js';
+import { currentUser, escapeHtml, hasTeamPermission, onAuthChange } from '../services/api.service.js';
 import { getCurrentLanguage, t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -441,6 +441,7 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
   };
 
   const hasActiveTeam = Boolean(resolveActiveWorkspace(currentUser));
+  const canShowBillingFooter = !hasActiveTeam || hasTeamPermission('team:billing:manage');
 
   drawerBody.innerHTML = `
     <div class="drawer-section__header" data-ref="drawer-settings-header" style="padding: 8px 8px 4px 8px;">
@@ -486,31 +487,36 @@ function renderSettingsDrawerContent(drawerBody: HTMLElement, drawerFooter: HTML
   bindNavLink(btnTeam, '/settings/team');
 
   if (drawerFooter) {
-    drawerFooter.innerHTML = `
-      <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-        <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing', 'Facturación')}</span>
-      </button>
-      <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-        <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases', 'Historial de compras')}</span>
-      </button>
-    `;
-    showElement(drawerFooter);
-    translateElement(drawerFooter);
+    if (canShowBillingFooter) {
+      drawerFooter.innerHTML = `
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing', 'Facturación')}</span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases', 'Historial de compras')}</span>
+        </button>
+      `;
+      showElement(drawerFooter);
+      translateElement(drawerFooter);
 
-    const btnBilling = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
-    const btnPurchases = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+      const btnBilling = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+      const btnPurchases = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
 
-    if (currentPath === '/settings/billing') {
-      btnBilling?.classList.add('is-active');
-    } else if (currentPath === '/settings/purchases' || currentPath === '/settings/purchase-history') {
-      btnPurchases?.classList.add('is-active');
+      if (currentPath === '/settings/billing') {
+        btnBilling?.classList.add('is-active');
+      } else if (currentPath === '/settings/purchases' || currentPath === '/settings/purchase-history') {
+        btnPurchases?.classList.add('is-active');
+      }
+
+      bindNavLink(btnBilling, '/settings/billing');
+      bindNavLink(btnPurchases, '/settings/purchases');
+      renderIcons(drawerFooter);
+    } else {
+      drawerFooter.innerHTML = '';
+      hideElement(drawerFooter);
     }
-
-    bindNavLink(btnBilling, '/settings/billing');
-    bindNavLink(btnPurchases, '/settings/purchases');
-    renderIcons(drawerFooter);
   }
 
   renderIcons(drawerBody);
