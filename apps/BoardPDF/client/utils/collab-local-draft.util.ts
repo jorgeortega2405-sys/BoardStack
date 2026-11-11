@@ -1,6 +1,7 @@
 interface LocalCollabDraft {
   content: {
     elements: any[];
+    guides?: any[];
     pageBackgrounds: string[];
     pageCount: number;
     pagePdfSources: any[];

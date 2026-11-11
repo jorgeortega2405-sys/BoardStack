@@ -1,14 +1,14 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { postApi, setAuthState } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { getPendingCloudSyncDraft, removeLocalDraft, setPendingCloudSyncDraft } from '../utils/collab-local-draft.util.js';
+import { getPendingCloudSyncDraft, listLocalDrafts, removeLocalDraft, setPendingCloudSyncDraft } from '../utils/collab-local-draft.util.js';
 import { createBannerManager, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
-import { t } from '../services/i18n.service.js';
 
 interface RegistrationFlowState {
   email?: string;
@@ -33,6 +33,19 @@ async function syncPendingDraftIfAny(): Promise<string | null> {
         setPendingCloudSyncDraft(null);
         showToast(t('toasts.tu_diseno_local_se_ha_sincronizado_con_t'), 'success');
         return `/d/${encodeURIComponent(pending.id)}`;
+      }
+    } catch {}
+  }
+  const drafts = listLocalDrafts();
+  for (const draft of drafts) {
+    try {
+      const res = await postApi('/api/collaborative-docs', {
+        content: draft.content,
+        id: draft.id,
+        title: draft.title,
+      });
+      if (res.ok) {
+        removeLocalDraft(draft.id);
       }
     } catch {}
   }

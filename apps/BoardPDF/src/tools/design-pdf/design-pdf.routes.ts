@@ -27,7 +27,9 @@ for (const base of endpoints) {
   router.patch(`${base}/:id/custom-slug`, optionalAuth, updateCollaborativeDocCustomSlugHandler);
   router.post(`${base}/:id/ai-generate`, requireAuth, aiGenerateCollaborativeDocHandler);
   router.get(`${base}/:id`, optionalAuth, getCollaborativeDocHandler);
+  router.post(`${base}/render-pdf`, optionalAuth, downloadCollaborativeDocPdfHandler);
   router.get(`${base}/:id/pdf`, optionalAuth, downloadCollaborativeDocPdfHandler);
+  router.post(`${base}/:id/pdf`, optionalAuth, downloadCollaborativeDocPdfHandler);
   router.post(`${base}`, requireAuth, saveCollaborativeDocHandler);
   router.put(`${base}/:id`, optionalAuth, saveCollaborativeDocHandler);
   router.delete(`${base}/:id`, requireAuth, deleteCollaborativeDocHandler);

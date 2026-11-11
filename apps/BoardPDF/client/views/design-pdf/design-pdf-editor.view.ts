@@ -1,3 +1,4 @@
+import { showAuthGateModal } from '../../components/auth-gate-modal.component.js';
 import { openDeleteDocModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, PageDimension, PagePreset, inToPx, mmToPx } from '../../config/collab-page-presets.config.js';
@@ -13,6 +14,7 @@ import { initWasmEngine } from '../../services/wasm-engine.service.js';
 import { wsService } from '../../services/websocket.service.js';
 import { ViewController } from '../../types/common.types.js';
 import { getOrCreateGuestIdentity } from '../../utils/collab-identity.util.js';
+import { getLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, hideElement, setupDropdown, showElement, withButtonLoading } from '../../utils/dom.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { bindChartInspectorEvents, renderChartSpreadsheet, switchChartAxisTab, switchChartInspectorTab, syncChartInspector } from './components/design-pdf-chart-inspector.component.js';
@@ -670,9 +672,8 @@ class DesignPdfEditorController implements ViewController {
         showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
         return;
       }
-      if (!currentUser) {
-        showToast(t('collaborative.login_required_upload'), 'warning');
-        navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      if (!currentUser || this.isLocalOnly) {
+        showAuthGateModal({ featureKey: 'cloud_uploads', returnUrl: window.location.pathname });
         return;
       }
       fileInput?.click();
@@ -1622,44 +1623,80 @@ class DesignPdfEditorController implements ViewController {
 
     try {
       if (!currentUser) {
-        try {
-          const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
-          const res = await getApi(getUrl);
-          if (res.ok) {
-            const data = await res.json();
-            serverDoc = data.document;
-            if (data.document) {
-              this.isLocalOnly = false;
-              this.docTitle = data.document.title || t('collaborative.untitled_doc');
-              this.docAccessLevel = data.document.access_level || 'anyone_with_link';
-              this.docCustomSlug = data.document.custom_slug || null;
-              this.isDocOwner = false;
-              this.canEditDoc = data.canEdit ?? (this.docAccessLevel === 'anyone_with_link');
-              this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
-              this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
-              this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
-              this.manualGuides = Array.isArray(data.document.content?.guides) ? data.document.content.guides : [];
-              this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
-              this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
-              this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
-              this.initPageSizesFromContent(data.document.content);
-              if (data.aiLock?.locked) {
-                this.pendingAiLock = { locked: true, lockedBy: data.aiLock.lockedBy || null };
+        const localDraft = getLocalDraft(this.docId);
+        if (localDraft) {
+          this.isLocalOnly = true;
+          this.docTitle = localDraft.title || t('collaborative.untitled_doc');
+          this.docAccessLevel = 'restricted';
+          this.docCustomSlug = null;
+          this.isDocOwner = true;
+          this.canEditDoc = true;
+          this.docMembers = [];
+          this.pageCount = Math.max(1, localDraft.content?.pageCount || 1);
+          this.elements = Array.isArray(localDraft.content?.elements) ? localDraft.content.elements : [];
+          this.manualGuides = Array.isArray(localDraft.content?.guides) ? localDraft.content.guides : [];
+          this.pageTitles = Array.isArray(localDraft.content?.pageTitles) && localDraft.content.pageTitles.length > 0 ? localDraft.content.pageTitles : [''];
+          this.pageBackgrounds = Array.isArray(localDraft.content?.pageBackgrounds) && localDraft.content.pageBackgrounds.length > 0 ? localDraft.content.pageBackgrounds : ['#ffffff'];
+          this.pagePdfSources = Array.isArray(localDraft.content?.pagePdfSources) && localDraft.content.pagePdfSources.length > 0 ? localDraft.content.pagePdfSources : [null];
+          this.initPageSizesFromContent(localDraft.content);
+        } else {
+          try {
+            const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
+            const res = await getApi(getUrl);
+            if (res.ok) {
+              const data = await res.json();
+              serverDoc = data.document;
+              if (data.document) {
+                this.isLocalOnly = false;
+                this.docTitle = data.document.title || t('collaborative.untitled_doc');
+                this.docAccessLevel = data.document.access_level || 'anyone_with_link';
+                this.docCustomSlug = data.document.custom_slug || null;
+                this.isDocOwner = false;
+                this.canEditDoc = data.canEdit ?? (this.docAccessLevel === 'anyone_with_link');
+                this.docMembers = Array.isArray(data.document.members) ? data.document.members : [];
+                this.pageCount = Math.max(1, data.document.page_count || data.document.content?.pageCount || 1);
+                this.elements = Array.isArray(data.document.content?.elements) ? data.document.content.elements : [];
+                this.manualGuides = Array.isArray(data.document.content?.guides) ? data.document.content.guides : [];
+                this.pageTitles = Array.isArray(data.document.content?.pageTitles) && data.document.content.pageTitles.length > 0 ? data.document.content.pageTitles : [''];
+                this.pageBackgrounds = Array.isArray(data.document.content?.pageBackgrounds) && data.document.content.pageBackgrounds.length > 0 ? data.document.content.pageBackgrounds : ['#ffffff'];
+                this.pagePdfSources = Array.isArray(data.document.content?.pagePdfSources) && data.document.content.pagePdfSources.length > 0 ? data.document.content.pagePdfSources : [null];
+                this.initPageSizesFromContent(data.document.content);
+                if (data.aiLock?.locked) {
+                  this.pendingAiLock = { locked: true, lockedBy: data.aiLock.lockedBy || null };
+                }
               }
+            } else if (res.status === 403) {
+              this.isRestrictedAccess = true;
+              this.renderRestrictedScreen();
+              return false;
+            } else {
+              this.isLocalOnly = true;
+              this.docTitle = t('collaborative.untitled_doc');
+              this.docAccessLevel = 'restricted';
+              this.docCustomSlug = null;
+              this.isDocOwner = true;
+              this.canEditDoc = true;
+              this.docMembers = [];
+              saveLocalDraft(this.docId, {
+                content: this.getContentPayload(),
+                id: this.docId,
+                title: this.docTitle,
+              });
             }
-          } else if (res.status === 403) {
-            this.isRestrictedAccess = true;
-            this.renderRestrictedScreen();
-            return false;
-          } else {
-            showToast(t('collaborative.login_required_design'), 'warning');
-            navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-            return false;
+          } catch {
+            this.isLocalOnly = true;
+            this.docTitle = t('collaborative.untitled_doc');
+            this.docAccessLevel = 'restricted';
+            this.docCustomSlug = null;
+            this.isDocOwner = true;
+            this.canEditDoc = true;
+            this.docMembers = [];
+            saveLocalDraft(this.docId, {
+              content: this.getContentPayload(),
+              id: this.docId,
+              title: this.docTitle,
+            });
           }
-        } catch {
-          showToast(t('collaborative.login_required_design'), 'warning');
-          navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-          return false;
         }
       } else {
         try {
@@ -1734,6 +1771,14 @@ class DesignPdfEditorController implements ViewController {
       if (titleInput) {
         titleInput.value = this.docTitle;
       }
+      if (this.isLocalOnly) {
+        const shareBtnText = this.container.querySelector<HTMLElement>('[data-ref="btn-share-text"]');
+        if (shareBtnText) {
+          shareBtnText.textContent = t('collaborative.download');
+        }
+        const shareBtnIconUse = this.container.querySelector<SVGUseElement>('[data-ref="btn-share-icon"] use');
+        shareBtnIconUse?.setAttribute('href', '/icons.svg#download');
+      }
       this.setSaveStatus('saved');
       return true;
     } finally {
@@ -1802,22 +1847,40 @@ class DesignPdfEditorController implements ViewController {
         cloudBtn.setAttribute('aria-label', 'Error al sincronizar');
       } else {
         cloudBtn.classList.remove('is-error');
-        iconUse?.setAttribute('href', '/icons.svg#cloud');
-        if (status === 'saving') {
-          cloudBtn.setAttribute('data-tooltip', 'Guardando cambios automáticamente...');
-          cloudBtn.setAttribute('aria-label', 'Guardando cambios...');
+        if (this.isLocalOnly) {
+          iconUse?.setAttribute('href', '/icons.svg#devices');
+          if (status === 'saving') {
+            cloudBtn.setAttribute('data-tooltip', t('collaborative.saving_local', 'Guardando en este dispositivo...'));
+            cloudBtn.setAttribute('aria-label', t('collaborative.saving_local', 'Guardando en este dispositivo...'));
+          } else {
+            cloudBtn.setAttribute('data-tooltip', t('collaborative.local_saved_tooltip', 'Guardado en este dispositivo (Modo local)'));
+            cloudBtn.setAttribute('aria-label', t('collaborative.local_saved_tooltip', 'Guardado en este dispositivo (Modo local)'));
+          }
         } else {
-          cloudBtn.setAttribute('data-tooltip', 'Cambios guardados');
-          cloudBtn.setAttribute('aria-label', 'Documento guardado');
+          iconUse?.setAttribute('href', '/icons.svg#cloud');
+          if (status === 'saving') {
+            cloudBtn.setAttribute('data-tooltip', t('ui.sincronizando_con_la_nube', 'Guardando cambios automáticamente...'));
+            cloudBtn.setAttribute('aria-label', t('ui.guardando', 'Guardando cambios...'));
+          } else {
+            cloudBtn.setAttribute('data-tooltip', t('ui.cambios_guardados_en_la_nube', 'Cambios guardados'));
+            cloudBtn.setAttribute('aria-label', t('collaborative.footer_status_saved', 'Documento guardado'));
+          }
         }
       }
     }
 
     if (footerStatus) {
-      footerStatus.textContent =
-        status === 'saving' ? 'Guardando...' :
-        status === 'saved' ? 'Guardado' :
-        'Error de sincronización';
+      if (this.isLocalOnly) {
+        footerStatus.textContent =
+          status === 'saving' ? t('collaborative.saving_local', 'Guardando...') :
+          status === 'saved' ? t('collaborative.local_mode_badge', 'Local') :
+          t('ui.error_de_sincronizacion', 'Error');
+      } else {
+        footerStatus.textContent =
+          status === 'saving' ? t('ui.guardando', 'Guardando...') :
+          status === 'saved' ? t('collaborative.footer_status_saved', 'Guardado') :
+          t('ui.error_de_sincronizacion', 'Error de sincronización');
+      }
     }
   }
 
@@ -1874,6 +1937,28 @@ class DesignPdfEditorController implements ViewController {
       id: this.docId,
       title: this.docTitle,
     };
+
+    if (this.isLocalOnly) {
+      try {
+        saveLocalDraft(this.docId, {
+          content: payload.content,
+          id: this.docId,
+          title: this.docTitle,
+        });
+        this.writeLocalWal();
+        this.lastSavedTimestamp = Date.now();
+        this.isModified = false;
+        this.setSaveStatus('saved');
+      } catch {
+        this.setSaveStatus('error');
+      } finally {
+        this.isAutoSaving = false;
+        if (this.hasPendingSave) {
+          this.scheduleAutoSave(200);
+        }
+      }
+      return;
+    }
 
     try {
       const res = await putApi(API_ROUTES.collaborativeDocs.byId(this.docId), payload);
@@ -3084,7 +3169,7 @@ class DesignPdfEditorController implements ViewController {
     return div;
   }
 
-  private addImageElement(asset: UploadedAsset): void {
+  private addImageElement(asset: UploadedAsset, dims?: { height: number; width: number }): void {
     if (this.isAiLocked) {
       showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
       return;
@@ -3092,17 +3177,29 @@ class DesignPdfEditorController implements ViewController {
     if (this.editorMode === 'view') return;
     const id = `img_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const pageIdx = this.selectedPageIndex !== null ? this.selectedPageIndex : this.activePageIndex;
+    const pageDim = this.getPageDimensions(pageIdx);
+    const width = dims?.width || 280;
+    const height = dims?.height || 200;
+    const offsetX = (this.elements.length % 5) * 20;
+    const offsetY = (this.elements.length % 5) * 20;
+    const x = dims
+      ? Math.max(20, Math.min(pageDim.width - width - 20, Math.round((pageDim.width - width) / 2) + offsetX))
+      : 140 + offsetX;
+    const y = dims
+      ? Math.max(20, Math.min(pageDim.height - height - 20, Math.round((pageDim.height - height) / 2) + offsetY))
+      : 180 + offsetY;
+
     const newImg: ElementImage = {
-      height: 200,
+      height,
       id,
       name: asset.name,
       pageIndex: pageIdx,
       rotation: 0,
       type: 'image',
       url: asset.url,
-      width: 280,
-      x: 140 + (this.elements.length % 5) * 20,
-      y: 180 + (this.elements.length % 5) * 20,
+      width,
+      x,
+      y,
     };
 
     this.pushElement(newImg);
@@ -3110,6 +3207,31 @@ class DesignPdfEditorController implements ViewController {
     this.selectElement(id);
     this.activateSelectTool();
     this.setModified(true);
+  }
+
+  private measureImageDimensions(src: string): Promise<{ height: number; width: number }> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth || 280;
+        let h = img.naturalHeight || 200;
+        const maxW = 340;
+        const maxH = 340;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        resolve({
+          height: Math.max(40, h),
+          width: Math.max(40, w),
+        });
+      };
+      img.onerror = () => {
+        resolve({ height: 200, width: 280 });
+      };
+      img.src = src;
+    });
   }
 
   private makeDraggable(element: HTMLElement, item: ElementChart | ElementImage | ElementShape | ElementTable | ElementText): void {
@@ -4463,7 +4585,66 @@ class DesignPdfEditorController implements ViewController {
     showToast(selectedElements.length > 1 ? `${selectedElements.length} elementos copiados` : 'Elemento copiado', 'info');
   }
 
-  private async pasteFromClipboard(overrideText?: string, overrideFiles?: FileList | null): Promise<void> {
+  private async processPastedImageFile(file: File): Promise<void> {
+    if (currentUser && !this.isLocalOnly) {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (this.docId) {
+        formData.append('docId', this.docId);
+      }
+      try {
+        const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
+        if (res.ok) {
+          const data = await res.json();
+          const uploaded = data.file || (data.files && data.files[0]);
+          if (uploaded && uploaded.url) {
+            const dims = await this.measureImageDimensions(uploaded.url);
+            this.addImageElement({
+              id: uploaded.id || `pasted_${Date.now()}`,
+              name: uploaded.name || file.name || 'image',
+              size: uploaded.size || file.size || 0,
+              type: 'image',
+              url: uploaded.url,
+            }, dims);
+            void this.loadUploadedAssets();
+            showToast(t('collaborative.image_pasted'), 'info');
+          }
+        } else {
+          if (res.status === 401) {
+            showToast(t('collaborative.login_required_upload'), 'danger');
+          } else if (res.status === 413) {
+            showToast(t('collaborative.storage_quota_exceeded'), 'danger');
+          } else {
+            showToast(t('collaborative.upload_failed'), 'danger');
+          }
+        }
+      } catch {
+        showToast(t('collaborative.upload_failed'), 'danger');
+      }
+    } else {
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const dims = await this.measureImageDimensions(dataUrl);
+        this.addImageElement({
+          id: `pasted_${Date.now()}`,
+          name: file.name || 'image',
+          size: file.size || 0,
+          type: 'image',
+          url: dataUrl,
+        }, dims);
+        showToast(t('collaborative.image_pasted_local'), 'info');
+      } catch {
+        showToast(t('collaborative.upload_failed'), 'danger');
+      }
+    }
+  }
+
+  private async pasteFromClipboard(overrideText?: string, overrideFiles?: FileList | File[] | null): Promise<void> {
     if (this.isAiLocked || this.editorMode === 'view') {
       showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
       return;
@@ -4483,38 +4664,7 @@ class DesignPdfEditorController implements ViewController {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file.type.startsWith('image/')) {
-          const formData = new FormData();
-          formData.append('file', file);
-          if (this.docId) {
-            formData.append('docId', this.docId);
-          }
-          try {
-            const res = await postFormApi(API_ROUTES.collaborativeDocs.upload, formData);
-            if (res.ok) {
-              const data = await res.json();
-              const uploaded = data.file || (data.files && data.files[0]);
-              if (uploaded && uploaded.url) {
-                this.addImageElement({
-                  id: uploaded.id || `pasted_${Date.now()}`,
-                  name: uploaded.name || file.name || 'image',
-                  size: uploaded.size || file.size || 0,
-                  type: 'image',
-                  url: uploaded.url,
-                });
-                showToast(t('collaborative.image_pasted'), 'info');
-              }
-            } else {
-              if (res.status === 401) {
-                showToast(t('collaborative.login_required_upload'), 'danger');
-              } else if (res.status === 413) {
-                showToast(t('collaborative.storage_quota_exceeded'), 'danger');
-              } else {
-                showToast(t('collaborative.upload_failed'), 'danger');
-              }
-            }
-          } catch {
-            showToast(t('collaborative.upload_failed'), 'danger');
-          }
+          await this.processPastedImageFile(file);
           return;
         }
       }
@@ -4529,6 +4679,21 @@ class DesignPdfEditorController implements ViewController {
       } catch {}
     }
 
+    if (text === undefined && !files && navigator.clipboard && 'read' in navigator.clipboard) {
+      try {
+        const clipItems = await navigator.clipboard.read();
+        for (const item of clipItems) {
+          const imgType = item.types.find((t) => t.startsWith('image/'));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const file = new File([blob], `pasted_image_${Date.now()}.${imgType.split('/')[1] || 'png'}`, { type: imgType });
+            await this.processPastedImageFile(file);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     if (text === undefined && navigator.clipboard?.readText) {
       try {
         text = await navigator.clipboard.readText();
@@ -4536,6 +4701,20 @@ class DesignPdfEditorController implements ViewController {
         showToast(t('toasts.para_pegar_contenido_externo_usa_el_ataj'), 'info');
         return;
       }
+    }
+
+    if (text && (text.startsWith('http://') || text.startsWith('https://')) && /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(text.trim())) {
+      const imgUrl = text.trim();
+      const dims = await this.measureImageDimensions(imgUrl);
+      this.addImageElement({
+        id: `pasted_${Date.now()}`,
+        name: 'image',
+        size: 0,
+        type: 'image',
+        url: imgUrl,
+      }, dims);
+      showToast(t('collaborative.image_pasted_local'), 'info');
+      return;
     }
 
     const targetPageIndex = this.selectedPageIndex !== null
@@ -5605,7 +5784,12 @@ class DesignPdfEditorController implements ViewController {
       this.handleOpenAiGenerateModal();
     }, { signal });
 
-    // btn-cloud-status is purely an autosave indicator
+    const cloudBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cloud-status"]');
+    cloudBtn?.addEventListener('click', () => {
+      if (this.isLocalOnly) {
+        showToast(t('collaborative.local_saved_toast', 'Documento guardado localmente en este dispositivo.'), 'info');
+      }
+    }, { signal });
 
     const shareBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-link"]');
     shareBtn?.addEventListener('click', () => {
@@ -5640,6 +5824,14 @@ class DesignPdfEditorController implements ViewController {
     window.addEventListener('beforeunload', () => {
       if (this.isAiLocked) return;
       this.writeLocalWal();
+      if (this.isLocalOnly) {
+        saveLocalDraft(this.docId, {
+          content: this.getContentPayload(),
+          id: this.docId,
+          title: this.docTitle,
+        });
+        return;
+      }
       if (this.hasPendingSave || this.autoSaveTimer) {
         const payload = JSON.stringify({
           content: this.getContentPayload(),
@@ -6350,8 +6542,7 @@ class DesignPdfEditorController implements ViewController {
     const btnImageRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-image-remove-bg"]');
     btnImageRemoveBg?.addEventListener('click', async () => {
       if (!currentUser) {
-        showToast(t('collaborative.login_required_ai_bg'), 'warning');
-        navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        showAuthGateModal({ featureKey: 'ai_bg_remove', returnUrl: window.location.pathname });
         return;
       }
       if (!hasSubscriptionFeature('pro')) {
@@ -6825,11 +7016,6 @@ class DesignPdfEditorController implements ViewController {
               return;
             }
           }
-          if (key === 'v') {
-            e.preventDefault();
-            void this.pasteFromClipboard();
-            return;
-          }
           if (key === 'd') {
             e.preventDefault();
             this.duplicateSelected();
@@ -6847,16 +7033,83 @@ class DesignPdfEditorController implements ViewController {
       }
     }, { signal });
 
+    window.addEventListener('dragover', (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+      }
+    }, { signal });
+
+    window.addEventListener('drop', (e: DragEvent) => {
+      if (this.isAiLocked || this.editorMode === 'view') return;
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        const imgFiles: File[] = [];
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].type.startsWith('image/')) {
+            imgFiles.push(files[i]);
+          }
+        }
+        if (imgFiles.length > 0) {
+          e.preventDefault();
+          void this.pasteFromClipboard(undefined, imgFiles);
+        }
+      }
+    }, { signal });
+
     window.addEventListener('paste', (e: ClipboardEvent) => {
       if (this.isAiLocked || this.editorMode === 'view') return;
       const activeTag = document.activeElement?.tagName.toLowerCase();
       const isEditing = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
       if (isEditing) return;
 
-      e.preventDefault();
+      const filesList: File[] = [];
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        for (let i = 0; i < e.clipboardData.files.length; i++) {
+          const f = e.clipboardData.files[i];
+          if (f.type.startsWith('image/')) filesList.push(f);
+        }
+      }
+      if (filesList.length === 0 && e.clipboardData?.items) {
+        for (let i = 0; i < e.clipboardData.items.length; i++) {
+          const item = e.clipboardData.items[i];
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const f = item.getAsFile();
+            if (f) filesList.push(f);
+          }
+        }
+      }
+
+      if (filesList.length > 0) {
+        e.preventDefault();
+        void this.pasteFromClipboard(undefined, filesList);
+        return;
+      }
+
+      const html = e.clipboardData?.getData('text/html');
+      if (html && html.includes('<img')) {
+        const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (match && match[1]) {
+          const imgSrc = match[1];
+          if (imgSrc.startsWith('data:image/')) {
+            e.preventDefault();
+            void (async () => {
+              try {
+                const res = await fetch(imgSrc);
+                const blob = await res.blob();
+                const file = new File([blob], `pasted_image_${Date.now()}.png`, { type: blob.type || 'image/png' });
+                await this.processPastedImageFile(file);
+              } catch {
+                void this.pasteFromClipboard(imgSrc);
+              }
+            })();
+            return;
+          }
+        }
+      }
+
       const text = e.clipboardData?.getData('text/plain');
-      const files = e.clipboardData?.files;
-      void this.pasteFromClipboard(text, files);
+      e.preventDefault();
+      void this.pasteFromClipboard(text, null);
     }, { signal });
 
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
@@ -7229,21 +7482,18 @@ class DesignPdfEditorController implements ViewController {
   private renderUploadsGrid(): void {
     const grid = this.queryPanel<HTMLElement>('[data-ref="uploads-grid"]');
     const emptyState = this.queryPanel<HTMLElement>('[data-ref="empty-uploads"]');
-    const guestGate = this.queryPanel<HTMLElement>('[data-ref="uploads-guest-gate"]');
     const btnUpload = this.queryPanel<HTMLElement>('[data-ref="btn-upload-file"]');
     const tabs = this.queryPanel<HTMLElement>('[data-ref="upload-tabs"]');
     if (!grid) return;
 
     if (!currentUser) {
-      if (guestGate) showElement(guestGate);
-      if (btnUpload) hideElement(btnUpload);
+      if (btnUpload) showElement(btnUpload);
       if (tabs) hideElement(tabs);
-      if (emptyState) hideElement(emptyState);
+      if (emptyState) showElement(emptyState);
       grid.innerHTML = '';
       return;
     }
 
-    if (guestGate) hideElement(guestGate);
     if (btnUpload) showElement(btnUpload);
     if (tabs) showElement(tabs);
 
@@ -7877,23 +8127,20 @@ class DesignPdfEditorController implements ViewController {
       showToast(t('collaborative.ai_lock_blocked_action'), 'warning');
       return;
     }
-    if (initialView === 'main' && !currentUser) {
-      showToast(t('collaborative.login_required_share'), 'warning');
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
+    const effectiveInitialView: 'download' | 'find-replace' | 'main' =
+      (!currentUser || this.isLocalOnly) && initialView === 'main' ? 'download' : initialView;
 
     this.closeFilePopover();
     this.fileDropdownCtrl?.close();
     this.editDropdownCtrl?.close();
 
     if (this.sharePopoverHandle) {
-      if (initialView === 'main') {
+      if (this.sharePopoverHandle.getActiveView() === effectiveInitialView) {
         this.closeSharePopover();
         return;
       }
-      this.sharePopoverHandle.openView(initialView);
-      if (initialView === 'find-replace') {
+      this.sharePopoverHandle.openView(effectiveInitialView);
+      if (effectiveInitialView === 'find-replace') {
         this.syncShareFindState();
       }
       return;
@@ -7932,8 +8179,10 @@ class DesignPdfEditorController implements ViewController {
           this.executeSearch();
         },
       },
-      initialView,
+      getContent: () => this.getContentPayload(),
+      initialView: effectiveInitialView,
       isDocOwner: this.isDocOwner,
+      isLocalOnly: this.isLocalOnly,
       onAccessLevelChange: (level) => {
         this.docAccessLevel = level;
       },
@@ -7963,6 +8212,15 @@ class DesignPdfEditorController implements ViewController {
   }
 
   private async createDocumentCopy(): Promise<void> {
+    if (this.isLocalOnly) {
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
+      const copyTitle = `${this.docTitle} (Copia)`;
+      const content = this.getContentPayload();
+      saveLocalDraft(newId, { content, id: newId, title: copyTitle });
+      showToast(t('toasts.copia_creada_en_una_nueva_pestana'), 'success');
+      window.open(`/d/${encodeURIComponent(newId)}`, '_blank');
+      return;
+    }
     if (!currentUser) {
       showToast(t('collaborative.login_required_duplicate'), 'warning');
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
@@ -9129,8 +9387,7 @@ class DesignPdfEditorController implements ViewController {
       return;
     }
     if (!currentUser) {
-      showToast(t('collaborative.ai_login_required'), 'warning');
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      showAuthGateModal({ featureKey: 'ai_designer', returnUrl: window.location.pathname });
       return;
     }
     if (!this.canEditDoc || this.editorMode === 'view') {

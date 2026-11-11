@@ -319,12 +319,6 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async ({ params, query }) => {
       const docId = params.id || query.get('id') || '';
-      const { currentUser } = await import('../services/api.service.js');
-      if (!docId && !currentUser) {
-        const { navigate } = await import('../services/navigation.service.js');
-        navigate(`/login?redirect=${encodeURIComponent('/projects')}`, true);
-        return null;
-      }
       await loadStylesheet('/css/tools/tool-workspace.css');
       const { createDesignPdfEditorView } = await import('../views/design-pdf/design-pdf-editor.view.js');
       return await createDesignPdfEditorView(docId, query);
@@ -369,13 +363,6 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
-      const { currentUser } = await import('../services/api.service.js');
-      if (!currentUser) {
-        const { navigate } = await import('../services/navigation.service.js');
-        const targetPath = window.location.pathname || '/projects';
-        navigate(`/login?redirect=${encodeURIComponent(targetPath)}`, true);
-        return null;
-      }
       await loadStylesheet('/css/tools/tool-workspace.css');
       await loadStylesheet('/css/components/component-views.css');
       const { createProjectsView } = await import('../views/projects/projects.view.js');
@@ -394,14 +381,9 @@ const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
-    handler: async (ctx) => {
-      const { currentUser } = await import('../services/api.service.js');
+    handler: async () => {
       const { navigate } = await import('../services/navigation.service.js');
-      if (!currentUser) {
-        navigate('/login?redirect=%2Fprojects', true);
-      } else {
-        navigate('/projects', true);
-      }
+      navigate('/projects', true);
       return null;
     },
     id: 'design-pdf',

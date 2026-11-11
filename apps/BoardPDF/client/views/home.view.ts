@@ -200,11 +200,7 @@ class HomeController {
       'click',
       (e) => {
         e.preventDefault();
-        if (currentUser) {
-          navigate('/projects');
-        } else {
-          navigate('/login?redirect=/projects');
-        }
+        navigate('/projects');
       },
       { signal: this.abortController?.signal }
     );

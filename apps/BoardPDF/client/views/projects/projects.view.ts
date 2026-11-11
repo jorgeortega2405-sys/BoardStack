@@ -1,3 +1,4 @@
+import { showAuthGateModal } from '../../components/auth-gate-modal.component.js';
 import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
 import { getLabelDisplayName, openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
@@ -10,7 +11,9 @@ import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { DocumentLabel, ViewController } from '../../types/common.types.js';
+import { getLocalDraft, listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 import { debounce, setupDropdown } from '../../utils/dom.util.js';
+import { createLocalFolder, deleteLocalFolder, getLocalFolderById, listLocalFolders, moveDocToLocalFolder, renameLocalFolder } from '../../utils/project-local-folders.util.js';
 
 
 interface ProjectFolder {
@@ -32,6 +35,7 @@ interface DocItem {
   created_at: string;
   folder_id?: string | null;
   id: string;
+  isLocalOnly?: boolean;
   labels?: DocumentLabel[];
   page_count: number;
   pdf_filename?: string;
@@ -79,10 +83,6 @@ class ProjectsController implements ViewController {
   }
 
   public async init(): Promise<void> {
-    if (!currentUser) {
-      navigate('/login?redirect=%2Fprojects', true);
-      return;
-    }
     this.abortController = new AbortController();
     await this.loadData();
     this.renderView();
@@ -119,6 +119,12 @@ class ProjectsController implements ViewController {
   }
 
   private async loadLabelsCatalog(): Promise<void> {
+    if (!currentUser) {
+      this.userLabels = [];
+      this.customLabelsCount = 0;
+      this.maxCustomLabels = 0;
+      return;
+    }
     try {
       const res = await getApi(API_ROUTES.documentLabels.base);
       if (res.ok) {
@@ -135,6 +141,37 @@ class ProjectsController implements ViewController {
 
   private async loadRootProjectsData(): Promise<void> {
     this.currentFolder = null;
+    if (!currentUser) {
+      const drafts = listLocalDrafts();
+      this.documents = drafts.filter((d) => !d.folderId).map((d) => ({
+        access_level: 'private',
+        content: d.content,
+        created_at: d.createdAt,
+        folder_id: d.folderId || null,
+        id: d.id,
+        isLocalOnly: true,
+        labels: [],
+        page_count: d.content?.pageCount || 1,
+        title: d.title,
+        updated_at: d.updatedAt,
+      }));
+      const fRes = listLocalFolders(null, 'project');
+      this.folders = fRes.folders.map((f) => ({
+        color: f.color,
+        created_at: f.created_at,
+        document_count: f.document_count,
+        file_count: 0,
+        folder_type: f.folder_type,
+        id: f.id,
+        name: f.name,
+        parent_id: f.parent_id,
+        updated_at: f.updated_at,
+        user_id: null,
+      }));
+      this.uploadsFolder = null;
+      this.files = [];
+      return;
+    }
     try {
       const docsRes = await getApi(API_ROUTES.collaborativeDocs.base);
       if (docsRes.ok) {
@@ -162,10 +199,58 @@ class ProjectsController implements ViewController {
   }
 
   private async loadFolderDetailData(folderId: string): Promise<void> {
+    if (!currentUser) {
+      const localFolder = getLocalFolderById(folderId);
+      if (!localFolder) {
+        showToast(t('projects.folder_not_found'), 'warning');
+        navigate('/projects');
+        return;
+      }
+      this.currentFolder = {
+        color: localFolder.color,
+        created_at: localFolder.created_at,
+        document_count: localFolder.document_count,
+        file_count: 0,
+        folder_type: localFolder.folder_type,
+        id: localFolder.id,
+        name: localFolder.name,
+        parent_id: localFolder.parent_id,
+        updated_at: localFolder.updated_at,
+        user_id: null,
+      };
+      const drafts = listLocalDrafts();
+      this.documents = drafts.filter((d) => d.folderId === folderId).map((d) => ({
+        access_level: 'private',
+        content: d.content,
+        created_at: d.createdAt,
+        folder_id: d.folderId,
+        id: d.id,
+        isLocalOnly: true,
+        labels: [],
+        page_count: d.content?.pageCount || 1,
+        title: d.title,
+        updated_at: d.updatedAt,
+      }));
+      this.files = [];
+      const subFoldersRes = listLocalFolders(folderId, 'project');
+      this.folders = subFoldersRes.folders.map((f) => ({
+        color: f.color,
+        created_at: f.created_at,
+        document_count: f.document_count,
+        file_count: 0,
+        folder_type: f.folder_type,
+        id: f.id,
+        name: f.name,
+        parent_id: f.parent_id,
+        updated_at: f.updated_at,
+        user_id: null,
+      }));
+      return;
+    }
     try {
       const res = await getApi(API_ROUTES.projectFolders.byId(folderId));
       if (!res.ok) {
-        showToast(t('projects.folder_not_found', 'Carpeta no encontrada'), 'warning');
+        showToast(t('projects.folder_not_found'), 'warning');
         navigate('/projects');
         return;
       }
@@ -175,7 +260,7 @@ class ProjectsController implements ViewController {
       this.files = Array.isArray(data.files) ? data.files : [];
       this.folders = Array.isArray(data.subfolders) ? data.subfolders : [];
     } catch {
-      showToast(t('projects.folder_load_error', 'Error al cargar carpeta'), 'danger');
+      showToast(t('projects.folder_load_error'), 'danger');
       navigate('/projects');
     }
   }
@@ -408,6 +493,13 @@ class ProjectsController implements ViewController {
         </button>
       `;
     } else {
+      const uploadsTabHtml = currentUser
+        ? `
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="pill-type-uploads" data-type="uploads">
+          ${t('projects.tab_uploads')}
+        </button>
+      `
+        : '';
       bar.innerHTML = `
         <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
           ${t('projects.tab_all')}
@@ -418,9 +510,7 @@ class ProjectsController implements ViewController {
         <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'folders' ? 'is-active' : ''}" data-ref="pill-type-folders" data-type="folders">
           ${t('projects.tab_folders')}
         </button>
-        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="pill-type-uploads" data-type="uploads">
-          ${t('projects.tab_uploads')}
-        </button>
+        ${uploadsTabHtml}
       `;
     }
 
@@ -434,11 +524,11 @@ class ProjectsController implements ViewController {
     let html = `
       <button type="button" class="menu-item ${this.filterCategory === 'all' ? 'is-active' : ''}" data-ref="item-cat-all" data-category="all">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
-        <span class="menu-item__text">Todas las categorías</span>
+        <span class="menu-item__text">${this.escapeHtml(t('projects.cat_all'))}</span>
       </button>
       <button type="button" class="menu-item ${this.filterCategory === 'root' ? 'is-active' : ''}" data-ref="item-cat-root" data-category="root">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-        <span class="menu-item__text">Sin carpeta (Raíz)</span>
+        <span class="menu-item__text">${this.escapeHtml(t('projects.cat_root'))}</span>
       </button>
     `;
 
@@ -539,9 +629,10 @@ class ProjectsController implements ViewController {
     empty.classList.add('is-hidden');
 
     grid.innerHTML = filteredDocs.map((doc) => {
-      const isPublic = doc.access_level === 'anyone_with_link';
-      const badgeIcon = isPublic ? 'lock_open' : 'lock';
-      const badgeText = isPublic ? 'Público' : 'Privado';
+      const isLocal = doc.isLocalOnly || !currentUser;
+      const isPublic = !isLocal && doc.access_level === 'anyone_with_link';
+      const badgeIcon = isLocal ? 'devices' : (isPublic ? 'lock_open' : 'lock');
+      const badgeText = isLocal ? t('collaborative.local_mode_badge') : (isPublic ? t('collaborative.badge_public') : t('collaborative.badge_private'));
       const relativeTime = this.formatRelativeTime(doc.updated_at);
       const dim = this.getDocDimensions(doc);
       const paperSize = this.computePaperSize(dim.width, dim.height, 196, 156);
@@ -564,23 +655,23 @@ class ProjectsController implements ViewController {
                   <div class="menu-panel__list" data-ref="list-actions-${doc.id}">
                     <button type="button" class="menu-item" data-ref="item-open-tab-${doc.id}" data-action="open-tab" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
-                      <span class="menu-item__text">Abrir en una pestaña</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_open_tab'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-move-doc-${doc.id}" data-action="move-doc" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                      <span class="menu-item__text">Mover a carpeta...</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-copy-doc-${doc.id}" data-action="copy-doc" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-                      <span class="menu-item__text">Crear una copia</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_copy_doc'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-download-${doc.id}" data-action="download" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                      <span class="menu-item__text">Descargar PDF</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_download_pdf'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-copy-link-${doc.id}" data-action="copy-link" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
-                      <span class="menu-item__text">Copiar enlace</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_copy_link'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-labels-doc-${doc.id}" data-action="manage-labels" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#label"></use></svg>
@@ -589,7 +680,7 @@ class ProjectsController implements ViewController {
                     <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
                     <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">Eliminar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
                     </button>
                   </div>
                 </div>
@@ -674,15 +765,15 @@ class ProjectsController implements ViewController {
           </div>
           <div class="tool-card__bottom">
             <div class="tool-card__title-row">
-              <h3 class="tool-card__title" title="Subidos">Subidos</h3>
+              <h3 class="tool-card__title" title="${this.escapeHtml(t('projects.uploads_title'))}">${this.escapeHtml(t('projects.uploads_title'))}</h3>
               <span class="tool-card__badge-pill">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-                <span>${upCount} ${upCount === 1 ? 'archivo' : 'archivos'}</span>
+                <span>${upCount} ${upCount === 1 ? t('projects.files_count_singular') : t('projects.files_count_plural')}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-              <span class="tool-card__meta-text">Carpeta del sistema</span>
+              <span class="tool-card__meta-text">${this.escapeHtml(t('projects.system_folder'))}</span>
             </div>
           </div>
         </div>
@@ -703,12 +794,12 @@ class ProjectsController implements ViewController {
                   <div class="menu-panel__list">
                     <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                      <span class="menu-item__text">Renombrar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
                     </button>
                     <div class="menu-divider"></div>
                     <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">Eliminar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
                     </button>
                   </div>
                 </div>
@@ -731,12 +822,12 @@ class ProjectsController implements ViewController {
               <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
               <span class="tool-card__badge-pill">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                <span>${docCount} ${docCount === 1 ? 'diseño' : 'diseños'}</span>
+                <span>${docCount} ${docCount === 1 ? t('projects.designs_count_singular') : t('projects.designs_count_plural')}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-              <span class="tool-card__meta-text">Carpeta</span>
+              <span class="tool-card__meta-text">${this.escapeHtml(t('projects.folder'))}</span>
             </div>
           </div>
         </div>
@@ -782,12 +873,12 @@ class ProjectsController implements ViewController {
                   <div class="menu-panel__list">
                     <button type="button" class="menu-item" data-action="rename-folder" data-id="${f.id}" data-name="${this.escapeHtml(f.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-                      <span class="menu-item__text">Renombrar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_rename'))}</span>
                     </button>
                     <div class="menu-divider"></div>
                     <button type="button" class="menu-item menu-item--danger" data-action="delete-folder" data-id="${f.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">Eliminar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
                     </button>
                   </div>
                 </div>
@@ -810,12 +901,12 @@ class ProjectsController implements ViewController {
               <h3 class="tool-card__title" title="${this.escapeHtml(f.name)}">${this.escapeHtml(f.name)}</h3>
               <span class="tool-card__badge-pill">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                <span>${fCount} ${fCount === 1 ? 'archivo' : 'archivos'}</span>
+                <span>${fCount} ${fCount === 1 ? t('projects.files_count_singular') : t('projects.files_count_plural')}</span>
               </span>
             </div>
             <div class="tool-card__meta-row">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-              <span class="tool-card__meta-text">Carpeta</span>
+              <span class="tool-card__meta-text">${this.escapeHtml(t('projects.folder'))}</span>
             </div>
           </div>
         </div>
@@ -864,16 +955,16 @@ class ProjectsController implements ViewController {
                   <div class="menu-panel__list">
                     <button type="button" class="menu-item" data-action="move-upload" data-id="${file.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-                      <span class="menu-item__text">Mover a...</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_move_folder'))}</span>
                     </button>
                     <button type="button" class="menu-item" data-action="download-upload" data-url="${file.url}" data-name="${this.escapeHtml(file.name)}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                      <span class="menu-item__text">Descargar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_download_pdf'))}</span>
                     </button>
                     <div class="menu-divider"></div>
                     <button type="button" class="menu-item menu-item--danger" data-action="delete-upload" data-id="${file.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">Eliminar</span>
+                      <span class="menu-item__text">${this.escapeHtml(t('projects.action_delete'))}</span>
                     </button>
                   </div>
                 </div>
@@ -1024,7 +1115,7 @@ class ProjectsController implements ViewController {
         this.filterCategory = cat;
         const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-category"]');
         if (label) {
-          label.textContent = cat === 'all' ? 'Categoría' : item.querySelector('.menu-item__text')?.textContent?.trim() || item.textContent?.trim() || 'Categoría';
+          label.textContent = cat === 'all' ? t('projects.filter_category') : item.querySelector('.menu-item__text')?.textContent?.trim() || item.textContent?.trim() || t('projects.filter_category');
         }
         catDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
         item.classList.add('is-active');
@@ -1059,7 +1150,7 @@ class ProjectsController implements ViewController {
           this.sortOption = sort;
           const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-date"]');
           if (label) {
-            label.textContent = btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || 'Fecha de modificación';
+            label.textContent = btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || t('projects.filter_date');
           }
           dateDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
           btn.classList.add('is-active');
@@ -1071,7 +1162,7 @@ class ProjectsController implements ViewController {
     const btnSortToggle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-sort"]');
     btnSortToggle?.addEventListener('click', () => {
       this.sortAscending = !this.sortAscending;
-      showToast(this.sortAscending ? 'Orden ascendente' : 'Orden descendente', 'info');
+      showToast(this.sortAscending ? t('projects.sort_ascending_toast') : t('projects.sort_descending_toast'), 'info');
       this.renderView();
     }, { signal: this.abortController?.signal });
 
@@ -1089,6 +1180,10 @@ class ProjectsController implements ViewController {
       }, { signal: this.abortController?.signal });
 
       menu?.querySelector('[data-action="upload-files"]')?.addEventListener('click', () => {
+        if (!currentUser) {
+          showAuthGateModal({ featureKey: 'cloud_uploads', returnUrl: '/projects' });
+          return;
+        }
         const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-project-upload"]');
         fileInput?.click();
       }, { signal: this.abortController?.signal });
@@ -1096,6 +1191,10 @@ class ProjectsController implements ViewController {
 
     const btnUploadDirect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-upload-direct"]');
     btnUploadDirect?.addEventListener('click', () => {
+      if (!currentUser) {
+        showAuthGateModal({ featureKey: 'cloud_uploads', returnUrl: '/projects' });
+        return;
+      }
       const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-project-upload"]');
       fileInput?.click();
     }, { signal: this.abortController?.signal });
@@ -1115,6 +1214,10 @@ class ProjectsController implements ViewController {
 
     const btnEmptyUpload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-empty-upload"]');
     btnEmptyUpload?.addEventListener('click', () => {
+      if (!currentUser) {
+        showToast(t('collaborative.local_upload_blocked'), 'warning');
+        return;
+      }
       fileInput?.click();
     }, { signal: this.abortController?.signal });
 
@@ -1187,16 +1290,24 @@ class ProjectsController implements ViewController {
         } else if (action === 'move-doc' && id) {
           void this.promptMoveDoc(id);
         } else if (action === 'copy-link' && id) {
+          const doc = this.documents.find((d) => d.id === id);
+          if (!currentUser || doc?.isLocalOnly) {
+            showAuthGateModal({ featureKey: 'collaborative_share', returnUrl: '/projects' });
+            return;
+          }
           const link = `${window.location.origin}/d/${encodeURIComponent(id)}`;
           navigator.clipboard?.writeText(link);
           showToast(t('toasts.enlace_copiado_al_portapapeles'), 'info');
         } else if (action === 'manage-labels' && id) {
           actionBtn.closest<HTMLElement>('.dropdown')?.classList.remove('is-open');
           actionBtn.closest<HTMLElement>('.tool-card')?.classList.remove('has-open-dropdown');
+          if (!currentUser) {
+            showAuthGateModal({ featureKey: 'labels', returnUrl: '/projects' });
+            return;
+          }
           void this.promptManageLabels(id);
         } else if (action === 'download' && id) {
-          showToast(t('toasts.generando_descarga_del_documento'), 'info');
-          window.open(`/api/collaborative-docs/${encodeURIComponent(id)}/export`, '_blank');
+          void this.handleDownloadDoc(id);
         } else if (action === 'delete' && id) {
           void this.handleDeleteDoc(id);
         } else if (action === 'rename-folder' && id) {
@@ -1224,6 +1335,23 @@ class ProjectsController implements ViewController {
   }
 
   private async promptCreateFolder(): Promise<void> {
+    if (!currentUser) {
+      openCreateFolderModal({
+        onConfirm: async (name: string) => {
+          try {
+            createLocalFolder({ name, parentId: null });
+            showToast(t('toasts.carpeta_creada_exitosamente'), 'info');
+            await this.loadData();
+            this.renderView();
+            return true;
+          } catch (err: any) {
+            showToast(err?.message || t('ui.no_se_pudo_crear_la_carpeta'), 'danger');
+            return false;
+          }
+        },
+      });
+      return;
+    }
     const isUploadsContext = this.currentFolder?.folder_type === 'uploads';
     const folderType = isUploadsContext ? 'upload_folder' : 'project';
     const parentId = isUploadsContext ? this.currentFolder?.id : null;
@@ -1254,6 +1382,24 @@ class ProjectsController implements ViewController {
   }
 
   private async promptRenameFolder(folderId: string, currentName: string): Promise<void> {
+    if (!currentUser) {
+      openRenameFolderModal({
+        currentName,
+        onConfirm: async (newName: string) => {
+          try {
+            renameLocalFolder(folderId, newName);
+            showToast(t('toasts.carpeta_renombrada_exitosamente'), 'info');
+            await this.loadData();
+            this.renderView();
+            return true;
+          } catch (err: any) {
+            showToast(err?.message || t('ui.no_se_pudo_renombrar_la_carpeta'), 'danger');
+            return false;
+          }
+        },
+      });
+      return;
+    }
     openRenameFolderModal({
       currentName,
       onConfirm: async (newName: string) => {
@@ -1277,6 +1423,26 @@ class ProjectsController implements ViewController {
   }
 
   private async promptDeleteFolder(folderId: string): Promise<void> {
+    if (!currentUser) {
+      openDeleteFolderModal({
+        onConfirm: async () => {
+          const ok = deleteLocalFolder(folderId);
+          if (!ok) {
+            showToast(t('ui.no_se_pudo_eliminar_la_carpeta'), 'danger');
+            return false;
+          }
+          showToast(t('toasts.folder_deleted'), 'info');
+          if (this.currentFolderId === folderId) {
+            navigate('/projects');
+          } else {
+            await this.loadData();
+            this.renderView();
+          }
+          return true;
+        },
+      });
+      return;
+    }
     openDeleteFolderModal({
       onConfirm: async () => {
         try {
@@ -1304,13 +1470,29 @@ class ProjectsController implements ViewController {
 
   private async promptMoveDoc(docId: string): Promise<void> {
     let availableFolders: ProjectFolder[] = [];
-    try {
-      const res = await getApi(API_ROUTES.projectFolders.base);
-      if (res.ok) {
-        const data = await res.json();
-        availableFolders = Array.isArray(data.folders) ? data.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
-      }
-    } catch {}
+    if (!currentUser) {
+      const res = listLocalFolders(null, 'project');
+      availableFolders = res.folders.map((f) => ({
+        color: f.color,
+        created_at: f.created_at,
+        document_count: f.document_count,
+        file_count: 0,
+        folder_type: f.folder_type,
+        id: f.id,
+        name: f.name,
+        parent_id: f.parent_id,
+        updated_at: f.updated_at,
+        user_id: null,
+      }));
+    } else {
+      try {
+        const res = await getApi(API_ROUTES.projectFolders.base);
+        if (res.ok) {
+          const data = await res.json();
+          availableFolders = Array.isArray(data.folders) ? data.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
+        }
+      } catch {}
+    }
 
     const currentDoc = this.documents.find((d) => d.id === docId);
     const activeFolderId = currentDoc?.folder_id || this.currentFolderId || null;
@@ -1319,6 +1501,13 @@ class ProjectsController implements ViewController {
       activeFolderId,
       folders: availableFolders.map((f) => ({ id: f.id, name: f.name })),
       onConfirm: async (targetId: string | null) => {
+        if (!currentUser || currentDoc?.isLocalOnly) {
+          moveDocToLocalFolder(docId, targetId);
+          showToast(t('toasts.doc_moved_success'), 'info');
+          await this.loadData();
+          this.renderView();
+          return true;
+        }
         try {
           const res = await patchApi(API_ROUTES.projectFolders.docFolder(docId), { folderId: targetId });
           if (!res.ok) {
@@ -1442,6 +1631,10 @@ class ProjectsController implements ViewController {
 
   private async handleUploadFiles(files: File[]): Promise<void> {
     if (files.length === 0) return;
+    if (!currentUser) {
+      showAuthGateModal({ featureKey: 'cloud_uploads', returnUrl: '/projects' });
+      return;
+    }
 
     const formData = new FormData();
     files.forEach((f) => formData.append('files', f));
@@ -1451,7 +1644,7 @@ class ProjectsController implements ViewController {
       formData.append('folderId', this.currentFolder.id);
     }
 
-    showToast(`Subiendo ${files.length} ${files.length === 1 ? 'archivo' : 'archivos'}...`, 'info');
+    showToast(t('projects.uploading_count', { count: files.length }), 'info');
 
     try {
       const res = await fetch(API_ROUTES.collaborativeDocs.upload, {
@@ -1464,10 +1657,10 @@ class ProjectsController implements ViewController {
         this.renderView();
       } else {
         const data = await res.json();
-        showToast(data.error || 'Error al subir archivos', 'danger');
+        showToast(data.error || t('ui.error_al_subir_archivos', 'Error al subir archivos'), 'danger');
       }
     } catch {
-      showToast('Error de red al subir archivos', 'danger');
+      showToast(t('ui.error_de_red_al_subir_archivos', 'Error de red al subir archivos'), 'danger');
     }
   }
 
@@ -1479,7 +1672,7 @@ class ProjectsController implements ViewController {
       }
     }
 
-    const titleVal = 'Documento sin título';
+    const titleVal = t('collaborative.untitled_doc');
     const dimensions = { ...COLLAB_DOCUMENT_DEFAULT_SIZE };
     const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
@@ -1496,6 +1689,17 @@ class ProjectsController implements ViewController {
       pageSizes: [dimensions],
       pageTitles: [''],
     };
+
+    if (!currentUser) {
+      saveLocalDraft(newDocId, {
+        content: initialContent,
+        folderId: targetFolderId,
+        title: titleVal,
+      });
+      const navUrl = `/d/${encodeURIComponent(newDocId)}?w=${dimensions.width}&h=${dimensions.height}`;
+      navigate(navUrl);
+      return;
+    }
 
     try {
       void putApi(API_ROUTES.collaborativeDocs.byId(newDocId), {
@@ -1517,8 +1721,20 @@ class ProjectsController implements ViewController {
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `doc_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-    const newTitle = `${doc.title} (Copia)`;
+    const newTitle = `${doc.title}${t('collaborative.copy_suffix')}`;
     const newContent = doc.content ? JSON.parse(JSON.stringify(doc.content)) : {};
+
+    if (!currentUser || doc.isLocalOnly) {
+      saveLocalDraft(newId, {
+        content: newContent,
+        folderId: doc.folder_id || null,
+        title: newTitle,
+      });
+      showToast(t('toasts.copy_created_success'), 'info');
+      await this.loadData();
+      this.renderView();
+      return;
+    }
 
     try {
       await putApi(API_ROUTES.collaborativeDocs.byId(newId), {
@@ -1536,20 +1752,55 @@ class ProjectsController implements ViewController {
 
   private async handleDeleteDoc(docId: string): Promise<void> {
     const doc = this.documents.find((d) => d.id === docId);
-    const docTitle = doc?.title || 'este documento';
+    const docTitle = doc?.title || t('collaborative.untitled_doc');
 
     openDeleteDocModal({
       docTitle,
       onConfirm: async () => {
-        try {
-          await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
-        } catch {}
+        if (!currentUser || doc?.isLocalOnly) {
+          removeLocalDraft(docId);
+        } else {
+          try {
+            await deleteApi(API_ROUTES.collaborativeDocs.byId(docId));
+          } catch {}
+        }
         showToast(t('toasts.documento_eliminado_correctamente'), 'info');
         await this.loadData();
         this.renderView();
         return true;
       },
     });
+  }
+
+  private async handleDownloadDoc(docId: string): Promise<void> {
+    const doc = this.documents.find((d) => d.id === docId);
+    if (!currentUser || doc?.isLocalOnly) {
+      showToast(t('toasts.generando_descarga_del_documento'), 'info');
+      try {
+        const res = await postApi(API_ROUTES.collaborativeDocs.renderPdf, {
+          content: doc?.content || {},
+          title: doc?.title || 'document',
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${doc?.title || 'document'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } else {
+          showToast(t('collaborative.export_error'), 'danger');
+        }
+      } catch {
+        showToast(t('collaborative.export_error'), 'danger');
+      }
+    } else {
+      showToast(t('toasts.generando_descarga_del_documento'), 'info');
+      window.open(`/api/collaborative-docs/${encodeURIComponent(docId)}/export`, '_blank');
+    }
   }
 
   private getDocDimensions(doc: DocItem): { height: number; width: number } {
@@ -1645,12 +1896,12 @@ class ProjectsController implements ViewController {
     const diffHours = Math.floor(diffMin / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMin < 1) return 'Editado hace un momento';
-    if (diffMin < 60) return `Editado hace ${diffMin} ${diffMin === 1 ? 'minuto' : 'minutos'}`;
-    if (diffHours < 24) return `Editado hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-    if (diffDays === 1) return 'Editado ayer';
-    if (diffDays < 30) return `Editado hace ${diffDays} días`;
-    return `Editado el ${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+    if (diffMin < 1) return t('projects.edited_just_now');
+    if (diffMin < 60) return t('projects.edited_minutes_ago', { count: diffMin });
+    if (diffHours < 24) return t('projects.edited_hours_ago', { count: diffHours });
+    if (diffDays === 1) return t('projects.edited_yesterday');
+    if (diffDays < 30) return t('projects.edited_days_ago', { count: diffDays });
+    return t('projects.edited_on_date', { date: date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) });
   }
 
   private escapeHtml(str: string): string {
@@ -1661,10 +1912,6 @@ class ProjectsController implements ViewController {
 }
 
 async function createProjectsView(folderId?: string | null): Promise<HTMLElement | null> {
-  if (!currentUser) {
-    navigate('/login?redirect=%2Fprojects', true);
-    return null;
-  }
   const container = await loadTemplate('/views/projects/projects.html');
   const controller = new ProjectsController(container, folderId);
   await controller.init();

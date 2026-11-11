@@ -1,3 +1,4 @@
+import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi } from '../../../services/api.service.js';
 import { t } from '../../../services/i18n.service.js';
@@ -34,8 +35,10 @@ interface CollabShareModalOptions {
   docMembers: DocMember[];
   docTitle: string;
   findReplace?: CollabShareFindOptions;
+  getContent?: () => any;
   initialView?: 'customize-link' | 'download' | 'find-replace' | 'main';
   isDocOwner: boolean;
+  isLocalOnly?: boolean;
   onAccessLevelChange: (level: 'anyone_with_link' | 'restricted') => void;
   onClose: () => void;
   onCustomSlugChange?: (slug: string) => void;
@@ -613,6 +616,10 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   const copyBtn = popover.querySelector<HTMLButtonElement>('[data-ref="btn-collab-copy-link"]');
   const copyTxt = popover.querySelector<HTMLElement>('[data-ref="txt-copy-link"]');
   copyBtn?.addEventListener('click', () => {
+    if (options.isLocalOnly) {
+      showAuthGateModal({ featureKey: 'collaborative_share', returnUrl: window.location.pathname });
+      return;
+    }
     const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
     void navigator.clipboard.writeText(url).then(() => {
       if (copyTxt) copyTxt.textContent = t('common.copied');
@@ -748,6 +755,10 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   });
 
   btnCustomizeLink?.addEventListener('click', () => {
+    if (options.isLocalOnly) {
+      showAuthGateModal({ featureKey: 'collaborative_share', returnUrl: window.location.pathname });
+      return;
+    }
     openView('customize-link');
   });
 
@@ -969,7 +980,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     containerCustomPages?.classList.remove('is-hidden');
   });
 
-  btnConfirmDownload?.addEventListener('click', () => {
+  btnConfirmDownload?.addEventListener('click', async () => {
     if (currentPagesMode === 'custom' && selectedPages.size === 0) {
       if (downloadError) {
         downloadError.textContent = t('ui.por_favor_selecciona_al_menos_una_pagina');
@@ -981,11 +992,38 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
       downloadError.classList.add('is-hidden');
     }
 
+    const pagesVal = currentPagesMode === 'custom' ? Array.from(selectedPages).sort((a, b) => a - b).join(',') : undefined;
+
+    if (options.isLocalOnly && options.getContent) {
+      try {
+        const payload = {
+          content: options.getContent(),
+          pages: pagesVal,
+          title: docTitle || 'document',
+          type: currentDownloadType,
+        };
+        const res = await postApi(API_ROUTES.collaborativeDocs.renderPdf, payload);
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${docTitle || 'document'}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          closePopover();
+          showToast(t('toasts.descarga_iniciada'), 'info');
+          return;
+        }
+      } catch {}
+    }
+
     let downloadUrl = API_ROUTES.collaborativeDocs.pdf(docId);
     const queryParams = new URLSearchParams();
-    if (currentPagesMode === 'custom') {
-      const sorted = Array.from(selectedPages).sort((a, b) => a - b);
-      queryParams.set('pages', sorted.join(','));
+    if (pagesVal) {
+      queryParams.set('pages', pagesVal);
     }
     if (currentDownloadType === 'print') {
       queryParams.set('type', 'print');

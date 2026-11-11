@@ -1,5 +1,5 @@
-import { getLocalDraft, saveLocalDraft } from './collab-local-draft.util.js';
 import { t } from '../services/i18n.service.js';
+import { getLocalDraft, listLocalDrafts, saveLocalDraft } from './collab-local-draft.util.js';
 
 interface LocalProjectFolder {
   color?: string | null;
@@ -58,12 +58,17 @@ function saveStoredLocalFolders(folders: LocalProjectFolder[]): void {
 function listLocalFolders(parentId?: string | null, folderType?: 'project' | 'upload_folder'): { folders: LocalProjectFolder[]; uploadsFolder: LocalProjectFolder } {
   const uploadsFolder = getLocalUploadsFolder();
   const allFolders = getStoredLocalFolders();
+  const drafts = listLocalDrafts();
 
   const filtered = allFolders.filter((f) => {
     if (f.folder_type === 'uploads') return false;
     if (parentId !== undefined && f.parent_id !== parentId) return false;
     if (folderType && f.folder_type !== folderType) return false;
     return true;
+  });
+
+  filtered.forEach((f) => {
+    f.document_count = drafts.filter((d) => d.folderId === f.id).length;
   });
 
   return {
@@ -150,6 +155,13 @@ function deleteLocalFolder(id: string): boolean {
   if (!target || target.folder_type === 'uploads') {
     return false;
   }
+
+  const drafts = listLocalDrafts();
+  drafts.forEach((d) => {
+    if (d.folderId === id) {
+      saveLocalDraft(d.id, { folderId: null });
+    }
+  });
 
   folders = folders.filter((f) => f.id !== id);
   saveStoredLocalFolders(folders);

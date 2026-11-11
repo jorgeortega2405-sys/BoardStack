@@ -1032,6 +1032,36 @@ body.modal-open {
   background: linear-gradient(135deg, #09090b 0%, #18181b 50%, #09090b 100%);
 }
 
+.modal-card--auth-gate {
+  height: auto;
+  max-height: calc(100vh - 48px);
+}
+
+.modal-split__top--auth-gate {
+  height: 130px;
+  min-height: 130px;
+  flex: 0 0 130px;
+  background: radial-gradient(circle at 50% 30%, rgba(59, 130, 246, 0.15), transparent 70%), linear-gradient(135deg, #09090b 0%, #18181b 100%);
+}
+
+.modal-split__icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-split__icon-badge .component-icon {
+  width: 26px;
+  height: 26px;
+}
+
 .modal-split__bottom {
   flex: 1 1 auto;
   min-height: 0;

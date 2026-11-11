@@ -10,7 +10,7 @@ import { canUserAllocateStorage, recordUserAsset } from '../../services/storage-
 import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { generateCollaborativeDocumentWithAi } from './design-pdf-ai.service.js';
 import { acquireCollaborativeAiLock, getCollaborativeAiLock, releaseCollaborativeAiLock } from './design-pdf-lock.service.js';
-import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug } from './design-pdf.service.js';
+import { addCollaborativeDocMember, deleteCollaborativeDocument, getCollaborativeDocByCustomSlug, getCollaborativeDocMembers, getCollaborativeDocument, getRenderedPdfBuffer, listCollaborativeDocuments, removeCollaborativeDocMember, renderCollaborativePdf, saveCollaborativeDocument, searchRegisteredUsers, updateCollaborativeDocAccessLevel, updateCollaborativeDocCustomSlug } from './design-pdf.service.js';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
@@ -440,7 +440,18 @@ async function deleteCollaborativeDocHandler(req: Request, res: Response): Promi
 async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params;
-    if (!id || typeof id !== 'string') {
+    let title = typeof req.body?.title === 'string' && req.body.title.trim() ? req.body.title.trim() : 'document';
+    let pdfBuffer: Buffer | null = null;
+
+    if (req.body && req.body.content) {
+      pdfBuffer = await renderCollaborativePdf(title, req.body.content);
+    } else if (id && typeof id === 'string') {
+      const doc = await getCollaborativeDocument(id);
+      if (doc) {
+        title = doc.title || title;
+        pdfBuffer = await getRenderedPdfBuffer(id);
+      }
+    } else {
       res.status(400).json({
         error: 'Identificador de documento no válido.',
         success: false,
@@ -448,10 +459,7 @@ async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): 
       return;
     }
 
-    const doc = await getCollaborativeDocument(id);
-    const pdfBuffer = await getRenderedPdfBuffer(id);
-
-    if (!doc || !pdfBuffer || pdfBuffer.length === 0) {
+    if (!pdfBuffer || pdfBuffer.length === 0) {
       res.status(404).json({
         error: 'El archivo PDF no está disponible para descarga.',
         success: false,
@@ -459,22 +467,24 @@ async function downloadCollaborativeDocPdfHandler(req: Request, res: Response): 
       return;
     }
 
-    const safeFilename = `${encodeURIComponent(doc.title.replace(/[^a-zA-Z0-9_\-\. ]/g, '_')) || 'document'}.pdf`;
-    const pagesParam = typeof req.query.pages === 'string' ? req.query.pages.trim() : null;
+    const safeFilename = `${encodeURIComponent(title.replace(/[^a-zA-Z0-9_\-\. ]/g, '_')) || 'document'}.pdf`;
+    const rawPages = typeof req.query.pages === 'string'
+      ? req.query.pages.trim()
+      : (typeof req.body?.pages === 'string' ? req.body.pages.trim() : null);
     let finalBuffer = pdfBuffer;
 
-    if (pagesParam && pagesParam !== 'all') {
-      const pageNums = pagesParam
+    if (rawPages && rawPages !== 'all') {
+      const pageNums = (rawPages as string)
         .split(',')
-        .map((p) => parseInt(p.trim(), 10))
-        .filter((p) => !isNaN(p) && p > 0);
+        .map((p: string) => parseInt(p.trim(), 10))
+        .filter((p: number) => !isNaN(p) && p > 0);
 
       if (pageNums.length > 0) {
         const srcDoc = await PDFDocument.load(pdfBuffer);
         const totalPages = srcDoc.getPageCount();
         const validIndices = pageNums
-          .map((p) => p - 1)
-          .filter((idx) => idx >= 0 && idx < totalPages);
+          .map((p: number) => p - 1)
+          .filter((idx: number) => idx >= 0 && idx < totalPages);
 
         if (validIndices.length > 0) {
           const outDoc = await PDFDocument.create();

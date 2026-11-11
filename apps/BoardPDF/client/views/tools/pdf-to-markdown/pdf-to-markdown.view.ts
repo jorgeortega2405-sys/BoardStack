@@ -1,3 +1,4 @@
+import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
@@ -108,6 +109,10 @@ class PdfToMarkdownController implements ViewController {
   }
 
   private async handleFileSelected(file: File): Promise<void> {
+    if (!currentUser) {
+      showAuthGateModal({ featureKey: 'ai_tools', returnUrl: '/pdf-to-markdown' });
+      return;
+    }
     this.hideError();
     const limits = getCurrentUserToolLimits('pdf-to-markdown');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {

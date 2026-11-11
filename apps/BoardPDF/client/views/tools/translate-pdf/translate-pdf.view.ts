@@ -1,3 +1,4 @@
+import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
@@ -266,8 +267,7 @@ class TranslatePdfViewController implements ViewController {
 
   private handleFileSelected(file: File): void {
     if (!currentUser) {
-      showToast(t('toasts.debes_iniciar_sesion_para_utilizar_las_h'), 'warning');
-      navigate('/login');
+      showAuthGateModal({ featureKey: 'ai_tools', returnUrl: '/translate-pdf' });
       return;
     }
 
