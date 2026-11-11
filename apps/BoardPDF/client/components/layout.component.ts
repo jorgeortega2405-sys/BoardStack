@@ -78,7 +78,7 @@ function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.p
   const isProjects = cleanPath === '/projects' || cleanPath.startsWith('/projects/');
   const isAuth = cleanPath.startsWith('/login') || cleanPath.startsWith('/register') || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
 
-  const isCollaborative = cleanPath.startsWith('/d/') || cleanPath.startsWith('/tools/collaborative-pdf');
+  const isCollaborative = cleanPath.startsWith('/d/') || cleanPath.startsWith('/tools/collaborative-pdf') || cleanPath.startsWith('/design-pdf') || cleanPath.startsWith('/tools/design-pdf');
   const railTop = sidebar.querySelector<HTMLElement>('[data-ref="rail-top"]');
   const defaultTop = sidebar.querySelector<HTMLElement>('[data-ref="rail-top-default"]');
   const defaultCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center-default"]');

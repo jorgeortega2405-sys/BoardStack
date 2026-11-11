@@ -90,7 +90,7 @@ Este documento define las reglas estrictas de desarrollo, seguridad, arquitectur
 ## 4. Idioma en Ecosistemas Ajenos al Sistema Web (Python, Rust, Shell, Docker) y Anotaciones
 
 1. **Código y Documentación 100% en Inglés en Python y Rust**:
-   - En herramientas, microservicios y módulos donde el sistema de traducción web de TypeScript no aplica (como Rust en `apps/BoardPDF/board-wasm/` y `apps/BoardPDF/collab-server/`, scripts de Python en `scripts/` o tests, Dockerfiles, Shell scripts y archivos de configuración):
+   - En herramientas, microservicios y módulos donde el sistema de traducción web de TypeScript no aplica (como Rust en `apps/BoardPDF/board-wasm/` y `apps/BoardPDF/sync-engine/`, scripts de Python en `scripts/` o tests, Dockerfiles, Shell scripts y archivos de configuración):
      - **TODO el código debe escribirse estrictamente en INGLÉS**: nombres de funciones, variables, structs, enums, constantes, logs internos, mensajes de error y argumentos de línea de comandos.
      - Queda estrictamente prohibido usar español en identificadores, comentarios, docstrings o logs dentro de proyectos Rust o Python.
 
@@ -227,7 +227,7 @@ Al escribir o modificar plantillas HTML, los atributos deben ordenarse de acuerd
 
 3. **Estructura Rust y Microservicios (`apps/BoardPDF/`)**:
    - `apps/BoardPDF/board-wasm/`: Motor WebAssembly de alto rendimiento en Rust para renderizado, transformaciones vectoriales y procesamiento local de PDFs.
-   - `apps/BoardPDF/collab-server/`: Servidor de sincronización WebSocket de alta concurrencia en Rust para edición colaborativa en tiempo real.
+   - `apps/BoardPDF/sync-engine/`: Servidor de sincronización WebSocket de alta concurrencia en Rust para edición en tiempo real.
 
 ---
 

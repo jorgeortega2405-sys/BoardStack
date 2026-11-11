@@ -11,6 +11,24 @@ interface RouteSeoInfo {
 }
 
 const SEO_ROUTES: Record<string, RouteSeoInfo> = {
+  'design-pdf': {
+    category: 'collaborative',
+    descriptions: {
+      en: 'Design, create, and edit PDF documents online with shapes, text, templates, and cloud storage.',
+    },
+    isTool: true,
+    routeId: 'design-pdf',
+    slugs: {
+      de: 'pdf-designen',
+      en: 'design-pdf',
+      fr: 'concevoir-pdf',
+      it: 'progetta-pdf',
+      pt: 'design-pdf',
+    },
+    titles: {
+      en: 'Design PDF - Create & Edit PDF Documents Online | BoardPDF',
+    },
+  },
   'collaborative-pdf': {
     category: 'collaborative',
     descriptions: {

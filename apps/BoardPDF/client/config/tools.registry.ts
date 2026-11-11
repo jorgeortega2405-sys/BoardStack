@@ -40,9 +40,9 @@ const TOOLS_REGISTRY: ToolItem[] = [
     featured: true,
     icon: 'groups',
     iconBoxClass: 'tool-card__icon-box--purple',
-    id: 'collaborative-pdf',
+    id: 'design-pdf',
     nameKey: 'home.tool_collaborative_pdf_title',
-    path: '/collaborative-pdf',
+    path: '/design-pdf',
   },
   {
     activatedAt: '2026-01-15',

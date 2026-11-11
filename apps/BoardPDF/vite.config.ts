@@ -32,7 +32,7 @@ export default defineConfig({
       ignored: [
         /[\\/]\.git[\\/]/,
         /[\\/]board-wasm[\\/]/,
-        /[\\/]collab-server[\\/]/,
+        /[\\/]sync-engine[\\/]/,
         /[\\/]data[\\/]/,
         /[\\/]dist[\\/]/,
         /[\\/]logs[\\/]/,

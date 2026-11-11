@@ -20,7 +20,7 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
    - En TypeScript (`client/`): Usar `t('clave.de.traduccion')`. Cero texto en español hardcodeado en la web.
 
 4. **Idioma 100% en Inglés en Python, Rust, Shell y Anotaciones**:
-   - En Python, Rust (`apps/BoardPDF/board-wasm/`, `apps/BoardPDF/collab-server/`), Dockerfiles, Shell y scripts externos al sistema de traducción web, TODO el código, variables, logs internos y mensajes debe ser estrictamente en INGLÉS.
+   - En Python, Rust (`apps/BoardPDF/board-wasm/`, `apps/BoardPDF/sync-engine/`), Dockerfiles, Shell y scripts externos al sistema de traducción web, TODO el código, variables, logs internos y mensajes debe ser estrictamente en INGLÉS.
    - Cualquier anotación técnica, comentario o docstring debe redactarse 100% en INGLÉS.
 
 5. **CERO `console.log` en Frontend (Excepción Única: WebSocket Lifecycle)**:

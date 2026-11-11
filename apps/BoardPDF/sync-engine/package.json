@@ -1,0 +1,12 @@
+{
+  "name": "sync-engine",
+  "version": "1.0.0",
+  "description": "BoardStack Real-time Sync Engine in Rust",
+  "private": true,
+  "scripts": {
+    "build": "cargo build --release",
+    "dev": "cargo run",
+    "start": "cargo run --release",
+    "test": "cargo test"
+  }
+}

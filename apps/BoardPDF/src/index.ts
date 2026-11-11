@@ -18,7 +18,7 @@ import toolsRoutes from './routes/tools.routes.js';
 import { logger } from './services/logger.service.js';
 import { startColdStorageCron } from './services/storage-quota.service.js';
 import { flushTelemetryQueue, trackApplicationError } from './services/telemetry.service.js';
-import { getCollaborativeDocByCustomSlug } from './tools/collaborative-pdf/collaborative-pdf.service.js';
+import { getCollaborativeDocByCustomSlug } from './tools/design-pdf/design-pdf.service.js';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -109,7 +109,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
           ignored: [
             /[\\/]\.git[\\/]/,
             /[\\/]board-wasm[\\/]/,
-            /[\\/]collab-server[\\/]/,
+            /[\\/]sync-engine[\\/]/,
             /[\\/]data[\\/]/,
             /[\\/]dist[\\/]/,
             /[\\/]logs[\\/]/,

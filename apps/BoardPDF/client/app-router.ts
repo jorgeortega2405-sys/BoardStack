@@ -98,7 +98,7 @@ setNavigationHandler(navigate);
 setLanguageSwitchHandler(switchLanguage);
 
 function isCollabEditorRoute(pathname: string): boolean {
-  return pathname.startsWith('/d/') || pathname === '/d' || pathname.startsWith('/collaborative-pdf/editor');
+  return pathname.startsWith('/d/') || pathname === '/d' || pathname.startsWith('/design-pdf/editor') || pathname.startsWith('/collaborative-pdf/editor');
 }
 
 async function render(rawPath = window.location.pathname, options?: RenderOptions): Promise<void> {

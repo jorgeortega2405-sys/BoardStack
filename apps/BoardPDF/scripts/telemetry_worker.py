@@ -288,6 +288,33 @@ def create_cassandra_session() -> Tuple[Cluster, Session]:
     return cluster, session
 
 
+def ensure_cassandra_schema(session: Session) -> None:
+    schema_candidates = [
+        Path('/app/init.cql'),
+        Path(__file__).resolve().parents[3] / 'database' / 'cassandra' / 'init.cql',
+        Path.cwd() / 'database' / 'cassandra' / 'init.cql',
+        Path.cwd() / 'init.cql',
+    ]
+    schema_path: Optional[Path] = None
+    for candidate in schema_candidates:
+        if candidate.is_file():
+            schema_path = candidate
+            break
+
+    if not schema_path:
+        logger.info('Cassandra schema file not found; assuming schema is already initialized.')
+        return
+
+    try:
+        cql_content = schema_path.read_text(encoding='utf-8')
+        statements = [stmt.strip() for stmt in cql_content.split(';') if stmt.strip()]
+        for stmt in statements:
+            session.execute(stmt)
+        logger.info('Applied Cassandra schema from %s successfully.', schema_path)
+    except Exception as exc:
+        logger.warning('Failed applying Cassandra schema (%s); will attempt to proceed.', exc)
+
+
 def ensure_consumer_group(r: redis.Redis) -> None:
     try:
         r.xgroup_create(name=TELEMETRY_STREAM_KEY, groupname=TELEMETRY_CONSUMER_GROUP, id='0', mkstream=True)
@@ -667,6 +694,7 @@ def connect_with_retry() -> Tuple[redis.Redis, Cluster, Session, PreparedTelemet
             r.ping()
             ensure_consumer_group(r)
             cluster, session = create_cassandra_session()
+            ensure_cassandra_schema(session)
             stmts = PreparedTelemetryStatements(session)
             logger.info(
                 'Connected to Redis (%s:%s) and Cassandra (%s:%s/%s).',

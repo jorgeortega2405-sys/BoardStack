@@ -5,8 +5,8 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DocumentLabel, LabelColorKey, ModalInstance } from '../types/common.types.js';
 import { setupDropdown, setupPasswordToggle } from '../utils/dom.util.js';
-import { openCollabPageSizeModal } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
-import type { CollabPageSizeModalOptions, CollabPageSizeResult } from '../views/collaborative-pdf/collab-page-size-modal.util.js';
+import { openCollabPageSizeModal } from '../views/design-pdf/modals/design-pdf-page-size-modal.util.js';
+import type { CollabPageSizeModalOptions, CollabPageSizeResult } from '../views/design-pdf/modals/design-pdf-page-size-modal.util.js';
 import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderDocumentLabelsModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
 import { openModal, setupSheetDragToDismiss } from './modal.component.js';
 

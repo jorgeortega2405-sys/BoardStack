@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install build dependencies for cassandra-driver C extensions
+RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/requirements-worker.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt \
+  && apt-get purge -y --auto-remove gcc python3-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/ /app/scripts/
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-u", "/app/scripts/worker_manager.py"]

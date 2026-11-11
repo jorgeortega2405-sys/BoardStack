@@ -3,7 +3,7 @@ import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { createProjectFolder, deleteProjectFolder, getProjectFolderById, listProjectFolders, moveDocToFolder, moveUploadToFolder, renameProjectFolder } from '../services/project-folders.service.js';
 import { reclaimUserAsset } from '../services/storage-quota.service.js';
-import { listCollaborativeDocuments } from '../tools/collaborative-pdf/collaborative-pdf.service.js';
+import { listCollaborativeDocuments } from '../tools/design-pdf/design-pdf.service.js';
 import type { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';

@@ -326,14 +326,15 @@ const APP_ROUTES: RouteDefinition[] = [
         return null;
       }
       await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createCollaborativePdfEditorView } = await import('../views/collaborative-pdf/collaborative-pdf-editor.view.js');
-      return await createCollaborativePdfEditorView(docId, query);
+      const { createDesignPdfEditorView } = await import('../views/design-pdf/design-pdf-editor.view.js');
+      return await createDesignPdfEditorView(docId, query);
     },
-    id: 'collaborative-pdf-editor',
+    id: 'design-pdf-editor',
     match: (path) => {
       const match = path.match(/^\/d\/([a-zA-Z0-9_-]+)\/?$/);
       if (match) return { id: match[1] };
       if (path === '/d' || path === '/d/') return { id: '' };
+      if (path === '/design-pdf/editor' || path.startsWith('/design-pdf/editor')) return true;
       if (path === '/collaborative-pdf/editor' || path.startsWith('/collaborative-pdf/editor')) return true;
       return false;
     },
@@ -348,7 +349,7 @@ const APP_ROUTES: RouteDefinition[] = [
       }
       const { getApi } = await import('../services/api.service.js');
       try {
-        const res = await getApi(`/api/collaborative-docs/resolve-slug/${encodeURIComponent(slug)}`);
+        const res = await getApi(`/api/design-docs/resolve-slug/${encodeURIComponent(slug)}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.id) {
@@ -403,8 +404,8 @@ const APP_ROUTES: RouteDefinition[] = [
       }
       return null;
     },
-    id: 'collaborative-pdf',
-    match: (path) => path === '/collaborative-pdf' || (path.startsWith('/collaborative-pdf') && !path.startsWith('/collaborative-pdf/editor')),
+    id: 'design-pdf',
+    match: (path) => path === '/design-pdf' || path === '/collaborative-pdf' || (path.startsWith('/design-pdf') && !path.startsWith('/design-pdf/editor')) || (path.startsWith('/collaborative-pdf') && !path.startsWith('/collaborative-pdf/editor')),
   },
   {
     handler: async (ctx) => {
@@ -654,16 +655,6 @@ const APP_ROUTES: RouteDefinition[] = [
     },
     id: 'settings',
     match: (path) => path === '/settings' || path === '/settings/' || path.startsWith('/settings/'),
-  },
-  {
-    handler: async () => {
-      await loadStylesheet('/css/components/component-views.css');
-      await loadStylesheet('/css/components/component-overlays.css');
-      const { createModalTestView } = await import('../views/modaltest.view.js');
-      return await createModalTestView();
-    },
-    id: 'modaltest',
-    match: (path) => path === '/modaltest' || path === '/modaltest/',
   },
   {
     handler: async (ctx) => {

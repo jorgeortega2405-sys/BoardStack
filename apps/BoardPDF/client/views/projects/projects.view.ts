@@ -305,8 +305,13 @@ class ProjectsController implements ViewController {
     const btnFilterDate = this.container.querySelector<HTMLElement>('[data-ref="btn-filter-date"]');
     btnFilterDate?.classList.toggle('is-active', this.sortOption !== 'recent');
 
+    const mainSubtitle = this.container.querySelector<HTMLElement>('[data-ref="projects-main-subtitle"]');
+    const dropdownCategory = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-category"]');
+    const dropdownLabel = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-label"]');
+
     if (!this.currentFolderId || !this.currentFolder) {
       if (mainTitle) mainTitle.textContent = t('projects.title');
+      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle');
       btnFolderBack?.classList.add('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
@@ -314,12 +319,16 @@ class ProjectsController implements ViewController {
       sectionDocs?.classList.remove('is-hidden');
       sectionUploads?.classList.add('is-hidden');
 
+      if (dropdownCategory) dropdownCategory.classList.remove('is-hidden');
+      if (dropdownLabel) dropdownLabel.classList.toggle('is-hidden', this.userLabels.length === 0);
+
       this.renderTypeFilterMenu('root');
       this.renderRootFoldersGrid();
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'project') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
+      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_project_folder');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
       btnUploadDirect?.classList.add('is-hidden');
@@ -328,10 +337,14 @@ class ProjectsController implements ViewController {
       sectionDocs?.classList.remove('is-hidden');
       sectionUploads?.classList.add('is-hidden');
 
+      if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
+      if (dropdownLabel) dropdownLabel.classList.toggle('is-hidden', this.userLabels.length === 0);
+
       this.renderTypeFilterMenu('project');
       this.renderDocsGrid();
     } else if (this.currentFolder.folder_type === 'uploads') {
       if (mainTitle) mainTitle.textContent = t('projects.uploads_title');
+      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.add('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
@@ -340,12 +353,16 @@ class ProjectsController implements ViewController {
       sectionDocs?.classList.add('is-hidden');
       sectionUploads?.classList.remove('is-hidden');
 
+      if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
+      if (dropdownLabel) dropdownLabel.classList.add('is-hidden');
+
       this.renderTypeFilterMenu('uploads');
       this.renderUploadSubfoldersGrid();
       this.renderUploadsGrid();
     } else if (this.currentFolder.folder_type === 'upload_folder') {
       const folderName = this.currentFolder.name;
       if (mainTitle) mainTitle.textContent = folderName;
+      if (mainSubtitle) mainSubtitle.textContent = t('projects.subtitle_uploads');
       btnFolderBack?.classList.remove('is-hidden');
       folderHeaderActions?.classList.remove('is-hidden');
       btnUploadDirect?.classList.remove('is-hidden');
@@ -353,6 +370,9 @@ class ProjectsController implements ViewController {
       sectionFolders?.classList.add('is-hidden');
       sectionDocs?.classList.add('is-hidden');
       sectionUploads?.classList.remove('is-hidden');
+
+      if (dropdownCategory) dropdownCategory.classList.add('is-hidden');
+      if (dropdownLabel) dropdownLabel.classList.add('is-hidden');
 
       this.renderTypeFilterMenu('uploads');
       this.renderUploadsGrid();
@@ -363,64 +383,48 @@ class ProjectsController implements ViewController {
   }
 
   private renderTypeFilterMenu(context: 'root' | 'project' | 'uploads'): void {
-    const list = this.container.querySelector<HTMLElement>('[data-ref="list-filter-type"]');
-    const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
-    if (!list) return;
+    const bar = this.container.querySelector<HTMLElement>('[data-ref="projects-categories-bar"]');
+    if (!bar) return;
 
     if (context === 'uploads') {
-      list.innerHTML = `
-        <button type="button" class="menu-item ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="item-type-all" data-type="all">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-          <span class="menu-item__text">${t('projects.type_all')}</span>
+      bar.innerHTML = `
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
+          ${t('projects.tab_all')}
         </button>
-        <button type="button" class="menu-item ${this.filterType === 'images' ? 'is-active' : ''}" data-ref="item-type-images" data-type="images">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-          <span class="menu-item__text">${t('projects.tab_images')}</span>
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'images' ? 'is-active' : ''}" data-ref="pill-type-images" data-type="images">
+          ${t('projects.tab_images')}
         </button>
-        <button type="button" class="menu-item ${this.filterType === 'pdfs' ? 'is-active' : ''}" data-ref="item-type-pdfs" data-type="pdfs">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-          <span class="menu-item__text">${t('projects.tab_pdfs')}</span>
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'pdfs' ? 'is-active' : ''}" data-ref="pill-type-pdfs" data-type="pdfs">
+          ${t('projects.tab_pdfs')}
         </button>
       `;
-      if (label) {
-        if (this.filterType === 'images') label.textContent = t('projects.tab_images');
-        else if (this.filterType === 'pdfs') label.textContent = t('projects.tab_pdfs');
-        else label.textContent = t('projects.filter_type');
-      }
+    } else if (context === 'project') {
+      bar.innerHTML = `
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
+          ${t('projects.tab_all')}
+        </button>
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="pill-type-docs" data-type="docs">
+          ${t('projects.tab_docs')}
+        </button>
+      `;
     } else {
-      list.innerHTML = `
-        <button type="button" class="menu-item ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="item-type-all" data-type="all">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-          <span class="menu-item__text">${t('projects.type_all')}</span>
+      bar.innerHTML = `
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'all' ? 'is-active' : ''}" data-ref="pill-type-all" data-type="all">
+          ${t('projects.tab_all')}
         </button>
-        <button type="button" class="menu-item ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="item-type-docs" data-type="docs">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-          <span class="menu-item__text">${t('projects.type_docs')}</span>
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'docs' ? 'is-active' : ''}" data-ref="pill-type-docs" data-type="docs">
+          ${t('projects.tab_docs')}
         </button>
-        <button type="button" class="menu-item ${this.filterType === 'folders' ? 'is-active' : ''}" data-ref="item-type-folders" data-type="folders">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          <span class="menu-item__text">${t('projects.type_folders')}</span>
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'folders' ? 'is-active' : ''}" data-ref="pill-type-folders" data-type="folders">
+          ${t('projects.tab_folders')}
         </button>
-        ${
-          context === 'root'
-            ? `
-          <button type="button" class="menu-item ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="item-type-uploads" data-type="uploads">
-            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-            <span class="menu-item__text">${t('projects.type_uploads')}</span>
-          </button>
-        `
-            : ''
-        }
+        <button type="button" class="component-badge component-badge--interactive ${this.filterType === 'uploads' ? 'is-active' : ''}" data-ref="pill-type-uploads" data-type="uploads">
+          ${t('projects.tab_uploads')}
+        </button>
       `;
-      if (label) {
-        if (this.filterType === 'docs') label.textContent = t('projects.type_docs');
-        else if (this.filterType === 'folders') label.textContent = t('projects.type_folders');
-        else if (this.filterType === 'uploads') label.textContent = t('projects.type_uploads');
-        else label.textContent = t('projects.filter_type');
-      }
     }
 
-    renderIcons(list);
+    renderIcons(bar);
   }
 
   private renderCategoryFilterItems(): void {
@@ -502,7 +506,7 @@ class ProjectsController implements ViewController {
     const counter = this.container.querySelector<HTMLElement>('[data-ref="counter-documents"]');
     if (!grid || !empty) return;
 
-    if (this.filterType === 'folders') {
+    if (this.filterType === 'folders' || this.filterType === 'uploads') {
       grid.innerHTML = '';
       const filteredFolders = this.getFilteredAndSortedFolders();
       const hasFolders = (this.uploadsFolder ? 1 : 0) + filteredFolders.length > 0;
@@ -634,7 +638,10 @@ class ProjectsController implements ViewController {
       return;
     }
 
-    const filteredFolders = this.getFilteredAndSortedFolders();
+    let filteredFolders = this.getFilteredAndSortedFolders();
+    if (this.filterType === 'uploads') {
+      filteredFolders = [];
+    }
     const totalCount = (this.uploadsFolder ? 1 : 0) + filteredFolders.length;
 
     if (counter) {
@@ -986,11 +993,9 @@ class ProjectsController implements ViewController {
       }, { signal: this.abortController?.signal });
     }
 
-    const typeDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-filter-type"]');
-    if (typeDropdown) {
-      setupDropdown(typeDropdown);
-
-      typeDropdown.addEventListener('click', (e) => {
+    const categoriesBar = this.container.querySelector<HTMLElement>('[data-ref="projects-categories-bar"]');
+    if (categoriesBar) {
+      categoriesBar.addEventListener('click', (e) => {
         const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-type]');
         if (!btn) return;
         const type = (btn.getAttribute('data-type') || 'all') as any;
@@ -1000,12 +1005,10 @@ class ProjectsController implements ViewController {
         } else {
           this.uploadsActiveTab = 'all';
         }
-        const label = this.container.querySelector<HTMLElement>('[data-ref="label-filter-type"]');
-        if (label) {
-          label.textContent = type === 'all' ? t('projects.filter_type') : btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || t('projects.filter_type');
+        if (type === 'uploads' && this.uploadsFolder && !this.currentFolderId) {
+          navigate(`/projects/${this.uploadsFolder.id}`);
+          return;
         }
-        typeDropdown.querySelectorAll('.menu-item').forEach((m) => m.classList.remove('is-active'));
-        btn.classList.add('is-active');
         this.renderView();
       }, { signal: this.abortController?.signal });
     }

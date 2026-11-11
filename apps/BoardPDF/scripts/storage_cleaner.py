@@ -26,7 +26,7 @@ AWS_S3_FORCE_PATH_STYLE = os.getenv('AWS_S3_FORCE_PATH_STYLE', 'true').lower() =
 DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
 DB_PORT = int(os.getenv('DB_PORT', '3306'))
 DB_USER = os.getenv('DB_USER', 'boardpdf_user')
-DB_PASSWORD = os.getenv('DB_PASSWORD', 'boardpdf_secure_password_2026')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 DB_NAME = os.getenv('DB_NAME', 'boardpdf_db')
 
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')

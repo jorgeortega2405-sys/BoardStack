@@ -18,7 +18,7 @@ function isToolView(): boolean {
 
   const rawPath = window.location.pathname.toLowerCase();
   const path = rawPath.replace(/^\/[a-z]{2,3}(\/|$)/i, '/') || '/';
-  if (path.startsWith('/d/') || path === '/d' || path.startsWith('/collaborative-pdf/editor')) return true;
+  if (path.startsWith('/d/') || path === '/d' || path.startsWith('/design-pdf/editor') || path.startsWith('/collaborative-pdf/editor')) return true;
 
   const toolPaths = [
     '/merge-pdf', '/split-pdf', '/remove-pdf-pages', '/extract-pdf-pages', '/organize-pdf',

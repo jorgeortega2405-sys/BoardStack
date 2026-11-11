@@ -51,9 +51,14 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
 </button>
 <h1 class="view-hero__title projects-hero__title" data-ref="projects-main-title" data-i18n="projects.title"></h1>
+<p class="view-hero__subtitle projects-hero__subtitle" data-ref="projects-main-subtitle" data-i18n="projects.subtitle"></p>
 </div>
-<div class="projects-search-wrap" data-ref="projects-search-wrap">
-<div class="component-search" data-ref="projects-search-bar">
+<div class="categories-bar projects-categories-bar" data-ref="projects-categories-bar"></div>
+</div>
+</section>
+<section class="view-section" data-ref="section-toolbar">
+<div class="projects-toolbar" data-ref="projects-toolbar">
+<div class="component-search projects-search-bar" data-ref="projects-search-bar">
 <div class="component-search__icon" data-ref="projects-search-icon">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
 </div>
@@ -64,33 +69,7 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
 </button>
 </div>
-<div class="categories-bar projects-filter-badges" data-ref="projects-filter-badges">
-<div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-type">
-<button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-type">
-<span data-ref="label-filter-type" data-i18n="projects.filter_type"></span>
-<svg class="component-icon component-badge__icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="menu-panel menu-panel--dropdown menu-panel--w-180" data-ref="menu-filter-type">
-<div class="menu-panel__list" data-ref="list-filter-type">
-<button type="button" class="menu-item is-active" data-ref="item-type-all" data-type="all">
-<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-<span class="menu-item__text" data-i18n="projects.type_all"></span>
-</button>
-<button type="button" class="menu-item" data-ref="item-type-docs" data-type="docs">
-<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-<span class="menu-item__text" data-i18n="projects.type_docs"></span>
-</button>
-<button type="button" class="menu-item" data-ref="item-type-folders" data-type="folders">
-<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-<span class="menu-item__text" data-i18n="projects.type_folders"></span>
-</button>
-<button type="button" class="menu-item" data-ref="item-type-uploads" data-type="uploads">
-<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-<span class="menu-item__text" data-i18n="projects.type_uploads"></span>
-</button>
-</div>
-</div>
-</div>
+<div class="projects-toolbar__actions" data-ref="projects-toolbar-actions">
 <div class="dropdown projects-filter-dropdown" data-ref="dropdown-filter-category">
 <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-category">
 <span data-ref="label-filter-category" data-i18n="projects.filter_category"></span>
