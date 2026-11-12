@@ -1,8 +1,5 @@
-import { showAuthGateModal } from '../../components/auth-gate-modal.component.js';
 import { getFooterHtml, mountSiteFooter } from '../../components/footer.component.js';
-import { getLabelDisplayName, openCreateFolderModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal } from '../../components/modal.component.js';
-import { openCreateTeamModal } from '../../components/team-create-modal.component.js';
-import { openTeamFolderShareModal } from '../../components/team-folder-share-modal.component.js';
+import { getLabelDisplayName, openCreateFolderModal, openCreateTeamModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal, openTeamFolderShareModal, showAuthGateModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, getActiveWorkspaceTeam, getApi, hasTeamPermission, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';

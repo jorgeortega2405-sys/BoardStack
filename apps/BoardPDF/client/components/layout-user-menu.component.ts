@@ -7,7 +7,7 @@ import { getActiveTeamId, onWorkspaceChange, resolveActiveWorkspace, setActiveTe
 import { TeamInvitationRecord } from '../types/team.types.js';
 import { getUserAvatarUrl } from '../utils/avatar.util.js';
 import { applyAvatarTier } from '../utils/tier.util.js';
-import { openCreateTeamModal } from './team-create-modal.component.js';
+import { openCreateTeamModal } from './modal.component.js';
 
 function setupUserMenu(sidebar: HTMLElement): () => void {
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');

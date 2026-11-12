@@ -8,9 +8,9 @@ import { showToast } from '../services/toast.service.js';
 import { saveDownloadPayloadAndNavigate, ToolDownloadPayload } from '../services/tool-flow.service.js';
 import { advanceWorkflowSession, clearWorkflowSession, getActiveWorkflowSession, getWorkflowIntermediateFile } from '../services/workflow-session.service.js';
 import { hideElement, showElement } from '../utils/dom.util.js';
+import { isLimitErrorMessage, showUpgradeLimitModal } from './modal.component.js';
 import { ToolDropzoneComponent, ToolDropzoneOptions } from './tool-dropzone.component.js';
 import { ToolStatusManager } from './tool-status.component.js';
-import { isLimitErrorMessage, showUpgradeLimitModal } from './upgrade-limit-modal.component.js';
 
 type ToolPhase = 'download' | 'dropzone' | 'processing' | 'workspace';
 

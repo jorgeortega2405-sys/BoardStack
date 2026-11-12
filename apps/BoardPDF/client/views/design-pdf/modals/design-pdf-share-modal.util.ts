@@ -1,4 +1,4 @@
-import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
+import { showAuthGateModal } from '../../../components/modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi, updateDocTeamAccessApi } from '../../../services/api.service.js';
 import { t, translateElement } from '../../../services/i18n.service.js';

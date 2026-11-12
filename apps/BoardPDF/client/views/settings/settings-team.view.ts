@@ -1,8 +1,5 @@
 import { navigate } from '../../app-router.js';
-import { openModal } from '../../components/modal.component.js';
-import { openCreateTeamModal } from '../../components/team-create-modal.component.js';
-import { openInviteTeamMemberModal } from '../../components/team-invite-modal.component.js';
-import { openManageTeamSeatsModal } from '../../components/team-seats-modal.component.js';
+import { openCreateTeamModal, openInviteTeamMemberModal, openManageTeamSeatsModal, openModal } from '../../components/modal.component.js';
 import { checkAuthSession, currentUser, escapeHtml, getActiveWorkspaceTeam, getCurrentTeamApi, hasTeamPermission, leaveCurrentTeamApi, updateCurrentTeamApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { loadTemplate } from '../../services/template.service.js';

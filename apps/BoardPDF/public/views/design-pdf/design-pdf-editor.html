@@ -1,6 +1,6 @@
 <div class="component-wrapper component-wrapper--full view-wrapper collaborative-editor-wrapper" data-ref="collaborative-editor-wrapper">
 <header class="component-top" data-ref="collaborative-top-bar">
-<div class="collaborative-top-bar__left" >
+<div class="collaborative-top-bar__left" data-ref="top-bar-left">
 <a class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-home" href="/" data-tooltip="Inicio" aria-label="Inicio">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
 </a>
@@ -127,7 +127,34 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
 </button>
 </div>
-<div class="collaborative-top-bar__right" >
+<div class="collaborative-compare-top-bar is-hidden" data-ref="collaborative-compare-top-bar">
+<button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-compare-upload-second">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_load_second"></span>
+</button>
+<input class="is-hidden" data-ref="input-compare-file-second" type="file" accept="application/pdf" />
+<span class="collaborative-compare-filename is-hidden" data-ref="compare-filename-second"></span>
+<div class="collaborative-subtoolbar__divider"></div>
+<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn is-active" data-ref="btn-compare-mode-side" data-i18n-tooltip="collaborative.compare_side_by_side" data-i18n-aria="collaborative.compare_side_by_side">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#view_column"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_side_by_side"></span>
+</button>
+<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-mode-overlay" data-i18n-tooltip="collaborative.compare_overlay" data-i18n-aria="collaborative.compare_overlay">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_overlay"></span>
+</button>
+<div class="collaborative-compare-slider-wrap is-hidden" data-ref="compare-slider-wrap">
+<span class="collaborative-subtoolbar__label" data-i18n="collaborative.compare_opacity"></span>
+<input class="collab-popover-range" data-ref="slider-compare-opacity" data-i18n-aria="collaborative.compare_opacity" type="range" min="10" max="90" value="50" step="5" />
+<span class="collaborative-subtoolbar__label" data-ref="txt-compare-opacity">50%</span>
+</div>
+<div class="collaborative-subtoolbar__divider"></div>
+<button type="button" class="component-button component-button--ghost component-button--danger component-button--h36" data-ref="btn-compare-exit" data-i18n-tooltip="collaborative.compare_exit" data-i18n-aria="collaborative.compare_exit">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_exit"></span>
+</button>
+</div>
+<div class="collaborative-top-bar__right" data-ref="top-bar-right">
 <div class="collab-presence-container" data-ref="collab-presence-container"></div>
 <input class="collaborative-title-input" data-ref="input-doc-title" type="text" value="" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " />
 <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-ai-generate" data-i18n-tooltip="collaborative.ai_btn_tooltip" data-i18n-aria="collaborative.ai_btn_aria">
@@ -298,32 +325,6 @@
 </div>
 </div>
 <div class="collaborative-context-toolbar is-hidden" data-ref="collaborative-context-toolbar">
-<div class="collaborative-context-group is-hidden" data-ref="context-group-compare">
-<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-upload-second">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
-<span class="component-button__text" data-i18n="collaborative.compare_load_second"></span>
-</button>
-<input class="is-hidden" data-ref="input-compare-file-second" type="file" accept="application/pdf" />
-<span class="collaborative-subtoolbar__filename" data-ref="compare-filename-second"></span>
-<div class="collaborative-subtoolbar__divider"></div>
-<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn is-active" data-ref="btn-compare-mode-side" data-i18n-tooltip="collaborative.compare_side_by_side" data-i18n-aria="collaborative.compare_side_by_side">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#view_column"></use></svg>
-<span class="component-button__text" data-i18n="collaborative.compare_side_by_side"></span>
-</button>
-<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-mode-overlay" data-i18n-tooltip="collaborative.compare_overlay" data-i18n-aria="collaborative.compare_overlay">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-<span class="component-button__text" data-i18n="collaborative.compare_overlay"></span>
-</button>
-<div class="collaborative-compare-slider-wrap is-hidden" data-ref="compare-slider-wrap">
-<span class="collaborative-subtoolbar__label" data-i18n="collaborative.compare_opacity"></span>
-<input class="collab-popover-range" data-ref="slider-compare-opacity" data-i18n-aria="collaborative.compare_opacity" type="range" min="10" max="90" value="50" step="5" />
-<span class="collaborative-subtoolbar__label" data-ref="txt-compare-opacity">50%</span>
-</div>
-<div class="collaborative-subtoolbar__divider"></div>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-exit" data-i18n-tooltip="collaborative.compare_exit" data-i18n-aria="collaborative.compare_exit">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
 <div class="collaborative-context-group is-hidden" data-ref="context-group-text">
 <button type="button" class="component-button component-button--ghost component-button--h36 collaborative-font-btn" data-ref="btn-font-family" data-tooltip="Cambiar fuente" aria-label="Cambiar fuente">
 <span class="collaborative-font-btn__name" data-ref="txt-font-family">Helvetica</span>

@@ -1,5 +1,4 @@
-import { showAuthGateModal } from '../../components/auth-gate-modal.component.js';
-import { openDeleteDocModal } from '../../components/modal.component.js';
+import { openDeleteDocModal, showAuthGateModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_PAGE_PRESETS, PageDimension, PagePreset, inToPx, mmToPx } from '../../config/collab-page-presets.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, hasSubscriptionFeature, onAuthChange, patchApi, postApi, postFormApi, putApi, updateUserAiTokens } from '../../services/api.service.js';
@@ -2333,8 +2332,8 @@ class DesignPdfEditorController implements ViewController {
         if (clickedItem) return;
 
         if (this.activeTool === 'redact') {
-          const isTextItem = !!(e.target as HTMLElement)?.closest('.pdf-redact-text-item, .collaborative-text-box');
-          if (isTextItem) {
+          const isTextLayerOrItem = !!(e.target as HTMLElement)?.closest('.pdf-redact-text-layer, .pdf-redact-text-item, .collaborative-text-box');
+          if (isTextLayerOrItem) {
             return;
           }
           e.preventDefault();
@@ -2402,9 +2401,12 @@ class DesignPdfEditorController implements ViewController {
             };
 
             this.pushElement(redactionEl);
+            const elementsContainer = sheet.querySelector<HTMLElement>('.collaborative-page-elements');
+            if (elementsContainer) {
+              elementsContainer.appendChild(this.createShapeElement(redactionEl));
+            }
             this.recordHistory();
             this.setModified(true);
-            this.renderPages();
             showToast(t('toasts.redaction_added'), 'success');
           };
 
@@ -2763,6 +2765,10 @@ class DesignPdfEditorController implements ViewController {
       startX = Math.max(0, Math.min(pageW, (e.clientX - sheetRect.left) / zoom));
       startY = Math.max(0, Math.min(pageH, (e.clientY - sheetRect.top) / zoom));
 
+      try {
+        container.setPointerCapture(e.pointerId);
+      } catch {}
+
       preview.classList.remove('is-hidden');
       preview.style.left = `${startX}px`;
       preview.style.top = `${startY}px`;
@@ -2786,6 +2792,9 @@ class DesignPdfEditorController implements ViewController {
       const onPointerUp = (upEvt: PointerEvent) => {
         if (!isDrawingNew) return;
         isDrawingNew = false;
+        try {
+          container.releasePointerCapture(upEvt.pointerId);
+        } catch {}
         preview.classList.add('is-hidden');
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
@@ -2827,9 +2836,20 @@ class DesignPdfEditorController implements ViewController {
       const initialBox = { ...this.cropBox };
       const minDim = 30;
 
+      const workspace = this.container.querySelector<HTMLElement>('[data-ref="collaborative-workspace"]');
+      const startScrollLeft = workspace?.scrollLeft || 0;
+      const startScrollTop = workspace?.scrollTop || 0;
+
+      const captureTarget = handleEl || box;
+      try {
+        captureTarget.setPointerCapture(e.pointerId);
+      } catch {}
+
       const onPointerMove = (moveEvt: PointerEvent) => {
-        const deltaX = (moveEvt.clientX - startClientX) / zoom;
-        const deltaY = (moveEvt.clientY - startClientY) / zoom;
+        const scrollDx = (workspace?.scrollLeft || 0) - startScrollLeft;
+        const scrollDy = (workspace?.scrollTop || 0) - startScrollTop;
+        const deltaX = (moveEvt.clientX - startClientX + scrollDx) / zoom;
+        const deltaY = (moveEvt.clientY - startClientY + scrollDy) / zoom;
 
         if (!handleType) {
           const newX = Math.max(0, Math.min(pageW - initialBox.width, initialBox.x + deltaX));
@@ -2846,21 +2866,38 @@ class DesignPdfEditorController implements ViewController {
           let newW = initialBox.width;
           let newH = initialBox.height;
 
-          if (handleType.includes('w')) {
-            const right = initialBox.x + initialBox.width;
-            newX = Math.max(0, Math.min(right - minDim, initialBox.x + deltaX));
-            newW = right - newX;
-          }
-          if (handleType.includes('e')) {
+          if (handleType === 'se') {
             newW = Math.max(minDim, Math.min(pageW - initialBox.x, initialBox.width + deltaX));
-          }
-          if (handleType.includes('n')) {
-            const bottom = initialBox.y + initialBox.height;
-            newY = Math.max(0, Math.min(bottom - minDim, initialBox.y + deltaY));
-            newH = bottom - newY;
-          }
-          if (handleType.includes('s')) {
             newH = Math.max(minDim, Math.min(pageH - initialBox.y, initialBox.height + deltaY));
+          } else if (handleType === 'ne') {
+            const clampedDy = Math.min(initialBox.height - minDim, Math.max(-initialBox.y, deltaY));
+            newH = initialBox.height - clampedDy;
+            newY = initialBox.y + clampedDy;
+            newW = Math.max(minDim, Math.min(pageW - initialBox.x, initialBox.width + deltaX));
+          } else if (handleType === 'sw') {
+            const clampedDx = Math.min(initialBox.width - minDim, Math.max(-initialBox.x, deltaX));
+            newW = initialBox.width - clampedDx;
+            newX = initialBox.x + clampedDx;
+            newH = Math.max(minDim, Math.min(pageH - initialBox.y, initialBox.height + deltaY));
+          } else if (handleType === 'nw') {
+            const clampedDx = Math.min(initialBox.width - minDim, Math.max(-initialBox.x, deltaX));
+            const clampedDy = Math.min(initialBox.height - minDim, Math.max(-initialBox.y, deltaY));
+            newW = initialBox.width - clampedDx;
+            newX = initialBox.x + clampedDx;
+            newH = initialBox.height - clampedDy;
+            newY = initialBox.y + clampedDy;
+          } else if (handleType === 'e') {
+            newW = Math.max(minDim, Math.min(pageW - initialBox.x, initialBox.width + deltaX));
+          } else if (handleType === 'w') {
+            const clampedDx = Math.min(initialBox.width - minDim, Math.max(-initialBox.x, deltaX));
+            newW = initialBox.width - clampedDx;
+            newX = initialBox.x + clampedDx;
+          } else if (handleType === 's') {
+            newH = Math.max(minDim, Math.min(pageH - initialBox.y, initialBox.height + deltaY));
+          } else if (handleType === 'n') {
+            const clampedDy = Math.min(initialBox.height - minDim, Math.max(-initialBox.y, deltaY));
+            newH = initialBox.height - clampedDy;
+            newY = initialBox.y + clampedDy;
           }
 
           this.cropBox = {
@@ -2873,7 +2910,10 @@ class DesignPdfEditorController implements ViewController {
         updateCropDom();
       };
 
-      const onPointerUp = () => {
+      const onPointerUp = (upEvt: PointerEvent) => {
+        try {
+          captureTarget.releasePointerCapture(upEvt.pointerId);
+        } catch {}
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
       };
@@ -2897,8 +2937,17 @@ class DesignPdfEditorController implements ViewController {
       this.activateTool('select');
     }
     this.isCompareMode = true;
+    this.closeSubtoolbars();
+    this.selectElement(null);
+
+    const compareTopBar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-compare-top-bar"]');
+    const topBarLeft = this.container.querySelector<HTMLElement>('[data-ref="top-bar-left"]');
+    const topBarRight = this.container.querySelector<HTMLElement>('[data-ref="top-bar-right"]');
+    if (compareTopBar) showElement(compareTopBar);
+    if (topBarLeft) hideElement(topBarLeft);
+    if (topBarRight) hideElement(topBarRight);
+
     this.updateModeButtonsState();
-    this.updateContextToolbar();
     if (!this.secondPdfDoc) {
       const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-compare-file-second"]');
       input?.click();
@@ -2911,10 +2960,23 @@ class DesignPdfEditorController implements ViewController {
     this.isCompareMode = false;
     this.secondPdfDoc = null;
     this.secondPdfFile = null;
-    this.updateModeButtonsState();
-    this.updateContextToolbar();
+
+    const compareTopBar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-compare-top-bar"]');
+    const topBarLeft = this.container.querySelector<HTMLElement>('[data-ref="top-bar-left"]');
+    const topBarRight = this.container.querySelector<HTMLElement>('[data-ref="top-bar-right"]');
+    if (compareTopBar) hideElement(compareTopBar);
+    if (topBarLeft) showElement(topBarLeft);
+    if (topBarRight) showElement(topBarRight);
+
     const filenameSpan = this.container.querySelector<HTMLElement>('[data-ref="compare-filename-second"]');
-    if (filenameSpan) filenameSpan.textContent = '';
+    if (filenameSpan) {
+      filenameSpan.textContent = '';
+      hideElement(filenameSpan);
+    }
+    const sliderWrap = this.container.querySelector<HTMLElement>('[data-ref="compare-slider-wrap"]');
+    if (sliderWrap) hideElement(sliderWrap);
+
+    this.updateModeButtonsState();
     this.renderPages();
   }
 
@@ -3034,13 +3096,16 @@ class DesignPdfEditorController implements ViewController {
       };
 
       this.pushElement(redactionEl);
+      const elementsContainer = targetSheet.querySelector<HTMLElement>('.collaborative-page-elements');
+      if (elementsContainer) {
+        elementsContainer.appendChild(this.createShapeElement(redactionEl));
+      }
       addedCount++;
     }
 
     selection.removeAllRanges();
 
     if (addedCount > 0) {
-      this.renderPages();
       this.recordHistory();
       this.setModified(true);
       showToast(t('toasts.texto_censurado_correctamente'), 'success');
@@ -4901,7 +4966,11 @@ class DesignPdfEditorController implements ViewController {
     const toolbar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-context-toolbar"]');
     if (!toolbar) return;
 
-    const compareGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-compare"]');
+    if (this.isCompareMode) {
+      hideElement(toolbar);
+      return;
+    }
+
     const textGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-text"]');
     const shapeGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-shape"]');
     const imageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-image"]');
@@ -4909,20 +4978,6 @@ class DesignPdfEditorController implements ViewController {
     const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
     const pageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-page"]');
     const actionGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-actions"]');
-
-    if (this.isCompareMode) {
-      showElement(toolbar);
-      if (compareGroup) showElement(compareGroup);
-      if (textGroup) hideElement(textGroup);
-      if (shapeGroup) hideElement(shapeGroup);
-      if (imageGroup) hideElement(imageGroup);
-      if (tableGroup) hideElement(tableGroup);
-      if (chartGroup) hideElement(chartGroup);
-      if (pageGroup) hideElement(pageGroup);
-      if (actionGroup) hideElement(actionGroup);
-      return;
-    }
-    if (compareGroup) hideElement(compareGroup);
 
     if (this.selectedElementId) {
       showElement(toolbar);
@@ -8161,7 +8216,9 @@ class DesignPdfEditorController implements ViewController {
         const filenameSpan = this.container.querySelector<HTMLElement>('[data-ref="compare-filename-second"]');
         if (filenameSpan) {
           filenameSpan.textContent = file.name;
+          showElement(filenameSpan);
         }
+        inputCompareFileSecond.value = '';
         showToast(t('toasts.compare_loaded'), 'success');
         this.renderPages();
       } catch {

@@ -355,6 +355,156 @@ function openModal(options: ModalOptions = {}): ModalInstance {
   return modalInstance;
 }
 
+function openCustomModal(options: {
+  backdropClass?: string;
+  backdropRef?: string;
+  contentHtml: string;
+  onClose?: () => void;
+}): ModalInstance {
+  const {
+    backdropClass = 'modal-backdrop',
+    backdropRef = 'modal-backdrop',
+    contentHtml,
+    onClose = null,
+  } = options;
+
+  const backdrop = document.createElement('div');
+  backdrop.className = backdropClass;
+  backdrop.setAttribute('data-ref', backdropRef);
+  backdrop.innerHTML = contentHtml;
+
+  translateElement(backdrop);
+  renderIcons(backdrop);
+
+  const card = backdrop.querySelector<HTMLElement>('[data-ref*="modal-card"]') || backdrop.querySelector<HTMLElement>('.modal-card');
+  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
+  const dragZone = backdrop.querySelector<HTMLElement>('[data-ref*="drag-zone"]');
+  const bodyContainer = backdrop.querySelector<HTMLElement>('[data-ref*="body"]') || card || backdrop;
+  const confirmBtn = backdrop.querySelector<HTMLButtonElement>('[data-ref*="confirm"], [data-ref*="submit"], [data-ref*="action"], [data-ref*="register"]');
+  const cancelBtn = backdrop.querySelector<HTMLElement>('[data-ref*="cancel"], [data-ref*="login"]');
+  const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref*="error"]');
+
+  let isClosing = false;
+
+  const modalInstance: ModalInstance = {
+    backdrop,
+    body: bodyContainer,
+    btnCancel: cancelBtn as any,
+    btnConfirm: confirmBtn,
+    cancelBtn,
+    card,
+    clearError() {
+      if (errorBanner) {
+        errorBanner.textContent = '';
+        hideElement(errorBanner);
+      }
+    },
+    close() {
+      if (isClosing) return;
+      isClosing = true;
+
+      backdrop.classList.remove('is-visible');
+      document.removeEventListener('keydown', handleKeyDown);
+
+      setTimeout(() => {
+        if (backdrop.parentNode) {
+          backdrop.parentNode.removeChild(backdrop);
+        }
+        activeModals = activeModals.filter((m) => m !== modalInstance);
+        if (activeModals.length === 0 && document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
+          document.body.classList.remove('modal-open');
+        }
+        if (onClose) {
+          onClose();
+        }
+      }, 200);
+    },
+    closeBtn,
+    confirmBtn,
+    errorBanner,
+    setBody(newBody: HTMLElement | string) {
+      if (typeof newBody === 'string') {
+        bodyContainer.innerHTML = newBody;
+      } else if (newBody instanceof HTMLElement) {
+        bodyContainer.innerHTML = '';
+        bodyContainer.appendChild(newBody);
+      }
+      translateElement(bodyContainer);
+      renderIcons(bodyContainer);
+    },
+    setConfirmLoading(isLoading: boolean, loadingText = t('common.loading')) {
+      if (!confirmBtn) return;
+      if (isLoading) {
+        confirmBtn.disabled = true;
+        confirmBtn.setAttribute('data-original-text', confirmBtn.textContent || '');
+        confirmBtn.textContent = loadingText;
+      } else {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = confirmBtn.getAttribute('data-original-text') || '';
+      }
+    },
+    setConfirmText(newText: string, newKey = '') {
+      const resolved = newKey ? t(newKey) : newText;
+      if (confirmBtn) {
+        confirmBtn.textContent = resolved;
+      }
+    },
+    setConfirmVisible(visible: boolean) {
+      if (confirmBtn) {
+        toggleElement(confirmBtn, visible);
+      }
+    },
+    setDescription() {},
+    setOnConfirm() {},
+    setTitle() {},
+    showError(message: string) {
+      if (errorBanner) {
+        errorBanner.textContent = message;
+        showElement(errorBanner);
+      }
+    },
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      modalInstance.close();
+    }
+  };
+
+  document.addEventListener('keydown', handleKeyDown);
+
+  closeBtn?.addEventListener('click', (e: MouseEvent) => {
+    e.preventDefault();
+    modalInstance.close();
+  });
+
+  backdrop.addEventListener('click', (e: MouseEvent) => {
+    if (e.target === backdrop) {
+      e.preventDefault();
+      modalInstance.close();
+    }
+  });
+
+  document.body.appendChild(backdrop);
+  document.body.classList.add('modal-open');
+  activeModals.push(modalInstance);
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+    const firstInput = backdrop.querySelector<HTMLInputElement>('input:not([type="hidden"]), select, textarea');
+    if (firstInput) {
+      firstInput.focus();
+    }
+  });
+
+  if (dragZone && card) {
+    setupSheetDragToDismiss(dragZone, card, backdrop, () => modalInstance.close());
+  }
+
+  return modalInstance;
+}
+
 async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => void } = {}): Promise<any> {
   const { onClose = null, onSuccess = null } = options;
 
@@ -362,16 +512,20 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
     active2FAModal.close();
   }
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
-  backdrop.setAttribute('data-ref', 'modal-2fa-backdrop');
+  const modalInstance = openCustomModal({
+    backdropRef: 'modal-2fa-backdrop',
+    contentHtml: renderTwoFactorModalContent(),
+    onClose: () => {
+      if (active2FAModal === modalInstance) {
+        active2FAModal = null;
+      }
+      if (onClose) onClose();
+    },
+  });
 
-  backdrop.innerHTML = renderTwoFactorModalContent();
+  active2FAModal = modalInstance;
+  const backdrop = modalInstance.backdrop;
 
-  translateElement(backdrop);
-  renderIcons(backdrop);
-
-  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
   const stage1Container = backdrop.querySelector<HTMLElement>('[data-ref="stage-1-container"]');
   const stage2Container = backdrop.querySelector<HTMLElement>('[data-ref="stage-2-container"]');
   const visualStage1 = backdrop.querySelector<HTMLElement>('[data-ref="visual-stage-1"]');
@@ -389,7 +543,6 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
   const finishBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-finish-2fa"]');
 
   let currentBackupCodes: string[] = [];
-  let isClosing = false;
 
   const showError = (message: string) => {
     if (errorBanner) {
@@ -416,60 +569,6 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
       btn.textContent = btn.getAttribute('data-original-text') || t('common.continue');
     }
   };
-
-  const modalInstance = {
-    backdrop,
-    close() {
-      if (isClosing) return;
-      isClosing = true;
-
-      backdrop.classList.remove('is-visible');
-      document.removeEventListener('keydown', handleKeyDown);
-
-      setTimeout(() => {
-        if (backdrop.parentNode) {
-          backdrop.parentNode.removeChild(backdrop);
-        }
-        if (active2FAModal === modalInstance) {
-          active2FAModal = null;
-        }
-        if (document.querySelectorAll('.modal-backdrop.is-visible').length === 0) {
-          document.body.classList.remove('modal-open');
-        }
-        if (onClose) onClose();
-      }, 200);
-    },
-  };
-
-  active2FAModal = modalInstance;
-
-  const card2fa = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-2fa"]');
-  const dragZone2fa = backdrop.querySelector<HTMLElement>('[data-ref="modal-2fa-drag-zone"]');
-
-  if (dragZone2fa && card2fa) {
-    setupSheetDragToDismiss(dragZone2fa, card2fa, backdrop, () => modalInstance.close());
-  }
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      modalInstance.close();
-    }
-  };
-
-  document.addEventListener('keydown', handleKeyDown);
-
-  backdrop.addEventListener('click', (e: MouseEvent) => {
-    if (e.target === backdrop) {
-      e.preventDefault();
-      modalInstance.close();
-    }
-  });
-
-  closeBtn?.addEventListener('click', (e: MouseEvent) => {
-    e.preventDefault();
-    modalInstance.close();
-  });
 
   toggleSecretBtn?.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
@@ -506,13 +605,6 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
     if (onSuccess) {
       onSuccess();
     }
-  });
-
-  document.body.appendChild(backdrop);
-  document.body.classList.add('modal-open');
-
-  requestAnimationFrame(() => {
-    backdrop.classList.add('is-visible');
   });
 
   try {
@@ -642,6 +734,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
 export {
   closeAllModals,
   open2FAModal,
+  openCustomModal,
   openModal,
   setupSheetDragToDismiss,
 };

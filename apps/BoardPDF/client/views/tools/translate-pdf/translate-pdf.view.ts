@@ -1,6 +1,5 @@
-import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
+import { showAuthGateModal, showUpgradeLimitModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
-import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';

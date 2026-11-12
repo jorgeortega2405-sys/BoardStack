@@ -1,5 +1,5 @@
 import { getFooterHtml, mountSiteFooter } from '../components/footer.component.js';
-import { openCreateTeamModal } from '../components/team-create-modal.component.js';
+import { openCreateTeamModal } from '../components/modal.component.js';
 import { currentUser, hasSubscriptionFeature, updateUserSubscriptionTier, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';

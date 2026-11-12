@@ -577,24 +577,364 @@ function renderDocumentLabelsModalBody(options: {
   `;
 }
 
+function renderCreateTeamModalBody(options: {
+  canCreateFirstFreeTeam: boolean;
+  hintText: string;
+  seats: number;
+}): string {
+  const { hintText, seats } = options;
+  const seatsBadgeText = seats === 1 ? t('checkout.seats_count_singular') : t('checkout.seats_count_plural', { count: seats });
+  return `
+    <div class="team-create-modal" data-ref="team-create-modal-body">
+      <div class="banner banner--info team-create-modal__hint" data-ref="team-create-hint">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+        <span>${escapeHtml(hintText)}</span>
+      </div>
+      <label class="field" data-ref="field-create-team-name">
+        <input class="field__input" data-ref="input-create-team-name" type="text" placeholder=" " maxlength="80" autocomplete="organization" />
+        <span class="field__label">${escapeHtml(t('teams.create_modal.team_name_label'))}</span>
+      </label>
+      <div class="team-seats-field" data-ref="team-create-seats-field">
+        <div class="team-seats-field__header">
+          <span class="team-seats-field__label">${escapeHtml(t('teams.create_modal.seats_label'))}</span>
+          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="team-create-seats-badge">${escapeHtml(seatsBadgeText)}</span>
+        </div>
+        <div class="team-seats-stepper" data-ref="team-create-seats-stepper">
+          <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-dec" aria-label="-">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
+          </button>
+          <input class="field__input team-seats-stepper__input" data-ref="input-create-team-seats" type="number" min="1" max="50" value="${seats}" />
+          <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-inc" aria-label="+">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          </button>
+        </div>
+        <p class="team-seats-field__hint">${escapeHtml(t('teams.create_modal.seats_price_hint'))}</p>
+      </div>
+      <ul class="team-create-modal__features">
+        <li class="team-create-modal__feature-item">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          <span>${escapeHtml(t('teams.create_modal.feat_storage'))}</span>
+        </li>
+        <li class="team-create-modal__feature-item">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          <span>${escapeHtml(t('teams.create_modal.feat_tokens'))}</span>
+        </li>
+        <li class="team-create-modal__feature-item">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          <span>${escapeHtml(t('teams.create_modal.feat_sharing'))}</span>
+        </li>
+      </ul>
+    </div>
+  `;
+}
+
+function renderInviteTeamMemberModalBody(canAssignAdmin: boolean): string {
+  return `
+    <div class="team-invite-modal" data-ref="team-invite-modal-body">
+      <label class="field" data-ref="field-invite-email">
+        <input class="field__input" data-ref="input-modal-invite-email" type="email" placeholder=" " maxlength="254" autocomplete="email" />
+        <span class="field__label">${escapeHtml(t('settings.team.invite_email_label'))}</span>
+      </label>
+
+      <div class="team-invite-modal__role-section" data-ref="invite-role-section">
+        <span class="team-invite-modal__label">${escapeHtml(t('settings.team.invite_role_label'))}</span>
+        <div class="dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-invite-role">
+          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-invite-role" aria-label="${escapeHtml(t('settings.team.invite_role_label'))}">
+            <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-invite-role">
+              <svg class="component-icon dropdown-trigger__icon" data-ref="icon-selected-invite-role" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+              <span class="dropdown-trigger__text" data-ref="txt-selected-invite-role">${escapeHtml(t('settings.team.invite_role_member'))}</span>
+            </div>
+            <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="dropdown-backdrop" data-ref="dropdown-backdrop-invite-role">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-invite-role">
+              <div class="menu-panel__drag-zone" data-ref="drag-zone-invite-role" aria-hidden="true">
+                <div class="menu-panel__drag-handle"></div>
+              </div>
+              <div class="menu-panel__list menu-panel__list--scrollable" data-ref="invite-roles-list">
+                <button type="button" class="menu-item is-selected is-active" data-ref="invite-role-option-member" data-value="member">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                  <span class="menu-item__text">${escapeHtml(t('settings.team.invite_role_member'))}</span>
+                  <svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                </button>
+                ${canAssignAdmin ? `
+                  <button type="button" class="menu-item" data-ref="invite-role-option-admin" data-value="admin">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+                    <span class="menu-item__text">${escapeHtml(t('settings.team.invite_role_admin'))}</span>
+                    <svg class="component-icon menu-item__check is-hidden" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="team-seats-field__hint" data-ref="invite-role-desc">${escapeHtml(t('settings.team.invite_role_member_desc'))}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderManageTeamSeatsModalBody(options: {
+  maxSeats: number;
+  minHint: string;
+  minSeats: number;
+  seatDraft: number;
+  securityFieldHtml: string;
+}): string {
+  const { maxSeats, minHint, minSeats, seatDraft, securityFieldHtml } = options;
+  return `
+    <div class="team-seats-modal" data-ref="team-seats-modal-body">
+      <div class="team-seats-field" data-ref="modal-seats-stepper-box">
+        <div class="team-seats-field__header">
+          <span class="team-seats-field__label">${escapeHtml(t('settings.team.seats_step_label'))}</span>
+          <div class="team-seats-stepper" data-ref="modal-seats-stepper">
+            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-dec" aria-label="${escapeHtml(t('settings.team.aria_decrease_seats'))}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
+            </button>
+            <input class="field__input team-seats-stepper__input" data-ref="input-modal-seats" type="number" min="${minSeats}" max="${maxSeats}" value="${seatDraft}" />
+            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-inc" aria-label="${escapeHtml(t('settings.team.aria_increase_seats'))}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+          </div>
+        </div>
+        <p class="team-seats-field__hint">${escapeHtml(minHint)}</p>
+      </div>
+      <div class="banner banner--info is-hidden" data-ref="modal-seats-preview-banner"></div>
+      <div class="team-seats-payment is-hidden" data-ref="modal-seats-payment-box"></div>
+      <div class="team-seats-security is-hidden" data-ref="modal-seats-security-box">
+        <label class="team-confirm-check" data-ref="label-seats-confirm">
+          <input class="component-checkbox" data-ref="checkbox-seats-confirm" type="checkbox" />
+          <span class="team-confirm-check__text">${escapeHtml(t('settings.team.seats_security_confirm_label'))}</span>
+        </label>
+        ${securityFieldHtml}
+      </div>
+    </div>
+  `;
+}
+
+function renderTeamFolderShareModalBody(): string {
+  return `
+    <div class="team-folder-share" data-ref="team-folder-share-body">
+      <div class="team-folder-share__loading" data-ref="folder-share-loading">
+        <span>${escapeHtml(t('common.loading'))}</span>
+      </div>
+
+      <div class="team-folder-share__content is-hidden" data-ref="folder-share-content">
+        <div class="team-folder-share__section">
+          <div class="team-folder-share__label">${escapeHtml(t('projects.share_folder_visibility_label'))}</div>
+          <div class="team-folder-share__visibility-grid">
+            <button type="button" class="team-folder-share__vis-card" data-ref="btn-folder-visibility-restricted" data-visibility="restricted">
+              <div class="team-folder-share__vis-head">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                <span class="team-folder-share__vis-title">${escapeHtml(t('projects.folder_visibility_restricted'))}</span>
+              </div>
+              <p class="team-folder-share__vis-desc">${escapeHtml(t('projects.share_folder_visibility_restricted_desc'))}</p>
+            </button>
+
+            <button type="button" class="team-folder-share__vis-card" data-ref="btn-folder-visibility-team" data-visibility="team">
+              <div class="team-folder-share__vis-head">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                <span class="team-folder-share__vis-title">${escapeHtml(t('projects.folder_visibility_team'))}</span>
+              </div>
+              <p class="team-folder-share__vis-desc">${escapeHtml(t('projects.share_folder_visibility_team_desc'))}</p>
+            </button>
+          </div>
+        </div>
+
+        <div class="team-folder-share__members-section is-hidden" data-ref="folder-share-members-section">
+          <div class="team-folder-share__search-row" data-ref="folder-share-search-row">
+            <input class="field__input--simple team-folder-share__search-input" data-ref="input-folder-member-search" type="search" placeholder="${escapeHtml(t('projects.share_folder_add_placeholder'))}" autocomplete="off" />
+            <div class="component-tabs team-folder-share__role-tabs" data-ref="tabs-folder-add-role">
+              <button type="button" class="component-tab is-active" data-ref="btn-folder-role-editor" data-role="editor">${escapeHtml(t('projects.share_folder_role_editor'))}</button>
+              <button type="button" class="component-tab" data-ref="btn-folder-role-viewer" data-role="viewer">${escapeHtml(t('projects.share_folder_role_viewer'))}</button>
+            </div>
+          </div>
+
+          <div class="team-folder-share__results is-hidden" data-ref="list-folder-member-results"></div>
+          <div class="team-folder-share__members-list" data-ref="list-folder-members"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAuthGateModalContent(options: {
+  desc: string;
+  feat1: string;
+  feat2: string;
+  feat3: string;
+  pillText: string;
+  returnUrl: string;
+  title: string;
+}): string {
+  const { desc, feat1, feat2, feat3, pillText, returnUrl, title } = options;
+  const loginUrl = `/login?returnUrl=${encodeURIComponent(returnUrl)}`;
+  const registerUrl = `/register?returnUrl=${encodeURIComponent(returnUrl)}`;
+
+  return `
+    <div class="modal-container" data-ref="modal-auth-gate-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="common.close" aria-label="${escapeHtml(t('common.close'))}">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--split" data-ref="modal-card-auth-gate">
+        <div class="modal-card__drag-zone" data-ref="modal-auth-gate-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-split__left" data-ref="modal-split-left">
+          <div class="modal-split__content" data-ref="auth-gate-content">
+            <div class="modal-split__header" data-ref="auth-gate-header">
+              <div class="component-badge modal-split__pill" data-ref="auth-gate-pill">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+                <span>${escapeHtml(pillText)}</span>
+              </div>
+              <h2 class="modal-split__title modal-split__title--upgrade" data-ref="auth-gate-title">${escapeHtml(title)}</h2>
+            </div>
+            <div class="modal-split__limit-body" data-ref="auth-gate-body">
+              <p class="modal-split__limit-notice" data-ref="auth-gate-desc">${escapeHtml(desc)}</p>
+              <ul class="modal-split__benefits-list" data-ref="auth-gate-benefits-list">
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat1)}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat2)}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat3)}</span>
+                </li>
+              </ul>
+            </div>
+            <div class="modal-split__limit-footer" data-ref="auth-gate-footer">
+              <div class="modal-split__limit-actions" data-ref="auth-gate-actions">
+                <a class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-auth-gate-login" href="${loginUrl}">
+                  <span data-i18n="nav.login">${escapeHtml(t('nav.login'))}</span>
+                </a>
+              </div>
+              <p class="modal-split__footnote" data-ref="auth-gate-footnote">
+                ${escapeHtml(t('auth_gate.dont_have_account'))} <a class="link" data-ref="btn-auth-gate-register" href="${registerUrl}">${escapeHtml(t('auth_gate.create_free_account'))}</a>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-split__right" data-ref="modal-split-right">
+          <div class="modal-split__illustration-container" data-ref="auth-gate-illustration">
+            <img class="modal-split__illustration" data-ref="auth-gate-banner-img" src="/images/modals/auth-gate-banner.svg" alt="BoardPDF Account" />
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderUpgradeLimitModalContent(options: {
+  actionText: string;
+  bannerAlt: string;
+  bannerImgSrc: string;
+  benefitNotice: string;
+  currentNotice: string;
+  desc: string;
+  feat1: string;
+  feat2: string;
+  feat3: string;
+  footnoteHtml: string;
+  pillHtml: string;
+  title: string;
+}): string {
+  const {
+    actionText,
+    bannerAlt,
+    bannerImgSrc,
+    benefitNotice,
+    currentNotice,
+    desc,
+    feat1,
+    feat2,
+    feat3,
+    footnoteHtml,
+    pillHtml,
+    title,
+  } = options;
+
+  return `
+    <div class="modal-container" data-ref="modal-upgrade-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="common.close" aria-label="${escapeHtml(t('common.close'))}">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--split" data-ref="modal-card-upgrade">
+        <div class="modal-card__drag-zone" data-ref="modal-upgrade-drag-zone" aria-hidden="true">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <div class="modal-split__left" data-ref="modal-split-left">
+          <div class="modal-split__content" data-ref="upgrade-content">
+            <div class="modal-split__header" data-ref="upgrade-header">
+              ${pillHtml}
+              <h2 class="modal-split__title modal-split__title--upgrade" data-ref="upgrade-title">${escapeHtml(title)}</h2>
+            </div>
+            <div class="modal-split__limit-body" data-ref="upgrade-body">
+              <p class="modal-split__limit-desc" data-ref="upgrade-desc">${escapeHtml(desc)}</p>
+              ${currentNotice ? `<div class="modal-split__limit-notice" data-ref="upgrade-current-notice"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg><span>${escapeHtml(currentNotice)}</span></div>` : ''}
+              ${benefitNotice ? `<div class="modal-split__benefit-notice" data-ref="upgrade-benefit-notice"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg><span>${escapeHtml(benefitNotice)}</span></div>` : ''}
+              <ul class="modal-split__benefits-list" data-ref="upgrade-benefits-list">
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat1)}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat2)}</span>
+                </li>
+                <li class="modal-split__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>${escapeHtml(feat3)}</span>
+                </li>
+              </ul>
+            </div>
+            <div class="modal-split__limit-footer" data-ref="upgrade-footer">
+              <div class="modal-split__limit-actions" data-ref="upgrade-actions">
+                <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-upgrade-action">
+                  <span>${escapeHtml(actionText)}</span>
+                </button>
+              </div>
+              ${footnoteHtml}
+            </div>
+          </div>
+        </div>
+        <div class="modal-split__right" data-ref="modal-split-right">
+          <div class="modal-split__illustration-container" data-ref="upgrade-illustration">
+            <img class="modal-split__illustration" data-ref="upgrade-banner-img" src="${escapeHtml(bannerImgSrc)}" alt="${escapeHtml(bannerAlt)}" />
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 export {
   LABEL_COLOR_KEYS,
   escapeHtml,
   getLabelDisplayName,
   renderAddWebUrlModalBody,
+  renderAuthGateModalContent,
   renderCollabPageSizeModalBody,
   renderCreateFolderModalBody,
+  renderCreateTeamModalBody,
   renderDeleteAccountModalBody,
   renderDisable2FAModalBody,
   renderDocumentLabelsModalBody,
+  renderInviteTeamMemberModalBody,
+  renderManageTeamSeatsModalBody,
   renderMoveFolderOptionsModalBody,
   renderNewPasswordModalBody,
   renderProtectPdfModalBody,
   renderRenameFolderModalBody,
   renderShareDownloadModalContent,
+  renderTeamFolderShareModalBody,
   renderThankYouShareModalBody,
   renderTwoFactorModalContent,
   renderUnlockPdfModalBody,
+  renderUpgradeLimitModalContent,
   renderVerifyEmailCodeModalBody,
   renderVerifyPasswordModalBody,
   renderWorkflowBuilderModalBody,

@@ -3778,6 +3778,10 @@
   box-sizing: border-box;
 }
 
+.crop-bounding-box.is-hidden {
+  display: none !important;
+}
+
 .crop-bounding-box .collaborative-transform-handle {
   pointer-events: auto !important;
   display: block !important;
@@ -5263,6 +5267,34 @@
   align-items: center;
   display: flex;
   gap: 8px;
+}
+
+.collaborative-compare-top-bar {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  height: 100%;
+  justify-content: center;
+  padding: 0 16px;
+  width: 100%;
+}
+
+.collaborative-compare-top-bar.is-hidden {
+  display: none !important;
+}
+
+.collaborative-compare-filename {
+  background-color: var(--bg-hover, #f3f4f6);
+  border-radius: 6px;
+  color: var(--text-secondary, #4b5563);
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 4px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .component-top .settings-dropdown-wrapper {

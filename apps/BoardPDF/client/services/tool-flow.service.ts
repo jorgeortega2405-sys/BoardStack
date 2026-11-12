@@ -1,11 +1,11 @@
-import { showUpgradeLimitModal } from '../components/upgrade-limit-modal.component.js';
+import { showUpgradeLimitModal } from '../components/modal.component.js';
 import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
 import { bindFileDropzone } from '../utils/dom.util.js';
 import { pickDropboxFiles } from './dropbox.service.js';
 import { pickGoogleDriveFiles } from './google-drive.service.js';
+import { t } from './i18n.service.js';
 import { navigate } from './navigation.service.js';
 import { showToast } from './toast.service.js';
-import { t } from './i18n.service.js';
 
 interface ToolDownloadPayload {
   downloadUrl?: string;

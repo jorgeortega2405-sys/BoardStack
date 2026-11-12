@@ -1,5 +1,5 @@
+import { showUpgradeLimitModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
-import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormApi } from '../../../services/api.service.js';
@@ -10,13 +10,26 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
 
+interface CollabDropzoneConfig {
+  descKey: string;
+  mode?: 'compare' | 'crop' | 'redact';
+  titleKey: string;
+  toolId: 'compare-pdf' | 'crop-pdf' | 'edit-pdf' | 'redact-pdf';
+}
+
 class EditPdfController implements ViewController {
   private abortController: AbortController | null = null;
+  private config: CollabDropzoneConfig;
   private container: HTMLElement;
   private phaseManager: ToolPhaseManager | null = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, config?: CollabDropzoneConfig) {
     this.container = container;
+    this.config = config || {
+      descKey: 'home.tool_edit_pdf_desc',
+      titleKey: 'home.tool_edit_pdf_title',
+      toolId: 'edit-pdf',
+    };
   }
 
   public async init(): Promise<void> {
@@ -25,16 +38,16 @@ class EditPdfController implements ViewController {
       container: this.container,
       dropzone: {
         buttonText: t('tools.select_pdf_file'),
-        desc: t('ui.anade_texto_imagenes_formas_y_dibujos_o_'),
+        desc: t(this.config.descKey),
         hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: t('home.tool_edit_pdf_title'),
+        title: t(this.config.titleKey),
       },
-      toolId: 'edit-pdf',
-      toolName: t('home.tool_edit_pdf_title'),
+      toolId: this.config.toolId,
+      toolName: t(this.config.titleKey),
     });
     await this.phaseManager.init();
     renderIcons(this.container);
@@ -60,13 +73,13 @@ class EditPdfController implements ViewController {
       return;
     }
 
-    const limits = getCurrentUserToolLimits('edit-pdf');
+    const limits = getCurrentUserToolLimits(this.config.toolId);
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolId: 'edit-pdf',
-        toolName: t('home.tool_edit_pdf_title'),
+        toolId: this.config.toolId,
+        toolName: t(this.config.titleKey),
         type: 'file_size',
       });
       return;
@@ -90,7 +103,8 @@ class EditPdfController implements ViewController {
         const docTitle = file.name.replace(/\.[^/.]+$/, '');
         const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `doc_${Date.now().toString(36)}`;
         sessionStorage.setItem('collab_auto_import', JSON.stringify({ asset, docTitle }));
-        navigate(`/d/${newDocId}`);
+        const modeParam = this.config.mode ? `?mode=${this.config.mode}` : '';
+        navigate(`/d/${newDocId}${modeParam}`);
       } else {
         this.showError(t('ui.ocurrio_un_error_al_subir_el_documento_p'));
         this.phaseManager?.setPhase('dropzone');
@@ -115,12 +129,47 @@ class EditPdfController implements ViewController {
   }
 }
 
-async function createEditPdfView(): Promise<HTMLElement> {
+async function createCollabDropzoneView(config: CollabDropzoneConfig): Promise<HTMLElement> {
   const container = await loadTemplate('/views/tools/edit-pdf/edit-pdf.html');
-  const controller = new EditPdfController(container);
+  const controller = new EditPdfController(container, config);
   await controller.init();
   (container as any).__controller = controller;
   return container;
 }
 
-export { EditPdfController, createEditPdfView };
+export function createEditPdfView(): Promise<HTMLElement> {
+  return createCollabDropzoneView({
+    descKey: 'home.tool_edit_pdf_desc',
+    titleKey: 'home.tool_edit_pdf_title',
+    toolId: 'edit-pdf',
+  });
+}
+
+export function createCropPdfView(): Promise<HTMLElement> {
+  return createCollabDropzoneView({
+    descKey: 'home.tool_crop_pdf_desc',
+    mode: 'crop',
+    titleKey: 'home.tool_crop_pdf_title',
+    toolId: 'crop-pdf',
+  });
+}
+
+export function createRedactPdfView(): Promise<HTMLElement> {
+  return createCollabDropzoneView({
+    descKey: 'home.tool_redact_pdf_desc',
+    mode: 'redact',
+    titleKey: 'home.tool_redact_pdf_title',
+    toolId: 'redact-pdf',
+  });
+}
+
+export function createComparePdfView(): Promise<HTMLElement> {
+  return createCollabDropzoneView({
+    descKey: 'home.tool_compare_pdf_desc',
+    mode: 'compare',
+    titleKey: 'home.tool_compare_pdf_title',
+    toolId: 'compare-pdf',
+  });
+}
+
+export { EditPdfController };

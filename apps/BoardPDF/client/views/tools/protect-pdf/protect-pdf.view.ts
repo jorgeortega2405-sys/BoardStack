@@ -1,6 +1,5 @@
-import { openProtectPdfPasswordModal } from '../../../components/modal-dialogs.js';
+import { openProtectPdfPasswordModal, showUpgradeLimitModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
-import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';

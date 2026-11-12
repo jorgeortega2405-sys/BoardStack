@@ -120,7 +120,7 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async (ctx) => {
       await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createCropPdfView } = await import('../views/tools/crop-pdf/crop-pdf.view.js');
+      const { createCropPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
       return await createCropPdfView();
     },
     id: 'crop-pdf',
@@ -156,7 +156,7 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async (ctx) => {
       await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createRedactPdfView } = await import('../views/tools/redact-pdf/redact-pdf.view.js');
+      const { createRedactPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
       return await createRedactPdfView();
     },
     id: 'redact-pdf',
@@ -264,7 +264,7 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async (ctx) => {
       await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createComparePdfView } = await import('../views/tools/compare-pdf/compare-pdf.view.js');
+      const { createComparePdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
       return await createComparePdfView();
     },
     id: 'compare-pdf',

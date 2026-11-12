@@ -1,5 +1,4 @@
-import { openModal } from '../../components/modal.component.js';
-import { openInviteTeamMemberModal } from '../../components/team-invite-modal.component.js';
+import { openInviteTeamMemberModal, openModal } from '../../components/modal.component.js';
 import { checkAuthSession, currentUser, escapeHtml, getActiveWorkspaceTeam, getCurrentTeamApi, removeTeamMemberApi, revokeTeamInvitationApi, updateTeamMemberRoleApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';

@@ -1,5 +1,5 @@
+import { showUpgradeLimitModal } from '../../../components/modal.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
-import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { escapeHtml, postFormWithProgress } from '../../../services/api.service.js';
