@@ -160,11 +160,13 @@ class DesignPdfEditorController implements ViewController {
   private isAiLocked = false;
   private isLocalAiGenerating = false;
   private pendingAiLock: { locked: boolean; lockedBy?: string | null } | null = null;
+  private prefetchedDocRes: Promise<Response> | null = null;
 
-  constructor(container: HTMLElement, docId?: string, queryParams?: URLSearchParams) {
+  constructor(container: HTMLElement, docId?: string, queryParams?: URLSearchParams, prefetchedDocRes?: Promise<Response> | null) {
     this.container = container;
     this.docId = docId || '';
     this.queryParams = queryParams;
+    this.prefetchedDocRes = prefetchedDocRes || null;
     this.canvasManager = new DesignPdfCanvasManager(this as any);
     this.historyManager = new DesignPdfHistoryManager(this as any);
     this.rulerManager = new DesignPdfRulerManager(this as any);
@@ -1023,21 +1025,15 @@ class DesignPdfEditorController implements ViewController {
   }
 
   private updateModeButtonsState(): void {
-    const btnTopCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-crop"]');
-    const btnTopRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redact"]');
-    const btnTopCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-compare"]');
     const btnToolCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-crop"]');
     const btnToolRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-redact"]');
     const btnToolCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-compare"]');
 
-    btnTopCrop?.classList.toggle('is-active', this.isCropMode);
     btnToolCrop?.classList.toggle('is-active', this.isCropMode);
 
     const isRedact = this.activeTool === 'redact';
-    btnTopRedact?.classList.toggle('is-active', isRedact);
     btnToolRedact?.classList.toggle('is-active', isRedact);
 
-    btnTopCompare?.classList.toggle('is-active', this.isCompareMode);
     btnToolCompare?.classList.toggle('is-active', this.isCompareMode);
   }
 
@@ -1708,7 +1704,9 @@ class DesignPdfEditorController implements ViewController {
         } else {
           try {
             const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
-            const res = await getApi(getUrl);
+            const pendingRes = this.prefetchedDocRes;
+            this.prefetchedDocRes = null;
+            const res = pendingRes ? await pendingRes : await getApi(getUrl);
             if (res.ok) {
               const data = await res.json();
               serverDoc = data.document;
@@ -1773,7 +1771,9 @@ class DesignPdfEditorController implements ViewController {
       } else {
         try {
           const getUrl = API_ROUTES.collaborativeDocs.byId(this.docId) + (this.initialUrlDimensions ? `?w=${this.initialUrlDimensions.width}&h=${this.initialUrlDimensions.height}` : '');
-          const res = await getApi(getUrl);
+          const pendingRes = this.prefetchedDocRes;
+          this.prefetchedDocRes = null;
+          const res = pendingRes ? await pendingRes : await getApi(getUrl);
 
           if (res.status === 403) {
             this.isRestrictedAccess = true;
@@ -5644,9 +5644,7 @@ class DesignPdfEditorController implements ViewController {
       searchInput.dataset.hasFontListener = 'true';
       searchInput.addEventListener('input', () => {
         this.fontSearchQuery = searchInput.value.trim();
-        if (clearSearchBtn) {
-          clearSearchBtn.style.display = this.fontSearchQuery ? 'inline-flex' : 'none';
-        }
+        clearSearchBtn?.classList.toggle('is-hidden', !this.fontSearchQuery);
         this.updateFontList();
       });
     }
@@ -5657,7 +5655,7 @@ class DesignPdfEditorController implements ViewController {
         if (searchInput) {
           searchInput.value = '';
           this.fontSearchQuery = '';
-          clearSearchBtn.style.display = 'none';
+          clearSearchBtn.classList.add('is-hidden');
           this.updateFontList();
         }
       });
@@ -5679,13 +5677,23 @@ class DesignPdfEditorController implements ViewController {
     const curWeight = Number(activeEl?.fontWeight || (activeEl?.isBold ? 700 : 400));
     const isItalic = activeEl?.fontStyle === 'italic' || !!activeEl?.isItalic;
 
-    let filtered: FontCatalogEntry[] = buildCombinedFontCatalog();
+    const allCatalog = buildCombinedFontCatalog();
+    if (!document.head.querySelector('[data-ref="style-collab-font-previews"]')) {
+      const styleEl = document.createElement('style');
+      styleEl.setAttribute('data-ref', 'style-collab-font-previews');
+      styleEl.textContent = allCatalog
+        .map((entry, index) => `[data-ref="font-list-container"] [data-font-idx="${index}"] { font-family: ${entry.cssPreviewFamily}; }`)
+        .join('\n');
+      document.head.appendChild(styleEl);
+    }
+
+    let filtered = allCatalog.map((f, idx) => ({ f, idx }));
     if (this.fontActiveCategory !== 'all') {
-      filtered = filtered.filter((f) => f.category === this.fontActiveCategory);
+      filtered = filtered.filter(({ f }) => f.category === this.fontActiveCategory);
     }
     if (this.fontSearchQuery) {
       const q = this.fontSearchQuery.toLowerCase();
-      filtered = filtered.filter((f) => {
+      filtered = filtered.filter(({ f }) => {
         const displayLabel = f.labelKey ? t(f.labelKey).toLowerCase() : f.family.toLowerCase();
         return f.family.toLowerCase().includes(q) || displayLabel.includes(q);
       });
@@ -5696,40 +5704,35 @@ class DesignPdfEditorController implements ViewController {
       return;
     }
 
-    listContainer.innerHTML = filtered.map((f) => {
+    listContainer.innerHTML = filtered.map(({ f, idx }) => {
       const isSelected = f.family.toLowerCase() === currentFamily.toLowerCase();
       const isExpanded = this.expandedFontFamily?.toLowerCase() === f.family.toLowerCase();
       const displayLabel = f.labelKey ? t(f.labelKey) : f.family;
+      const slug = f.family.replace(/\s+/g, '-');
 
-      const variantsHtml = isExpanded ? `
-        <div class="collaborative-font-variants-inline" data-ref="font-variants-${f.family.replace(/\s+/g, '-')}">
-          <div class="collaborative-font-weights-menu">
-            ${f.weights.map((w) => {
-              const isAct = w === curWeight;
-              const label = WEIGHT_LABEL_KEYS[w] ? t(WEIGHT_LABEL_KEYS[w]) : `${w}`;
-              return `<button type="button" class="menu-item collaborative-weight-pill${isAct ? ' is-active' : ''}" data-font-family="${f.family}" data-weight="${w}">
-                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-weight: ${w};">${label}</span>
-                ${isAct ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
-              </button>`;
-            }).join('')}
-            ${f.hasItalic ? `
-              <button type="button" class="menu-item collaborative-weight-pill${isItalic ? ' is-active' : ''}" data-font-family="${f.family}" data-action="toggle-italic">
-                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-style: italic;">${t('collaborative.font_italic')}</span>
-                ${isItalic ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      ` : '';
+      const variantsHtml = isExpanded
+        ? f.weights.map((w) => {
+            const isAct = isSelected && w === curWeight;
+            const label = WEIGHT_LABEL_KEYS[w] ? t(WEIGHT_LABEL_KEYS[w]) : `${w}`;
+            return `<button type="button" class="menu-item menu-item--bordered${isAct ? ' is-active' : ''}" data-ref="font-weight-${slug}-${w}" data-font-family="${f.family}" data-font-idx="${idx}" data-weight="${w}">
+              <span class="menu-item__text font-weight-${w}">${label}</span>
+              ${isAct ? '<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+            </button>`;
+          }).join('') +
+          (f.hasItalic
+            ? `<button type="button" class="menu-item menu-item--bordered${isSelected && isItalic ? ' is-active' : ''}" data-ref="font-italic-${slug}" data-font-family="${f.family}" data-font-idx="${idx}" data-action="toggle-italic">
+                <span class="menu-item__text font-style-italic">${t('collaborative.font_italic')}</span>
+                ${isSelected && isItalic ? '<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
+              </button>`
+            : '')
+        : '';
 
       return `
-        <div class="collaborative-font-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ''}" data-ref="font-card-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-          <button type="button" class="menu-item collaborative-font-card__header" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}" data-is-standard="${f.isStandard ? '1' : '0'}">
-            <span class="menu-item__text" style="font-family: '${f.family}', sans-serif;">${displayLabel}</span>
-            <svg class="component-icon collaborative-font-card__chevron menu-item__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-          </button>
-          ${variantsHtml}
-        </div>
+        <button type="button" class="menu-item menu-item--bordered${isSelected ? ' is-active' : ''}" data-ref="font-item-${slug}" data-font-family="${f.family}" data-font-idx="${idx}" data-is-standard="${f.isStandard ? '1' : '0'}">
+          <span class="menu-item__text">${displayLabel}</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${isExpanded ? 'expand_less' : 'expand_more'}"></use></svg>
+        </button>
+        ${variantsHtml}
       `;
     }).join('');
 
@@ -5751,7 +5754,7 @@ class DesignPdfEditorController implements ViewController {
       }
     }, { root: listContainer, rootMargin: '80px' });
 
-    const fontHeaders = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-card__header');
+    const fontHeaders = listContainer.querySelectorAll<HTMLButtonElement>('[data-ref^="font-item-"]');
     fontHeaders.forEach((btn) => {
       const fam = btn.getAttribute('data-font-family');
       const isStd = btn.getAttribute('data-is-standard') === '1';
@@ -5767,7 +5770,7 @@ class DesignPdfEditorController implements ViewController {
       }
     });
 
-    const weightPills = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-weight-pill[data-weight]');
+    const weightPills = listContainer.querySelectorAll<HTMLButtonElement>('[data-weight]');
     weightPills.forEach((pill) => {
       pill.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -5807,7 +5810,7 @@ class DesignPdfEditorController implements ViewController {
       });
     });
 
-    const italicPills = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-weight-pill[data-action="toggle-italic"]');
+    const italicPills = listContainer.querySelectorAll<HTMLButtonElement>('[data-action="toggle-italic"]');
     italicPills.forEach((pill) => {
       pill.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -6384,9 +6387,39 @@ class DesignPdfEditorController implements ViewController {
       await this.createDocumentCopy();
     }, { signal });
 
+    const btnMenuFileTools = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-tools"]');
+    const submenuTools = this.container.querySelector<HTMLElement>('[data-ref="dropdown-submenu-tools"]');
+    const toolsParent = this.container.querySelector<HTMLElement>('[data-ref="item-menu-file-tools-parent"]');
+
     const btnMenuFileRulers = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-rulers"]');
     const submenuRulers = this.container.querySelector<HTMLElement>('[data-ref="dropdown-submenu-rulers"]');
     const rulersParent = this.container.querySelector<HTMLElement>('[data-ref="item-menu-file-rulers-parent"]');
+
+    btnMenuFileTools?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !submenuTools?.classList.contains('is-hidden');
+      if (isOpen) {
+        submenuTools?.classList.add('is-hidden');
+        toolsParent?.classList.remove('is-open');
+      } else {
+        submenuRulers?.classList.add('is-hidden');
+        rulersParent?.classList.remove('is-open');
+        submenuTools?.classList.remove('is-hidden');
+        toolsParent?.classList.add('is-open');
+      }
+    }, { signal });
+
+    toolsParent?.addEventListener('mouseenter', () => {
+      submenuRulers?.classList.add('is-hidden');
+      rulersParent?.classList.remove('is-open');
+      submenuTools?.classList.remove('is-hidden');
+      toolsParent.classList.add('is-open');
+    }, { signal });
+
+    toolsParent?.addEventListener('mouseleave', () => {
+      submenuTools?.classList.add('is-hidden');
+      toolsParent.classList.remove('is-open');
+    }, { signal });
 
     btnMenuFileRulers?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -6395,12 +6428,16 @@ class DesignPdfEditorController implements ViewController {
         submenuRulers?.classList.add('is-hidden');
         rulersParent?.classList.remove('is-open');
       } else {
+        submenuTools?.classList.add('is-hidden');
+        toolsParent?.classList.remove('is-open');
         submenuRulers?.classList.remove('is-hidden');
         rulersParent?.classList.add('is-open');
       }
     }, { signal });
 
     rulersParent?.addEventListener('mouseenter', () => {
+      submenuTools?.classList.add('is-hidden');
+      toolsParent?.classList.remove('is-open');
       submenuRulers?.classList.remove('is-hidden');
       rulersParent.classList.add('is-open');
     }, { signal });
@@ -6465,34 +6502,25 @@ class DesignPdfEditorController implements ViewController {
     const btnMenuFileCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-crop"]');
     btnMenuFileCrop?.addEventListener('click', () => {
       this.fileDropdownCtrl?.close();
+      submenuTools?.classList.add('is-hidden');
+      toolsParent?.classList.remove('is-open');
       this.activateTool('crop');
     }, { signal });
 
     const btnMenuFileCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-compare"]');
     btnMenuFileCompare?.addEventListener('click', () => {
       this.fileDropdownCtrl?.close();
+      submenuTools?.classList.add('is-hidden');
+      toolsParent?.classList.remove('is-open');
       this.activateTool('compare');
     }, { signal });
 
     const btnMenuFileRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-redact"]');
     btnMenuFileRedact?.addEventListener('click', () => {
       this.fileDropdownCtrl?.close();
+      submenuTools?.classList.add('is-hidden');
+      toolsParent?.classList.remove('is-open');
       this.activateTool('redact');
-    }, { signal });
-
-    const btnTopCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-crop"]');
-    btnTopCrop?.addEventListener('click', () => {
-      this.activateTool('crop');
-    }, { signal });
-
-    const btnTopRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redact"]');
-    btnTopRedact?.addEventListener('click', () => {
-      this.activateTool('redact');
-    }, { signal });
-
-    const btnTopCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-compare"]');
-    btnTopCompare?.addEventListener('click', () => {
-      this.activateTool('compare');
     }, { signal });
 
     window.addEventListener('mouseup', () => {
@@ -10429,8 +10457,18 @@ class DesignPdfEditorController implements ViewController {
 }
 
 async function createDesignPdfEditorView(docId?: string, query?: URLSearchParams): Promise<HTMLElement> {
+  const urlParams = query || new URLSearchParams(window.location.search);
+  const queryW = parseInt(urlParams.get('w') || '0', 10);
+  const queryH = parseInt(urlParams.get('h') || '0', 10);
+  const pathMatch = window.location.pathname.match(/^\/d\/([a-zA-Z0-9_-]+)\/?$/);
+  const resolvedDocId = docId || urlParams.get('id') || (pathMatch ? pathMatch[1] : '');
+  let prefetchedDocRes: Promise<Response> | null = null;
+  if (resolvedDocId && (currentUser || !getLocalDraft(resolvedDocId))) {
+    const dimQuery = queryW > 0 && queryH > 0 ? `?w=${queryW}&h=${queryH}` : '';
+    prefetchedDocRes = getApi(API_ROUTES.collaborativeDocs.byId(resolvedDocId) + dimQuery);
+  }
   const container = await loadTemplate('/views/design-pdf/design-pdf-editor.html');
-  const controller = new DesignPdfEditorController(container, docId, query);
+  const controller = new DesignPdfEditorController(container, resolvedDocId || docId, query, prefetchedDocRes);
   (container as any).__controller = controller;
   await controller.init();
   return container;

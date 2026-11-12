@@ -421,6 +421,18 @@ class StripeService {
           teamId: metaTeamId,
         });
 
+        const ownerBilling = await purchaseService.getUserBillingInfo(userId);
+        if (!ownerBilling || ownerBilling.subscription_tier !== 'business' || ownerBilling.subscription_status !== 'active') {
+          await purchaseService.updateUserSubscription(
+            userId,
+            'business',
+            customerId || null,
+            subscription.id,
+            subStatus,
+            periodEndDate
+          );
+        }
+
         logger.security.info('Suscripción de equipo confirmada y activada mediante Stripe Elements', {
           periodEnd: periodEndDate,
           plan: planId,
@@ -729,6 +741,18 @@ class StripeService {
           stripeSubscriptionId: null,
           teamId: metaTeamId,
         });
+
+        const ownerBilling = await purchaseService.getUserBillingInfo(userId);
+        if (!ownerBilling || ownerBilling.subscription_tier !== 'business' || ownerBilling.subscription_status !== 'active') {
+          await purchaseService.updateUserSubscription(
+            userId,
+            'business',
+            customerId,
+            null,
+            'active',
+            periodEndDate
+          );
+        }
 
         return {
           periodEnd: periodEndDate,

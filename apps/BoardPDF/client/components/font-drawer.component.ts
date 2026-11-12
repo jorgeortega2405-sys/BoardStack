@@ -96,7 +96,7 @@ class FontDrawerComponent {
     }
     this.isOpened = true;
     this.drawerEl.classList.add('is-open');
-    const selectedCard = this.drawerEl.querySelector<HTMLElement>('.collaborative-font-card.is-selected');
+    const selectedCard = this.drawerEl.querySelector<HTMLElement>('[data-ref^="font-item-"].is-active');
     selectedCard?.scrollIntoView({ block: 'nearest' });
   }
 
@@ -286,42 +286,36 @@ class FontDrawerComponent {
         const label = this._getDisplayLabel(entry);
 
         const variantsHtml = isExpanded
-          ? '<div class="collaborative-font-variants-inline">' +
-              '<div class="collaborative-font-weights-menu">' +
-                entry.weights
-                  .map((w) => {
-                    const isWeightActive = isSelected && this.selected.weight === w;
-                    const weightLabel = t(`tools.font_weight_${w}`);
-                    return (
-                      `<button type="button" class="menu-item collaborative-weight-pill${isWeightActive ? ' is-active' : ''}" data-font-family="${entry.family}" data-weight="${w}" data-font-idx="${idx}">` +
-                        `<span class="menu-item__text font-weight-${w}">${weightLabel}</span>` +
-                        (isWeightActive
-                          ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>'
-                          : '') +
-                      '</button>'
-                    );
-                  })
-                  .join('') +
-                (entry.hasItalic
-                  ? `<button type="button" class="menu-item collaborative-weight-pill${isSelected && this.selected.style === 'italic' ? ' is-active' : ''}" data-font-family="${entry.family}" data-action="toggle-italic" data-font-idx="${idx}">` +
-                      `<span class="menu-item__text font-style-italic">${t('tools.font_style_italic')}</span>` +
-                      (isSelected && this.selected.style === 'italic'
-                        ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>'
-                        : '') +
-                    '</button>'
-                  : '') +
-              '</div>' +
-            '</div>'
+          ? entry.weights
+              .map((w) => {
+                const isWeightActive = isSelected && this.selected.weight === w;
+                const weightLabel = t(`tools.font_weight_${w}`);
+                return (
+                  `<button type="button" class="menu-item menu-item--bordered${isWeightActive ? ' is-active' : ''}" data-ref="font-weight-${slug}-${w}" data-font-family="${entry.family}" data-weight="${w}" data-font-idx="${idx}">` +
+                    `<span class="menu-item__text font-weight-${w}">${weightLabel}</span>` +
+                    (isWeightActive
+                      ? '<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>'
+                      : '') +
+                  '</button>'
+                );
+              })
+              .join('') +
+            (entry.hasItalic
+              ? `<button type="button" class="menu-item menu-item--bordered${isSelected && this.selected.style === 'italic' ? ' is-active' : ''}" data-ref="font-italic-${slug}" data-font-family="${entry.family}" data-action="toggle-italic" data-font-idx="${idx}">` +
+                  `<span class="menu-item__text font-style-italic">${t('tools.font_style_italic')}</span>` +
+                  (isSelected && this.selected.style === 'italic'
+                    ? '<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>'
+                    : '') +
+                '</button>'
+              : '')
           : '';
 
         return (
-          `<div class="collaborative-font-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ''}" data-ref="font-card-${slug}" data-font-family="${entry.family}">` +
-            `<button type="button" class="menu-item collaborative-font-card__header" data-ref="font-item-${slug}" data-font-family="${entry.family}" data-font-idx="${idx}" data-is-standard="${entry.isStandard ? '1' : '0'}">` +
-              `<span class="menu-item__text">${label}</span>` +
-              '<svg class="component-icon collaborative-font-card__chevron menu-item__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>' +
-            '</button>' +
-            variantsHtml +
-          '</div>'
+          `<button type="button" class="menu-item menu-item--bordered${isSelected ? ' is-active' : ''}" data-ref="font-item-${slug}" data-font-family="${entry.family}" data-font-idx="${idx}" data-is-standard="${entry.isStandard ? '1' : '0'}">` +
+            `<span class="menu-item__text">${label}</span>` +
+            `<svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${isExpanded ? 'expand_less' : 'expand_more'}"></use></svg>` +
+          '</button>' +
+          variantsHtml
         );
       })
       .join('');
@@ -343,7 +337,7 @@ class FontDrawerComponent {
       { root: listContainer, rootMargin: '80px' }
     );
 
-    const headers = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-card__header');
+    const headers = listContainer.querySelectorAll<HTMLButtonElement>('[data-ref^="font-item-"]');
     headers.forEach((btn) => {
       this.fontObserver?.observe(btn);
     });
@@ -354,7 +348,7 @@ class FontDrawerComponent {
         const target = e.target as HTMLElement | null;
         if (!target) return;
 
-        const headerBtn = target.closest<HTMLButtonElement>('.collaborative-font-card__header');
+        const headerBtn = target.closest<HTMLButtonElement>('[data-ref^="font-item-"]');
         if (headerBtn) {
           const family = headerBtn.getAttribute('data-font-family');
           if (!family) return;
@@ -386,7 +380,7 @@ class FontDrawerComponent {
           return;
         }
 
-        const pill = target.closest<HTMLButtonElement>('.collaborative-weight-pill');
+        const pill = target.closest<HTMLButtonElement>('[data-weight], [data-action="toggle-italic"]');
         if (!pill) return;
         e.stopPropagation();
         const family = pill.getAttribute('data-font-family');

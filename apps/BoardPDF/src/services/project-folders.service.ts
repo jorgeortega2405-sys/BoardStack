@@ -117,34 +117,57 @@ async function listProjectFolders(
   teamPermissions: string[] = []
 ): Promise<{ folders: ProjectFolderRecord[]; uploadsFolder: ProjectFolderRecord }> {
   const effectiveTeamId = teamId || null;
-  const uploadsFolder = await ensureUploadsFolder(userId, effectiveTeamId);
   const pool = getDbPool();
 
+  let query = effectiveTeamId
+    ? `SELECT pf.id, pf.user_id, pf.team_id, pf.parent_id, pf.name, pf.folder_type, pf.color, pf.visibility, pf.created_at, pf.updated_at, pfm.role AS explicit_role
+       FROM project_folders pf
+       LEFT JOIN project_folder_members pfm ON pfm.folder_id = pf.id AND pfm.user_id = ?
+       WHERE pf.team_id = ?`
+    : `SELECT id, user_id, team_id, parent_id, name, folder_type, color, visibility, created_at, updated_at
+       FROM project_folders
+       WHERE user_id <=> ? AND team_id IS NULL`;
+
+  const params: any[] = effectiveTeamId ? [userId || 0, effectiveTeamId] : [userId];
+
+  if (parentId !== undefined) {
+    query += effectiveTeamId ? ' AND pf.parent_id <=> ?' : ' AND parent_id <=> ?';
+    params.push(parentId);
+  }
+
+  if (folderType) {
+    query += effectiveTeamId ? ' AND pf.folder_type = ?' : ' AND folder_type = ?';
+    params.push(folderType);
+  }
+
+  query += effectiveTeamId ? ' ORDER BY pf.created_at ASC' : ' ORDER BY created_at ASC';
+
+  const uploadsFolderPromise = ensureUploadsFolder(userId, effectiveTeamId);
+
   try {
-    let query = effectiveTeamId
-      ? `SELECT pf.id, pf.user_id, pf.team_id, pf.parent_id, pf.name, pf.folder_type, pf.color, pf.visibility, pf.created_at, pf.updated_at, pfm.role AS explicit_role
-         FROM project_folders pf
-         LEFT JOIN project_folder_members pfm ON pfm.folder_id = pf.id AND pfm.user_id = ?
-         WHERE pf.team_id = ?`
-      : `SELECT id, user_id, team_id, parent_id, name, folder_type, color, visibility, created_at, updated_at
-         FROM project_folders
-         WHERE user_id <=> ? AND team_id IS NULL`;
+    const [uploadsFolder, [rows], [docCounts], [fileCounts]] = await Promise.all([
+      uploadsFolderPromise,
+      pool.query<any[]>(query, params),
+      effectiveTeamId
+        ? pool.query<any[]>(
+            'SELECT folder_id, COUNT(*) AS count FROM collaborative_documents WHERE team_id = ? AND folder_id IS NOT NULL GROUP BY folder_id',
+            [effectiveTeamId]
+          )
+        : pool.query<any[]>(
+            'SELECT folder_id, COUNT(*) AS count FROM collaborative_documents WHERE user_id <=> ? AND team_id IS NULL AND folder_id IS NOT NULL GROUP BY folder_id',
+            [userId]
+          ),
+      effectiveTeamId
+        ? pool.query<any[]>(
+            'SELECT folder_id, COUNT(*) AS count FROM user_storage_assets WHERE team_id = ? GROUP BY folder_id',
+            [effectiveTeamId]
+          )
+        : pool.query<any[]>(
+            'SELECT folder_id, COUNT(*) AS count FROM user_storage_assets WHERE user_id <=> ? AND team_id IS NULL GROUP BY folder_id',
+            [userId]
+          ),
+    ]);
 
-    const params: any[] = effectiveTeamId ? [userId || 0, effectiveTeamId] : [userId];
-
-    if (parentId !== undefined) {
-      query += effectiveTeamId ? ' AND pf.parent_id <=> ?' : ' AND parent_id <=> ?';
-      params.push(parentId);
-    }
-
-    if (folderType) {
-      query += effectiveTeamId ? ' AND pf.folder_type = ?' : ' AND folder_type = ?';
-      params.push(folderType);
-    }
-
-    query += effectiveTeamId ? ' ORDER BY pf.created_at ASC' : ' ORDER BY created_at ASC';
-
-    const [rows] = await pool.query<any[]>(query, params);
     const rawFolders = (Array.isArray(rows) ? rows : []) as Array<ProjectFolderRecord & { explicit_role?: 'editor' | 'viewer' | null }>;
     const folderList: ProjectFolderRecord[] = [];
     for (const f of rawFolders) {
@@ -166,53 +189,25 @@ async function listProjectFolders(
       }
     }
 
-    const [docCounts] = effectiveTeamId
-      ? await pool.query<any[]>(
-          'SELECT folder_id, COUNT(*) AS count FROM collaborative_documents WHERE team_id = ? AND folder_id IS NOT NULL GROUP BY folder_id',
-          [effectiveTeamId]
-        )
-      : await pool.query<any[]>(
-          'SELECT folder_id, COUNT(*) AS count FROM collaborative_documents WHERE user_id <=> ? AND team_id IS NULL AND folder_id IS NOT NULL GROUP BY folder_id',
-          [userId]
-        );
     const docCountMap = new Map<string, number>();
     if (Array.isArray(docCounts)) {
       docCounts.forEach((r) => docCountMap.set(r.folder_id, Number(r.count) || 0));
     }
 
-    const [fileCounts] = effectiveTeamId
-      ? await pool.query<any[]>(
-          'SELECT folder_id, COUNT(*) AS count FROM user_storage_assets WHERE team_id = ? AND folder_id IS NOT NULL GROUP BY folder_id',
-          [effectiveTeamId]
-        )
-      : await pool.query<any[]>(
-          'SELECT folder_id, COUNT(*) AS count FROM user_storage_assets WHERE user_id <=> ? AND team_id IS NULL AND folder_id IS NOT NULL GROUP BY folder_id',
-          [userId]
-        );
     const fileCountMap = new Map<string, number>();
+    let nullFolderFileCount = 0;
     if (Array.isArray(fileCounts)) {
-      fileCounts.forEach((r) => fileCountMap.set(r.folder_id, Number(r.count) || 0));
+      fileCounts.forEach((r) => {
+        const count = Number(r.count) || 0;
+        if (r.folder_id) {
+          fileCountMap.set(r.folder_id, count);
+        } else {
+          nullFolderFileCount += count;
+        }
+      });
     }
 
-    let rootUploadsCount = 0;
-    try {
-      const [rootCountRows] = effectiveTeamId
-        ? await pool.query<any[]>(
-            'SELECT COUNT(*) AS count FROM user_storage_assets WHERE team_id = ? AND (folder_id IS NULL OR folder_id = ?)',
-            [effectiveTeamId, uploadsFolder.id]
-          )
-        : await pool.query<any[]>(
-            'SELECT COUNT(*) AS count FROM user_storage_assets WHERE user_id <=> ? AND team_id IS NULL AND (folder_id IS NULL OR folder_id = ?)',
-            [userId, uploadsFolder.id]
-          );
-      if (Array.isArray(rootCountRows) && rootCountRows[0]) {
-        rootUploadsCount = Number(rootCountRows[0].count) || 0;
-      }
-    } catch {
-      rootUploadsCount = 0;
-    }
-
-    uploadsFolder.file_count = rootUploadsCount;
+    uploadsFolder.file_count = nullFolderFileCount + (fileCountMap.get(uploadsFolder.id) || 0);
 
     const enrichedFolders = folderList
       .filter((f) => f.folder_type !== 'uploads')
@@ -228,6 +223,7 @@ async function listProjectFolders(
     };
   } catch (err) {
     logger.db.error('Error al listar carpetas de proyectos en MySQL', err);
+    const uploadsFolder = await uploadsFolderPromise;
     return {
       folders: [],
       uploadsFolder,

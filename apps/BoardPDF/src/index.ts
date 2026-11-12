@@ -168,6 +168,13 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
     });
   } else {
     const clientDist = path.join(process.cwd(), 'dist/client');
+    const prodIndexPath = path.join(clientDist, 'index.html');
+    let cachedProdTemplate: string | null = null;
+    try {
+      if (fs.existsSync(prodIndexPath)) {
+        cachedProdTemplate = fs.readFileSync(prodIndexPath, 'utf-8');
+      }
+    } catch {}
     app.use(
       express.static(clientDist, {
         immutable: true,
@@ -211,14 +218,17 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
       res.setHeader('Expires', '0');
 
       try {
-        const template = fs.readFileSync(path.join(clientDist, 'index.html'), 'utf-8');
+        const template = cachedProdTemplate || fs.readFileSync(prodIndexPath, 'utf-8');
+        if (!cachedProdTemplate && template) {
+          cachedProdTemplate = template;
+        }
         const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
         const host = (req.headers['x-forwarded-host'] as string) || req.get('host') || 'localhost:3000';
         const baseUrl = config.baseUrl && !config.baseUrl.includes('localhost') ? config.baseUrl : `${proto}://${host}`;
         const html = injectHtmlSeo(template, req.path, baseUrl);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
       } catch {
-        res.sendFile(path.join(clientDist, 'index.html'));
+        res.sendFile(prodIndexPath);
       }
     });
   }

@@ -5,6 +5,11 @@ let currentTranslations: Record<string, unknown> = {};
 let isLanguageBundleAvailable = true;
 
 const FALLBACK_TRANSLATIONS: Record<string, unknown> = {};
+const I18N_SELECTOR = '[data-i18n],[data-i18n-html],[data-i18n-placeholder],[data-i18n-tooltip],[data-i18n-aria],[data-i18n-title],[data-i18n-alt]';
+const LEGAL_MODULES = ['privacy', 'terms', 'cookies', 'security'] as const;
+const loadedLegalBundles = new Set<string>();
+const memoryBundleCache = new Map<string, Record<string, unknown>>();
+const pendingLegalBundles = new Map<string, Promise<void>>();
 
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   const keys = path.split('.');
@@ -63,8 +68,6 @@ function isTranslationBundleAvailable(): boolean {
   return isLanguageBundleAvailable;
 }
 
-const LEGAL_MODULES = ['privacy', 'terms', 'cookies', 'security'] as const;
-
 async function fetchJsonFile(filePath: string): Promise<Record<string, unknown> | null> {
   try {
     const res = await fetch(filePath);
@@ -89,33 +92,82 @@ async function fetchLanguageBundle(norm: string): Promise<Record<string, unknown
   if (!bundle.help || typeof bundle.help !== 'object') {
     bundle.help = {};
   }
-  const helpObj = bundle.help as Record<string, unknown>;
-
-  const legalResults = await Promise.all(
-    LEGAL_MODULES.map(async (mod) => {
-      const data = await fetchJsonFile(`/translations/${encodeURIComponent(norm)}/${mod}.json`);
-      return { data, mod };
-    })
-  );
-
-  for (const { data, mod } of legalResults) {
-    if (data) {
-      bundle[mod] = data;
-      helpObj[mod] = data;
-    }
-  }
 
   return bundle;
 }
 
+async function ensureLegalTranslationsLoaded(lang?: string): Promise<void> {
+  const norm = normalizeLanguageCode(lang || currentLanguage);
+  if (loadedLegalBundles.has(norm)) {
+    return;
+  }
+  const existingPending = pendingLegalBundles.get(norm);
+  if (existingPending) {
+    await existingPending;
+    return;
+  }
+
+  const task = (async () => {
+    const legalResults = await Promise.all(
+      LEGAL_MODULES.map(async (mod) => {
+        const data = await fetchJsonFile(`/translations/${encodeURIComponent(norm)}/${mod}.json`);
+        return { data, mod };
+      })
+    );
+
+    const targetBundle = norm === currentLanguage ? currentTranslations : (memoryBundleCache.get(norm) || {});
+    if (!targetBundle.help || typeof targetBundle.help !== 'object') {
+      targetBundle.help = {};
+    }
+    const helpObj = targetBundle.help as Record<string, unknown>;
+
+    for (const { data, mod } of legalResults) {
+      if (data) {
+        targetBundle[mod] = data;
+        helpObj[mod] = data;
+      }
+    }
+
+    loadedLegalBundles.add(norm);
+    memoryBundleCache.set(norm, targetBundle);
+    try {
+      sessionStorage.setItem(`boardpdf_i18n_${norm}`, JSON.stringify(targetBundle));
+    } catch {}
+  })().finally(() => {
+    pendingLegalBundles.delete(norm);
+  });
+
+  pendingLegalBundles.set(norm, task);
+  await task;
+}
+
 async function loadTranslationFile(code: string): Promise<void> {
   const norm = normalizeLanguageCode(code);
+  const memCached = memoryBundleCache.get(norm);
+  if (memCached && Object.keys(memCached).length > 0) {
+    currentTranslations = memCached;
+    isLanguageBundleAvailable = true;
+    return;
+  }
+
   let bundle = await fetchLanguageBundle(norm);
   if (!bundle && norm !== DEFAULT_LANGUAGE) {
     bundle = await fetchLanguageBundle(DEFAULT_LANGUAGE);
   }
   if (bundle) {
+    const existingLegal = memoryBundleCache.get(norm);
+    if (existingLegal) {
+      for (const mod of LEGAL_MODULES) {
+        if (existingLegal[mod]) {
+          bundle[mod] = existingLegal[mod];
+          if (bundle.help && typeof bundle.help === 'object') {
+            (bundle.help as Record<string, unknown>)[mod] = existingLegal[mod];
+          }
+        }
+      }
+    }
     currentTranslations = bundle;
+    memoryBundleCache.set(norm, bundle);
     isLanguageBundleAvailable = true;
     try {
       sessionStorage.setItem(`boardpdf_i18n_${norm}`, JSON.stringify(currentTranslations));
@@ -152,9 +204,12 @@ async function initI18n(initialLang?: string): Promise<string> {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
-        currentTranslations = parsed;
+        currentTranslations = parsed as Record<string, unknown>;
+        memoryBundleCache.set(currentLanguage, currentTranslations);
+        if (parsed.privacy && parsed.terms && parsed.cookies && parsed.security) {
+          loadedLegalBundles.add(currentLanguage);
+        }
         isLanguageBundleAvailable = true;
-        void loadTranslationFile(currentLanguage);
         return currentLanguage;
       }
     }
@@ -173,71 +228,61 @@ async function setLanguage(code: string): Promise<void> {
   await loadTranslationFile(norm);
 }
 
-function translateElement<T extends HTMLElement>(element: T): T {
-  const nodesWithI18n = element.querySelectorAll<HTMLElement>('[data-i18n]');
-  nodesWithI18n.forEach((node) => {
-    const key = node.getAttribute('data-i18n');
-    if (key) {
-      node.textContent = t(key);
-    }
-  });
-
-  const htmlNodes = element.querySelectorAll<HTMLElement>('[data-i18n-html]');
-  htmlNodes.forEach((node) => {
-    const key = node.getAttribute('data-i18n-html');
-    if (key) {
-      node.innerHTML = t(key);
-    }
-  });
-
-  const placeholders = element.querySelectorAll<HTMLElement>('[data-i18n-placeholder]');
-  placeholders.forEach((node) => {
-    const key = node.getAttribute('data-i18n-placeholder');
-    if (key && 'placeholder' in node) {
-      (node as unknown as HTMLInputElement).placeholder = t(key);
-    }
-  });
-
-  const tooltips = element.querySelectorAll<HTMLElement>('[data-i18n-tooltip]');
-  tooltips.forEach((node) => {
-    const key = node.getAttribute('data-i18n-tooltip');
-    if (key) {
-      node.setAttribute('data-tooltip', t(key));
-    }
-  });
-
-  const arias = element.querySelectorAll<HTMLElement>('[data-i18n-aria]');
-  arias.forEach((node) => {
-    const key = node.getAttribute('data-i18n-aria');
-    if (key) {
-      node.setAttribute('aria-label', t(key));
-    }
-  });
-
-  const titles = element.querySelectorAll<HTMLElement>('[data-i18n-title]');
-  titles.forEach((node) => {
-    const key = node.getAttribute('data-i18n-title');
-    if (key) {
-      node.setAttribute('title', t(key));
-    }
-  });
-
-  const alts = element.querySelectorAll<HTMLElement>('[data-i18n-alt]');
-  alts.forEach((node) => {
-    const key = node.getAttribute('data-i18n-alt');
-    if (key) {
-      node.setAttribute('alt', t(key));
-    }
-  });
-
-  if (element.hasAttribute('data-i18n')) {
-    const key = element.getAttribute('data-i18n');
-    if (key) {
-      element.textContent = t(key);
+function applyNodeTranslation(node: HTMLElement): void {
+  const i18nKey = node.getAttribute('data-i18n');
+  if (i18nKey) {
+    const text = t(i18nKey);
+    if (node.textContent !== text) {
+      node.textContent = text;
     }
   }
 
+  const htmlKey = node.getAttribute('data-i18n-html');
+  if (htmlKey) {
+    const html = t(htmlKey);
+    if (node.innerHTML !== html) {
+      node.innerHTML = html;
+    }
+  }
+
+  const placeholderKey = node.getAttribute('data-i18n-placeholder');
+  if (placeholderKey && 'placeholder' in node) {
+    const placeholder = t(placeholderKey);
+    if ((node as unknown as HTMLInputElement).placeholder !== placeholder) {
+      (node as unknown as HTMLInputElement).placeholder = placeholder;
+    }
+  }
+
+  const tooltipKey = node.getAttribute('data-i18n-tooltip');
+  if (tooltipKey) {
+    node.setAttribute('data-tooltip', t(tooltipKey));
+  }
+
+  const ariaKey = node.getAttribute('data-i18n-aria');
+  if (ariaKey) {
+    node.setAttribute('aria-label', t(ariaKey));
+  }
+
+  const titleKey = node.getAttribute('data-i18n-title');
+  if (titleKey) {
+    node.setAttribute('title', t(titleKey));
+  }
+
+  const altKey = node.getAttribute('data-i18n-alt');
+  if (altKey) {
+    node.setAttribute('alt', t(altKey));
+  }
+}
+
+function translateElement<T extends HTMLElement>(element: T): T {
+  if (element.matches?.(I18N_SELECTOR)) {
+    applyNodeTranslation(element);
+  }
+  const nodes = element.querySelectorAll<HTMLElement>(I18N_SELECTOR);
+  for (let i = 0; i < nodes.length; i++) {
+    applyNodeTranslation(nodes[i]);
+  }
   return element;
 }
 
-export { getCurrentLanguage, initI18n, isTranslationBundleAvailable, setLanguage, t, translateElement };
+export { ensureLegalTranslationsLoaded, getCurrentLanguage, initI18n, isTranslationBundleAvailable, setLanguage, t, translateElement };

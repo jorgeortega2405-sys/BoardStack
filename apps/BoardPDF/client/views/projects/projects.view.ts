@@ -2,12 +2,12 @@ import { getFooterHtml, mountSiteFooter } from '../../components/footer.componen
 import { getLabelDisplayName, openCreateFolderModal, openCreateTeamModal, openDeleteDocModal, openDeleteFolderModal, openDeleteUploadModal, openDocumentLabelsModal, openMoveDocModal, openMoveUploadModal, openRenameFolderModal, openTeamFolderShareModal, showAuthGateModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
-import { currentUser, deleteApi, getActiveWorkspaceTeam, getApi, hasTeamPermission, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getActiveWorkspaceTeam, getApi, hasTeamPermission, patchApi, postApi, postFormApi, putApi } from '../../services/api.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
-import { loadTemplate } from '../../services/template.service.js';
+import { loadTemplate, preloadTemplates } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { onWorkspaceChange, setActiveTeamId } from '../../services/workspace.service.js';
 import { DocumentLabel, ViewController } from '../../types/common.types.js';
@@ -69,6 +69,7 @@ class ProjectsController implements ViewController {
   private filterCategory: string = 'all';
   private filterLabelId: number | null = null;
   private folders: ProjectFolder[] = [];
+  private initialDataPromise: Promise<void> | null = null;
   private loadSequence: number = 0;
   private maxCustomLabels: number = 3;
   private searchQuery: string = '';
@@ -85,13 +86,27 @@ class ProjectsController implements ViewController {
   }
 
   public async init(): Promise<void> {
-    this.abortController = new AbortController();
-    await this.loadData();
+    if (!this.abortController) {
+      this.abortController = new AbortController();
+    }
+    const pendingData = this.initialDataPromise;
+    this.initialDataPromise = null;
+    if (pendingData) {
+      await pendingData;
+    } else {
+      await this.loadData();
+    }
     if (!this.abortController || this.abortController.signal.aborted) return;
     this.renderView();
     this.renderFooter();
     renderIcons(this.container);
     this.bindEvents();
+
+    setTimeout(() => {
+      if (!this.abortController || this.abortController.signal.aborted) return;
+      preloadTemplates(['/views/design-pdf/design-pdf-editor.html']);
+      void import('../design-pdf/design-pdf-editor.view.js');
+    }, 120);
 
     this.workspaceUnsubscribe = onWorkspaceChange(() => {
       if (!this.abortController || this.abortController.signal.aborted) return;
@@ -201,33 +216,36 @@ class ProjectsController implements ViewController {
       this.files = [];
       return;
     }
-    try {
-      const docsRes = await getApi(API_ROUTES.collaborativeDocs.base);
-      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
-      if (docsRes.ok) {
-        const data = await docsRes.json();
+    const [docsResult, foldersResult] = await Promise.allSettled([
+      getApi(API_ROUTES.collaborativeDocs.base),
+      getApi(API_ROUTES.projectFolders.base),
+    ]);
+    if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
+
+    if (docsResult.status === 'fulfilled' && docsResult.value.ok) {
+      try {
+        const data = await docsResult.value.json();
         if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
         const serverDocs: DocItem[] = Array.isArray(data.documents) ? data.documents : [];
         this.documents = serverDocs.filter((d) => !d.folder_id);
-      } else {
+      } catch {
         this.documents = [];
       }
-    } catch {
-      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
+    } else {
       this.documents = [];
     }
 
-    try {
-      const foldersRes = await getApi(API_ROUTES.projectFolders.base);
-      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
-      if (foldersRes.ok) {
-        const fData = await foldersRes.json();
+    if (foldersResult.status === 'fulfilled' && foldersResult.value.ok) {
+      try {
+        const fData = await foldersResult.value.json();
         if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
         this.folders = Array.isArray(fData.folders) ? fData.folders.filter((f: ProjectFolder) => f.folder_type === 'project') : [];
         this.uploadsFolder = fData.uploadsFolder || null;
+      } catch {
+        this.folders = [];
+        this.uploadsFolder = null;
       }
-    } catch {
-      if (seq !== this.loadSequence || this.abortController?.signal.aborted) return;
+    } else {
       this.folders = [];
       this.uploadsFolder = null;
     }
@@ -1156,15 +1174,27 @@ class ProjectsController implements ViewController {
   }
 
   private loadDocPreviews(docs: DocItem[]): void {
-    for (const doc of docs) {
-      const canvas = this.container.querySelector<HTMLCanvasElement>(`[data-ref="canvas-doc-${doc.id}"]`);
-      const placeholder = this.container.querySelector<HTMLElement>(`[data-ref="placeholder-doc-${doc.id}"]`);
-      if (!canvas) continue;
+    if (docs.length === 0) return;
+    const signal = this.abortController?.signal;
+    let index = 0;
+    const renderBatch = () => {
+      if (signal?.aborted) return;
+      const end = Math.min(index + 6, docs.length);
+      for (; index < end; index++) {
+        const doc = docs[index];
+        const canvas = this.container.querySelector<HTMLCanvasElement>(`[data-ref="canvas-doc-${doc.id}"]`);
+        const placeholder = this.container.querySelector<HTMLElement>(`[data-ref="placeholder-doc-${doc.id}"]`);
+        if (!canvas) continue;
 
-      canvas.classList.remove('is-hidden');
-      if (placeholder) placeholder.classList.add('is-hidden');
-      this.renderLocalCanvasPreview(doc, canvas, 196, 156);
-    }
+        canvas.classList.remove('is-hidden');
+        if (placeholder) placeholder.classList.add('is-hidden');
+        this.renderLocalCanvasPreview(doc, canvas, 196, 156);
+      }
+      if (index < docs.length) {
+        requestAnimationFrame(renderBatch);
+      }
+    };
+    requestAnimationFrame(renderBatch);
   }
 
   private loadUploadPdfThumbnails(files: UploadFileItem[]): void {
@@ -2080,15 +2110,17 @@ class ProjectsController implements ViewController {
   }
 
   private escapeHtml(str: string): string {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return escapeHtml(str);
   }
 }
 
 async function createProjectsView(folderId?: string | null): Promise<HTMLElement | null> {
+  const placeholderContainer = document.createElement('div');
+  const controller = new ProjectsController(placeholderContainer, folderId);
+  (controller as any).abortController = new AbortController();
+  (controller as any).initialDataPromise = (controller as any).loadData();
   const container = await loadTemplate('/views/projects/projects.html');
-  const controller = new ProjectsController(container, folderId);
+  (controller as any).container = container;
   await controller.init();
   (container as any).__controller = controller;
   return container;

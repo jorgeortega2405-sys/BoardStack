@@ -54,32 +54,49 @@ function slugifyTeamName(name: string): string {
   return `${base || 'equipo'}-${suffix}`;
 }
 
+const teamRolePermissionsMemoryCache = new Map<string, { expiresAt: number; permissions: string[] }>();
+
 async function getTeamRolePermissions(role: TeamMemberRole, isSubscriptionActive: boolean): Promise<string[]> {
+  const cacheKey = `${role}:${isSubscriptionActive ? '1' : '0'}`;
+  const cached = teamRolePermissionsMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.permissions;
+  }
+
   const pool = getDbPool();
-  const [roleRows] = await pool.query<RowDataPacket[]>(
-    `SELECT p.name FROM team_role_permissions trp
-     INNER JOIN permissions p ON p.id = trp.permission_id
-     WHERE trp.role = ?`,
-    [role]
-  );
+  const [roleResult, subResult] = await Promise.all([
+    pool.query<RowDataPacket[]>(
+      `SELECT p.name FROM team_role_permissions trp
+       INNER JOIN permissions p ON p.id = trp.permission_id
+       WHERE trp.role = ?`,
+      [role]
+    ),
+    isSubscriptionActive
+      ? pool.query<RowDataPacket[]>(
+          `SELECT p.name FROM subscription_tier_permissions stp
+           INNER JOIN permissions p ON p.id = stp.permission_id
+           WHERE stp.tier = 'business' AND p.name LIKE 'subscription:%'`
+        )
+      : Promise.resolve([[]] as unknown as [RowDataPacket[], any]),
+  ]);
+
+  const [roleRows] = roleResult;
+  const [subRows] = subResult;
 
   const perms = new Set<string>(['tools:access']);
   for (const row of roleRows) {
     if (row.name) perms.add(String(row.name));
   }
-
-  if (isSubscriptionActive) {
-    const [subRows] = await pool.query<RowDataPacket[]>(
-      `SELECT p.name FROM subscription_tier_permissions stp
-       INNER JOIN permissions p ON p.id = stp.permission_id
-       WHERE stp.tier = 'business' AND p.name LIKE 'subscription:%'`
-    );
-    for (const row of subRows) {
-      if (row.name) perms.add(String(row.name));
-    }
+  for (const row of subRows) {
+    if (row.name) perms.add(String(row.name));
   }
 
-  return Array.from(perms);
+  const result = Array.from(perms);
+  teamRolePermissionsMemoryCache.set(cacheKey, {
+    expiresAt: Date.now() + 300_000,
+    permissions: result,
+  });
+  return result;
 }
 
 async function getTeamById(teamId: number): Promise<TeamRecord | null> {
@@ -122,33 +139,34 @@ async function listUserTeams(userId: number): Promise<TeamSummary[]> {
         [userId]
       );
 
-      const summaries: TeamSummary[] = [];
-      for (const row of rows) {
-        const role = (row.member_role || 'member') as TeamMemberRole;
-        const permissions = await getTeamRolePermissions(role, row.subscription_status === 'active');
-        summaries.push({
-          ai_tokens_balance: Number(row.ai_tokens_balance || 0),
-          ai_tokens_reset_at: row.ai_tokens_reset_at ? new Date(row.ai_tokens_reset_at).toISOString() : null,
-          avatar_url: row.avatar_url || null,
-          billing_period: row.billing_period || null,
-          id: Number(row.id),
-          name: String(row.name),
-          owner_id: Number(row.owner_id),
-          permissions,
-          role,
-          seat_limit: Number(row.seat_limit || 1),
-          seats_used: Number(row.seats_used || 1),
-          slug: String(row.slug),
-          storage_limit_bytes: Number(row.storage_limit_bytes || TEAM_STORAGE_LIMIT_BYTES),
-          storage_used_bytes: Number(row.storage_used_bytes || 0),
-          subscription_period_end: row.subscription_period_end
-            ? new Date(row.subscription_period_end).toISOString()
-            : null,
-          subscription_status: String(row.subscription_status),
-          subscription_tier: String(row.subscription_tier || 'business'),
-          uuid: String(row.uuid),
-        });
-      }
+      const summaries: TeamSummary[] = await Promise.all(
+        rows.map(async (row) => {
+          const role = (row.member_role || 'member') as TeamMemberRole;
+          const permissions = await getTeamRolePermissions(role, row.subscription_status === 'active');
+          return {
+            ai_tokens_balance: Number(row.ai_tokens_balance || 0),
+            ai_tokens_reset_at: row.ai_tokens_reset_at ? new Date(row.ai_tokens_reset_at).toISOString() : null,
+            avatar_url: row.avatar_url || null,
+            billing_period: row.billing_period || null,
+            id: Number(row.id),
+            name: String(row.name),
+            owner_id: Number(row.owner_id),
+            permissions,
+            role,
+            seat_limit: Number(row.seat_limit || 1),
+            seats_used: Number(row.seats_used || 1),
+            slug: String(row.slug),
+            storage_limit_bytes: Number(row.storage_limit_bytes || TEAM_STORAGE_LIMIT_BYTES),
+            storage_used_bytes: Number(row.storage_used_bytes || 0),
+            subscription_period_end: row.subscription_period_end
+              ? new Date(row.subscription_period_end).toISOString()
+              : null,
+            subscription_status: String(row.subscription_status),
+            subscription_tier: String(row.subscription_tier || 'business'),
+            uuid: String(row.uuid),
+          };
+        })
+      );
       return summaries;
     }
   )) || [];
@@ -332,7 +350,7 @@ async function createTeamFromPersonalBusiness(ownerId: number, rawName: string):
       slug,
       ownerId,
       user.stripe_customer_id || null,
-      null,
+      user.stripe_subscription_id || null,
       periodEnd,
       TEAM_STORAGE_LIMIT_BYTES,
       TEAM_MONTHLY_TOKENS,

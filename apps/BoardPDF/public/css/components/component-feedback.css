@@ -208,7 +208,7 @@
   font-weight: 500;
   background-color: var(--bg-surface);
   color: var(--text-primary);
-  border: 1px solid #00000020;
+  border: 1px solid #e2e8f0;
   white-space: nowrap;
   flex-shrink: 0;
   transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), color var(--sl-transition-fast), transform var(--sl-transition-fast);

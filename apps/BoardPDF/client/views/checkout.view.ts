@@ -44,7 +44,9 @@ class CheckoutController implements ViewController {
 
     this.abortController = new AbortController();
 
-    const params = this.initialQuery || new URLSearchParams(window.location.search);
+    const params = this.initialQuery && this.initialQuery.toString().length > 0
+      ? this.initialQuery
+      : new URLSearchParams(window.location.search);
     const planParam = params.get('plan');
     const flowParam = params.get('flow');
     this.flowMode = flowParam === 'create-team' ? 'create-team' : 'standard';
@@ -58,17 +60,12 @@ class CheckoutController implements ViewController {
     const rawTeamId = Number(params.get('teamId') || 0);
     this.teamId = Number.isInteger(rawTeamId) && rawTeamId > 0 ? rawTeamId : null;
     this.teamName = (params.get('teamName') || '').trim();
-    const rawSeats = Number(params.get('seats') || 0);
-    if (Number.isInteger(rawSeats) && rawSeats >= 1) {
-      this.teamSeats = Math.min(50, rawSeats);
-    } else {
-      this.teamSeats = this.flowMode === 'create-team' ? 2 : 1;
-    }
+    this.teamSeats = 1;
 
     const hasPro = hasSubscriptionFeature('pro');
     const hasBusiness = hasSubscriptionFeature('business');
     const isTeamFlow = this.currentPlan === 'business'
-      && (this.flowMode === 'create-team' || this.teamId !== null || this.teamName.length > 0 || this.teamSeats > 1);
+      && (this.flowMode === 'create-team' || this.teamId !== null || this.teamName.length > 0);
 
     if (this.currentPlan === 'pro' && (hasPro || hasBusiness)) {
       this.renderAlreadyOwnedPlan(normalizeTier(currentUser.subscription_tier), 'pro');
@@ -76,7 +73,8 @@ class CheckoutController implements ViewController {
     }
 
     if (this.currentPlan === 'business' && hasBusiness && !isTeamFlow) {
-      this.flowMode = 'create-team';
+      this.renderAlreadyOwnedPlan('business', 'business');
+      return;
     }
 
     const cycleParam = params.get('cycle');
@@ -112,27 +110,9 @@ class CheckoutController implements ViewController {
       }
     }
 
-    const teamConfigBox = this.container.querySelector<HTMLElement>('[data-ref="checkout-team-config"]');
     const step1Title = this.container.querySelector<HTMLElement>('[data-ref="checkout-step1-title"]');
-    const teamNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-team-name"]');
-    const seatsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats"]');
-
-    if (this.currentPlan === 'business') {
-      teamConfigBox?.classList.remove('is-hidden');
-      if (step1Title) {
-        step1Title.textContent = this.flowMode === 'create-team'
-          ? t('checkout.step1_title_team')
-          : t('checkout.step1_title');
-      }
-      if (teamNameInput && this.teamName) {
-        teamNameInput.value = this.teamName;
-      }
-      if (seatsInput) {
-        seatsInput.value = String(this.teamSeats);
-      }
-    } else {
-      teamConfigBox?.classList.add('is-hidden');
-      if (step1Title) step1Title.textContent = t('checkout.step1_title');
+    if (step1Title) {
+      step1Title.textContent = t('checkout.step1_title');
     }
 
     this.bindEvents();
@@ -280,56 +260,9 @@ class CheckoutController implements ViewController {
       this.invalidateGateway();
     }, { signal });
 
-    const teamNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-team-name"]');
-    teamNameInput?.addEventListener('input', () => {
-      this.teamName = teamNameInput.value.trim();
-      this.updateSelectionCards();
-      this.updateSummary();
-      this.invalidateGateway();
-    }, { signal });
-
-    const seatsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats"]');
-    const btnSeatsDec = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-dec"]');
-    const btnSeatsInc = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-inc"]');
-
-    const applySeats = (nextVal: number) => {
-      const clamped = Math.max(1, Math.min(50, Math.floor(Number(nextVal) || 1)));
-      if (seatsInput) seatsInput.value = String(clamped);
-      if (btnSeatsDec) btnSeatsDec.disabled = clamped <= 1;
-      if (btnSeatsInc) btnSeatsInc.disabled = clamped >= 50;
-      if (clamped === this.teamSeats) return;
-      this.teamSeats = clamped;
-      this.updateSelectionCards();
-      this.updateSummary();
-      this.invalidateGateway();
-    };
-
-    btnSeatsDec?.addEventListener('click', (e) => {
-      e.preventDefault();
-      applySeats(this.teamSeats - 1);
-    }, { signal });
-
-    btnSeatsInc?.addEventListener('click', (e) => {
-      e.preventDefault();
-      applySeats(this.teamSeats + 1);
-    }, { signal });
-
-    seatsInput?.addEventListener('change', () => {
-      applySeats(Number(seatsInput.value));
-    }, { signal });
-
     const btnNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-next"]');
     btnNext?.addEventListener('click', (e) => {
       e.preventDefault();
-      if (this.isTeamPurchase() && !this.teamId && this.teamName.trim().length < 2) {
-        const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
-        if (errorBanner) {
-          errorBanner.textContent = t('checkout.team_name_required');
-          errorBanner.classList.remove('is-hidden');
-        }
-        teamNameInput?.focus();
-        return;
-      }
       const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
       errorBanner?.classList.add('is-hidden');
       this.goToStep(2);

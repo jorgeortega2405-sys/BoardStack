@@ -582,8 +582,7 @@ function renderCreateTeamModalBody(options: {
   hintText: string;
   seats: number;
 }): string {
-  const { hintText, seats } = options;
-  const seatsBadgeText = seats === 1 ? t('checkout.seats_count_singular') : t('checkout.seats_count_plural', { count: seats });
+  const { hintText } = options;
   return `
     <div class="team-create-modal" data-ref="team-create-modal-body">
       <div class="banner banner--info team-create-modal__hint" data-ref="team-create-hint">
@@ -594,22 +593,6 @@ function renderCreateTeamModalBody(options: {
         <input class="field__input" data-ref="input-create-team-name" type="text" placeholder=" " maxlength="80" autocomplete="organization" />
         <span class="field__label">${escapeHtml(t('teams.create_modal.team_name_label'))}</span>
       </label>
-      <div class="team-seats-field" data-ref="team-create-seats-field">
-        <div class="team-seats-field__header">
-          <span class="team-seats-field__label">${escapeHtml(t('teams.create_modal.seats_label'))}</span>
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="team-create-seats-badge">${escapeHtml(seatsBadgeText)}</span>
-        </div>
-        <div class="team-seats-stepper" data-ref="team-create-seats-stepper">
-          <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-dec" aria-label="-">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-          </button>
-          <input class="field__input team-seats-stepper__input" data-ref="input-create-team-seats" type="number" min="1" max="50" value="${seats}" />
-          <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-modal-seats-inc" aria-label="+">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          </button>
-        </div>
-        <p class="team-seats-field__hint">${escapeHtml(t('teams.create_modal.seats_price_hint'))}</p>
-      </div>
       <ul class="team-create-modal__features">
         <li class="team-create-modal__feature-item">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>

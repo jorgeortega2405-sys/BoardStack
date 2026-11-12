@@ -1,8 +1,24 @@
 import { t, translateElement } from './i18n.service.js';
 import { renderIcons } from './icon.service.js';
 
+const parsedTemplateCache = new Map<string, HTMLElement>();
 const templateCache = new Map<string, string>();
 const templatePending = new Map<string, Promise<string>>();
+
+function cacheParsedTemplate(url: string, html: string): HTMLElement | null {
+  const existing = parsedTemplateCache.get(url);
+  if (existing) {
+    return existing;
+  }
+  const template = document.createElement('template');
+  template.innerHTML = html.trim();
+  const element = template.content.firstElementChild as HTMLElement | null;
+  if (element) {
+    renderIcons(element);
+    parsedTemplateCache.set(url, element);
+  }
+  return element;
+}
 
 function preloadTemplates(urls: string[]): void {
   for (const url of urls) {
@@ -12,6 +28,7 @@ function preloadTemplates(urls: string[]): void {
         .then((text) => {
           if (text) {
             templateCache.set(url, text);
+            cacheParsedTemplate(url, text);
           }
           templatePending.delete(url);
           return text;
@@ -26,47 +43,40 @@ function preloadTemplates(urls: string[]): void {
 }
 
 async function loadTemplate(url: string): Promise<HTMLElement> {
-  const isDev = Boolean((import.meta as any).env?.DEV);
-  let html = isDev ? undefined : templateCache.get(url);
-  if (!html) {
-    let pending = isDev ? undefined : templatePending.get(url);
-    if (!pending) {
-      pending = fetch(url)
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(t('ui.error_al_cargar_la_plantilla'));
-          }
-          return res.text();
-        })
-        .then((text) => {
-          if (!isDev) {
+  let cachedElement = parsedTemplateCache.get(url) || null;
+  if (!cachedElement) {
+    let html = templateCache.get(url);
+    if (!html) {
+      let pending = templatePending.get(url);
+      if (!pending) {
+        pending = fetch(url)
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error(t('ui.error_al_cargar_la_plantilla'));
+            }
+            return res.text();
+          })
+          .then((text) => {
             templateCache.set(url, text);
             templatePending.delete(url);
-          }
-          return text;
-        })
-        .catch((err) => {
-          if (!isDev) {
+            return text;
+          })
+          .catch((err) => {
             templatePending.delete(url);
-          }
-          throw err;
-        });
-      if (!isDev) {
+            throw err;
+          });
         templatePending.set(url, pending);
       }
+      html = await pending;
     }
-    html = await pending;
+
+    cachedElement = cacheParsedTemplate(url, html);
+    if (!cachedElement) {
+      throw new Error(`Plantilla vacía o inválida: ${url}`);
+    }
   }
 
-  const template = document.createElement('template');
-  template.innerHTML = html.trim();
-  const element = template.content.firstElementChild as HTMLElement | null;
-  if (!element) {
-    throw new Error(`Plantilla vacía o inválida: ${url}`);
-  }
-
-  const clone = document.importNode(element, true) as HTMLElement;
-  renderIcons(clone);
+  const clone = document.importNode(cachedElement, true) as HTMLElement;
   return translateElement(clone);
 }
 

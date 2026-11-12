@@ -1607,7 +1607,7 @@ body.modal-open {
 .label-picker__chip {
   align-items: center;
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.04));
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 9999px;
   color: var(--text-primary);
   display: inline-flex;

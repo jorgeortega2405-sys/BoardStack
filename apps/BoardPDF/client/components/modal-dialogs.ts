@@ -943,24 +943,21 @@ function openCreateTeamModal(options: { initialSeats?: number; onCreated?: () =>
     && user.teams.some((team) => Number(team.owner_id) === Number(user.id) && team.subscription_status === 'active');
   const canCreateFirstFreeTeam = hasBusinessEntitlement && !ownsActiveTeam;
 
-  let seats = Math.max(1, Math.min(50, Math.floor(Number(options.initialSeats) || (canCreateFirstFreeTeam ? 1 : 2))));
+  const seats = 1;
 
   const hintText = canCreateFirstFreeTeam
     ? t('teams.create_modal.business_free_hint')
     : t('teams.create_modal.upgrade_hint');
 
-  const getConfirmText = (count: number): string => {
-    if (canCreateFirstFreeTeam && count === 1) {
-      return t('teams.create_modal.btn_create_free');
-    }
-    return t('teams.create_modal.btn_continue_checkout', { seats: count });
-  };
+  const confirmText = canCreateFirstFreeTeam
+    ? t('teams.create_modal.btn_create_free')
+    : t('teams.create_modal.btn_continue_checkout', { seats: 1 });
 
   const modal = openModal({
     bodyHtml: renderCreateTeamModalBody({ canCreateFirstFreeTeam, hintText, seats }),
     cancelText: t('teams.create_modal.btn_cancel'),
     confirmClass: 'component-button--black',
-    confirmText: getConfirmText(seats),
+    confirmText,
     description: t('teams.create_modal.subtitle'),
     onConfirm: async (inst) => {
       inst.clearError();
@@ -972,7 +969,7 @@ function openCreateTeamModal(options: { initialSeats?: number; onCreated?: () =>
         return false;
       }
 
-      if (canCreateFirstFreeTeam && seats === 1) {
+      if (canCreateFirstFreeTeam) {
         inst.setConfirmLoading(true);
         const res = await createTeamApi(name);
         if (res.success && res.team) {
@@ -996,7 +993,6 @@ function openCreateTeamModal(options: { initialSeats?: number; onCreated?: () =>
         cycle: 'monthly',
         flow: 'create-team',
         plan: 'business',
-        seats: String(seats),
         teamName: name,
       });
       navigate(`/checkout?${params.toString()}`);
@@ -1008,43 +1004,8 @@ function openCreateTeamModal(options: { initialSeats?: number; onCreated?: () =>
     title: t('teams.create_modal.title'),
   });
 
-  const seatsInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-create-team-seats"]');
-  const seatsBadge = modal.body.querySelector<HTMLElement>('[data-ref="team-create-seats-badge"]');
-  const btnDec = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-dec"]');
-  const btnInc = modal.body.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-inc"]');
   const nameInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-create-team-name"]');
-
-  const syncSeatsUI = (nextVal: number) => {
-    seats = Math.max(1, Math.min(50, Math.floor(Number(nextVal) || 1)));
-    if (seatsInput) seatsInput.value = String(seats);
-    if (seatsBadge) {
-      seatsBadge.textContent = seats === 1
-        ? t('checkout.seats_count_singular')
-        : t('checkout.seats_count_plural', { count: seats });
-    }
-    if (modal.btnConfirm) {
-      modal.btnConfirm.textContent = getConfirmText(seats);
-    }
-    if (btnDec) btnDec.disabled = seats <= 1;
-    if (btnInc) btnInc.disabled = seats >= 50;
-  };
-
-  syncSeatsUI(seats);
   renderIcons(modal.backdrop);
-
-  btnDec?.addEventListener('click', (e) => {
-    e.preventDefault();
-    syncSeatsUI(seats - 1);
-  });
-
-  btnInc?.addEventListener('click', (e) => {
-    e.preventDefault();
-    syncSeatsUI(seats + 1);
-  });
-
-  seatsInput?.addEventListener('change', () => {
-    syncSeatsUI(Number(seatsInput.value));
-  });
 
   nameInput?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

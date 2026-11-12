@@ -104,7 +104,11 @@ function isCollabEditorRoute(pathname: string): boolean {
 
 async function render(rawPath = window.location.pathname, options?: RenderOptions): Promise<void> {
   const navigationStartTime = performance.now();
-  const { pathname: path, query: targetQuery } = parseRouteUrl(options?.updateHistory?.fullUrl || rawPath);
+  const effectiveUrl = options?.updateHistory?.fullUrl
+    || (rawPath.includes('?') || rawPath.includes('#')
+      ? rawPath
+      : `${rawPath}${window.location.search}${window.location.hash}`);
+  const { pathname: path, query: targetQuery } = parseRouteUrl(effectiveUrl);
   closeAllModals();
   hideTooltip();
 
@@ -129,10 +133,12 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
     clearWorkflowSession();
   }
 
+  let langChanged = false;
   if (matched) {
     currentActiveRouteId = matched.routeId;
     if (matched.lang !== getCurrentLanguage()) {
       await setLanguage(matched.lang);
+      langChanged = true;
     }
     if (!matched.isCanonical) {
       const fullCanonical = `${matched.canonicalPath}${window.location.search}${window.location.hash}`;
@@ -221,7 +227,9 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
   layoutContent.scrollTop = 0;
 
   activeViewElement = nextViewElement;
-  translateElement(nextViewElement);
+  if (langChanged) {
+    translateElement(nextViewElement);
+  }
   layoutContent.appendChild(nextViewElement);
   finishNavigationProgress(nextViewElement);
 
@@ -234,8 +242,10 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
       currentSidebar.classList.remove('is-hidden');
       updateSidebarAuthState(currentSidebar);
       updateSidebarActiveState(currentSidebar, internalPath);
-      translateElement(currentSidebar);
-      translateElement(document.body);
+      if (langChanged) {
+        translateElement(currentSidebar);
+        translateElement(document.body);
+      }
       if (hasDesignatedMenuItems(internalPath)) {
         if (window.innerWidth > 768) {
           const drawerMode = internalPath.startsWith('/settings')
@@ -276,10 +286,10 @@ async function render(rawPath = window.location.pathname, options?: RenderOption
 
 function initRouter(): void {
   window.addEventListener('popstate', () => {
-    void render(window.location.pathname);
+    void render(`${window.location.pathname}${window.location.search}${window.location.hash}`);
   });
 
-  void render(window.location.pathname);
+  void render(`${window.location.pathname}${window.location.search}${window.location.hash}`);
 }
 
 export { getCurrentRouteId, initRouter, navigate, render, switchLanguage };

@@ -460,7 +460,11 @@ async function me(req: Request, res: Response): Promise<void> {
     const accounts = getLinkedAccounts(req);
 
     if (user && typeof user.id === 'number') {
-      const dbUser = await findUserById(user.id);
+      const [dbUser, userTeams, pendingInvites] = await Promise.all([
+        findUserById(user.id),
+        listUserTeams(user.id),
+        getPendingInvitationsCountForEmail(user.email),
+      ]);
       if (dbUser) {
         user.ai_tokens_balance = dbUser.ai_tokens_balance !== undefined ? Number(dbUser.ai_tokens_balance) : user.ai_tokens_balance;
         user.avatar_url = dbUser.avatar_url ?? null;
@@ -469,23 +473,24 @@ async function me(req: Request, res: Response): Promise<void> {
         user.google_email = dbUser.google_email || null;
         user.has_password = Boolean(dbUser.password_hash);
         user.subscription_tier = dbUser.subscription_tier || user.subscription_tier || 'free';
+        if (dbUser.subscription_status) {
+          user.subscription_status = dbUser.subscription_status;
+        }
         user.two_factor_enabled = Boolean(dbUser.two_factor_enabled);
         user.username = dbUser.username;
       }
-      const billing = await purchaseService.getUserBillingInfo(user.id);
-      if (billing) {
-        user.subscription_tier = billing.subscription_tier;
-        user.subscription_status = billing.subscription_status;
+      if (!dbUser || dbUser.subscription_status === undefined) {
+        const billing = await purchaseService.getUserBillingInfo(user.id);
+        if (billing) {
+          user.subscription_tier = billing.subscription_tier;
+          user.subscription_status = billing.subscription_status;
+        }
       }
       user.permissions = await permissionService.getUserPermissions(
         user.id,
         user.subscription_tier,
         user.subscription_status
       );
-      const [userTeams, pendingInvites] = await Promise.all([
-        listUserTeams(user.id),
-        getPendingInvitationsCountForEmail(user.email),
-      ]);
       user.teams = userTeams;
       user.pending_invitations_count = pendingInvites;
       const requestedTeamId = extractRequestedTeamId(req);

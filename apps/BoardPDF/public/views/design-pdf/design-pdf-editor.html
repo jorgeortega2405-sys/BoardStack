@@ -23,6 +23,14 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
 <span class="menu-item__text" >Crear una copia</span>
 </button>
+<div class="menu-item-submenu-wrapper" data-ref="item-menu-file-tools-parent">
+<button type="button" class="menu-item menu-item--has-submenu" data-ref="btn-menu-file-tools">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#build"></use></svg>
+<span class="menu-item__text" data-i18n="collaborative.tools"></span>
+<svg class="component-icon menu-item__arrow" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+</button>
+<div class="menu-panel menu-panel--submenu menu-panel--w-260 is-hidden" data-ref="dropdown-submenu-tools">
+<div class="menu-panel__list" data-ref="dropdown-list-tools">
 <button type="button" class="menu-item" data-ref="btn-menu-file-crop">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
 <span class="menu-item__text" data-i18n="collaborative.tool_crop"></span>
@@ -35,6 +43,9 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
 <span class="menu-item__text" data-i18n="collaborative.tool_compare"></span>
 </button>
+</div>
+</div>
+</div>
 <div class="menu-item-submenu-wrapper" data-ref="item-menu-file-rulers-parent">
 <button type="button" class="menu-item menu-item--has-submenu" data-ref="btn-menu-file-rulers">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
@@ -116,15 +127,6 @@
 </button>
 <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-cloud-btn collaborative-top-icon-btn" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" data-i18n-aria="common.save_changes" aria-label="Guardar cambios">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
-</button>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-crop" data-i18n-tooltip="collaborative.tool_crop_tooltip" data-i18n-aria="collaborative.tool_crop_tooltip">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
-</button>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-redact" data-i18n-tooltip="collaborative.tool_redact_tooltip" data-i18n-aria="collaborative.tool_redact_tooltip">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility_off"></use></svg>
-</button>
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-compare" data-i18n-tooltip="collaborative.tool_compare_tooltip" data-i18n-aria="collaborative.tool_compare_tooltip">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
 </button>
 </div>
 <div class="collaborative-compare-top-bar is-hidden" data-ref="collaborative-compare-top-bar">

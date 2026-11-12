@@ -156,7 +156,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="collab-access-menu">
                     <div class="menu-panel__list" data-ref="list-access-options">
-                      <button type="button" class="menu-item ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
+                      <button type="button" class="menu-item menu-item--tall ${!isLinkMode ? 'is-selected' : ''}" data-ref="option-access-restricted" data-access="restricted">
                         <div class="menu-item__icon-wrapper">
                           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
                         </div>
@@ -167,7 +167,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
                         <svg class="component-icon menu-item__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                       </button>
 
-                      <button type="button" class="menu-item ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
+                      <button type="button" class="menu-item menu-item--tall ${isLinkMode ? 'is-selected' : ''}" data-ref="option-access-link" data-access="anyone_with_link">
                         <div class="menu-item__icon-wrapper">
                           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
                         </div>
@@ -242,7 +242,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
               <span data-ref="txt-copy-link">${t('collaborative.copy_link')}</span>
             </button>
-            <button type="button" class="component-button component-button--ghost component-button--h44 component-button--w-full" data-ref="btn-collab-customize-link">
+            <button type="button" class="component-button component-button--h44 component-button--w-full" data-ref="btn-collab-customize-link">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
               <span data-ref="txt-customize-link">${t('collaborative.customize_link')}</span>
             </button>

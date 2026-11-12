@@ -530,7 +530,7 @@ html, body {
 .layout-drawer__collapse-wrapper {
   align-items: center;
   background-color: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 9999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
@@ -800,7 +800,7 @@ html, body {
   overflow: hidden;
   background-color: var(--bg-surface);
   border-radius: 16px 16px 0 0;
-  border: 1px solid rgba(0, 0, 0, 0.125);
+  border: 1px solid #e2e8f0;
   border-bottom: none;
   box-sizing: border-box;
 }

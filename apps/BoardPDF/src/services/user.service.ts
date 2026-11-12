@@ -21,6 +21,7 @@ interface UserRecord extends RowDataPacket {
   last_login_ip?: string | null;
   password_hash?: string;
   registration_ip?: string | null;
+  subscription_status?: string;
   subscription_tier?: string;
   two_factor_enabled?: boolean | number;
   two_factor_recovery_codes?: string | null;
@@ -77,7 +78,7 @@ async function findUserById(id: number): Promise<UserRecord | null> {
 
   const pool = getDbPool();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, subscription_tier, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, subscription_tier, subscription_status, two_factor_enabled, ai_tokens_balance, ai_tokens_reset_at, created_at, google_id, google_email FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;

@@ -1,6 +1,7 @@
 import { initRouter, navigate } from './app-router.js';
 import { initGlobalDropzone } from './components/global-dropzone.component.js';
 import { setupLayoutScrollSync } from './components/layout.component.js';
+import { preloadRoute } from './config/routes.config.js';
 import { checkAuthSession } from './services/api.service.js';
 import { initI18n, translateElement } from './services/i18n.service.js';
 import { preloadTemplates } from './services/template.service.js';
@@ -56,7 +57,56 @@ function initScrollShadow(): void {
   document.addEventListener('scroll', handleScrollEvent, { capture: true, passive: true });
 }
 
+function resolvePrefetchTarget(targetEl: HTMLElement | null): string | null {
+  if (!targetEl) return null;
+
+  const declarativeNav = targetEl.closest<HTMLElement>('[data-navigate]');
+  if (declarativeNav) {
+    return declarativeNav.getAttribute('data-navigate');
+  }
+
+  const toolCard = targetEl.closest<HTMLElement>('[data-tool-path]');
+  if (toolCard) {
+    return toolCard.getAttribute('data-tool-path');
+  }
+
+  const railProjects = targetEl.closest<HTMLElement>('[data-ref="rail-item-projects"], [data-ref="btn-rail-projects"]');
+  if (railProjects) {
+    return '/projects';
+  }
+
+  const railHome = targetEl.closest<HTMLElement>('[data-ref="rail-item-home"], [data-ref="btn-rail-home"]');
+  if (railHome) {
+    return '/';
+  }
+
+  const railLogin = targetEl.closest<HTMLElement>('[data-ref="rail-item-login"], [data-ref="btn-rail-login"]');
+  if (railLogin) {
+    return '/login';
+  }
+
+  const anchor = targetEl.closest<HTMLAnchorElement>('a[href]');
+  if (anchor && anchor.origin === window.location.origin) {
+    const href = anchor.getAttribute('href');
+    if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:') && anchor.getAttribute('target') !== '_blank' && !anchor.hasAttribute('download')) {
+      return href;
+    }
+  }
+
+  return null;
+}
+
 function setupGlobalLinks(): void {
+  const handlePrefetch = (e: Event) => {
+    const dest = resolvePrefetchTarget(e.target as HTMLElement | null);
+    if (dest) {
+      preloadRoute(dest);
+    }
+  };
+
+  document.addEventListener('pointerover', handlePrefetch, { passive: true });
+  document.addEventListener('focusin', handlePrefetch, { passive: true });
+
   document.addEventListener('click', (e: MouseEvent) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
@@ -88,11 +138,8 @@ function setupGlobalLinks(): void {
 
 async function initApp(): Promise<void> {
   const currentPath = window.location.pathname;
-  if (currentPath === '/' || currentPath === '' || /^\/[a-z]{2}\/?$/i.test(currentPath)) {
-    preloadTemplates(['/views/components/sidebar.html', '/views/home/home.html']);
-  } else {
-    preloadTemplates(['/views/components/sidebar.html']);
-  }
+  preloadTemplates(['/views/components/sidebar.html']);
+  preloadRoute(currentPath);
   await Promise.all([initI18n(), checkAuthSession()]);
   initTooltips();
   initGlobalDropzone();

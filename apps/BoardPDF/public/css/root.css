@@ -427,16 +427,17 @@
   --text-disabled: #d1d5db;
   --text-inverse: #ffffff;
 
-  --border-color: rgba(0, 0, 0, 0.12);
+  --border-color: #e2e8f0;
   --border-color-hover: rgba(0, 0, 0, 0.35);
   --border-color-focus: #111827;
   --divider-color: rgba(0, 0, 0, 0.08);
 
   --border-light: rgba(0, 0, 0, 0.08);
   --border-lighter: rgba(0, 0, 0, 0.05);
-  --border-transparent-20: rgba(0, 0, 0, 0.12);
+  --border-transparent-20: #e2e8f0;
   --border-dynamic: 1px solid var(--border-color);
-  --border-subtle-translucent: #00000020;
+  --border-subtle: #e2e8f0;
+  --border-subtle-translucent: #e2e8f0;
 
   --overlay-dark: rgba(0, 0, 0, 0.45);
   --overlay-blur: none;

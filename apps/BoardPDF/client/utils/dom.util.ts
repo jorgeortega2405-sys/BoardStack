@@ -207,33 +207,53 @@ function bindNavigationLinks(
   }
 }
 
-const loadedStylesheets = new Set<string>();
+const loadedStylesheets = new Set<string>([
+  '/css/root.css',
+  '/css/components/component-layout.css',
+  '/css/components/component-buttons.css',
+  '/css/components/component-forms.css',
+  '/css/components/component-feedback.css',
+  '/css/components/component-overlays.css',
+  '/css/components/component-views.css',
+]);
+const pendingStylesheets = new Map<string, Promise<void>>();
 
 function loadStylesheet(href: string): Promise<void> {
   const cleanHref = href.split('?')[0];
   if (
     loadedStylesheets.has(href) ||
-    document.querySelector(`link[href="${href}"]`)
+    loadedStylesheets.has(cleanHref) ||
+    document.querySelector(`link[href="${href}"], link[href="${cleanHref}"]`)
   ) {
     loadedStylesheets.add(href);
     loadedStylesheets.add(cleanHref);
     return Promise.resolve();
   }
 
-  return new Promise((resolve, reject) => {
+  const existingPending = pendingStylesheets.get(cleanHref);
+  if (existingPending) {
+    return existingPending;
+  }
+
+  const promise = new Promise<void>((resolve, reject) => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = href;
     link.onload = () => {
+      pendingStylesheets.delete(cleanHref);
       loadedStylesheets.add(href);
       loadedStylesheets.add(cleanHref);
       resolve();
     };
     link.onerror = () => {
+      pendingStylesheets.delete(cleanHref);
       reject(new Error(t('ui.error_al_cargar_hoja_de_estilo')));
     };
     document.head.appendChild(link);
   });
+
+  pendingStylesheets.set(cleanHref, promise);
+  return promise;
 }
 
 function debounce<T extends (...args: any[]) => void>(fn: T, delayMs = 350): (...args: Parameters<T>) => void {

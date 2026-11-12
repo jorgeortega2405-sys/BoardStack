@@ -1,4 +1,5 @@
-import { getCurrentLanguage } from '../services/i18n.service.js';
+import { ensureLegalTranslationsLoaded, getCurrentLanguage } from '../services/i18n.service.js';
+import { preloadTemplates } from '../services/template.service.js';
 import { loadStylesheet } from '../utils/dom.util.js';
 import { isSupportedLanguage, normalizeLanguageCode } from '../utils/languages.util.js';
 import { SEO_ROUTES, getLocalizedPath, resolveRouteFromSlug } from './seo.config.js';
@@ -20,7 +21,7 @@ interface RouteDefinition {
 
 const APP_ROUTES: RouteDefinition[] = [
   {
-    handler: async (ctx) => {
+    handler: async () => {
       const { createHomeView } = await import('../views/home.view.js');
       return await createHomeView();
     },
@@ -28,270 +29,330 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/' || path === '',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfToMarkdownView } = await import('../views/tools/pdf-to-markdown/pdf-to-markdown.view.js');
+    handler: async () => {
+      const [, { createPdfToMarkdownView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-to-markdown/pdf-to-markdown.view.js'),
+      ]);
       return await createPdfToMarkdownView();
     },
     id: 'pdf-to-markdown',
     match: (path) => path === '/pdf-to-markdown' || path.startsWith('/pdf-to-markdown'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createSummarizePdfView } = await import('../views/tools/summarize-pdf/summarize-pdf.view.js');
+    handler: async () => {
+      const [, { createSummarizePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/summarize-pdf/summarize-pdf.view.js'),
+      ]);
       return await createSummarizePdfView();
     },
     id: 'summarize-pdf',
     match: (path) => path === '/summarize-pdf' || path.startsWith('/summarize-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createTranslatePdfView } = await import('../views/tools/translate-pdf/translate-pdf.view.js');
+    handler: async () => {
+      const [, { createTranslatePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/translate-pdf/translate-pdf.view.js'),
+      ]);
       return await createTranslatePdfView();
     },
     id: 'translate-pdf',
     match: (path) => path === '/translate-pdf' || path.startsWith('/translate-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createMergePdfView } = await import('../views/tools/merge-pdf/merge-pdf.view.js');
+    handler: async () => {
+      const [, { createMergePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/merge-pdf/merge-pdf.view.js'),
+      ]);
       return await createMergePdfView();
     },
     id: 'merge-pdf',
     match: (path) => path === '/merge-pdf' || path.startsWith('/merge-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createSplitPdfView } = await import('../views/tools/split-pdf/split-pdf.view.js');
+    handler: async () => {
+      const [, { createSplitPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/split-pdf/split-pdf.view.js'),
+      ]);
       return await createSplitPdfView();
     },
     id: 'split-pdf',
     match: (path) => path === '/split-pdf' || path.startsWith('/split-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createSplitPdfView } = await import('../views/tools/split-pdf/split-pdf.view.js');
+    handler: async () => {
+      const [, { createSplitPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/split-pdf/split-pdf.view.js'),
+      ]);
       return await createSplitPdfView('pages');
     },
     id: 'extract-pdf-pages',
     match: (path) => path === '/extract-pdf-pages' || path.startsWith('/extract-pdf-pages'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createRemovePdfPagesView } = await import('../views/tools/remove-pdf-pages/remove-pdf-pages.view.js');
+    handler: async () => {
+      const [, { createRemovePdfPagesView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/remove-pdf-pages/remove-pdf-pages.view.js'),
+      ]);
       return await createRemovePdfPagesView();
     },
     id: 'remove-pdf-pages',
     match: (path) => path === '/remove-pdf-pages' || path.startsWith('/remove-pdf-pages'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createOrganizePdfView } = await import('../views/tools/organize-pdf/organize-pdf.view.js');
+    handler: async () => {
+      const [, { createOrganizePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/organize-pdf/organize-pdf.view.js'),
+      ]);
       return await createOrganizePdfView();
     },
     id: 'organize-pdf',
     match: (path) => path === '/organize-pdf' || path.startsWith('/organize-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createRotatePdfView } = await import('../views/tools/rotate-pdf/rotate-pdf.view.js');
+    handler: async () => {
+      const [, { createRotatePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/rotate-pdf/rotate-pdf.view.js'),
+      ]);
       return await createRotatePdfView();
     },
     id: 'rotate-pdf',
     match: (path) => path === '/rotate-pdf' || path.startsWith('/rotate-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPageNumbersView } = await import('../views/tools/page-numbers/page-numbers.view.js');
+    handler: async () => {
+      const [, { createPageNumbersView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/page-numbers/page-numbers.view.js'),
+      ]);
       return await createPageNumbersView();
     },
     id: 'page-numbers',
     match: (path) => path === '/page-numbers' || path.startsWith('/page-numbers') || path === '/add-page-numbers' || path.startsWith('/add-page-numbers'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createCropPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
+    handler: async () => {
+      const [, { createCropPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/edit-pdf/edit-pdf.view.js'),
+      ]);
       return await createCropPdfView();
     },
     id: 'crop-pdf',
     match: (path) => path === '/crop-pdf' || path.startsWith('/crop-pdf') || path === '/tools/crop-pdf' || path.startsWith('/tools/crop-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createWatermarkPdfView } = await import('../views/tools/watermark-pdf/watermark-pdf.view.js');
+    handler: async () => {
+      const [, { createWatermarkPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/watermark-pdf/watermark-pdf.view.js'),
+      ]);
       return await createWatermarkPdfView();
     },
     id: 'watermark-pdf',
     match: (path) => path === '/watermark-pdf' || path.startsWith('/watermark-pdf') || path === '/add-watermark' || path.startsWith('/add-watermark'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createEditPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
+    handler: async () => {
+      const [, { createEditPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/edit-pdf/edit-pdf.view.js'),
+      ]);
       return await createEditPdfView();
     },
     id: 'edit-pdf',
     match: (path) => path === '/edit-pdf' || path.startsWith('/edit-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createProtectPdfView } = await import('../views/tools/protect-pdf/protect-pdf.view.js');
+    handler: async () => {
+      const [, { createProtectPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/protect-pdf/protect-pdf.view.js'),
+      ]);
       return await createProtectPdfView();
     },
     id: 'protect-pdf',
     match: (path) => path === '/protect-pdf' || path.startsWith('/protect-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createRedactPdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
+    handler: async () => {
+      const [, { createRedactPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/edit-pdf/edit-pdf.view.js'),
+      ]);
       return await createRedactPdfView();
     },
     id: 'redact-pdf',
     match: (path) => path === '/redact-pdf' || path.startsWith('/redact-pdf') || path === '/tools/redact-pdf' || path.startsWith('/tools/redact-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createUnlockPdfView } = await import('../views/tools/unlock-pdf/unlock-pdf.view.js');
+    handler: async () => {
+      const [, { createUnlockPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/unlock-pdf/unlock-pdf.view.js'),
+      ]);
       return await createUnlockPdfView();
     },
     id: 'unlock-pdf',
     match: (path) => path === '/unlock-pdf' || path.startsWith('/unlock-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
+    handler: async () => {
+      const [, { createPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-converter/pdf-converter.view.js'),
+      ]);
       return await createPdfConverterView('pdf-to-jpg');
     },
     id: 'pdf-to-jpg',
     match: (path) => path === '/pdf-to-jpg' || path.startsWith('/pdf-to-jpg'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
+    handler: async () => {
+      const [, { createPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-converter/pdf-converter.view.js'),
+      ]);
       return await createPdfConverterView('pdf-to-word');
     },
     id: 'pdf-to-word',
     match: (path) => path === '/pdf-to-word' || path.startsWith('/pdf-to-word'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
+    handler: async () => {
+      const [, { createPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-converter/pdf-converter.view.js'),
+      ]);
       return await createPdfConverterView('pdf-to-powerpoint');
     },
     id: 'pdf-to-powerpoint',
     match: (path) => path === '/pdf-to-powerpoint' || path.startsWith('/pdf-to-powerpoint'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
+    handler: async () => {
+      const [, { createPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-converter/pdf-converter.view.js'),
+      ]);
       return await createPdfConverterView('pdf-to-excel');
     },
     id: 'pdf-to-excel',
     match: (path) => path === '/pdf-to-excel' || path.startsWith('/pdf-to-excel'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createPdfConverterView } = await import('../views/tools/pdf-converter/pdf-converter.view.js');
+    handler: async () => {
+      const [, { createPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/pdf-converter/pdf-converter.view.js'),
+      ]);
       return await createPdfConverterView('pdf-to-pdfa');
     },
     id: 'pdf-to-pdfa',
     match: (path) => path === '/pdf-to-pdfa' || path.startsWith('/pdf-to-pdfa'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
+    handler: async () => {
+      const [, { createToPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/to-pdf-converter/to-pdf-converter.view.js'),
+      ]);
       return await createToPdfConverterView('jpg-to-pdf');
     },
     id: 'jpg-to-pdf',
     match: (path) => path === '/jpg-to-pdf' || path.startsWith('/jpg-to-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
+    handler: async () => {
+      const [, { createToPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/to-pdf-converter/to-pdf-converter.view.js'),
+      ]);
       return await createToPdfConverterView('word-to-pdf');
     },
     id: 'word-to-pdf',
     match: (path) => path === '/word-to-pdf' || path.startsWith('/word-to-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
+    handler: async () => {
+      const [, { createToPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/to-pdf-converter/to-pdf-converter.view.js'),
+      ]);
       return await createToPdfConverterView('powerpoint-to-pdf');
     },
     id: 'powerpoint-to-pdf',
     match: (path) => path === '/powerpoint-to-pdf' || path.startsWith('/powerpoint-to-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
+    handler: async () => {
+      const [, { createToPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/to-pdf-converter/to-pdf-converter.view.js'),
+      ]);
       return await createToPdfConverterView('excel-to-pdf');
     },
     id: 'excel-to-pdf',
     match: (path) => path === '/excel-to-pdf' || path.startsWith('/excel-to-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createToPdfConverterView } = await import('../views/tools/to-pdf-converter/to-pdf-converter.view.js');
+    handler: async () => {
+      const [, { createToPdfConverterView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/to-pdf-converter/to-pdf-converter.view.js'),
+      ]);
       return await createToPdfConverterView('html-to-pdf');
     },
     id: 'html-to-pdf',
     match: (path) => path === '/html-to-pdf' || path.startsWith('/html-to-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createComparePdfView } = await import('../views/tools/edit-pdf/edit-pdf.view.js');
+    handler: async () => {
+      const [, { createComparePdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/edit-pdf/edit-pdf.view.js'),
+      ]);
       return await createComparePdfView();
     },
     id: 'compare-pdf',
     match: (path) => path === '/compare-pdf' || path.startsWith('/compare-pdf') || path === '/tools/compare-pdf' || path.startsWith('/tools/compare-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createCompressPdfView } = await import('../views/tools/compress-pdf/compress-pdf.view.js');
+    handler: async () => {
+      const [, { createCompressPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/compress-pdf/compress-pdf.view.js'),
+      ]);
       return await createCompressPdfView();
     },
     id: 'compress-pdf',
     match: (path) => path === '/compress-pdf' || path.startsWith('/compress-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createRepairPdfView } = await import('../views/tools/repair-pdf/repair-pdf.view.js');
+    handler: async () => {
+      const [, { createRepairPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/repair-pdf/repair-pdf.view.js'),
+      ]);
       return await createRepairPdfView();
     },
     id: 'repair-pdf',
     match: (path) => path === '/repair-pdf' || path.startsWith('/repair-pdf'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createOcrPdfView } = await import('../views/tools/ocr-pdf/ocr-pdf.view.js');
+    handler: async () => {
+      const [, { createOcrPdfView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/tools/ocr-pdf/ocr-pdf.view.js'),
+      ]);
       return await createOcrPdfView();
     },
     id: 'ocr-pdf',
@@ -299,11 +360,10 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
-      await Promise.all([
-        loadStylesheet('/css/components/component-views.css'),
+      const [, { createDownloadReadyView }] = await Promise.all([
         loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/download-ready/download-ready.view.js'),
       ]);
-      const { createDownloadReadyView } = await import('../views/download-ready/download-ready.view.js');
       return await createDownloadReadyView(params.token);
     },
     id: 'download-ready',
@@ -319,8 +379,10 @@ const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async ({ params, query }) => {
       const docId = params.id || query.get('id') || '';
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createDesignPdfEditorView } = await import('../views/design-pdf/design-pdf-editor.view.js');
+      const [, { createDesignPdfEditorView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/design-pdf/design-pdf-editor.view.js'),
+      ]);
       return await createDesignPdfEditorView(docId, query);
     },
     id: 'design-pdf-editor',
@@ -363,9 +425,10 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ params }) => {
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      await loadStylesheet('/css/components/component-views.css');
-      const { createProjectsView } = await import('../views/projects/projects.view.js');
+      const [, { createProjectsView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/projects/projects.view.js'),
+      ]);
       return await createProjectsView(params?.folderId || null);
     },
     id: 'projects',
@@ -390,10 +453,11 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/design-pdf' || path === '/collaborative-pdf' || (path.startsWith('/design-pdf') && !path.startsWith('/design-pdf/editor')) || (path.startsWith('/collaborative-pdf') && !path.startsWith('/collaborative-pdf/editor')),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      await loadStylesheet('/css/tools/tool-workspace.css');
-      const { createWorkflowsPageView } = await import('../views/workflows.view.js');
+    handler: async () => {
+      const [, { createWorkflowsPageView }] = await Promise.all([
+        loadStylesheet('/css/tools/tool-workspace.css'),
+        import('../views/workflows.view.js'),
+      ]);
       return await createWorkflowsPageView();
     },
     id: 'workflows',
@@ -401,11 +465,19 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async (ctx) => {
-      const { getWorkflow } = await import('../services/workflow-storage.service.js');
-      const { getActiveWorkflowSession, startWorkflowSession } = await import('../services/workflow-session.service.js');
-      const { navigate } = await import('../services/navigation.service.js');
-      const { showToast } = await import('../services/toast.service.js');
-      const { t } = await import('../services/i18n.service.js');
+      const [
+        { getWorkflow },
+        { getActiveWorkflowSession, startWorkflowSession },
+        { navigate },
+        { showToast },
+        { t },
+      ] = await Promise.all([
+        import('../services/workflow-storage.service.js'),
+        import('../services/workflow-session.service.js'),
+        import('../services/navigation.service.js'),
+        import('../services/toast.service.js'),
+        import('../services/i18n.service.js'),
+      ]);
 
       const wf = getWorkflow(ctx.params.id || '');
       if (!wf || !wf.steps || wf.steps.length === 0) {
@@ -442,53 +514,59 @@ const APP_ROUTES: RouteDefinition[] = [
     },
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpFaqView } = await import('../views/help.view.js');
+    handler: async () => {
+      const { createHelpFaqView } = await import('../views/help/help-faq.view.js');
       return await createHelpFaqView();
     },
     id: 'help-faq',
     match: (path) => path === '/help/faq' || path === '/help-faq' || path === '/faq' || path === '/preguntas-frecuentes',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpPrivacyView } = await import('../views/help.view.js');
+    handler: async () => {
+      const [, { createHelpPrivacyView }] = await Promise.all([
+        ensureLegalTranslationsLoaded(),
+        import('../views/help/help-privacy.view.js'),
+      ]);
       return await createHelpPrivacyView();
     },
     id: 'help-privacy',
     match: (path) => path === '/help/privacy' || path === '/help-privacy' || path === '/privacy' || path === '/privacy-policy' || path === '/privacidad',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpTermsView } = await import('../views/help.view.js');
+    handler: async () => {
+      const [, { createHelpTermsView }] = await Promise.all([
+        ensureLegalTranslationsLoaded(),
+        import('../views/help/help-terms.view.js'),
+      ]);
       return await createHelpTermsView();
     },
     id: 'help-terms',
     match: (path) => path === '/help/terms' || path === '/help-terms' || path === '/terms' || path === '/terms-and-conditions' || path === '/terminos',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpCookiesView } = await import('../views/help.view.js');
+    handler: async () => {
+      const [, { createHelpCookiesView }] = await Promise.all([
+        ensureLegalTranslationsLoaded(),
+        import('../views/help/help-cookies.view.js'),
+      ]);
       return await createHelpCookiesView();
     },
     id: 'help-cookies',
     match: (path) => path === '/help/cookies' || path === '/help-cookies' || path === '/cookies' || path === '/cookie-policy',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpSecurityView } = await import('../views/help.view.js');
+    handler: async () => {
+      const [, { createHelpSecurityView }] = await Promise.all([
+        ensureLegalTranslationsLoaded(),
+        import('../views/help/help-security.view.js'),
+      ]);
       return await createHelpSecurityView();
     },
     id: 'help-security',
     match: (path) => path === '/help/security' || path === '/help-security' || path === '/security' || path === '/security-policy' || path === '/seguridad',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createAboutView } = await import('../views/about.view.js');
       return await createAboutView();
     },
@@ -496,8 +574,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/about' || path === '/sobre-nosotros' || path === '/help/about' || path.startsWith('/about'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createContactView } = await import('../views/contact.view.js');
       return await createContactView();
     },
@@ -505,8 +582,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/contact' || path === '/contacto' || path === '/help/contact' || path.startsWith('/contact'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createPricingView } = await import('../views/pricing.view.js');
       return await createPricingView();
     },
@@ -515,7 +591,6 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
       const { createCheckoutView } = await import('../views/checkout.view.js');
       return await createCheckoutView(ctx?.query);
     },
@@ -524,15 +599,14 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ path }) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createHelpCookiesView, createHelpFaqView, createHelpPrivacyView, createHelpSecurityView, createHelpTermsView } = await import('../views/help.view.js');
-
       switch (path) {
         case '/help/faq':
         case '/help-faq':
         case '/faq':
-        case '/preguntas-frecuentes':
+        case '/preguntas-frecuentes': {
+          const { createHelpFaqView } = await import('../views/help/help-faq.view.js');
           return await createHelpFaqView();
+        }
         case '/help/about':
         case '/about':
         case '/sobre-nosotros': {
@@ -549,38 +623,56 @@ const APP_ROUTES: RouteDefinition[] = [
         case '/help-privacy':
         case '/privacy':
         case '/privacy-policy':
-        case '/privacidad':
+        case '/privacidad': {
+          const [, { createHelpPrivacyView }] = await Promise.all([
+            ensureLegalTranslationsLoaded(),
+            import('../views/help/help-privacy.view.js'),
+          ]);
           return await createHelpPrivacyView();
+        }
         case '/help/terms':
         case '/help-terms':
         case '/terms':
         case '/terms-and-conditions':
-        case '/terminos':
+        case '/terminos': {
+          const [, { createHelpTermsView }] = await Promise.all([
+            ensureLegalTranslationsLoaded(),
+            import('../views/help/help-terms.view.js'),
+          ]);
           return await createHelpTermsView();
+        }
         case '/help/cookies':
         case '/help-cookies':
         case '/cookies':
-        case '/cookie-policy':
+        case '/cookie-policy': {
+          const [, { createHelpCookiesView }] = await Promise.all([
+            ensureLegalTranslationsLoaded(),
+            import('../views/help/help-cookies.view.js'),
+          ]);
           return await createHelpCookiesView();
+        }
         case '/help/security':
         case '/help-security':
         case '/security':
         case '/security-policy':
         case '/seguridad':
-          return await createHelpSecurityView();
-        default:
+        default: {
           if (path === '/help' || path === '/help/') {
             window.history.replaceState({}, '', '/help/security');
           }
+          const [, { createHelpSecurityView }] = await Promise.all([
+            ensureLegalTranslationsLoaded(),
+            import('../views/help/help-security.view.js'),
+          ]);
           return await createHelpSecurityView();
+        }
       }
     },
     id: 'help',
     match: (path) => path === '/help' || path === '/help/' || path.startsWith('/help/') || path.startsWith('/help-'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createLoginView } = await import('../views/auth.view.js');
       return await createLoginView();
     },
@@ -588,8 +680,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/login' || path.startsWith('/login'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createRegisterView } = await import('../views/auth.view.js');
       return await createRegisterView();
     },
@@ -597,8 +688,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/register' || path.startsWith('/register'),
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createForgotPasswordView } = await import('../views/auth.view.js');
       return await createForgotPasswordView();
     },
@@ -606,8 +696,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/forgot-password',
   },
   {
-    handler: async (ctx) => {
-      await loadStylesheet('/css/components/component-views.css');
+    handler: async () => {
       const { createResetPasswordView } = await import('../views/auth.view.js');
       return await createResetPasswordView();
     },
@@ -616,29 +705,34 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async ({ path }) => {
-      await loadStylesheet('/css/components/component-views.css');
-      const { createBillingView, createPurchasesView, createSecurityView, createTeamMembersView, createTeamSettingsView, createYourAccountView } = await import('../views/settings.view.js');
       if (path === '/settings' || path === '/settings/' || path === '/settings/your-account') {
         if (path === '/settings' || path === '/settings/') {
           window.history.replaceState({}, '', '/settings/your-account');
         }
+        const { createYourAccountView } = await import('../views/settings/settings-account.view.js');
         return await createYourAccountView();
       }
       if (path === '/settings/security') {
+        const { createSecurityView } = await import('../views/settings/settings-security.view.js');
         return await createSecurityView();
       }
       if (path === '/settings/billing') {
+        const { createBillingView } = await import('../views/settings/settings-billing.view.js');
         return await createBillingView();
       }
       if (path === '/settings/team/members' || path === '/settings/teams/members') {
+        const { createTeamMembersView } = await import('../views/settings/settings-team-members.view.js');
         return await createTeamMembersView();
       }
       if (path === '/settings/team' || path === '/settings/teams') {
+        const { createTeamSettingsView } = await import('../views/settings/settings-team.view.js');
         return await createTeamSettingsView();
       }
       if (path === '/settings/purchases' || path === '/settings/purchase-history') {
+        const { createPurchasesView } = await import('../views/settings/settings-purchases.view.js');
         return await createPurchasesView();
       }
+      const { createYourAccountView } = await import('../views/settings/settings-account.view.js');
       return await createYourAccountView();
     },
     id: 'settings',
@@ -646,7 +740,6 @@ const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      await loadStylesheet('/css/components/component-views.css');
       const { createTeamInviteView } = await import('../views/teams/invite.view.js');
       return await createTeamInviteView();
     },
@@ -654,7 +747,7 @@ const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/teams/invite' || path.startsWith('/teams/invite/'),
   },
   {
-    handler: async (ctx) => {
+    handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();
     },
@@ -802,5 +895,65 @@ function findRoute(path: string): MatchedRoute | null {
   return null;
 }
 
-export { APP_ROUTES, findRoute, parseRoutePath };
+const preloadedRoutes = new Set<string>();
+
+function preloadRoute(rawPath: string): void {
+  const matched = findRoute(rawPath);
+  if (!matched || preloadedRoutes.has(matched.routeId)) {
+    return;
+  }
+  preloadedRoutes.add(matched.routeId);
+
+  switch (matched.routeId) {
+    case 'home':
+      preloadTemplates(['/views/home/home.html']);
+      void import('../views/home.view.js');
+      break;
+    case 'projects':
+    case 'design-pdf':
+      preloadTemplates(['/views/projects/projects.html']);
+      void loadStylesheet('/css/tools/tool-workspace.css');
+      void import('../views/projects/projects.view.js');
+      break;
+    case 'design-pdf-editor':
+      preloadTemplates(['/views/design-pdf/design-pdf-editor.html']);
+      void loadStylesheet('/css/tools/tool-workspace.css');
+      void import('../views/design-pdf/design-pdf-editor.view.js');
+      break;
+    case 'workflows':
+      preloadTemplates(['/views/workflows/workflows.html']);
+      void loadStylesheet('/css/tools/tool-workspace.css');
+      void import('../views/workflows.view.js');
+      break;
+    case 'pricing':
+      preloadTemplates(['/views/pricing/pricing.html']);
+      void import('../views/pricing.view.js');
+      break;
+    case 'login':
+      preloadTemplates(['/views/auth/login.html']);
+      void import('../views/auth.view.js');
+      break;
+    case 'register':
+      preloadTemplates(['/views/auth/register.html']);
+      void import('../views/auth.view.js');
+      break;
+    case 'settings':
+      preloadTemplates(['/views/settings/account.html']);
+      void import('../views/settings/settings-account.view.js');
+      break;
+    case 'help-privacy':
+    case 'help-terms':
+    case 'help-cookies':
+    case 'help-security':
+      void ensureLegalTranslationsLoaded();
+      break;
+    default:
+      if (matched.routeId !== 'not-found' && matched.routeId !== 'about' && matched.routeId !== 'contact' && matched.routeId !== 'help-faq') {
+        void loadStylesheet('/css/tools/tool-workspace.css');
+      }
+      break;
+  }
+}
+
+export { APP_ROUTES, findRoute, parseRoutePath, preloadRoute };
 export type { MatchedRoute, RouteContext, RouteDefinition, RouteHandler };

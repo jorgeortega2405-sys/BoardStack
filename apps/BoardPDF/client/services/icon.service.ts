@@ -3,7 +3,7 @@ const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
 
 function renderIcons(root: ParentNode = document): void {
-  const targets = root.querySelectorAll<HTMLElement>('.component-icon, .material-symbols-rounded');
+  const targets = root.querySelectorAll<HTMLElement>('.component-icon:not(svg), .material-symbols-rounded:not(svg)');
 
   targets.forEach((node) => {
     if (node.tagName.toLowerCase() === 'svg') return;
