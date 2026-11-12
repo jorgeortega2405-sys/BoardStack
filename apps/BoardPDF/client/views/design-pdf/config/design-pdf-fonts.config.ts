@@ -5,6 +5,46 @@ interface GoogleFontItem {
   weights: number[];
 }
 
+interface FontCatalogEntry {
+  category?: 'display' | 'handwriting' | 'monospace' | 'sans-serif' | 'serif';
+  cssPreviewFamily: string;
+  family: string;
+  hasItalic: boolean;
+  isStandard: boolean;
+  labelKey?: string;
+  weights: number[];
+}
+
+const STANDARD_FONT_ENTRIES: FontCatalogEntry[] = [
+  {
+    category: 'sans-serif',
+    cssPreviewFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    family: 'Helvetica',
+    hasItalic: true,
+    isStandard: true,
+    labelKey: 'tools.font_standard_helvetica',
+    weights: [400, 700],
+  },
+  {
+    category: 'serif',
+    cssPreviewFamily: "'Times New Roman', Times, Georgia, serif",
+    family: 'Times-Roman',
+    hasItalic: true,
+    isStandard: true,
+    labelKey: 'tools.font_standard_times',
+    weights: [400, 700],
+  },
+  {
+    category: 'monospace',
+    cssPreviewFamily: "'Courier New', Courier, monospace",
+    family: 'Courier',
+    hasItalic: true,
+    isStandard: true,
+    labelKey: 'tools.font_standard_courier',
+    weights: [400, 700],
+  },
+];
+
 const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'sans-serif', family: 'Roboto', hasItalic: true, weights: [100, 300, 400, 500, 700, 900] },
   { category: 'sans-serif', family: 'Open Sans', hasItalic: true, weights: [300, 400, 500, 600, 700, 800] },
@@ -167,5 +207,25 @@ function loadGoogleFontPreview(family: string): void {
   document.head.appendChild(link);
 }
 
-export { GOOGLE_FONTS_CATALOG, WEIGHT_LABEL_KEYS, loadGoogleFont, loadGoogleFontPreview };
-export type { GoogleFontItem };
+function buildCombinedFontCatalog(): FontCatalogEntry[] {
+  const googleEntries: FontCatalogEntry[] = GOOGLE_FONTS_CATALOG.map((item: GoogleFontItem) => {
+    const safeFamily = item.family.replace(/['"\\;{}]/g, '');
+    const fallback = item.category === 'serif'
+      ? 'serif'
+      : item.category === 'monospace'
+        ? 'monospace'
+        : 'sans-serif';
+    return {
+      category: item.category,
+      cssPreviewFamily: `'${safeFamily}', ${fallback}`,
+      family: item.family,
+      hasItalic: item.hasItalic,
+      isStandard: false,
+      weights: item.weights,
+    };
+  });
+  return [...STANDARD_FONT_ENTRIES, ...googleEntries];
+}
+
+export { GOOGLE_FONTS_CATALOG, STANDARD_FONT_ENTRIES, WEIGHT_LABEL_KEYS, buildCombinedFontCatalog, loadGoogleFont, loadGoogleFontPreview };
+export type { FontCatalogEntry, GoogleFontItem };

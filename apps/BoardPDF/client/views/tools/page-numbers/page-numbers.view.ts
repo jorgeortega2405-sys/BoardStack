@@ -98,10 +98,8 @@ class PageNumbersController implements ViewController {
   }
 
   private initFontDrawer(): void {
-    const layoutEl = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-layout"]');
     const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-pn-font-drawer"]');
     const triggerLabel = this.container.querySelector<HTMLElement>('[data-ref="pn-font-selected-label"]');
-    if (!layoutEl) return;
 
     this.fontDrawer = new FontDrawerComponent({
       initialFont: {
@@ -109,7 +107,6 @@ class PageNumbersController implements ViewController {
         style: this.fontStyle,
         weight: this.fontWeight,
       },
-      mountPoint: layoutEl,
       onChange: (font: SelectedFontConfig) => {
         this.fontFamily = font.family;
         this.fontWeight = font.weight;
@@ -117,6 +114,7 @@ class PageNumbersController implements ViewController {
         if (triggerLabel) {
           triggerLabel.textContent = font.displayName;
         }
+        this.updateIndicators();
       },
       onClose: () => {
         triggerBtn?.classList.remove('is-active');

@@ -20,7 +20,7 @@ import { applyAvatarTier } from '../../utils/tier.util.js';
 import { bindChartInspectorEvents, renderChartSpreadsheet, switchChartAxisTab, switchChartInspectorTab, syncChartInspector } from './components/design-pdf-chart-inspector.component.js';
 import { alignElementToPage, moveElementLayer, reorderElementLayer } from './components/design-pdf-context-menu.component.js';
 import { renderLayersList } from './components/design-pdf-layers-panel.component.js';
-import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABEL_KEYS } from './config/design-pdf-fonts.config.js';
+import { FontCatalogEntry, GOOGLE_FONTS_CATALOG, GoogleFontItem, STANDARD_FONT_ENTRIES, WEIGHT_LABEL_KEYS, buildCombinedFontCatalog, loadGoogleFont, loadGoogleFontPreview } from './config/design-pdf-fonts.config.js';
 import { SHAPES_CATALOG } from './config/design-pdf-shapes.config.js';
 import { DesignPdfCanvasManager } from './managers/design-pdf-canvas.manager.js';
 import { DesignPdfHistoryManager } from './managers/design-pdf-history.manager.js';
@@ -5679,23 +5679,27 @@ class DesignPdfEditorController implements ViewController {
     const curWeight = Number(activeEl?.fontWeight || (activeEl?.isBold ? 700 : 400));
     const isItalic = activeEl?.fontStyle === 'italic' || !!activeEl?.isItalic;
 
-    let filtered = GOOGLE_FONTS_CATALOG;
+    let filtered: FontCatalogEntry[] = buildCombinedFontCatalog();
     if (this.fontActiveCategory !== 'all') {
       filtered = filtered.filter((f) => f.category === this.fontActiveCategory);
     }
     if (this.fontSearchQuery) {
       const q = this.fontSearchQuery.toLowerCase();
-      filtered = filtered.filter((f) => f.family.toLowerCase().includes(q));
+      filtered = filtered.filter((f) => {
+        const displayLabel = f.labelKey ? t(f.labelKey).toLowerCase() : f.family.toLowerCase();
+        return f.family.toLowerCase().includes(q) || displayLabel.includes(q);
+      });
     }
 
     if (filtered.length === 0) {
-      listContainer.innerHTML = '<div class="collaborative-panel-empty" style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px;">No se encontraron fuentes</div>';
+      listContainer.innerHTML = `<div class="collaborative-panel-empty" data-ref="font-list-empty">${t('collaborative.no_fonts_found')}</div>`;
       return;
     }
 
     listContainer.innerHTML = filtered.map((f) => {
       const isSelected = f.family.toLowerCase() === currentFamily.toLowerCase();
       const isExpanded = this.expandedFontFamily?.toLowerCase() === f.family.toLowerCase();
+      const displayLabel = f.labelKey ? t(f.labelKey) : f.family;
 
       const variantsHtml = isExpanded ? `
         <div class="collaborative-font-variants-inline" data-ref="font-variants-${f.family.replace(/\s+/g, '-')}">
@@ -5720,8 +5724,8 @@ class DesignPdfEditorController implements ViewController {
 
       return `
         <div class="collaborative-font-card${isSelected ? ' is-selected' : ''}${isExpanded ? ' is-expanded' : ''}" data-ref="font-card-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-          <button type="button" class="menu-item collaborative-font-card__header" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}">
-            <span class="menu-item__text" style="font-family: '${f.family}', sans-serif;">${f.family}</span>
+          <button type="button" class="menu-item collaborative-font-card__header" data-ref="font-item-${f.family.replace(/\s+/g, '-')}" data-font-family="${f.family}" data-is-standard="${f.isStandard ? '1' : '0'}">
+            <span class="menu-item__text" style="font-family: '${f.family}', sans-serif;">${displayLabel}</span>
             <svg class="component-icon collaborative-font-card__chevron menu-item__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </button>
           ${variantsHtml}
@@ -5738,7 +5742,8 @@ class DesignPdfEditorController implements ViewController {
       for (const entry of entries) {
         if (entry.isIntersecting) {
           const fam = entry.target.getAttribute('data-font-family');
-          if (fam) {
+          const isStd = entry.target.getAttribute('data-is-standard') === '1';
+          if (fam && !isStd) {
             loadGoogleFontPreview(fam);
             this.fontObserver?.unobserve(entry.target);
           }
@@ -5749,8 +5754,11 @@ class DesignPdfEditorController implements ViewController {
     const fontHeaders = listContainer.querySelectorAll<HTMLButtonElement>('.collaborative-font-card__header');
     fontHeaders.forEach((btn) => {
       const fam = btn.getAttribute('data-font-family');
+      const isStd = btn.getAttribute('data-is-standard') === '1';
       if (fam) {
-        this.fontObserver?.observe(btn);
+        if (!isStd) {
+          this.fontObserver?.observe(btn);
+        }
         btn.addEventListener('click', async () => {
           await this.applyFontFamily(fam);
           this.expandedFontFamily = this.expandedFontFamily?.toLowerCase() === fam.toLowerCase() ? null : fam;
@@ -5768,7 +5776,9 @@ class DesignPdfEditorController implements ViewController {
         if (activeEl) {
           activeEl.fontWeight = weightNum;
           activeEl.isBold = weightNum >= 600;
-          if (fam) await loadGoogleFont(fam, [weightNum], activeEl.fontStyle === 'italic');
+          if (fam && !STANDARD_FONT_ENTRIES.some((s) => s.family.toLowerCase() === fam.toLowerCase())) {
+            await loadGoogleFont(fam, [weightNum], activeEl.fontStyle === 'italic');
+          }
           const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
           if (elNode) {
             elNode.style.fontWeight = `${weightNum}`;
@@ -5782,12 +5792,12 @@ class DesignPdfEditorController implements ViewController {
             }
           }
           this.updateTransformBoxPosition();
-    if (this.showRulersAndGuides) {
-      this.updateRulers();
-    }
-    if (this.isLayersPanelOpen) {
-      this.renderLayersList();
-    }
+          if (this.showRulersAndGuides) {
+            this.updateRulers();
+          }
+          if (this.isLayersPanelOpen) {
+            this.renderLayersList();
+          }
           this.updateContextToolbar();
           this.setModified(true);
           this.broadcastElementUpdate(activeEl);
@@ -5806,7 +5816,9 @@ class DesignPdfEditorController implements ViewController {
           const nextStyle = activeEl.fontStyle === 'italic' ? 'normal' : 'italic';
           activeEl.fontStyle = nextStyle;
           activeEl.isItalic = nextStyle === 'italic';
-          if (fam) await loadGoogleFont(fam, undefined, true);
+          if (fam && !STANDARD_FONT_ENTRIES.some((s) => s.family.toLowerCase() === fam.toLowerCase())) {
+            await loadGoogleFont(fam, undefined, true);
+          }
           const elNode = this.container.querySelector<HTMLElement>(`[data-element-id="${activeEl.id}"]`);
           if (elNode) {
             elNode.style.fontStyle = nextStyle;
@@ -5820,12 +5832,12 @@ class DesignPdfEditorController implements ViewController {
             }
           }
           this.updateTransformBoxPosition();
-    if (this.showRulersAndGuides) {
-      this.updateRulers();
-    }
-    if (this.isLayersPanelOpen) {
-      this.renderLayersList();
-    }
+          if (this.showRulersAndGuides) {
+            this.updateRulers();
+          }
+          if (this.isLayersPanelOpen) {
+            this.renderLayersList();
+          }
           this.updateContextToolbar();
           this.setModified(true);
           this.broadcastElementUpdate(activeEl);
@@ -5837,8 +5849,11 @@ class DesignPdfEditorController implements ViewController {
   }
 
   private async applyFontFamily(family: string): Promise<void> {
-    const fontItem = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
-    await loadGoogleFont(family, fontItem?.weights, fontItem?.hasItalic);
+    const isStd = STANDARD_FONT_ENTRIES.some((s) => s.family.toLowerCase() === family.toLowerCase());
+    if (!isStd) {
+      const fontItem = GOOGLE_FONTS_CATALOG.find((f) => f.family.toLowerCase() === family.toLowerCase());
+      await loadGoogleFont(family, fontItem?.weights, fontItem?.hasItalic);
+    }
 
     const targetIds = new Set<string>();
     if (this.selectedElementIds.size > 0) {

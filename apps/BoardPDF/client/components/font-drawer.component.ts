@@ -1,7 +1,7 @@
 import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { debounce } from '../utils/dom.util.js';
-import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview } from '../views/design-pdf/config/design-pdf-fonts.config.js';
+import { FontCatalogEntry, buildCombinedFontCatalog, loadGoogleFont, loadGoogleFontPreview } from '../views/design-pdf/config/design-pdf-fonts.config.js';
 
 interface SelectedFontConfig {
   displayName: string;
@@ -12,67 +12,12 @@ interface SelectedFontConfig {
 
 interface FontDrawerOptions {
   initialFont?: Partial<SelectedFontConfig>;
-  mountPoint: HTMLElement;
+  mountPoint?: HTMLElement;
   onChange?: (font: SelectedFontConfig) => void;
   onClose?: () => void;
 }
 
-interface FontCatalogEntry {
-  cssPreviewFamily: string;
-  family: string;
-  hasItalic: boolean;
-  isStandard: boolean;
-  labelKey?: string;
-  weights: number[];
-}
-
-const STANDARD_FONT_ENTRIES: FontCatalogEntry[] = [
-  {
-    cssPreviewFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-    family: 'Helvetica',
-    hasItalic: true,
-    isStandard: true,
-    labelKey: 'tools.font_standard_helvetica',
-    weights: [400, 700],
-  },
-  {
-    cssPreviewFamily: "'Times New Roman', Times, Georgia, serif",
-    family: 'Times-Roman',
-    hasItalic: true,
-    isStandard: true,
-    labelKey: 'tools.font_standard_times',
-    weights: [400, 700],
-  },
-  {
-    cssPreviewFamily: "'Courier New', Courier, monospace",
-    family: 'Courier',
-    hasItalic: true,
-    isStandard: true,
-    labelKey: 'tools.font_standard_courier',
-    weights: [400, 700],
-  },
-];
-
 let drawerInstanceSeq = 0;
-
-function buildCombinedFontCatalog(): FontCatalogEntry[] {
-  const googleEntries: FontCatalogEntry[] = GOOGLE_FONTS_CATALOG.map((item: GoogleFontItem) => {
-    const safeFamily = item.family.replace(/['"\\;{}]/g, '');
-    const fallback = item.category === 'serif'
-      ? 'serif'
-      : item.category === 'monospace'
-        ? 'monospace'
-        : 'sans-serif';
-    return {
-      cssPreviewFamily: `'${safeFamily}', ${fallback}`,
-      family: item.family,
-      hasItalic: item.hasItalic,
-      isStandard: false,
-      weights: item.weights,
-    };
-  });
-  return [...STANDARD_FONT_ENTRIES, ...googleEntries];
-}
 
 class FontDrawerComponent {
   private abortController: AbortController | null = null;
@@ -82,7 +27,7 @@ class FontDrawerComponent {
   private fontObserver: IntersectionObserver | null = null;
   private isOpened = false;
   private listAbortController: AbortController | null = null;
-  private mountPoint: HTMLElement;
+  private mountPoint?: HTMLElement;
   private onChange?: (font: SelectedFontConfig) => void;
   private onClose?: () => void;
   private searchQuery = '';
@@ -90,7 +35,7 @@ class FontDrawerComponent {
   private styleEl: HTMLStyleElement | null = null;
   private uid: string;
 
-  constructor(options: FontDrawerOptions) {
+  constructor(options: FontDrawerOptions = {}) {
     drawerInstanceSeq += 1;
     this.uid = `font-drawer-${drawerInstanceSeq}`;
     this.mountPoint = options.mountPoint;
@@ -129,6 +74,7 @@ class FontDrawerComponent {
     this.styleEl = null;
     this.drawerEl?.remove();
     this.drawerEl = null;
+    this.isOpened = false;
   }
 
   public getSelectedFont(): SelectedFontConfig {
@@ -141,10 +87,31 @@ class FontDrawerComponent {
 
   public open(): void {
     if (!this.drawerEl || this.isOpened) return;
+    const sidebar = this.drawerEl.parentElement;
+    if (sidebar) {
+      const otherDrawers = sidebar.querySelectorAll<HTMLElement>('[data-ref="layout-drawer"]');
+      otherDrawers.forEach((d) => {
+        if (d !== this.drawerEl) d.classList.remove('is-open');
+      });
+    }
     this.isOpened = true;
     this.drawerEl.classList.add('is-open');
     const selectedCard = this.drawerEl.querySelector<HTMLElement>('.collaborative-font-card.is-selected');
     selectedCard?.scrollIntoView({ block: 'nearest' });
+  }
+
+  public setSelectedFont(font: Partial<SelectedFontConfig>): void {
+    const nextFamily = font.family || this.selected.family;
+    const nextWeight = Number(font.weight) || this.selected.weight;
+    const nextStyle = font.style || this.selected.style;
+    this.selected = {
+      displayName: this._resolveDisplayName(nextFamily, nextWeight, nextStyle),
+      family: nextFamily,
+      style: nextStyle,
+      weight: nextWeight,
+    };
+    this.expandedFamily = nextFamily;
+    this._renderList();
   }
 
   public toggle(): void {
@@ -161,10 +128,22 @@ class FontDrawerComponent {
     const signal = this.abortController.signal;
     if (!this.drawerEl) return;
 
-    const collapseBtn = this.drawerEl.querySelector<HTMLButtonElement>('[data-ref="btn-font-drawer-collapse"]');
-    const mobileCloseBtn = this.drawerEl.querySelector<HTMLButtonElement>('[data-ref="btn-font-drawer-mobile-close"]');
-    collapseBtn?.addEventListener('click', () => this.close(), { signal });
-    mobileCloseBtn?.addEventListener('click', () => this.close(), { signal });
+    const collapseBtn = this.drawerEl.querySelector<HTMLButtonElement>('[data-ref="btn-drawer-collapse"]');
+    const mobileCloseBtn = this.drawerEl.querySelector<HTMLButtonElement>('[data-ref="btn-drawer-mobile-close"]');
+    collapseBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.close();
+    }, { signal });
+    mobileCloseBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.close();
+    }, { signal });
+
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && this.isOpened) {
+        this.close();
+      }
+    }, { signal });
 
     const searchInput = this.drawerEl.querySelector<HTMLInputElement>('[data-ref="input-search-fonts"]');
     const clearSearchBtn = this.drawerEl.querySelector<HTMLButtonElement>('[data-ref="btn-clear-fonts-search"]');
@@ -226,47 +205,50 @@ class FontDrawerComponent {
   private _mount(): void {
     this._ensurePreviewStyles();
 
-    const drawer = document.createElement('aside');
-    drawer.className = 'layout-drawer tool-font-drawer';
-    drawer.setAttribute('data-ref', 'tool-font-drawer');
+    const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]') || this.mountPoint || document.body;
+
+    const drawer = document.createElement('div');
+    drawer.className = 'layout-drawer';
+    drawer.setAttribute('data-ref', 'layout-drawer');
     drawer.setAttribute('data-font-drawer', this.uid);
 
     drawer.innerHTML =
       '<div class="layout-drawer__collapse-wrapper">' +
-        `<button type="button" class="layout-drawer__collapse-pill" data-ref="btn-font-drawer-collapse" aria-label="${t('common.close')}">` +
+        `<button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" aria-label="${t('common.close')}">` +
           '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>' +
         '</button>' +
       '</div>' +
-      '<div class="layout-drawer__header collaborative-drawer-header" data-ref="font-drawer-header">' +
-        '<div class="collaborative-drawer-header__left" data-ref="font-drawer-header-left">' +
-          '<div class="component-title-badge" data-ref="font-drawer-title-badge">' +
-            `<h1 class="component-title-badge__text" data-ref="font-drawer-title">${t('tools.fonts_drawer_title')}</h1>` +
-          '</div>' +
+      '<div class="layout-drawer__header collaborative-drawer-header" data-ref="drawer-header">' +
+        '<div class="collaborative-drawer-header__left" data-ref="drawer-header-left">' +
+          '<svg class="component-icon collaborative-drawer-header__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>' +
+          `<span class="collaborative-drawer-header__title" data-ref="side-panel-title">${t('tools.fonts_drawer_title')}</span>` +
         '</div>' +
-        `<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 tool-drawer__mobile-close" data-ref="btn-font-drawer-mobile-close" aria-label="${t('common.close')}">` +
+        `<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-drawer-mobile-close" data-ref="btn-drawer-mobile-close" aria-label="${t('common.close')}">` +
           '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>' +
         '</button>' +
       '</div>' +
-      '<div class="layout-drawer__body tool-font-drawer__body" data-ref="font-drawer-body">' +
-        '<div class="collaborative-fonts-panel" data-ref="fonts-panel-wrapper">' +
-          '<div class="collaborative-fonts-search" data-ref="fonts-search-container">' +
-            '<div class="component-search component-search--full" data-ref="fonts-search-box">' +
-              '<div class="component-search__icon" data-ref="fonts-search-icon">' +
-                '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>' +
+      '<div class="layout-drawer__body" data-ref="side-panel-body">' +
+        '<div class="collaborative-panel-section" data-ref="panel-section-fonts">' +
+          '<div class="collaborative-fonts-panel" data-ref="fonts-panel-wrapper">' +
+            '<div class="collaborative-fonts-search" data-ref="fonts-search-container">' +
+              '<div class="component-search component-search--full" data-ref="fonts-search-box">' +
+                '<div class="component-search__icon" data-ref="fonts-search-icon">' +
+                  '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>' +
+                '</div>' +
+                '<div class="component-search__input-box" data-ref="fonts-search-input-box">' +
+                  `<input class="component-search__input" data-ref="input-search-fonts" placeholder="${t('collaborative.search_fonts')}" type="text" autocomplete="off" />` +
+                '</div>' +
+                `<button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-fonts-search" aria-label="${t('collaborative.clear_search')}">` +
+                  '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>' +
+                '</button>' +
               '</div>' +
-              '<div class="component-search__input-box" data-ref="fonts-search-input-box">' +
-                `<input class="component-search__input" data-ref="input-search-fonts" placeholder="${t('tools.search_fonts_placeholder')}" type="text" autocomplete="off" />` +
-              '</div>' +
-              `<button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-fonts-search" aria-label="${t('common.clear_search')}">` +
-                '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>' +
-              '</button>' +
             '</div>' +
+            '<div class="collaborative-font-list" data-ref="font-list-container"></div>' +
           '</div>' +
-          '<div class="collaborative-font-list" data-ref="font-list-container"></div>' +
         '</div>' +
       '</div>';
 
-    this.mountPoint.prepend(drawer);
+    sidebar.appendChild(drawer);
     this.drawerEl = drawer;
     renderIcons(drawer);
   }
@@ -292,7 +274,7 @@ class FontDrawerComponent {
       });
 
     if (filtered.length === 0) {
-      listContainer.innerHTML = `<div class="tool-font-empty" data-ref="font-drawer-empty">${t('tools.fonts_not_found')}</div>`;
+      listContainer.innerHTML = `<div class="collaborative-panel-empty" data-ref="font-drawer-empty">${t('tools.fonts_not_found')}</div>`;
       return;
     }
 

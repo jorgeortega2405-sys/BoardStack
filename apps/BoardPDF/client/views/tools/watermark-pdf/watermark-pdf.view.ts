@@ -100,10 +100,8 @@ class WatermarkPdfController implements ViewController {
   }
 
   private initFontDrawer(): void {
-    const layoutEl = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-layout"]');
     const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-wm-font-drawer"]');
     const triggerLabel = this.container.querySelector<HTMLElement>('[data-ref="wm-font-selected-label"]');
-    if (!layoutEl) return;
 
     this.fontDrawer = new FontDrawerComponent({
       initialFont: {
@@ -111,7 +109,6 @@ class WatermarkPdfController implements ViewController {
         style: this.fontStyle,
         weight: this.fontWeight,
       },
-      mountPoint: layoutEl,
       onChange: (font: SelectedFontConfig) => {
         this.fontFamily = font.family;
         this.fontWeight = font.weight;
