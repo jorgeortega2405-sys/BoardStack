@@ -3,6 +3,7 @@ FROM node:20-bookworm-slim AS base
 WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
     python3 python3-pip ghostscript qpdf poppler-utils wget \
     libreoffice-nogui \
     fonts-dejavu \
@@ -55,6 +56,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
     python3 python3-pip ghostscript qpdf poppler-utils wget \
     libreoffice-nogui \
     fonts-dejavu \

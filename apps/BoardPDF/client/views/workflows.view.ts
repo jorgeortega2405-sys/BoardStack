@@ -2,7 +2,7 @@ import { getFooterHtml, mountSiteFooter } from '../components/footer.component.j
 import { renderWorkflowBuilderModalBody, renderWorkflowEmptyStepsState, renderWorkflowPipelineStepItem } from '../components/modal-templates.js';
 import { openDeleteWorkflowModal, openModal } from '../components/modal.component.js';
 import { bindWorkflowDropdowns, renderWorkflowCardHtml } from '../components/workflow-card.component.js';
-import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
+import { WORKFLOW_TOOLS, getWorkflowToolName } from '../config/workflow-tools.config.js';
 import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -168,9 +168,9 @@ class WorkflowsController {
         stepsListEl.innerHTML = renderWorkflowEmptyStepsState();
       } else {
         stepsListEl.innerHTML = currentSteps.map((step, idx) => {
-          const tool = WORKFLOW_TOOLS.find((t) => t.id === step.tool);
-          const toolName = tool ? tool.name : step.tool;
-          const toolIcon = tool ? tool.icon : 'widgets';
+          const tool = WORKFLOW_TOOLS.find((item) => item.id === step.tool);
+          const toolName = getWorkflowToolName(step.tool);
+          const toolIcon = tool ? tool.icon : 'apps';
           return renderWorkflowPipelineStepItem(idx + 1, toolName, toolIcon, step.id);
         }).join('');
       }
@@ -249,7 +249,7 @@ class WorkflowsController {
       listEl.innerHTML = WORKFLOW_TOOLS.map((tool) => `
         <button type="button" class="menu-item" data-tool-id="${tool.id}">
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${tool.icon}"></use></svg>
-          <span class="menu-item__text">${this.escape(tool.name)}</span>
+          <span class="menu-item__text">${this.escape(t(tool.nameKey))}</span>
           ${tool.isTerminal ? `<span class="component-badge component-badge--sm">${t('workflows.terminal_badge')}</span>` : ''}
         </button>
       `).join('');
@@ -259,14 +259,14 @@ class WorkflowsController {
       toolDropdownCtrl = setupDropdown(toolWrapper, {
         onSelect: (_val: unknown, item?: HTMLElement) => {
           const toolId = item?.getAttribute('data-tool-id');
-          const found = WORKFLOW_TOOLS.find((t) => t.id === toolId);
+          const found = WORKFLOW_TOOLS.find((itemTool) => itemTool.id === toolId);
           if (found) {
             selectedTool = found;
             if (selectedIconEl) {
               showElement(selectedIconEl);
               selectedIconEl.innerHTML = `<use href="/icons.svg#${found.icon}"></use>`;
             }
-            if (selectedTxtEl) selectedTxtEl.textContent = found.name;
+            if (selectedTxtEl) selectedTxtEl.textContent = t(found.nameKey);
             renderToolOptions(found);
           }
         },

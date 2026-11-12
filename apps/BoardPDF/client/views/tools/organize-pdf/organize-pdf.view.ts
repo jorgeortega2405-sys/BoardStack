@@ -9,9 +9,17 @@ import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { SortableGridController, ToolSidebarModalController, hideElement, setupSortableGrid, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
-import { formatBytes } from '../../../utils/format.util.js';
+import { SortableGridController, hideElement, setupSortableGrid, showElement } from '../../../utils/dom.util.js';
 import { OrganizePageItem, OrganizePdfResponseData } from './organize-pdf.types.js';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 class OrganizePdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -23,7 +31,6 @@ class OrganizePdfController implements ViewController {
   private pages: OrganizePageItem[] = [];
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
   private sortableInstance: SortableGridController | null = null;
 
   constructor(container: HTMLElement) {
@@ -35,17 +42,24 @@ class OrganizePdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.ordena_reorganiza_y_gira_las_paginas_de_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Ordenar PDF',
+        title: t('tools.organize_pdf_title'),
+      },
+      onRetry: () => {
+        if (this.currentFile) {
+          this.phaseManager?.setPhase('workspace');
+        } else {
+          this.resetToInitial();
+        }
       },
       toolId: 'organize-pdf',
-      toolName: 'Ordenar PDF',
+      toolName: t('tools.organize_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'pdf-items-card',
     });
@@ -58,10 +72,6 @@ class OrganizePdfController implements ViewController {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
-    }
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
     }
     if (this.sortableInstance) {
       this.sortableInstance.destroy();
@@ -82,21 +92,6 @@ class OrganizePdfController implements ViewController {
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-sidebar"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="organize-sidebar-drag-zone"]');
-    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-
-    this.sidebarModal = setupToolSidebarModal({
-      backdrop,
-      closeBtn,
-      dragZone,
-      settingsBtn,
-      sidebar,
-      signal,
-    });
 
     const rotateAllBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all"]');
     const resetOrderBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-order"]');
@@ -142,11 +137,12 @@ class OrganizePdfController implements ViewController {
 
   public async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
+    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast(t('ui.selecciona_unicamente_un_documento_en_fo'), 'danger');
+      this.showError(t('tools.only_pdf_allowed'));
       return;
     }
 
@@ -156,7 +152,8 @@ class OrganizePdfController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Organizar PDF',
+        toolId: 'organize-pdf',
+        toolName: t('tools.organize_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -198,7 +195,7 @@ class OrganizePdfController implements ViewController {
         void this.generatePageThumbnail(item);
       }
     } catch {
-      showToast(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'), 'danger');
+      this.showError(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'));
       this.resetToInitial();
     }
   }
@@ -227,11 +224,21 @@ class OrganizePdfController implements ViewController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
         if (sheet) {
-          const isRotated = item.rotation !== 0;
-          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="Página ${item.pageNum}" style="${isRotated ? `transform: rotate(${item.rotation}deg);` : ''}" />`;
+          this.applySheetRotation(sheet, item.rotation);
+          const altText = escapeHtml(t('tools.page_label', { num: item.pageNum }));
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${item.id}" src="${item.thumbnailDataUrl}" alt="${altText}" />`;
         }
       }
     } catch {}
+  }
+
+  private applySheetRotation(sheet: HTMLElement | null, rotation: number): void {
+    if (!sheet) return;
+    if (rotation === 0) {
+      sheet.removeAttribute('data-rotation');
+    } else {
+      sheet.setAttribute('data-rotation', rotation.toString());
+    }
   }
 
   private renderFilesView(): void {
@@ -240,18 +247,10 @@ class OrganizePdfController implements ViewController {
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
 
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput && this.currentFile) {
       const base = this.currentFile.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_organizado.pdf`;
-    }
-
-    const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
-    if (countBadge) {
-      countBadge.textContent = `${this.pages.length} págs.`;
+      outputNameInput.value = `${base}_${t('tools.organize_filename_suffix')}.pdf`;
     }
 
     this.renderPagesGrid();
@@ -264,31 +263,36 @@ class OrganizePdfController implements ViewController {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="organize-pages-grid"]');
     if (!grid) return;
 
+    const rotateLabel = escapeHtml(t('tools.organize_rotate_page_aria'));
+    const removeLabel = escapeHtml(t('tools.organize_remove_page_aria'));
+
     grid.innerHTML = this.pages.map((p, index) => {
       const isMoved = p.originalIndex !== index;
       const isRotated = p.rotation !== 0;
+      const rotationAttr = isRotated ? ` data-rotation="${p.rotation}"` : '';
+      const altText = escapeHtml(t('tools.page_label', { num: p.pageNum }));
       return `
         <div class="pdf-card organize-page-card" data-ref="card-${p.id}" data-page-id="${p.id}" data-page-index="${index}">
           <div class="pdf-card__actions">
-            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-${p.id}" data-action="rotate" data-page-id="${p.id}" title="Girar página" aria-label="Girar página">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
+            <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-rotate-${p.id}" data-action="rotate" data-page-id="${p.id}" title="${rotateLabel}" aria-label="${rotateLabel}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
             </button>
-            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-${p.id}" data-action="remove" data-page-id="${p.id}" title="Eliminar página" aria-label="Eliminar página">
+            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-${p.id}" data-action="remove" data-page-id="${p.id}" title="${removeLabel}" aria-label="${removeLabel}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
           <div class="pdf-card__sheet-wrapper">
-            <div class="pdf-card__sheet" data-ref="sheet-${p.id}">
+            <div class="pdf-card__sheet" data-ref="sheet-${p.id}"${rotationAttr}>
               ${
                 p.thumbnailDataUrl
-                  ? `<img class="pdf-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="Página ${p.pageNum}" style="${isRotated ? `transform: rotate(${p.rotation}deg);` : ''}" />`
+                  ? `<img class="pdf-card__canvas" data-ref="img-${p.id}" src="${p.thumbnailDataUrl}" alt="${altText}" />`
                   : `<div class="pdf-card__spinner"></div>`
               }
             </div>
           </div>
           <div class="pdf-card__footer">
-            <span class="pdf-card__title">${t('tools.organize_pdf_page') || 'Página'} ${index + 1}</span>
-            ${isMoved ? `<span class="pdf-card__sub">(orig. ${p.originalIndex + 1})</span>` : ''}
+            <span class="pdf-card__title">${escapeHtml(t('tools.page_label', { num: index + 1 }))}</span>
+            ${isMoved ? `<span class="pdf-card__sub">${escapeHtml(t('tools.organize_origin_label', { num: p.originalIndex + 1 }))}</span>` : ''}
             ${isRotated ? `<span class="pdf-card__badge" data-ref="rot-badge-${p.id}">+${p.rotation}°</span>` : ''}
           </div>
         </div>
@@ -332,7 +336,7 @@ class OrganizePdfController implements ViewController {
         card.setAttribute('data-page-index', `${index}`);
         const pageTitle = card.querySelector<HTMLElement>('.pdf-card__title');
         if (pageTitle) {
-          pageTitle.textContent = `${t('tools.organize_pdf_page') || 'Página'} ${index + 1}`;
+          pageTitle.textContent = t('tools.page_label', { num: index + 1 });
         }
         let origSub = card.querySelector<HTMLElement>('.pdf-card__sub');
         if (p.originalIndex !== index) {
@@ -341,7 +345,7 @@ class OrganizePdfController implements ViewController {
             origSub.className = 'pdf-card__sub';
             card.querySelector('.pdf-card__footer')?.appendChild(origSub);
           }
-          origSub.textContent = `(orig. ${p.originalIndex + 1})`;
+          origSub.textContent = t('tools.organize_origin_label', { num: p.originalIndex + 1 });
         } else if (origSub) {
           origSub.remove();
         }
@@ -349,16 +353,9 @@ class OrganizePdfController implements ViewController {
     });
   }
 
-  private rotatePage(pageId: string): void {
-    const item = this.pages.find((p) => p.id === pageId);
-    if (!item) return;
-
-    item.rotation = (item.rotation + 90) % 360;
-
-    const img = this.container.querySelector<HTMLElement>(`[data-ref="img-${item.id}"]`);
-    if (img) {
-      img.style.transform = item.rotation !== 0 ? `rotate(${item.rotation}deg)` : '';
-    }
+  private updatePageRotationVisual(item: OrganizePageItem): void {
+    const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
+    this.applySheetRotation(sheet, item.rotation);
 
     const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${item.id}"]`);
     if (card) {
@@ -377,29 +374,19 @@ class OrganizePdfController implements ViewController {
     }
   }
 
+  private rotatePage(pageId: string): void {
+    const item = this.pages.find((p) => p.id === pageId);
+    if (!item) return;
+
+    item.rotation = (item.rotation + 90) % 360;
+    this.updatePageRotationVisual(item);
+  }
+
   private rotateAllPages(): void {
     if (this.pages.length === 0) return;
     this.pages.forEach((p) => {
       p.rotation = (p.rotation + 90) % 360;
-      const img = this.container.querySelector<HTMLElement>(`[data-ref="img-${p.id}"]`);
-      if (img) {
-        img.style.transform = p.rotation !== 0 ? `rotate(${p.rotation}deg)` : '';
-      }
-      const card = this.container.querySelector<HTMLElement>(`[data-ref="card-${p.id}"]`);
-      if (card) {
-        let rotBadge = card.querySelector<HTMLElement>(`[data-ref="rot-badge-${p.id}"]`);
-        if (p.rotation !== 0) {
-          if (!rotBadge) {
-            rotBadge = document.createElement('span');
-            rotBadge.className = 'pdf-card__badge';
-            rotBadge.setAttribute('data-ref', `rot-badge-${p.id}`);
-            card.querySelector('.pdf-card__footer')?.appendChild(rotBadge);
-          }
-          rotBadge.textContent = `+${p.rotation}°`;
-        } else if (rotBadge) {
-          rotBadge.remove();
-        }
-      }
+      this.updatePageRotationVisual(p);
     });
   }
 
@@ -429,30 +416,31 @@ class OrganizePdfController implements ViewController {
 
     this.refreshCardBadges();
     this.updateSummary();
-
-    const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
-    if (countBadge) {
-      countBadge.textContent = `${this.pages.length} págs.`;
-    }
   }
 
   private updateSummary(): void {
     const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
     if (countBadge) {
-      countBadge.textContent = `${this.pages.length} págs.`;
+      countBadge.textContent = t('tools.page_count_short', { count: this.pages.length });
     }
   }
 
   private updateActionButtons(): void {
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const rotateAllBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all"]');
+    const resetOrderBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-order"]');
     const txtMainAction = this.container.querySelector<HTMLElement>('[data-ref="txt-main-action"]');
+
+    const disabled = !this.currentFile || this.isProcessing;
+    if (rotateAllBtn) rotateAllBtn.disabled = disabled;
+    if (resetOrderBtn) resetOrderBtn.disabled = disabled;
 
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
-        txtMainAction.textContent = t('tools.organize_pdf_btn_select') || 'Seleccionar PDF';
+        txtMainAction.textContent = t('tools.organize_pdf_btn_select');
         mainActionBtn.disabled = true;
       } else {
-        txtMainAction.textContent = t('tools.organize_pdf_btn_action') || 'Ordenar PDF';
+        txtMainAction.textContent = t('tools.organize_pdf_btn_action');
         mainActionBtn.disabled = this.isProcessing;
       }
     }
@@ -460,6 +448,7 @@ class OrganizePdfController implements ViewController {
 
   private async executeOrganizePdf(): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
 
     if (this.pages.length === 0) {
       showToast(t('toasts.debes_incluir_al_menos_una_pagina_en_el_'), 'warning');
@@ -467,7 +456,7 @@ class OrganizePdfController implements ViewController {
     }
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    const customFilename = outputNameInput?.value.trim() || `${this.currentFile.name.replace(/\.pdf$/i, '')}_organizado.pdf`;
+    const customFilename = outputNameInput?.value.trim() || `${this.currentFile.name.replace(/\.pdf$/i, '')}_${t('tools.organize_filename_suffix')}.pdf`;
 
     const pagesOrder = this.pages.map((p) => ({
       pageIndex: p.originalIndex,
@@ -492,7 +481,10 @@ class OrganizePdfController implements ViewController {
       );
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Organizando páginas del PDF...', 'Aplicando el nuevo orden y rotaciones');
+      this.phaseManager?.showProcessing(
+        t('tools.organize_pdf_processing'),
+        t('tools.organize_pdf_processing_subtitle')
+      );
 
       if (!response.ok || !json.success || !json.data) {
         throw new Error(json.error || t('ui.error_al_procesar_la_solicitud'));
@@ -505,13 +497,15 @@ class OrganizePdfController implements ViewController {
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
-        returnText: 'Organizar otro documento PDF',
+        returnText: t('tools.organize_pdf_btn_another'),
         returnUrl: '/organize-pdf',
         subtitle: t('tools.organize_success_prefix') + `"${this.currentFile?.name}".`,
-        title: '¡PDF organizado con éxito!',
+        title: t('tools.organize_pdf_completed_title'),
         token,
       });
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('ui.no_se_pudo_aplicar_el_nuevo_orden_a_las_');
+      this.showError(msg);
       this.phaseManager?.showError(t('ui.no_se_pudo_aplicar_el_nuevo_orden_a_las_'), () => {
         this.phaseManager?.setPhase('workspace');
       });
@@ -533,12 +527,8 @@ class OrganizePdfController implements ViewController {
       this.sortableInstance = null;
     }
 
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="organize-pdf-workspace"]');
-
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    this.sidebarModal?.close();
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) outputNameInput.value = '';
@@ -546,7 +536,26 @@ class OrganizePdfController implements ViewController {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="organize-pages-grid"]');
     if (grid) grid.innerHTML = '';
 
+    this.updateActionButtons();
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(message: string): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="organize-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = message;
+      showElement(errorEl);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="organize-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = '';
+      hideElement(errorEl);
+    }
   }
 }
 

@@ -11,9 +11,18 @@ import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { hideElement, setupDropdown, setupSortableGrid, setupToolSidebarModal, showElement, SortableGridController, ToolSidebarModalController } from '../../../utils/dom.util.js';
+import { SortableGridController, hideElement, setupDropdown, setupSortableGrid, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { MergePdfResponseData, SelectedPdfItem } from './merge-pdf.types.js';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 async function estimatePdfPages(file: File): Promise<number> {
   try {
@@ -43,7 +52,6 @@ class MergePdfController implements ViewController {
   private isProcessing = false;
   private phaseManager: ToolPhaseManager | null = null;
   private selectedFiles: SelectedPdfItem[] = [];
-  private sidebarModal: ToolSidebarModalController | null = null;
   private sortable: SortableGridController | null = null;
 
   constructor(container: HTMLElement) {
@@ -55,18 +63,24 @@ class MergePdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar archivos PDF',
+        buttonText: t('tools.merge_pdf_btn_select'),
         desc: t('ui.une_pdfs_y_ponlos_en_el_orden_que_prefie'),
-        hint: 'o arrastra y suelta los PDF aquí',
+        hint: t('tools.drop_pdfs_hint'),
         multiselect: true,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFilesAdded(files);
         },
-        title: 'Unir archivos PDF',
+        title: t('tools.merge_pdf_dropzone_title'),
       },
-      sidebarRef: 'pdf-merger-sidebar',
+      onRetry: () => {
+        if (this.selectedFiles.length > 0) {
+          this.phaseManager?.setPhase('workspace');
+        } else {
+          this.resetToInitial();
+        }
+      },
       toolId: 'merge-pdf',
-      toolName: 'Unir PDF',
+      toolName: t('tools.merge_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'pdf-items-card',
     });
@@ -90,10 +104,6 @@ class MergePdfController implements ViewController {
     }
     this.dropdownControllers.forEach((ctrl) => ctrl.destroy());
     this.dropdownControllers = [];
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
   }
 
   private bindEvents(): void {
@@ -103,20 +113,6 @@ class MergePdfController implements ViewController {
     const addMoreInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-add-more-pdf"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
     const itemsGrid = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-grid"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-    const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-sidebar"]');
-
-    this.sidebarModal = setupToolSidebarModal({
-      backdrop: sidebarBackdrop,
-      closeBtn: sidebarCloseBtn,
-      dragZone: sidebarDragZone,
-      settingsBtn,
-      sidebar,
-      signal,
-    });
 
     const addFilesDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-add-files"]');
     if (addFilesDropdownWrapper) {
@@ -180,7 +176,7 @@ class MergePdfController implements ViewController {
         await this.handleFilesAdded(files);
       }
     } catch {
-      showToast('Error al importar archivos desde Google Drive.', 'danger');
+      showToast(t('tools.import_drive_error'), 'danger');
     }
   }
 
@@ -192,11 +188,12 @@ class MergePdfController implements ViewController {
         await this.handleFilesAdded(files);
       }
     } catch {
-      showToast('Error al importar archivos desde Dropbox.', 'danger');
+      showToast(t('tools.import_dropbox_error'), 'danger');
     }
   }
 
   public async handleFilesAdded(files: FileList | File[]): Promise<void> {
+    this.hideError();
     const limits = getCurrentUserToolLimits('merge-pdf');
     const fileArray = Array.from(files);
 
@@ -205,7 +202,7 @@ class MergePdfController implements ViewController {
       const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
       const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
       if (!isPdfExt && !isPdfMime) {
-        showToast(`El archivo "${file.name}" no es un documento PDF válido.`, 'warning');
+        showToast(t('tools.invalid_pdf_file_name', { name: file.name }), 'warning');
         continue;
       }
 
@@ -215,7 +212,8 @@ class MergePdfController implements ViewController {
           currentLimit: limits.maxFileSizeMB,
           fileName: file.name,
           proLimit: '1,000 MB',
-          toolName: 'Unir PDF',
+          toolId: 'merge-pdf',
+          toolName: t('tools.merge_pdf_title'),
           type: 'file_size',
         });
         return;
@@ -230,7 +228,8 @@ class MergePdfController implements ViewController {
         currentCount: this.selectedFiles.length + validPdfs.length,
         currentLimit: limits.maxFiles,
         proLimit: 500,
-        toolName: 'Unir PDF',
+        toolId: 'merge-pdf',
+        toolName: t('tools.merge_pdf_title'),
         type: 'files_count',
       });
       return;
@@ -243,7 +242,8 @@ class MergePdfController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxTotalSizeMB,
         proLimit: '2,000 MB',
-        toolName: 'Unir PDF',
+        toolId: 'merge-pdf',
+        toolName: t('tools.merge_pdf_title'),
         type: 'total_size',
       });
       return;
@@ -264,7 +264,7 @@ class MergePdfController implements ViewController {
         this.selectedFiles.push(item);
         newItems.push(item);
       } catch {
-        showToast(`El archivo "${file.name}" está dañado o protegido con contraseña.`, 'danger');
+        showToast(t('tools.damaged_or_protected_file_name', { name: file.name }), 'danger');
       }
     }
 
@@ -311,12 +311,12 @@ class MergePdfController implements ViewController {
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-${item.id}"]`);
         if (sheet && item.thumbnailDataUrl) {
-          sheet.innerHTML = `<img class="pdf-card__preview-img" data-ref="img-preview-${item.id}" src="${item.thumbnailDataUrl}" alt="${item.name}" />`;
+          sheet.innerHTML = `<img class="pdf-card__preview-img" data-ref="img-preview-${item.id}" src="${item.thumbnailDataUrl}" alt="${escapeHtml(item.name)}" />`;
         }
 
         const metaEl = this.container.querySelector<HTMLElement>(`[data-ref="meta-${item.id}"]`);
         if (metaEl) {
-          const pagesLabel = item.pageCount === 1 ? '1 pág.' : `${item.pageCount} págs.`;
+          const pagesLabel = this.formatPageCount(item.pageCount);
           metaEl.textContent = `${pagesLabel} • ${formatBytes(item.size)}`;
         }
       }
@@ -328,6 +328,12 @@ class MergePdfController implements ViewController {
     }
 
     this.updateSummary();
+  }
+
+  private formatPageCount(count: number): string {
+    return count === 1
+      ? t('tools.page_count_single')
+      : t('tools.page_count_plural', { count });
   }
 
   private renderFilesList(): void {
@@ -357,10 +363,12 @@ class MergePdfController implements ViewController {
   }
 
   private renderCardHtml(item: SelectedPdfItem, index: number): string {
-    const pagesLabel = item.pageCount === 1 ? '1 pág.' : `${item.pageCount} págs.`;
+    const pagesLabel = this.formatPageCount(item.pageCount);
+    const safeName = escapeHtml(item.name);
+    const deleteLabel = escapeHtml(t('common.delete_file'));
 
     const sheetContent = item.thumbnailDataUrl
-      ? `<img class="pdf-card__preview-img" src="${item.thumbnailDataUrl}" alt="${item.name}" />`
+      ? `<img class="pdf-card__preview-img" src="${item.thumbnailDataUrl}" alt="${safeName}" />`
       : `
         <div class="pdf-card__placeholder">
           <svg class="component-icon pdf-card__placeholder-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
@@ -375,7 +383,7 @@ class MergePdfController implements ViewController {
     return `
       <div class="pdf-card" data-ref="card-pdf-${item.id}" data-id="${item.id}">
         <div class="pdf-card__actions">
-          <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-pdf" data-id="${item.id}" title="Eliminar archivo" aria-label="Eliminar archivo">
+          <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-pdf" data-id="${item.id}" title="${deleteLabel}" aria-label="${deleteLabel}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
@@ -387,7 +395,7 @@ class MergePdfController implements ViewController {
         </div>
 
         <div class="pdf-card__footer">
-          <span class="pdf-card__title" title="${item.name}">${index + 1}. ${item.name}</span>
+          <span class="pdf-card__title" title="${safeName}">${index + 1}. ${safeName}</span>
           <span class="pdf-card__meta" data-ref="meta-${item.id}">${pagesLabel} • ${formatBytes(item.size)}</span>
         </div>
       </div>
@@ -451,14 +459,11 @@ class MergePdfController implements ViewController {
     const txtMainAction = this.container.querySelector<HTMLElement>('[data-ref="txt-main-action"]');
 
     if (mainActionBtn && txtMainAction) {
-      if (this.selectedFiles.length === 0) {
-        txtMainAction.textContent = t('tools.merge_pdf_btn_select') || 'Unir PDF';
-        mainActionBtn.disabled = true;
-      } else if (this.selectedFiles.length === 1) {
-        txtMainAction.textContent = t('tools.merge_pdf_btn_select') || 'Unir PDF';
+      if (this.selectedFiles.length <= 1) {
+        txtMainAction.textContent = t('tools.merge_pdf_btn_select');
         mainActionBtn.disabled = true;
       } else {
-        txtMainAction.textContent = t('tools.merge_pdf_btn_action') || 'Unir PDF';
+        txtMainAction.textContent = t('tools.merge_pdf_btn_merge');
         mainActionBtn.disabled = this.isProcessing;
       }
     }
@@ -485,6 +490,7 @@ class MergePdfController implements ViewController {
 
   private async executeMergePdf(): Promise<void> {
     if (this.selectedFiles.length < 2 || this.isProcessing) return;
+    this.hideError();
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     let customFilename = outputNameInput?.value.trim() || 'BoardPDF_merged';
@@ -514,7 +520,10 @@ class MergePdfController implements ViewController {
 
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Uniendo documentos PDF...', t('ui.generando_archivo_unificado_con_el_orden'));
+      this.phaseManager?.showProcessing(
+        t('tools.merge_pdf_merging'),
+        t('ui.generando_archivo_unificado_con_el_orden')
+      );
 
       if (!response.ok || !json.success) {
         throw new Error(json.error || t('ui.no_se_pudieron_unir_los_documentos_pdf_i'));
@@ -527,10 +536,10 @@ class MergePdfController implements ViewController {
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
-        returnText: 'Unir más archivos PDF',
+        returnText: t('tools.merge_return_text'),
         returnUrl: '/merge-pdf',
         subtitle: t('ui.se_han_unido_exitosamente_archivos_en_un'),
-        title: '¡PDFs unidos con éxito!',
+        title: t('tools.merge_pdf_completed_title'),
         token,
       });
     } catch (err: unknown) {
@@ -540,12 +549,14 @@ class MergePdfController implements ViewController {
           currentCount: this.selectedFiles.length,
           currentLimit: getCurrentUserToolLimits('merge-pdf').maxFiles,
           proLimit: 500,
-          toolName: 'Unir PDF',
+          toolId: 'merge-pdf',
+          toolName: t('tools.merge_pdf_title'),
           type: 'files_count',
         });
         this.phaseManager?.setPhase('workspace');
         return;
       }
+      this.showError(msg);
       this.phaseManager?.showError(msg, () => {
         this.phaseManager?.setPhase('workspace');
       });
@@ -565,14 +576,32 @@ class MergePdfController implements ViewController {
     }
 
     const itemsGrid = this.container.querySelector<HTMLElement>('[data-ref="pdf-items-grid"]');
-    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-output-name"]');
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="pdf-merger-workspace"]');
 
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     if (outputNameInput) outputNameInput.value = '';
     if (itemsGrid) itemsGrid.innerHTML = '';
 
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(message: string): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="merge-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = message;
+      showElement(errorEl);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="merge-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = '';
+      hideElement(errorEl);
+    }
   }
 }
 

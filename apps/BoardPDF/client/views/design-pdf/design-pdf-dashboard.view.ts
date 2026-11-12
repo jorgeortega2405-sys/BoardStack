@@ -2,15 +2,15 @@ import { openDeleteDocModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { COLLAB_DOCUMENT_DEFAULT_SIZE } from '../../config/collab-page-presets.config.js';
 import { resolveToolLimits } from '../../config/subscription-plans.config.js';
-import { currentUser, deleteApi, getApi, putApi } from '../../services/api.service.js';
-import { t } from '../../services/i18n.service.js';
+import { currentUser, deleteApi, getApi, postApi, putApi } from '../../services/api.service.js';
+import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
+import { getLocalDraft, listLocalDrafts, removeLocalDraft, saveLocalDraft } from '../../utils/collab-local-draft.util.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 
 interface DocItem {
@@ -96,16 +96,17 @@ class DesignPdfDashboardController implements ViewController {
       grid.innerHTML = `
         <div class="collaborative-empty-state" data-ref="collaborative-empty-state">
           <div class="collaborative-empty-state__icon" data-ref="empty-icon">
-            <svg class="component-icon" style="height: 48px; width: 48px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
           </div>
-          <h3 class="collaborative-empty-state__title" data-ref="empty-title">Aún no tienes documentos PDF</h3>
-          <p class="collaborative-empty-state__desc" data-ref="empty-desc">Crea tu primer documento desde cero o colabora en tiempo real con otros usuarios.</p>
+          <h3 class="collaborative-empty-state__title" data-ref="empty-title" data-i18n="collaborative.dashboard_empty_title"></h3>
+          <p class="collaborative-empty-state__desc" data-ref="empty-desc" data-i18n="collaborative.dashboard_empty_desc"></p>
           <button type="button" class="component-button component-button--primary component-button--h40" data-ref="btn-empty-create-pdf">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            <span>Crear nuevo PDF</span>
+            <span data-i18n="collaborative.create_new_pdf"></span>
           </button>
         </div>
       `;
+      translateElement(grid);
       renderIcons(grid);
       return;
     }
@@ -114,7 +115,7 @@ class DesignPdfDashboardController implements ViewController {
       const isLocal = !!doc.is_local;
       const isPublic = doc.access_level === 'anyone_with_link';
       const badgeIcon = isPublic ? 'lock_open' : 'lock';
-      const badgeText = isPublic ? 'Público' : 'Privado';
+      const badgeText = isPublic ? t('collaborative.doc_badge_public') : t('collaborative.doc_badge_private');
       const relativeTime = this.formatRelativeTime(doc.updated_at);
       const dim = this.getDocDimensions(doc);
       const paperSize = this.computePaperSize(dim.width, dim.height);
@@ -123,39 +124,36 @@ class DesignPdfDashboardController implements ViewController {
         <div class="tool-card tool-card--collab-doc" data-ref="card-doc-${doc.id}" data-doc-id="${doc.id}">
           <div class="tool-card__preview-box" data-ref="thumb-box-${doc.id}">
             <div class="pdf-card__actions" data-ref="actions-doc-${doc.id}">
-              <button type="button" class="component-button component-button--icon-only pdf-card__btn-action" data-ref="btn-bookmark-pdf" data-id="${doc.id}" data-tooltip="Guardar" aria-label="Guardar">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bookmark"></use></svg>
-              </button>
               <div class="dropdown" data-ref="dropdown-doc-${doc.id}">
-                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-pdf" data-id="${doc.id}" data-tooltip="Más opciones" aria-label="Más opciones">
+                <button type="button" class="component-button component-button--icon-only pdf-card__btn-action dropdown-trigger" data-ref="btn-more-pdf" data-id="${doc.id}" data-i18n-tooltip="common.more_options" data-i18n-aria="common.more_options">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                 </button>
                 <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--doc-actions" data-ref="menu-doc-${doc.id}">
                   <div class="menu-panel__list" data-ref="list-actions-${doc.id}">
                     <button type="button" class="menu-item" data-ref="item-open-tab-${doc.id}" data-action="open-tab" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
-                      <span class="menu-item__text">Abrir en una pestaña nueva</span>
+                      <span class="menu-item__text" data-i18n="collaborative.action_open_tab"></span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-copy-doc-${doc.id}" data-action="copy-doc" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-                      <span class="menu-item__text">Crear una copia</span>
+                      <span class="menu-item__text" data-i18n="collaborative.action_copy_doc"></span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-download-${doc.id}" data-action="download" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-                      <span class="menu-item__text">Descargar</span>
+                      <span class="menu-item__text" data-i18n="common.download"></span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-share-${doc.id}" data-action="share" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-                      <span class="menu-item__text">Compartir</span>
+                      <span class="menu-item__text" data-i18n="common.share"></span>
                     </button>
                     <button type="button" class="menu-item" data-ref="item-copy-link-${doc.id}" data-action="copy-link" data-id="${doc.id}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
-                      <span class="menu-item__text">Copiar el enlace</span>
+                      <span class="menu-item__text" data-i18n="collaborative.action_copy_link"></span>
                     </button>
                     <div class="menu-divider" data-ref="divider-delete-${doc.id}"></div>
                     <button type="button" class="menu-item menu-item--danger" data-ref="item-delete-${doc.id}" data-action="delete" data-id="${doc.id}" data-is-local="${isLocal ? '1' : '0'}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                      <span class="menu-item__text">Eliminar</span>
+                      <span class="menu-item__text" data-i18n="common.delete"></span>
                     </button>
                   </div>
                 </div>
@@ -179,7 +177,7 @@ class DesignPdfDashboardController implements ViewController {
             <div class="tool-card__title-row" data-ref="title-row-${doc.id}">
               <h3 class="tool-card__title" data-ref="title-doc-${doc.id}" title="${this.escapeHtml(doc.title)}">${this.escapeHtml(doc.title)}</h3>
               <span class="tool-card__badge-pill" data-ref="badge-doc-${doc.id}">
-                <svg class="component-icon" style="height: 12px; width: 12px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
                 <span>${badgeText}</span>
               </span>
             </div>
@@ -192,6 +190,7 @@ class DesignPdfDashboardController implements ViewController {
     }).join('');
 
     grid.innerHTML = docsHtml;
+    translateElement(grid);
     renderIcons(grid);
 
     const dropdownWrappers = grid.querySelectorAll<HTMLElement>('[data-ref^="dropdown-doc-"]');
@@ -216,6 +215,12 @@ class DesignPdfDashboardController implements ViewController {
 
           if (action === 'open-tab') {
             window.open(`/d/${encodeURIComponent(docId)}`, '_blank');
+          } else if (action === 'copy-doc') {
+            void this.handleCopyDoc(docId, isLocal);
+          } else if (action === 'download') {
+            void this.handleDownloadDoc(docId, isLocal);
+          } else if (action === 'share') {
+            navigate(`/d/${encodeURIComponent(docId)}?share=1`);
           } else if (action === 'copy-link') {
             const url = `${window.location.origin}/d/${encodeURIComponent(docId)}`;
             void navigator.clipboard.writeText(url).then(() => {
@@ -368,7 +373,7 @@ class DesignPdfDashboardController implements ViewController {
     if (diffMin < 60) return `Editado hace ${diffMin} ${diffMin === 1 ? 'minuto' : 'minutos'}`;
     if (diffHours < 24) return `Editado hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
     if (diffDays === 1) return 'Editado ayer';
-    if (diffDays < 30) return `Editado hace ${diffDays} días`;
+    if (diffDays < 30) return t('collaborative.time_days_ago', { count: diffDays });
     return `Editado el ${date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
   }
 
@@ -397,13 +402,6 @@ class DesignPdfDashboardController implements ViewController {
         if (btnEmptyCreate) {
           e.preventDefault();
           this.createNewDocument();
-          return;
-        }
-
-        const bookmarkBtn = target.closest<HTMLElement>('[data-ref="btn-bookmark-pdf"]');
-        if (bookmarkBtn) {
-          e.preventDefault();
-          e.stopPropagation();
           return;
         }
 
@@ -441,7 +439,7 @@ class DesignPdfDashboardController implements ViewController {
       return;
     }
 
-    const titleVal = 'Documento sin título';
+    const titleVal = t('common.untitled_document');
     const dimensions = { ...COLLAB_DOCUMENT_DEFAULT_SIZE };
     const newDocId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
@@ -476,9 +474,47 @@ class DesignPdfDashboardController implements ViewController {
     navigate(navUrl);
   }
 
+  private async handleCopyDoc(id: string, isLocal = false): Promise<void> {
+    const copySuffix = ` (${t('collaborative.copy_suffix')})`;
+    if (isLocal) {
+      const draft = getLocalDraft(id);
+      if (!draft) return;
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `local_${Date.now().toString(36)}`;
+      const newTitle = `${draft.title || t('collaborative.untitled_doc')}${copySuffix}`;
+      saveLocalDraft(newId, { content: draft.content, title: newTitle });
+      showToast(t('toasts.copia_creada_en_una_nueva_pestana'), 'success');
+      await this.loadDocuments();
+      return;
+    }
+    try {
+      const doc = this.documents.find((d) => d.id === id);
+      const newTitle = `${doc?.title || t('collaborative.untitled_doc')}${copySuffix}`;
+      const res = await postApi(API_ROUTES.collaborativeDocs.base, {
+        content: doc?.content || {},
+        title: newTitle,
+      });
+      if (res.ok) {
+        showToast(t('toasts.copia_creada_en_una_nueva_pestana'), 'success');
+        await this.loadDocuments();
+      } else {
+        showToast(t('errors.network_error'), 'error');
+      }
+    } catch {
+      showToast(t('errors.network_error'), 'error');
+    }
+  }
+
+  private handleDownloadDoc(id: string, isLocal = false): void {
+    if (isLocal) {
+      window.open(`/d/${encodeURIComponent(id)}?share=1`, '_blank');
+      return;
+    }
+    window.open(API_ROUTES.collaborativeDocs.pdf(id), '_blank');
+  }
+
   private async handleDelete(id: string, isLocal = false): Promise<void> {
     const doc = this.documents.find((d) => d.id === id);
-    const docTitle = doc?.title || t('common.document') || 'Documento';
+    const docTitle = doc?.title || t('common.document');
 
     openDeleteDocModal({
       docTitle,

@@ -104,7 +104,7 @@ class DesignPdfSyncManager {
       isGuest,
       onMessage: (msg: any) => this.handleCollabSocketMessage(msg),
       userId: user?.id || null,
-      username: username || 'Invitado',
+      username: username || t('collaborative.guest_name'),
     });
   }
 

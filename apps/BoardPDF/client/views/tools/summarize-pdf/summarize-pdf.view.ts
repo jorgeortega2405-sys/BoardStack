@@ -3,9 +3,9 @@ import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { currentUser, estimateAiTokens, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
+import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -13,7 +13,13 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, animateTypewriter, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
 import { SummarizePdfResultData } from './summarize-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
+
+function formatInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
 
 function renderSimpleMarkdown(md: string): string {
   const lines = md.split('\n');
@@ -82,13 +88,6 @@ function renderSimpleMarkdown(md: string): string {
   return html;
 }
 
-function formatInlineMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
-}
-
 class SummarizePdfController implements ViewController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
@@ -100,6 +99,7 @@ class SummarizePdfController implements ViewController {
   private pageObserver: IntersectionObserver | null = null;
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
+  private selectedMode: 'standard' = 'standard';
   private sidebarModal: ToolSidebarModalController | null = null;
   private zoomController: ToolZoomController | null = null;
   private zoomScale = 1.0;
@@ -113,18 +113,18 @@ class SummarizePdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar Archivo PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.lee_comprende_y_sintetiza_cualquier_docu'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Resumir PDF',
+        title: t('tools.summarize_pdf_title'),
       },
       sidebarRef: 'summarize-pdf-sidebar',
       toolId: 'summarize-pdf',
-      toolName: 'Resumir PDF',
+      toolName: t('tools.summarize_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'summarize-viewer-card',
     });
@@ -182,8 +182,41 @@ class SummarizePdfController implements ViewController {
     });
 
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const sidebarActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
+
     mainActionBtn?.addEventListener('click', () => {
       void this.startSummarize();
+    }, { signal });
+
+    sidebarActionBtn?.addEventListener('click', () => {
+      void this.startSummarize();
+    }, { signal });
+
+    const viewSummaryBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-view-summary"]');
+    const drawerCollapseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summary-drawer-collapse"]');
+    const drawerMobileCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summary-drawer-mobile-close"]');
+
+    viewSummaryBtn?.addEventListener('click', () => {
+      this.toggleSummaryDrawer();
+    }, { signal });
+
+    drawerCollapseBtn?.addEventListener('click', () => {
+      this.closeSummaryDrawer();
+    }, { signal });
+
+    drawerMobileCloseBtn?.addEventListener('click', () => {
+      this.closeSummaryDrawer();
+    }, { signal });
+
+    const copyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-summary"]');
+    const clearBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-summary"]');
+
+    copyBtn?.addEventListener('click', () => {
+      void this.handleCopySummary();
+    }, { signal });
+
+    clearBtn?.addEventListener('click', () => {
+      this.handleClearSummary();
     }, { signal });
 
     this.zoomController = new ToolZoomController({
@@ -217,6 +250,8 @@ class SummarizePdfController implements ViewController {
       return;
     }
 
+    this.hideError();
+
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       showToast(t('tools.only_pdf_allowed'), 'danger');
       return;
@@ -228,13 +263,16 @@ class SummarizePdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'summarize-pdf',
-        toolName: 'Resumir PDF',
+        toolName: t('tools.summarize_pdf_title'),
         type: 'file_size',
       });
       return;
     }
 
     this.currentFile = file;
+    this.currentResult = null;
+    this.handleClearSummary();
+    this.closeSummaryDrawer();
 
     try {
       const buffer = await file.arrayBuffer();
@@ -244,7 +282,6 @@ class SummarizePdfController implements ViewController {
       this.zoomController?.showFooter();
       this.zoomController?.updatePageInfo(1, this.pdfDocument.numPages);
       void this.renderAllPages();
-      await this.startSummarize();
     } catch {
       showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
       this.resetSelectedFile();
@@ -254,11 +291,16 @@ class SummarizePdfController implements ViewController {
   private renderViewerState(): void {
     this.phaseManager?.setPhase('workspace');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+    const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
-    if (settingsBtn) settingsBtn.classList.add('is-visible');
-    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const sidebarActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
+
+    if (settingsBtn) settingsBtn.classList.add('is-visible');
+    if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
+    if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     if (mainActionBtn) mainActionBtn.disabled = false;
+    if (sidebarActionBtn) sidebarActionBtn.disabled = false;
   }
 
   private async renderAllPages(): Promise<void> {
@@ -298,7 +340,6 @@ class SummarizePdfController implements ViewController {
       scaler.setAttribute('data-page-index', `${pageIndex}`);
       scaler.style.width = `${Math.floor(baseWidth * this.zoomScale)}px`;
       scaler.style.height = `${Math.floor(baseHeight * this.zoomScale)}px`;
-      scaler.style.marginBottom = '20px';
 
       const pageCard = document.createElement('div');
       pageCard.className = 'pdf-viewer-page-card tool-viewport-sheet';
@@ -307,7 +348,6 @@ class SummarizePdfController implements ViewController {
       pageCard.style.width = `${baseWidth}px`;
       pageCard.style.height = `${baseHeight}px`;
       pageCard.style.transform = `scale(${this.zoomScale})`;
-      pageCard.style.transformOrigin = 'top left';
 
       const canvas = document.createElement('canvas');
       canvas.className = 'pdf-viewer-page-canvas';
@@ -365,32 +405,47 @@ class SummarizePdfController implements ViewController {
     this.currentResult = null;
     this.pdfDocument = null;
     this.zoomScale = 1.0;
+    this.hideError();
 
-    const scrollContainer = this.container.querySelector<HTMLElement>('[data-ref="viewer-scroll-container"]');
     const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
     if (pagesWrapper) pagesWrapper.innerHTML = '';
-    else if (scrollContainer) scrollContainer.innerHTML = '';
 
     const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
+    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="summary-empty-state"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+    const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
+    const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
+    const sidebarActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
 
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    if (viewSummaryBtn) viewSummaryBtn.classList.remove('is-visible', 'is-active');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    if (scrollContainer) scrollContainer.innerHTML = '';
+    if (mainActionBtn) mainActionBtn.disabled = true;
+    if (sidebarActionBtn) sidebarActionBtn.disabled = true;
+
     hideElement(resultSection);
+    showElement(emptyState);
+    this.closeSummaryDrawer();
     this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
   }
 
   private async startSummarize(): Promise<void> {
+    if (!currentUser) {
+      showAuthGateModal({ featureKey: 'ai_tools', returnUrl: '/summarize-pdf' });
+      return;
+    }
     if (!this.currentFile || this.isProcessing) return;
 
+    this.hideError();
     this.isProcessing = true;
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
+    const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
 
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
+    if (viewSummaryBtn) viewSummaryBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
@@ -399,6 +454,7 @@ class SummarizePdfController implements ViewController {
     try {
       const formData = new FormData();
       formData.append('pdf', this.currentFile as Blob, this.currentFile?.name);
+      formData.append('mode', this.selectedMode);
 
       const response = await postFormWithProgress(
         API_ROUTES.tools.summarizePdf.summarize,
@@ -409,7 +465,10 @@ class SummarizePdfController implements ViewController {
       );
       const result = (await response.json()) as { data?: SummarizePdfResultData; error?: string; success: boolean };
 
-      this.phaseManager?.showProcessing('Resumiendo documento PDF...', 'Leyendo documento y sintetizando puntos clave con IA');
+      this.phaseManager?.showProcessing(
+        t('tools.summarize_processing_title'),
+        t('tools.summarize_processing_subtitle')
+      );
 
       if (!response.ok || !result.success || !result.data) {
         throw new Error(result.error || t('ui.error_al_generar_el_resumen_del_document'));
@@ -421,26 +480,31 @@ class SummarizePdfController implements ViewController {
       }
       this.phaseManager?.setPhase('workspace');
       if (settingsBtn) settingsBtn.classList.add('is-visible');
+      if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
       if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       showToast(t('toasts.summary_generated_success'), 'success');
+      this.openSummaryDrawer();
       this.renderSummaryResult(result.data);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_resumir_el_pdf');
+      this.showError(errorMessage);
       this.phaseManager?.showError(errorMessage, () => {
         this.phaseManager?.setPhase('workspace');
         if (settingsBtn) settingsBtn.classList.add('is-visible');
+        if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
         if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       });
-      showToast(errorMessage, 'danger');
     } finally {
       this.isProcessing = false;
     }
   }
 
   private renderSummaryResult(data: SummarizePdfResultData): void {
+    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="summary-empty-state"]');
     const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
     const renderedTextEl = this.container.querySelector<HTMLElement>('[data-ref="summary-rendered-text"]');
 
+    hideElement(emptyState);
     showElement(resultSection);
 
     if (renderedTextEl) {
@@ -452,6 +516,67 @@ class SummarizePdfController implements ViewController {
         renderHtml: renderSimpleMarkdown,
         signal: this.abortController?.signal,
       });
+    }
+  }
+
+  private openSummaryDrawer(): void {
+    const drawer = this.container.querySelector<HTMLElement>('[data-ref="summarize-drawer"]');
+    const viewBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
+    drawer?.classList.add('is-open');
+    viewBtn?.classList.add('is-active');
+  }
+
+  private closeSummaryDrawer(): void {
+    const drawer = this.container.querySelector<HTMLElement>('[data-ref="summarize-drawer"]');
+    const viewBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
+    drawer?.classList.remove('is-open');
+    viewBtn?.classList.remove('is-active');
+  }
+
+  private toggleSummaryDrawer(): void {
+    const drawer = this.container.querySelector<HTMLElement>('[data-ref="summarize-drawer"]');
+    if (!drawer) return;
+    if (drawer.classList.contains('is-open')) {
+      this.closeSummaryDrawer();
+    } else {
+      this.openSummaryDrawer();
+    }
+  }
+
+  private async handleCopySummary(): Promise<void> {
+    if (!this.currentResult?.summary) return;
+    try {
+      await navigator.clipboard.writeText(this.currentResult.summary);
+      showToast(t('toasts.summary_copied'), 'success');
+    } catch {
+      showToast(t('toasts.copy_failed'), 'danger');
+    }
+  }
+
+  private handleClearSummary(): void {
+    this.currentResult = null;
+    const renderedTextEl = this.container.querySelector<HTMLElement>('[data-ref="summary-rendered-text"]');
+    const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
+    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="summary-empty-state"]');
+    if (renderedTextEl) renderedTextEl.innerHTML = '';
+    hideElement(resultSection);
+    showElement(emptyState);
+  }
+
+  private showError(message: string): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-error-banner"]');
+    if (errorEl) {
+      errorEl.textContent = message;
+      showElement(errorEl);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-error-banner"]');
+    if (errorEl) {
+      errorEl.textContent = '';
+      hideElement(errorEl);
     }
   }
 }

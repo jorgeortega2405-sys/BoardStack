@@ -5,15 +5,15 @@ import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js
 import { postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, toggleElement } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
-import { ClientDiffItem, ClientPageComparison, ComparePdfResultData, CompareViewMode } from './compare-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
+import { ComparePdfResultData, CompareViewMode } from './compare-pdf.types.js';
 
 class ComparePdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -27,8 +27,6 @@ class ComparePdfController implements ViewController {
   private overlayOpacity = 0.5;
   private pageDimensions1: Array<{ height: number; width: number }> = [];
   private pageDimensions2: Array<{ height: number; width: number }> = [];
-  private pageScales1: number[] = [];
-  private pageScales2: number[] = [];
   private pdfDocument1: any = null;
   private pdfDocument2: any = null;
   private phaseManager: ToolPhaseManager | null = null;
@@ -48,21 +46,21 @@ class ComparePdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar Primer PDF',
+        buttonText: t('tools.compare_select_first_pdf'),
         desc: t('ui.compara_dos_archivos_pdf_uno_al_lado_del'),
-        hint: 'o arrastra y suelta el PDF aquí para comenzar la comparación',
+        hint: t('tools.compare_dropzone_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFile1Selected(files[0]);
         },
-        title: 'Comparar PDF',
+        title: t('tools.compare_pdf_title'),
       },
       onRetry: () => {
         void this.runComparison();
       },
       sidebarRef: 'compare-pdf-sidebar',
       toolId: 'compare-pdf',
-      toolName: 'Comparar PDF',
+      toolName: t('tools.compare_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'compare-workspace-card',
     });
@@ -118,10 +116,8 @@ class ComparePdfController implements ViewController {
 
     const fileInput2 = this.container.querySelector<HTMLInputElement>('[data-ref="input-pdf-file2"]');
     const browseBtn2 = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file2"]');
-
     const heroDriveBtn2 = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive2"]');
     const heroDropboxBtn2 = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox2"]');
-
     const removeDoc1Btn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-doc1"]');
     const removeDoc2Btn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-doc2"]');
     const syncScrollBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sync-scroll"]');
@@ -135,20 +131,15 @@ class ComparePdfController implements ViewController {
     const tabOverlayBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tab-overlay"]');
     const opacitySlider = this.container.querySelector<HTMLInputElement>('[data-ref="input-overlay-opacity"]');
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-changes"]');
-
     const downloadReportBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-report"]');
 
-    if (browseBtn2 && fileInput2) {
-      browseBtn2.addEventListener('click', () => fileInput2.click(), { signal });
-    }
+    browseBtn2?.addEventListener('click', () => fileInput2?.click(), { signal });
 
-    if (fileInput2) {
-      fileInput2.addEventListener('change', async () => {
-        if (fileInput2.files && fileInput2.files.length > 0) {
-          await this.handleFile2Selected(fileInput2.files[0]);
-        }
-      }, { signal });
-    }
+    fileInput2?.addEventListener('change', async () => {
+      if (fileInput2.files && fileInput2.files.length > 0) {
+        await this.handleFile2Selected(fileInput2.files[0]);
+      }
+    }, { signal });
 
     const dropzoneDoc2 = this.container.querySelector<HTMLElement>('[data-ref="dropzone-doc2"]');
     if (dropzoneDoc2) {
@@ -164,46 +155,36 @@ class ComparePdfController implements ViewController {
       dropzoneDoc2.addEventListener('drop', async (e) => {
         e.preventDefault();
         dropzoneDoc2.classList.remove('is-dragover');
-        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
           await this.handleFile2Selected(e.dataTransfer.files[0]);
         }
       }, { signal });
     }
 
-    if (heroDriveBtn2) {
-      heroDriveBtn2.addEventListener('click', async () => {
-        await this.handleCloudImport(2, 'drive');
-      }, { signal });
-    }
+    heroDriveBtn2?.addEventListener('click', async () => {
+      await this.handleCloudImport(2, 'drive');
+    }, { signal });
 
-    if (heroDropboxBtn2) {
-      heroDropboxBtn2.addEventListener('click', async () => {
-        await this.handleCloudImport(2, 'dropbox');
-      }, { signal });
-    }
+    heroDropboxBtn2?.addEventListener('click', async () => {
+      await this.handleCloudImport(2, 'dropbox');
+    }, { signal });
 
-    if (removeDoc1Btn) {
-      removeDoc1Btn.addEventListener('click', () => {
-        this.resetAll();
-      }, { signal });
-    }
+    removeDoc1Btn?.addEventListener('click', () => {
+      this.resetAll();
+    }, { signal });
 
-    if (removeDoc2Btn) {
-      removeDoc2Btn.addEventListener('click', () => {
-        this.resetFile2();
-      }, { signal });
-    }
+    removeDoc2Btn?.addEventListener('click', () => {
+      this.resetFile2();
+    }, { signal });
 
-    if (syncScrollBtn) {
-      syncScrollBtn.addEventListener('click', () => {
-        this.syncScroll = !this.syncScroll;
-        syncScrollBtn.classList.toggle('is-active', this.syncScroll);
-        showToast(
-          this.syncScroll ? 'Desplazamiento sincronizado activado.' : 'Desplazamiento independiente activado.',
-          'info'
-        );
-      }, { signal });
-    }
+    syncScrollBtn?.addEventListener('click', () => {
+      this.syncScroll = !this.syncScroll;
+      syncScrollBtn.classList.toggle('is-active', this.syncScroll);
+      showToast(
+        this.syncScroll ? t('toasts.compare_sync_enabled') : t('toasts.compare_sync_disabled'),
+        'info'
+      );
+    }, { signal });
 
     this.bindScrollSynchronization();
 
@@ -213,56 +194,39 @@ class ComparePdfController implements ViewController {
       maxZoom: 3.0,
       minZoom: 0.1,
       onZoomChange: (level) => this.applyZoom(level),
-      scrollContainer: this.container.querySelector<HTMLElement>('[data-ref="compare-main-layout"]'),
+      scrollContainer: this.container.querySelector<HTMLElement>('[data-ref="split-layout"]'),
       signal,
     });
 
-    if (zoomInBtn1) {
-      zoomInBtn1.addEventListener('click', () => this.changeZoom(1, 0.15), { signal });
-    }
-    if (zoomOutBtn1) {
-      zoomOutBtn1.addEventListener('click', () => this.changeZoom(1, -0.15), { signal });
-    }
+    zoomInBtn1?.addEventListener('click', () => this.changeZoom(1, 0.15), { signal });
+    zoomOutBtn1?.addEventListener('click', () => this.changeZoom(1, -0.15), { signal });
+    zoomInBtn2?.addEventListener('click', () => this.changeZoom(2, 0.15), { signal });
+    zoomOutBtn2?.addEventListener('click', () => this.changeZoom(2, -0.15), { signal });
 
-    if (zoomInBtn2) {
-      zoomInBtn2.addEventListener('click', () => this.changeZoom(2, 0.15), { signal });
-    }
-    if (zoomOutBtn2) {
-      zoomOutBtn2.addEventListener('click', () => this.changeZoom(2, -0.15), { signal });
-    }
+    tabSemanticBtn?.addEventListener('click', () => {
+      this.switchMode('semantic');
+    }, { signal });
 
-    if (tabSemanticBtn && tabOverlayBtn) {
-      tabSemanticBtn.addEventListener('click', () => {
-        this.switchMode('semantic');
-      }, { signal });
+    tabOverlayBtn?.addEventListener('click', () => {
+      this.switchMode('overlay');
+    }, { signal });
 
-      tabOverlayBtn.addEventListener('click', () => {
-        this.switchMode('overlay');
-      }, { signal });
-    }
+    opacitySlider?.addEventListener('input', () => {
+      const val = parseInt(opacitySlider.value, 10) || 50;
+      this.overlayOpacity = val / 100;
+      const valEl = this.container.querySelector<HTMLElement>('[data-ref="val-overlay-opacity"]');
+      if (valEl) valEl.textContent = `${val}%`;
+      this.applyOverlayOpacity();
+    }, { signal });
 
-    if (opacitySlider) {
-      opacitySlider.addEventListener('input', () => {
-        const val = parseInt(opacitySlider.value, 10) || 50;
-        this.overlayOpacity = val / 100;
-        const valEl = this.container.querySelector<HTMLElement>('[data-ref="val-overlay-opacity"]');
-        if (valEl) valEl.textContent = `${val}%`;
-        this.applyOverlayOpacity();
-      }, { signal });
-    }
+    searchInput?.addEventListener('input', () => {
+      this.searchQuery = searchInput.value.trim().toLowerCase();
+      this.renderChangesList();
+    }, { signal });
 
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        this.searchQuery = searchInput.value.trim().toLowerCase();
-        this.renderChangesList();
-      }, { signal });
-    }
-
-    if (downloadReportBtn) {
-      downloadReportBtn.addEventListener('click', async () => {
-        await this.handleDownloadReport();
-      }, { signal });
-    }
+    downloadReportBtn?.addEventListener('click', async () => {
+      await this.handleDownloadReport();
+    }, { signal });
   }
 
   private bindScrollSynchronization(): void {
@@ -318,14 +282,10 @@ class ComparePdfController implements ViewController {
   }
 
   private applyOverlayOpacity(): void {
-    const rightCards = this.container.querySelectorAll<HTMLElement>('[data-ref="pages-wrapper-right"] .compare-page-card');
-    rightCards.forEach((card) => {
-      if (this.currentMode === 'overlay') {
-        card.style.opacity = `${this.overlayOpacity}`;
-      } else {
-        card.style.opacity = '1';
-      }
-    });
+    const pagesWrapperRight = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper-right"]');
+    if (!pagesWrapperRight) return;
+    pagesWrapperRight.classList.toggle('is-overlay-mode', this.currentMode === 'overlay');
+    pagesWrapperRight.style.setProperty('--compare-overlay-opacity', `${this.currentMode === 'overlay' ? this.overlayOpacity : 1}`);
   }
 
   private applyZoom(level: number, pane?: 1 | 2): void {
@@ -387,7 +347,8 @@ class ComparePdfController implements ViewController {
         }
       }
     } catch (err: any) {
-      this.showError(err?.message || `Error al importar archivo desde ${provider === 'drive' ? 'Google Drive' : 'Dropbox'}.`);
+      const providerName = provider === 'drive' ? t('common.google_drive') : t('common.dropbox');
+      this.showError(err?.message || t('tools.compare_cloud_import_error', { provider: providerName }));
     }
   }
 
@@ -401,7 +362,7 @@ class ComparePdfController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Comparar PDF',
+        toolName: t('tools.compare_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -425,7 +386,6 @@ class ComparePdfController implements ViewController {
       this.pdfDocument1 = await loadPdfDocument(buffer);
 
       this.pageDimensions1 = [];
-      this.pageScales1 = [];
       const numPages = this.pdfDocument1.numPages;
 
       for (let i = 1; i <= numPages; i++) {
@@ -442,7 +402,7 @@ class ComparePdfController implements ViewController {
         await this.runComparison();
       }
     } catch {
-      this.showError('Error al leer el archivo PDF 1. Verifica que no esté protegido o dañado.');
+      this.showError(t('tools.compare_read_file1_error'));
       this.resetAll();
     }
   }
@@ -457,7 +417,7 @@ class ComparePdfController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Comparar PDF',
+        toolName: t('tools.compare_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -484,7 +444,6 @@ class ComparePdfController implements ViewController {
       this.pdfDocument2 = await loadPdfDocument(buffer);
 
       this.pageDimensions2 = [];
-      this.pageScales2 = [];
       const numPages = this.pdfDocument2.numPages;
 
       for (let i = 1; i <= numPages; i++) {
@@ -499,7 +458,7 @@ class ComparePdfController implements ViewController {
       await this.renderDocument2Pages();
       await this.runComparison();
     } catch {
-      this.showError('Error al leer el archivo PDF 2. Verifica que no esté protegido o dañado.');
+      this.showError(t('tools.compare_read_file2_error'));
       this.resetFile2();
     }
   }
@@ -579,25 +538,19 @@ class ComparePdfController implements ViewController {
 
       const baseWidth = 520;
       const displayScale = baseWidth / dims.width;
-      this.pageScales1[pageIndex] = displayScale;
-
       const displayWidth = Math.floor(baseWidth);
       const displayHeight = Math.floor((dims.height / dims.width) * baseWidth);
 
       const scaler = document.createElement('div');
       scaler.className = 'tool-viewport-scaler';
       scaler.setAttribute('data-scaler-left', `${pageIndex}`);
-      scaler.style.width = `${Math.floor(displayWidth * this.zoom1)}px`;
-      scaler.style.height = `${Math.floor(displayHeight * this.zoom1)}px`;
-      scaler.style.marginBottom = '20px';
 
       const pageCard = document.createElement('div');
       pageCard.className = 'compare-page-card tool-viewport-sheet';
       pageCard.setAttribute('data-page-left', `${pageIndex}`);
       pageCard.style.width = `${displayWidth}px`;
       pageCard.style.height = `${displayHeight}px`;
-      pageCard.style.transform = `scale(${this.zoom1})`;
-      pageCard.style.transformOrigin = 'top left';
+      applyPageScaler(scaler, pageCard, displayWidth, displayHeight, this.zoom1);
 
       const canvas = document.createElement('canvas');
       canvas.className = 'compare-page-canvas';
@@ -640,25 +593,19 @@ class ComparePdfController implements ViewController {
 
       const baseWidth = 520;
       const displayScale = baseWidth / dims.width;
-      this.pageScales2[pageIndex] = displayScale;
-
       const displayWidth = Math.floor(baseWidth);
       const displayHeight = Math.floor((dims.height / dims.width) * baseWidth);
 
       const scaler = document.createElement('div');
       scaler.className = 'tool-viewport-scaler';
       scaler.setAttribute('data-scaler-right', `${pageIndex}`);
-      scaler.style.width = `${Math.floor(displayWidth * this.zoom2)}px`;
-      scaler.style.height = `${Math.floor(displayHeight * this.zoom2)}px`;
-      scaler.style.marginBottom = '20px';
 
       const pageCard = document.createElement('div');
       pageCard.className = 'compare-page-card tool-viewport-sheet';
       pageCard.setAttribute('data-page-right', `${pageIndex}`);
       pageCard.style.width = `${displayWidth}px`;
       pageCard.style.height = `${displayHeight}px`;
-      pageCard.style.transform = `scale(${this.zoom2})`;
-      pageCard.style.transformOrigin = 'top left';
+      applyPageScaler(scaler, pageCard, displayWidth, displayHeight, this.zoom2);
 
       const canvas = document.createElement('canvas');
       canvas.className = 'compare-page-canvas';
@@ -684,6 +631,8 @@ class ComparePdfController implements ViewController {
       scaler.appendChild(pageCard);
       pagesWrapper.appendChild(scaler);
     }
+
+    this.applyOverlayOpacity();
   }
 
   private async runComparison(): Promise<void> {
@@ -703,7 +652,8 @@ class ComparePdfController implements ViewController {
         formData,
         (progress) => {
           this.phaseManager?.updateUploadProgress(progress, 2);
-        }
+        },
+        this.abortController?.signal
       );
       const result = (await response.json()) as {
         data?: ComparePdfResultData;
@@ -713,7 +663,7 @@ class ComparePdfController implements ViewController {
       };
 
       this.phaseManager?.showProcessing(
-        'Comparando documentos PDF...',
+        t('tools.compare_processing_title'),
         t('ui.analizando_estructura_de_texto_semantico')
       );
 
@@ -729,15 +679,14 @@ class ComparePdfController implements ViewController {
       }
     } catch (err: any) {
       const message = err?.message || t('ui.ha_ocurrido_un_error_al_comparar_los_doc');
-      this.phaseManager?.showError(message);
       this.showError(message);
+      this.phaseManager?.showError(message);
     } finally {
       this.isComparing = false;
     }
   }
 
   private updateSimilarityPill(sim: number | null): void {
-    const pill = this.container.querySelector<HTMLElement>('[data-ref="pill-similarity"]');
     const val = this.container.querySelector<HTMLElement>('[data-ref="txt-similarity-val"]');
     const downloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-report"]');
 
@@ -785,7 +734,12 @@ class ComparePdfController implements ViewController {
 
         const header = document.createElement('div');
         header.className = 'compare-change-card__header';
-        header.innerHTML = `<span>Página ${pageComp.pageIndex + 1}</span><span>${change.type}</span>`;
+        const headerPage = document.createElement('span');
+        headerPage.textContent = `${t('common.page')} ${pageComp.pageIndex + 1}`;
+        const headerType = document.createElement('span');
+        headerType.textContent = change.type;
+        header.appendChild(headerPage);
+        header.appendChild(headerType);
         card.appendChild(header);
 
         if (change.oldText) {
@@ -794,7 +748,12 @@ class ComparePdfController implements ViewController {
 
           const label = document.createElement('div');
           label.className = 'compare-change-card__label--old';
-          label.innerHTML = `<span>Archivo antiguo</span><span>-${change.oldText.length}</span>`;
+          const labelName = document.createElement('span');
+          labelName.textContent = t('tools.compare_old_file_label');
+          const labelCount = document.createElement('span');
+          labelCount.textContent = `-${change.oldText.length}`;
+          label.appendChild(labelName);
+          label.appendChild(labelCount);
           secOld.appendChild(label);
 
           const text = document.createElement('div');
@@ -811,7 +770,12 @@ class ComparePdfController implements ViewController {
 
           const label = document.createElement('div');
           label.className = 'compare-change-card__label--new';
-          label.innerHTML = `<span>Archivo nuevo</span><span>+${change.newText.length}</span>`;
+          const labelName = document.createElement('span');
+          labelName.textContent = t('tools.compare_new_file_label');
+          const labelCount = document.createElement('span');
+          labelCount.textContent = `+${change.newText.length}`;
+          label.appendChild(labelName);
+          label.appendChild(labelCount);
           secNew.appendChild(label);
 
           const text = document.createElement('div');
@@ -839,7 +803,7 @@ class ComparePdfController implements ViewController {
       noMatch.className = 'compare-changes-list__empty';
       noMatch.textContent = this.searchQuery
         ? t('ui.no_se_encontraron_cambios_que_coincidan_')
-        : 'Los documentos son 100% idénticos. No se detectaron diferencias.';
+        : t('tools.compare_identical_docs');
       listContainer.appendChild(noMatch);
     }
   }
@@ -873,12 +837,8 @@ class ComparePdfController implements ViewController {
     const leftCard = this.container.querySelector<HTMLElement>(`[data-scaler-left="${pageIndex}"], [data-page-left="${pageIndex}"]`);
     const rightCard = this.container.querySelector<HTMLElement>(`[data-scaler-right="${pageIndex}"], [data-page-right="${pageIndex}"]`);
 
-    if (leftCard) {
-      leftCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    if (rightCard) {
-      rightCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    leftCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    rightCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private async handleDownloadReport(): Promise<void> {
@@ -887,15 +847,17 @@ class ComparePdfController implements ViewController {
       return;
     }
 
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+    const customFilename = docTitleInput?.value.trim();
     const token = this.comparisonResult.fileId;
     this.phaseManager?.navigateToDownload({
       downloadUrl: this.comparisonResult.downloadUrl || `/api/download/${token}`,
-      fileSize: 0,
-      filename: this.comparisonResult.filename || 'informe_comparacion.pdf',
-      returnText: 'Volver a Comparar PDF',
+      fileSize: this.comparisonResult.fileSize || 0,
+      filename: customFilename || this.comparisonResult.filename || 'comparison_report.pdf',
+      returnText: t('tools.compare_return_btn'),
       returnUrl: '/compare-pdf',
       subtitle: t('ui.tu_informe_detallado_de_diferencias_y_an'),
-      title: '¡Informe de comparación listo!',
+      title: t('tools.compare_completed_title'),
       token,
     });
   }

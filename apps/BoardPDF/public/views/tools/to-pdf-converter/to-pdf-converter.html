@@ -1,225 +1,263 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="to-pdf-converter-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-add-files">
-<button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-add-files" data-tooltip="Añadir archivos" data-i18n-aria="common.add_files" aria-label="Añadir archivos">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-</button>
-<div class="dropdown-backdrop" data-ref="dropdown-backdrop-add-files"></div>
-<div class="menu-panel menu-panel--dropdown menu-panel--w-220" data-ref="dropdown-menu-add-files">
-<div class="menu-panel__list" >
-<button type="button" class="menu-item" data-ref="btn-menu-add-device">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#laptop"></use></svg>
-<span class="menu-item__text" >Desde mi dispositivo</span>
-</button>
-<button type="button" class="menu-item" data-ref="btn-menu-add-drive">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
-<span class="menu-item__text" >Subir desde Google Drive</span>
-</button>
-<button type="button" class="menu-item" data-ref="btn-menu-add-dropbox">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
-<span class="menu-item__text" >Subir desde Dropbox</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-add-files">
+        <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-add-files" data-i18n-tooltip="common.add_files" data-i18n-aria="common.add_files">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-add-files"></div>
+        <div class="menu-panel menu-panel--dropdown menu-panel--w-220" data-ref="dropdown-menu-add-files">
+          <div class="menu-panel__drag-zone" aria-hidden="true">
+            <div class="menu-panel__drag-handle"></div>
+          </div>
+          <div class="menu-panel__list">
+            <button type="button" class="menu-item" data-ref="btn-menu-add-device">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+              <span class="menu-item__text" data-ref="txt-menu-add-device" data-i18n="tools.add_from_device"></span>
+            </button>
+            <button type="button" class="menu-item" data-ref="btn-menu-add-drive">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#google_drive"></use></svg>
+              <span class="menu-item__text" data-i18n="tools.add_from_drive"></span>
+            </button>
+            <button type="button" class="menu-item" data-ref="btn-menu-add-dropbox">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dropbox"></use></svg>
+              <span class="menu-item__text" data-i18n="tools.add_from_dropbox"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-i18n-tooltip="common.options" data-i18n-aria="common.options">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text" data-i18n="common.options"></span>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-convert-action" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
+        <span class="component-button__text" data-ref="txt-convert-action" data-i18n="tools.to_pdf_convert_btn"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="to-pdf-converter-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="to-pdf-converter-workspace">
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="converter-selected-card">
+        <div class="pdf-reorder-hint" data-ref="converter-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+          <span data-ref="txt-reorder-hint" data-i18n="tools.to_pdf_reorder_hint"></span>
+        </div>
+        <div class="pdf-items-grid" data-ref="pdf-items-grid">
+          <div class="pdf-card">
+            <div class="pdf-card__actions">
+              <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" data-i18n-title="common.delete_file" data-i18n-aria="common.delete_file">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
+                <img class="pdf-card__preview-img is-hidden" data-ref="doc-preview-img" data-i18n-alt="common.preview" alt="" />
+                <div class="pdf-card__placeholder" data-ref="doc-preview-icon">
+                  <svg class="component-icon pdf-card__placeholder-icon" data-ref="selected-file-symbol" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                  <div class="pdf-card__placeholder-lines">
+                    <div class="pdf-card__placeholder-line pdf-card__placeholder-line--lg"></div>
+                    <div class="pdf-card__placeholder-line"></div>
+                    <div class="pdf-card__placeholder-line"></div>
+                    <div class="pdf-card__placeholder-line pdf-card__placeholder-line--sm"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span class="pdf-card__filename" data-ref="selected-file-name"></span>
+            <span class="pdf-card__meta" data-ref="selected-file-size"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="html-preview-view is-hidden" data-ref="html-preview-view">
+        <div class="html-preview-container" data-ref="html-preview-container">
+          <div class="html-browser-frame" data-ref="html-browser-frame" data-screen="screen" data-orientation="portrait">
+            <div class="html-preview-toolbar">
+              <span class="component-badge component-badge--sm html-preview-badge" data-ref="html-preview-badge"></span>
+              <button type="button" class="component-button component-button--ghost component-button--icon-only component-button--h32" data-ref="btn-toolbar-refresh-preview" data-i18n-tooltip="tools.html_to_pdf_refresh_preview" data-i18n-aria="tools.html_to_pdf_refresh_preview">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+              </button>
+            </div>
+            <div class="html-browser-frame__viewport">
+              <div class="html-preview-loader is-hidden" data-ref="html-preview-loader">
+                <svg class="component-icon is-spinning" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                <span data-i18n="tools.html_to_pdf_loading_preview"></span>
+              </div>
+              <img class="html-preview-img is-hidden" data-ref="html-preview-img" data-i18n-alt="common.web_preview" alt="" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <input class="pdf-dropzone__input is-hidden" data-ref="input-source-file" type="file" />
+      <div class="banner banner--danger is-hidden" data-ref="converter-global-error" role="alert"></div>
+    </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="to-pdf-converter-sidebar">
+        <div class="menu-panel__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+          <div class="menu-panel__drag-handle"></div>
+        </div>
+        <div class="tool-sidebar__header">
+          <div class="component-title-badge" data-ref="converter-sidebar-title-badge">
+            <h1 class="component-title-badge__text" data-ref="converter-sidebar-title" data-i18n="tools.to_pdf_converter_options"></h1>
+          </div>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section is-hidden" data-ref="section-jpg-options">
+            <span class="tool-sidebar__section-title" data-i18n="tools.jpg_page_orientation"></span>
+            <div class="component-tabs" data-ref="toggle-jpg-orientation" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-jpg-orient-portrait" data-i18n="tools.orient_portrait" data-val="portrait"></button>
+              <button type="button" class="component-tab" data-ref="btn-jpg-orient-landscape" data-i18n="tools.orient_landscape" data-val="landscape"></button>
+            </div>
+
+            <span class="tool-sidebar__section-title" data-i18n="tools.jpg_page_size"></span>
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-jpg-page-size">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-jpg-page-size" data-i18n-aria="aria.page_size">
+                <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-jpg-page-size">
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="icon-jpg-page-size" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="jpg-page-size-selected-text" data-i18n="ui.ajustado_mismo_tamano_de_pagina_de_la_im"></span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-jpg-page-size-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-jpg-page-size">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-jpg-page-size">
+                  <div class="menu-panel__drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-jpg-page-sizes">
+                    <button type="button" class="menu-item is-active" data-ref="option-jpg-size-fit" data-value="fit">
+                      <span class="menu-item__text" data-i18n="ui.ajustado_mismo_tamano_de_pagina_de_la_im"></span>
+                      <svg class="component-icon menu-item__check" data-ref="check-jpg-size-fit" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-jpg-size-a4" data-value="a4">
+                      <span class="menu-item__text" data-i18n="tools.page_size_a4"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-jpg-size-a4" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-jpg-size-letter" data-value="letter">
+                      <span class="menu-item__text" data-i18n="tools.page_size_letter"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-jpg-size-letter" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <span class="tool-sidebar__section-title" data-i18n="tools.margin_label"></span>
+            <div class="component-tabs" data-ref="toggle-jpg-margin" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-jpg-margin-none" data-i18n="tools.margin_none" data-val="none"></button>
+              <button type="button" class="component-tab" data-ref="btn-jpg-margin-small" data-i18n="tools.margin_small" data-val="small"></button>
+              <button type="button" class="component-tab" data-ref="btn-jpg-margin-large" data-i18n="tools.margin_large" data-val="large"></button>
+            </div>
+
+            <label class="split-option-card" data-ref="card-merge-images">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title" data-i18n="tools.jpg_merge_images_title"></span>
+                <span class="split-option-card__subtitle" data-i18n="tools.jpg_merge_images_desc"></span>
+              </div>
+              <input class="component-checkbox" data-ref="check-merge-images" type="checkbox" checked />
+            </label>
+          </div>
+
+          <div class="tool-sidebar__section is-hidden" data-ref="section-html-options">
+            <span class="tool-sidebar__section-title" data-i18n="tools.html_to_pdf.url_label"></span>
+            <label class="field" data-ref="field-html-url">
+              <input class="field__input" data-ref="input-html-url" type="url" placeholder=" " autocomplete="off" />
+              <span class="field__label" data-i18n="tools.html_url_address"></span>
+            </label>
+            <button type="button" class="component-button component-button--h40 component-button--w-full" data-ref="btn-refresh-html-preview">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+              <span data-i18n="tools.html_to_pdf_refresh_preview"></span>
+            </button>
+
+            <span class="tool-sidebar__section-title" data-i18n="aria.screen_size"></span>
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-html-screen">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-html-screen" data-i18n-aria="aria.screen_size">
+                <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-html-screen">
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="icon-html-screen" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="html-screen-selected-text" data-i18n="tools.html_screen_user_default"></span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-html-screen-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-html-screen">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-html-screen">
+                  <div class="menu-panel__drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-html-screens">
+                    <button type="button" class="menu-item is-active" data-ref="option-screen-user" data-value="screen">
+                      <span class="menu-item__text" data-ref="txt-option-screen-user" data-i18n="tools.html_screen_user_default"></span>
+                      <svg class="component-icon menu-item__check" data-ref="check-screen-user" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-screen-1920" data-value="1920">
+                      <span class="menu-item__text" data-i18n="tools.html_screen_1920"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-screen-1920" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-screen-1440" data-value="1440">
+                      <span class="menu-item__text" data-i18n="tools.html_screen_1440"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-screen-1440" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-screen-768" data-value="768">
+                      <span class="menu-item__text" data-i18n="tools.html_screen_768"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-screen-768" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-screen-320" data-value="320">
+                      <span class="menu-item__text" data-i18n="tools.html_screen_320"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-screen-320" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <label class="split-option-card" data-ref="card-html-single-page">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title" data-i18n="tools.html_single_page_title"></span>
+                <span class="split-option-card__subtitle" data-i18n="tools.html_single_page_desc"></span>
+              </div>
+              <input class="component-checkbox" data-ref="check-html-single-page" type="checkbox" />
+            </label>
+
+            <span class="tool-sidebar__section-title" data-i18n="tools.orientation_label"></span>
+            <div class="component-tabs" data-ref="toggle-html-orientation" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-html-orient-portrait" data-i18n="tools.orient_portrait" data-val="portrait"></button>
+              <button type="button" class="component-tab" data-ref="btn-html-orient-landscape" data-i18n="tools.orient_landscape" data-val="landscape"></button>
+            </div>
+
+            <span class="tool-sidebar__section-title" data-i18n="tools.margin_label"></span>
+            <div class="component-tabs" data-ref="toggle-html-margin" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-html-margin-none" data-i18n="tools.margin_none" data-val="none"></button>
+              <button type="button" class="component-tab" data-ref="btn-html-margin-small" data-i18n="tools.margin_small" data-val="small"></button>
+              <button type="button" class="component-tab" data-ref="btn-html-margin-large" data-i18n="tools.margin_large" data-val="large"></button>
+            </div>
+
+            <label class="split-option-card" data-ref="card-html-block-ads">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title" data-i18n="tools.html_block_ads_title"></span>
+                <span class="split-option-card__subtitle" data-i18n="tools.html_block_ads_desc"></span>
+              </div>
+              <input class="component-checkbox" data-ref="check-html-block-ads" type="checkbox" />
+            </label>
+
+            <label class="split-option-card" data-ref="card-html-remove-popups">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title" data-i18n="tools.html_remove_popups_title"></span>
+                <span class="split-option-card__subtitle" data-i18n="tools.html_remove_popups_desc"></span>
+              </div>
+              <input class="component-checkbox" data-ref="check-html-remove-popups" type="checkbox" checked />
+            </label>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
 </div>
-</div>
-</div>
-<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-<span class="component-button__text" >Opciones</span>
-</button>
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-convert-action" disabled>
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>
-<span class="component-button__text" data-ref="txt-convert-action">Convertir a PDF</span>
-</button>
-</div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="to-pdf-converter-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="to-pdf-converter-workspace">
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="converter-selected-card">
-<div class="pdf-reorder-hint" data-ref="converter-reorder-hint">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-<span data-ref="txt-reorder-hint">Arrastra y suelta las tarjetas para reorganizar el orden en que se convertirán a PDF.</span>
-</div>
-<div class="pdf-items-grid" data-ref="pdf-items-grid">
-<div class="pdf-card" >
-<div class="pdf-card__actions" >
-<button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" data-i18n-aria="common.delete_file" aria-label="Eliminar archivo">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="pdf-card__sheet-wrapper" >
-<div class="pdf-card__sheet" >
-<img class="pdf-card__preview-img is-hidden" data-ref="doc-preview-img" alt="Vista previa" />
-<div class="pdf-card__placeholder" data-ref="doc-preview-icon">
-<svg class="component-icon pdf-card__placeholder-icon" data-ref="selected-file-symbol" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-<div class="pdf-card__placeholder-lines" >
-<div class="pdf-card__placeholder-line pdf-card__placeholder-line--lg" ></div>
-<div class="pdf-card__placeholder-line" ></div>
-<div class="pdf-card__placeholder-line" ></div>
-<div class="pdf-card__placeholder-line pdf-card__placeholder-line--sm" ></div>
-</div>
-</div>
-</div>
-</div>
-<span class="pdf-card__filename" data-ref="selected-file-name">documento.docx</span>
-<span class="pdf-card__meta" data-ref="selected-file-size">0 KB</span>
-</div>
-</div>
-</div>
-<div class="html-preview-view is-hidden" data-ref="html-preview-view">
-<div class="html-preview-frame-container" data-ref="html-preview-container">
-<div class="html-preview-spinner is-hidden" data-ref="html-preview-spinner">
-<svg class="component-icon is-spinning" aria-hidden="true"><use href="/icons.svg#progress_activity"></use></svg>
-<span>Generando vista previa de la web...</span>
-</div>
-<iframe class="html-preview-iframe" data-ref="html-preview-iframe" data-i18n-title="common.web_preview" title="Vista previa de página web" sandbox="allow-same-origin allow-scripts"></iframe>
-</div>
-</div>
-</main>
-<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="to-pdf-converter-sidebar">
-<div class="tool-sidebar__header">
-  <h2 class="tool-sidebar__title" data-ref="converter-sidebar-title" data-i18n="tools.to_pdf_converter_options"></h2>
-  <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="tool-sidebar__body" >
-<div class="tool-sidebar__section is-hidden" data-ref="section-jpg-options">
-<span class="tool-sidebar__section-title" >Orientación de la página</span>
-<div class="component-tabs" data-ref="toggle-jpg-orientation" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-jpg-orient-portrait" data-val="portrait">Vertical</button>
-<button type="button" class="component-tab" data-ref="btn-jpg-orient-landscape" data-val="landscape">Horizontal</button>
-</div>
-<span class="tool-sidebar__section-title" >Tamaño de la página</span>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-jpg-page-size">
-<button type="button" class="dropdown-trigger" data-ref="btn-trigger-jpg-page-size" data-i18n-aria="aria.page_size" aria-label="Tamaño de la página">
-<div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-jpg-page-size">
-<svg class="component-icon dropdown-trigger__icon" data-ref="icon-jpg-page-size" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-<span class="dropdown-trigger__text" data-ref="jpg-page-size-selected-text">Ajustado (mismo tamaño de pagina de la imagen)</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-jpg-page-size-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" data-ref="dropdown-backdrop-jpg-page-size">
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-jpg-page-size">
-<div class="menu-panel__list" data-ref="list-jpg-page-sizes">
-<button type="button" class="menu-item is-active" data-ref="option-jpg-size-fit" data-value="fit">
-<span class="menu-item__text" >Ajustado (mismo tamaño de pagina de la imagen)</span>
-<svg class="component-icon menu-item__icon" data-ref="check-jpg-size-fit" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-jpg-size-a4" data-value="a4">
-<span class="menu-item__text" >A4 297x210 mm</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-jpg-size-a4" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-jpg-size-letter" data-value="letter">
-<span class="menu-item__text" >US Letter 215x279.4mm</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-jpg-size-letter" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-</div>
-</div>
-</div>
-</div>
-<span class="tool-sidebar__section-title" >Margen</span>
-<div class="component-tabs" data-ref="toggle-jpg-margin" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-jpg-margin-none" data-val="none">Sin margen</button>
-<button type="button" class="component-tab" data-ref="btn-jpg-margin-small" data-val="small">Pequeño</button>
-<button type="button" class="component-tab" data-ref="btn-jpg-margin-large" data-val="large">Grande</button>
-</div>
-<label class="split-option-card" data-ref="card-merge-images">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >Unir todas las imágenes en un único PDF</span>
-<span class="split-option-card__subtitle" >Combina todas las imágenes en un único documento PDF</span>
-</div>
-<input class="component-checkbox" data-ref="check-merge-images" type="checkbox" checked />
-</label>
-</div>
-<div class="tool-sidebar__section is-hidden" data-ref="section-html-options">
-<span class="tool-sidebar__section-title" >URL de la página web</span>
-<label class="field" data-ref="field-html-url">
-<input class="field__input" data-ref="input-html-url" type="url" placeholder=" " autocomplete="off" />
-<span class="field__label" >Dirección URL</span>
-</label>
-<button type="button" class="component-button component-button--secondary component-button--h40 component-button--w-full" data-ref="btn-refresh-html-preview">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-<span>Refrescar vista previa</span>
-</button>
-<span class="tool-sidebar__section-title" >Tamaño de la pantalla</span>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-html-screen">
-<button type="button" class="dropdown-trigger" data-ref="btn-trigger-html-screen" data-i18n-aria="aria.screen_size" aria-label="Tamaño de la pantalla">
-<div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-html-screen">
-<svg class="component-icon dropdown-trigger__icon" data-ref="icon-html-screen" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-<span class="dropdown-trigger__text" data-ref="html-screen-selected-text">Tu pantalla (medida de tu pantalla)</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-html-screen-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" data-ref="dropdown-backdrop-html-screen">
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-html-screen">
-<div class="menu-panel__list" data-ref="list-html-screens">
-<button type="button" class="menu-item is-active" data-ref="option-screen-user" data-value="screen">
-<span class="menu-item__text" data-ref="txt-option-screen-user">Tu pantalla (medida de tu pantalla)</span>
-<svg class="component-icon menu-item__icon" data-ref="check-screen-user" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-screen-1920" data-value="1920">
-<span class="menu-item__text" >Escritorio HD (1920px)</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-1920" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-screen-1440" data-value="1440">
-<span class="menu-item__text" >Escritorio (1440px)</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-1440" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-screen-768" data-value="768">
-<span class="menu-item__text" >Tableta (768px)</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-768" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-<button type="button" class="menu-item" data-ref="option-screen-320" data-value="320">
-<span class="menu-item__text" >Móvil (320px)</span>
-<svg class="component-icon menu-item__icon is-hidden" data-ref="check-screen-320" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-</button>
-</div>
-</div>
-</div>
-</div>
-<label class="split-option-card" data-ref="card-html-single-page">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >Una página grande</span>
-<span class="split-option-card__subtitle" >Tu web se convertirá en una sola página grande en lugar de dividirse en varias páginas PDF</span>
-</div>
-<input class="component-checkbox" data-ref="check-html-single-page" type="checkbox" />
-</label>
-<span class="tool-sidebar__section-title" >Orientación</span>
-<div class="component-tabs" data-ref="toggle-html-orientation" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-html-orient-portrait" data-val="portrait">Vertical</button>
-<button type="button" class="component-tab" data-ref="btn-html-orient-landscape" data-val="landscape">Horizontal</button>
-</div>
-<span class="tool-sidebar__section-title" >Margen</span>
-<div class="component-tabs" data-ref="toggle-html-margin" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-html-margin-none" data-val="none">Sin margen</button>
-<button type="button" class="component-tab" data-ref="btn-html-margin-small" data-val="small">Pequeño</button>
-<button type="button" class="component-tab" data-ref="btn-html-margin-large" data-val="large">Grande</button>
-</div>
-<label class="split-option-card" data-ref="card-html-block-ads">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >Intentar bloquear anuncios</span>
-<span class="split-option-card__subtitle" >Oculta publicidad intrusiva y anuncios de la página</span>
-</div>
-<input class="component-checkbox" data-ref="check-html-block-ads" type="checkbox" />
-</label>
-<label class="split-option-card" data-ref="card-html-remove-popups">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >Eliminar ventanas emergentes</span>
-<span class="split-option-card__subtitle" >Suprime banners de cookies y cuadros emergentes</span>
-</div>
-<input class="component-checkbox" data-ref="check-html-remove-popups" type="checkbox" checked />
-</label>
-</div>
-<div class="tool-sidebar__notice is-hidden" data-ref="converter-sidebar-notice">
-<p class="tool-sidebar__notice-text" >Convierte tu documento a formato PDF de forma segura y con alta fidelidad.</p>
-</div>
-</div>
-</aside>
-</div>
-</div>
-</div> 

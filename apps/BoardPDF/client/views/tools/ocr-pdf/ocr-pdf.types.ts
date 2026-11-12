@@ -1,4 +1,3 @@
-import { t } from '../../../services/i18n.service.js';
 type ClientOcrLanguage = string;
 
 interface OcrLanguageItem {
@@ -101,7 +100,7 @@ const OCR_LANGUAGES: readonly OcrLanguageItem[] = [
   { code: 'nld', name: 'Neerlandés; flamenco' },
   { code: 'nep', name: 'Nepalí' },
   { code: 'nor', name: 'Noruego' },
-  { code: 'oci', name: t('ui.occitano_despues_de_1500') },
+  { code: 'oci', name: 'ui.occitano_despues_de_1500' },
   { code: 'ori', name: 'Oriya' },
   { code: 'pan', name: 'Panyabí; Punyabí' },
   { code: 'fas', name: 'Persa' },

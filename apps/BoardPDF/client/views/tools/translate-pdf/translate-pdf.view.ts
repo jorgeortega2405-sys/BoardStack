@@ -4,8 +4,8 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { navigate } from '../../../services/navigation.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
@@ -14,18 +14,10 @@ import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSideba
 import { formatBytes } from '../../../utils/format.util.js';
 import { OCR_LANGUAGES } from '../ocr-pdf/ocr-pdf.types.js';
 import { TranslatePdfResultData } from './translate-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 const CLEAN_LANGUAGES = OCR_LANGUAGES.filter(
   (lang) => !lang.code.includes('_') && lang.code !== 'equ' && !lang.name.includes('antiguo')
 );
-
-const SOURCE_LANG_ITEMS = [
-  { code: '', name: 'Detección automática (Recomendado)' },
-  ...CLEAN_LANGUAGES,
-];
-
-const TARGET_LANG_ITEMS = [...CLEAN_LANGUAGES];
 
 class TranslatePdfViewController implements ViewController {
   private abortController: AbortController | null = null;
@@ -39,17 +31,6 @@ class TranslatePdfViewController implements ViewController {
   private sourceLang = '';
   private targetLang = 'spa';
 
-  private readonly layoutDetails = {
-    preserve: {
-      desc: t('ui.el_pdf_procesado_mantendra_el_diseno_lo_'),
-      title: 'Mantener el diseño',
-    },
-    text_only: {
-      desc: 'El PDF procesado contiene solo texto y su jerarquía.',
-      title: 'Solo texto',
-    },
-  };
-
   constructor(container: HTMLElement) {
     this.container = container;
   }
@@ -59,14 +40,14 @@ class TranslatePdfViewController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar Archivo PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.traduce_documentos_completos_conservando'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) this.handleFileSelected(files[0]);
         },
-        title: 'Traducir PDF',
+        title: t('tools.translate_pdf_title'),
       },
       onRetry: () => {
         const translateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-translate-action"]');
@@ -74,7 +55,7 @@ class TranslatePdfViewController implements ViewController {
       },
       sidebarRef: 'translate-pdf-sidebar',
       toolId: 'translate-pdf',
-      toolName: 'Traducir PDF',
+      toolName: t('tools.translate_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'translate-selected-card',
     });
@@ -143,7 +124,7 @@ class TranslatePdfViewController implements ViewController {
     if (sourceWrapper) {
       const listEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="list-source-lang"]');
       const emptyEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="empty-source-lang"]');
-      const searchInput = sourceWrapper.querySelector<HTMLInputElement>('[data-ref="search-source-lang"]');
+      const searchInput = sourceWrapper.querySelector<HTMLInputElement>('[data-ref="input-search-source-lang"]');
       const labelEl = sourceWrapper.querySelector<HTMLElement>('[data-ref="txt-selected-source-lang"]');
 
       if (listEl) this.renderSourceLanguages(listEl);
@@ -154,14 +135,18 @@ class TranslatePdfViewController implements ViewController {
         matchWidth: true,
         menu: sourceWrapper.querySelector<HTMLElement>('[data-ref="menu-source-lang"]'),
         offset: [0, 8],
-        onSelect: (val, item) => {
-          this.sourceLang = val || '';
+        onSelect: (_val, item) => {
+          const langCode = item?.getAttribute('data-lang') ?? '';
+          this.sourceLang = langCode;
           if (labelEl && item) {
             const text = item.querySelector('.menu-item__text')?.textContent || '';
+            labelEl.removeAttribute('data-i18n');
             labelEl.textContent = text;
           }
-          listEl?.querySelectorAll('.menu-item').forEach((i) => {
-            i.classList.toggle('is-active', (i.getAttribute('data-lang') || '') === this.sourceLang);
+          listEl?.querySelectorAll('.menu-item').forEach((menuItem) => {
+            const isMatch = (menuItem.getAttribute('data-lang') || '') === this.sourceLang;
+            menuItem.classList.toggle('is-active', isMatch);
+            menuItem.querySelector('.menu-item__check')?.classList.toggle('is-hidden', !isMatch);
           });
         },
         trigger: sourceWrapper.querySelector<HTMLElement>('[data-ref="btn-trigger-source-lang"]'),
@@ -176,7 +161,7 @@ class TranslatePdfViewController implements ViewController {
     if (targetWrapper) {
       const listEl = targetWrapper.querySelector<HTMLElement>('[data-ref="list-target-lang"]');
       const emptyEl = targetWrapper.querySelector<HTMLElement>('[data-ref="empty-target-lang"]');
-      const searchInput = targetWrapper.querySelector<HTMLInputElement>('[data-ref="search-target-lang"]');
+      const searchInput = targetWrapper.querySelector<HTMLInputElement>('[data-ref="input-search-target-lang"]');
       const labelEl = targetWrapper.querySelector<HTMLElement>('[data-ref="txt-selected-target-lang"]');
 
       if (listEl) this.renderTargetLanguages(listEl);
@@ -188,14 +173,18 @@ class TranslatePdfViewController implements ViewController {
         menu: targetWrapper.querySelector<HTMLElement>('[data-ref="menu-target-lang"]'),
         offset: [0, 8],
         onSelect: (val, item) => {
-          if (!val) return;
-          this.targetLang = val;
+          const langCode = val || item?.getAttribute('data-lang') || '';
+          if (!langCode) return;
+          this.targetLang = langCode;
           if (labelEl && item) {
             const text = item.querySelector('.menu-item__text')?.textContent || '';
+            labelEl.removeAttribute('data-i18n');
             labelEl.textContent = text;
           }
-          listEl?.querySelectorAll('.menu-item').forEach((i) => {
-            i.classList.toggle('is-active', (i.getAttribute('data-lang') || '') === this.targetLang);
+          listEl?.querySelectorAll('.menu-item').forEach((menuItem) => {
+            const isMatch = (menuItem.getAttribute('data-lang') || '') === this.targetLang;
+            menuItem.classList.toggle('is-active', isMatch);
+            menuItem.querySelector('.menu-item__check')?.classList.toggle('is-hidden', !isMatch);
           });
         },
         trigger: targetWrapper.querySelector<HTMLElement>('[data-ref="btn-trigger-target-lang"]'),
@@ -209,25 +198,33 @@ class TranslatePdfViewController implements ViewController {
   }
 
   private renderSourceLanguages(container: HTMLElement): void {
-    container.innerHTML = SOURCE_LANG_ITEMS.map((l) => {
-      const isActive = this.sourceLang === l.code;
+    const items = [
+      { code: '', name: t('tools.translate_auto_detect') },
+      ...CLEAN_LANGUAGES,
+    ];
+    container.innerHTML = items.map((lang) => {
+      const isActive = this.sourceLang === lang.code;
       return `
-        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-source-lang" data-lang="${l.code}" data-value="${l.code}">
-          <span class="menu-item__text">${l.name}</span>
+        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-source-lang-${lang.code || 'auto'}" data-lang="${lang.code}" data-value="${lang.code}">
+          <span class="menu-item__text">${lang.name}</span>
+          <svg class="component-icon menu-item__check${isActive ? '' : ' is-hidden'}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
         </button>
       `;
     }).join('');
+    renderIcons(container);
   }
 
   private renderTargetLanguages(container: HTMLElement): void {
-    container.innerHTML = TARGET_LANG_ITEMS.map((l) => {
-      const isActive = this.targetLang === l.code;
+    container.innerHTML = CLEAN_LANGUAGES.map((lang) => {
+      const isActive = this.targetLang === lang.code;
       return `
-        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-target-lang" data-lang="${l.code}" data-value="${l.code}">
-          <span class="menu-item__text">${l.name}</span>
+        <button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="item-target-lang-${lang.code}" data-lang="${lang.code}" data-value="${lang.code}">
+          <span class="menu-item__text">${lang.name}</span>
+          <svg class="component-icon menu-item__check${isActive ? '' : ' is-hidden'}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
         </button>
       `;
     }).join('');
+    renderIcons(container);
   }
 
   private filterLanguages(listEl: HTMLElement, emptyEl: HTMLElement | null, query: string): void {
@@ -260,9 +257,18 @@ class TranslatePdfViewController implements ViewController {
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="translate-layout-title"]');
     const descEl = this.container.querySelector<HTMLElement>('[data-ref="translate-layout-desc"]');
-    const detail = this.layoutDetails[mode];
-    if (titleEl && detail) titleEl.textContent = detail.title;
-    if (descEl && detail) descEl.textContent = detail.desc;
+    if (titleEl) {
+      titleEl.removeAttribute('data-i18n');
+      titleEl.textContent = mode === 'preserve'
+        ? t('tools.translate_layout_preserve_title')
+        : t('tools.translate_layout_text_title');
+    }
+    if (descEl) {
+      descEl.removeAttribute('data-i18n');
+      descEl.textContent = mode === 'preserve'
+        ? t('tools.translate_layout_preserve_desc')
+        : t('tools.translate_layout_text_desc');
+    }
   }
 
   private handleFileSelected(file: File): void {
@@ -284,7 +290,7 @@ class TranslatePdfViewController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'translate-pdf',
-        toolName: 'Traducir PDF',
+        toolName: t('tools.translate_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -304,6 +310,13 @@ class TranslatePdfViewController implements ViewController {
     if (translateBtn) translateBtn.disabled = false;
 
     this.phaseManager?.setPhase('workspace');
+
+    const titleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+    if (titleInput) {
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      titleInput.value = `${base}${t('tools.translate_default_suffix')}.pdf`;
+    }
+
     void this.renderThumbnail(file);
   }
 
@@ -311,10 +324,11 @@ class TranslatePdfViewController implements ViewController {
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
     if (!canvas) return;
 
+    let pdf: any = null;
     try {
       const pdfjs = await loadPdfJs();
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
       const page = await pdf.getPage(1);
       const targetWidth = 140;
       const origViewport = page.getViewport({ scale: 1 });
@@ -332,7 +346,12 @@ class TranslatePdfViewController implements ViewController {
         ctx.scale(dpr, dpr);
         await page.render({ canvasContext: ctx, viewport }).promise;
       }
-    } catch {}
+    } catch {
+    } finally {
+      try {
+        if (pdf) await pdf.destroy();
+      } catch {}
+    }
   }
 
   private resetSelectedFile(): void {
@@ -373,7 +392,7 @@ class TranslatePdfViewController implements ViewController {
         const res = (await response.json()) as { data?: TranslatePdfResultData; error?: string; success: boolean };
 
         this.phaseManager?.showProcessing(
-          'Traduciendo documento...',
+          t('tools.translate_processing_title'),
           this.selectedLayout === 'preserve'
             ? t('ui.conservando_formato_tipografia_y_tablas_')
             : t('ui.generando_documento_con_texto_traducido_')
@@ -388,20 +407,20 @@ class TranslatePdfViewController implements ViewController {
           updateUserAiTokens((res as any).aiTokens.balance);
         }
         showToast(t('toasts.documento_traducido_con_exito'), 'success');
-        this.phaseManager?.navigateToDownload({
+        await this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: res.data.size,
           filename: res.data.filename,
-          returnText: 'Traducir otro documento',
+          returnText: t('tools.translate_return_btn'),
           returnUrl: '/translate-pdf',
-          subtitle: `Se ha traducido exitosamente "${this.currentFile?.name}".`,
-          title: '¡PDF traducido con éxito!',
+          subtitle: `${t('tools.translate_success_prefix')}"${this.currentFile?.name}".`,
+          title: t('tools.translate_success_title'),
           token,
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : t('ui.error_al_conectar_con_el_servidor');
-        this.phaseManager?.showError(errorMessage);
         this.showError(errorMessage);
+        this.phaseManager?.showError(errorMessage);
       } finally {
         this.isProcessing = false;
       }

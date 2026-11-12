@@ -1,23 +1,31 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="organize-pdf-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
-<span class="component-button__text" data-ref="txt-main-action" data-i18n="tools.organize_pdf_btn_select"></span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-rotate-all" data-i18n-tooltip="tools.rotate_all_right" data-i18n-aria="tools.rotate_all_right" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-reset-order" data-i18n-tooltip="tools.organize_pdf_btn_reset" data-i18n-aria="tools.organize_pdf_btn_reset" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
+        <span class="component-button__text" data-ref="txt-main-action" data-i18n="tools.organize_pdf_btn_select"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="organize-pdf-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="organize-pdf-workspace">
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="pdf-items-card">
+        <div class="pdf-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+          <span data-i18n="tools.organize_pdf_info_hint"></span>
+        </div>
+        <div class="pdf-items-grid" data-ref="organize-pages-grid"></div>
+        <div class="banner banner--danger is-hidden" data-ref="organize-global-error" role="alert"></div>
+      </div>
+    </main>
+  </div>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="organize-pdf-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="organize-pdf-workspace">
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="pdf-items-card">
-<div class="pdf-reorder-hint" >
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-<span data-i18n="tools.organize_pdf_info_hint"></span>
-</div>
-<div class="pdf-items-grid" data-ref="organize-pages-grid"></div>
-</div>
-</main>
-</div>
-</div> 

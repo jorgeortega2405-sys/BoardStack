@@ -1,4 +1,3 @@
-import { t } from '../../../services/i18n.service.js';
 type ToPdfSourceType =
   | 'excel-to-pdf'
   | 'html-to-pdf'
@@ -16,92 +15,92 @@ type HtmlMargin = 'none' | 'small' | 'large';
 
 interface ToPdfRouteConfig {
   accept: string;
-  actionText: string;
-  browseText?: string;
-  convertingText: string;
+  actionTextKey: string;
+  browseTextKey: string;
+  convertingTextKey: string;
   formatBadge: string;
-  hintText?: string;
+  hintTextKey: string;
   icon: string;
   isUrlMode?: boolean;
   sourceType: ToPdfSourceType;
-  subtitle: string;
-  title: string;
+  subtitleKey: string;
+  titleKey: string;
 }
 
 const TO_PDF_CONFIGS: Record<string, ToPdfRouteConfig> = {
   '/excel-to-pdf': {
     accept: '.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
-    actionText: 'Convertir a PDF',
-    browseText: 'Seleccionar Archivo',
-    convertingText: t('ui.convirtiendo_hojas_de_calculo_a_pdf'),
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.select_file_btn',
+    convertingTextKey: 'ui.convirtiendo_hojas_de_calculo_a_pdf',
     formatBadge: 'XLSX / XLS',
-    hintText: 'o arrastra y suelta tu archivo aquí',
+    hintTextKey: 'common.drop_file_hint',
     icon: 'table_chart',
     sourceType: 'excel-to-pdf',
-    subtitle: t('ui.convierte_tus_libros_y_hojas_de_excel_en'),
-    title: 'Excel a PDF',
+    subtitleKey: 'ui.convierte_tus_libros_y_hojas_de_excel_en',
+    titleKey: 'tools.excel_to_pdf_title',
   },
   '/html-a-pdf': {
     accept: '.html,.htm,text/html',
-    actionText: 'Convertir a PDF',
-    browseText: 'Ingresar URL',
-    convertingText: 'Renderizando página web a PDF...',
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.html_to_pdf.add_url_btn',
+    convertingTextKey: 'tools.html_to_pdf_converting',
     formatBadge: 'URL / HTML',
-    hintText: t('ui.pega_la_url_de_cualquier_pagina_web_para'),
+    hintTextKey: 'ui.pega_la_url_de_cualquier_pagina_web_para',
     icon: 'language',
     isUrlMode: true,
     sourceType: 'html-to-pdf',
-    subtitle: t('ui.transforma_paginas_web_y_archivos_html_e'),
-    title: 'HTML a PDF',
+    subtitleKey: 'ui.transforma_paginas_web_y_archivos_html_e',
+    titleKey: 'tools.html_to_pdf_title',
   },
   '/html-to-pdf': {
     accept: '.html,.htm,text/html',
-    actionText: 'Convertir a PDF',
-    browseText: 'Ingresar URL',
-    convertingText: 'Renderizando página web a PDF...',
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.html_to_pdf.add_url_btn',
+    convertingTextKey: 'tools.html_to_pdf_converting',
     formatBadge: 'URL / HTML',
-    hintText: t('ui.pega_la_url_de_cualquier_pagina_web_para'),
+    hintTextKey: 'ui.pega_la_url_de_cualquier_pagina_web_para',
     icon: 'language',
     isUrlMode: true,
     sourceType: 'html-to-pdf',
-    subtitle: t('ui.transforma_paginas_web_y_archivos_html_e'),
-    title: 'HTML a PDF',
+    subtitleKey: 'ui.transforma_paginas_web_y_archivos_html_e',
+    titleKey: 'tools.html_to_pdf_title',
   },
   '/jpg-to-pdf': {
     accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp',
-    actionText: 'Convertir a PDF',
-    browseText: 'Seleccionar Archivo',
-    convertingText: 'Convirtiendo imágenes a PDF...',
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.select_files_btn',
+    convertingTextKey: 'tools.jpg_to_pdf_converting',
     formatBadge: 'JPG / PNG',
-    hintText: 'o arrastra y suelta tu archivo aquí',
-    icon: 'image',
+    hintTextKey: 'common.drop_files_hint',
+    icon: 'photo_library',
     sourceType: 'jpg-to-pdf',
-    subtitle: t('ui.convierte_tus_imagenes_jpg_jpeg_o_png_en'),
-    title: 'JPG a PDF',
+    subtitleKey: 'ui.convierte_tus_imagenes_jpg_jpeg_o_png_en',
+    titleKey: 'tools.jpg_to_pdf_title',
   },
   '/powerpoint-to-pdf': {
     accept: '.pptx,.ppt,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint',
-    actionText: 'Convertir a PDF',
-    browseText: 'Seleccionar Archivo',
-    convertingText: 'Convirtiendo diapositivas a PDF...',
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.select_file_btn',
+    convertingTextKey: 'tools.powerpoint_to_pdf_converting',
     formatBadge: 'PPTX / PPT',
-    hintText: 'o arrastra y suelta tu archivo aquí',
+    hintTextKey: 'common.drop_file_hint',
     icon: 'slideshow',
     sourceType: 'powerpoint-to-pdf',
-    subtitle: t('ui.convierte_tus_presentaciones_de_powerpoi'),
-    title: 'PowerPoint a PDF',
+    subtitleKey: 'ui.convierte_tus_presentaciones_de_powerpoi',
+    titleKey: 'tools.powerpoint_to_pdf_title',
   },
   '/word-to-pdf': {
     accept: '.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword',
-    actionText: 'Convertir a PDF',
-    browseText: 'Seleccionar Archivo',
-    convertingText: 'Convirtiendo documento Word a PDF...',
+    actionTextKey: 'tools.to_pdf_convert_btn',
+    browseTextKey: 'tools.select_file_btn',
+    convertingTextKey: 'tools.word_to_pdf_converting',
     formatBadge: 'DOCX / DOC',
-    hintText: 'o arrastra y suelta tu archivo aquí',
+    hintTextKey: 'common.drop_file_hint',
     icon: 'description',
     sourceType: 'word-to-pdf',
-    subtitle: t('ui.convierte_tus_documentos_de_word_a_archi'),
-    title: 'Word a PDF',
+    subtitleKey: 'ui.convierte_tus_documentos_de_word_a_archi',
+    titleKey: 'tools.word_to_pdf_title',
   },
 };
 

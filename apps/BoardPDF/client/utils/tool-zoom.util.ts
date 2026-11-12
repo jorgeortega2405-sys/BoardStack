@@ -1,3 +1,5 @@
+import { t } from '../services/i18n.service.js';
+
 interface ToolZoomOptions {
   container: HTMLElement;
   initialZoom?: number;
@@ -125,7 +127,7 @@ class ToolZoomController {
       this.resolveElements();
     }
     if (this.txtPage) {
-      this.txtPage.textContent = `${current} de ${total}`;
+      this.txtPage.textContent = t('tools.page_of_total', { current, total });
     }
   }
 

@@ -2,26 +2,17 @@ import { logger } from '../../services/logger.service.js';
 import { storeTempFile } from '../../services/temp-storage.service.js';
 import { executeProcessWithTimeout } from '../../utils/process.util.js';
 import { HtmlToPdfOptions, JpgToPdfOptions, StoredToPdfFile, ToPdfConversionResult, ToPdfSourceType } from './to-pdf-converter.types.js';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const TO_PDF_DIR = path.resolve(__dirname, '../../../data/to-pdf');
-const UPLOADS_DIR = path.join(TO_PDF_DIR, 'uploads');
-const OUTPUT_DIR = path.join(TO_PDF_DIR, 'output');
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-if (!fs.existsSync(OUTPUT_DIR)) {
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-}
+const TEMP_BASE_DIR = path.join(os.tmpdir(), 'boardpdf-to-pdf');
+const UPLOADS_DIR = path.join(TEMP_BASE_DIR, 'uploads');
+const OUTPUT_DIR = path.join(TEMP_BASE_DIR, 'output');
+const HEADLESS_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 function getBasePdfName(originalFilename: string): string {
   const ext = path.extname(originalFilename);
@@ -48,20 +39,27 @@ function getBrowserCommand(): string | null {
       }
     }
   } else {
-    const candidates = [
-      'google-chrome',
-      'google-chrome-stable',
-      'chromium',
-      'chromium-browser',
-      '/usr/bin/google-chrome',
+    const absoluteCandidates = [
+      '/usr/bin/chromium',
       '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
     ];
-    for (const candidate of candidates) {
+    for (const candidate of absoluteCandidates) {
       if (fs.existsSync(candidate)) {
         return candidate;
       }
+    }
+    for (const bin of ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable']) {
+      try {
+        const res = spawnSync('which', [bin], { encoding: 'utf8' });
+        const resolved = res.status === 0 ? res.stdout.trim().split(/\r?\n/)[0]?.trim() : '';
+        if (resolved && fs.existsSync(resolved)) {
+          return resolved;
+        }
+      } catch {}
     }
   }
   return null;
@@ -132,6 +130,7 @@ async function renderWithBrowser(targetUrl: string, outputPath: string, options?
   const tempProfile = path.join(os.tmpdir(), `bp_chrome_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
   try {
     await fs.promises.mkdir(tempProfile, { recursive: true });
+    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
   } catch {}
 
   let windowSize = '1920,1080';
@@ -147,11 +146,16 @@ async function renderWithBrowser(targetUrl: string, outputPath: string, options?
     '--headless=new',
     '--disable-gpu',
     '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--ignore-certificate-errors',
+    '--disable-blink-features=AutomationControlled',
+    `--user-agent=${HEADLESS_USER_AGENT}`,
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-extensions',
     '--disable-crash-reporter',
     '--run-all-compositor-stages-before-draw',
+    '--virtual-time-budget=6000',
     `--window-size=${windowSize}`,
     '--no-pdf-header-footer',
     `--crash-dumps-dir=${tempProfile}`,
@@ -161,12 +165,22 @@ async function renderWithBrowser(targetUrl: string, outputPath: string, options?
   ];
 
   let child;
+  let stderrOutput = '';
+  let childExited = false;
+  let childExitCode: number | null = null;
   try {
     child = spawn(browserCmd, args, {
-      detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', 'ignore', 'pipe'],
     });
-    child.unref();
+    child.stderr?.on('data', (chunk: Buffer) => {
+      if (stderrOutput.length < 1500) {
+        stderrOutput += chunk.toString('utf8');
+      }
+    });
+    child.on('exit', (code) => {
+      childExited = true;
+      childExitCode = code;
+    });
   } catch (err) {
     logger.app.warn('Error al iniciar navegador headless para PDF:', err);
     await fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
@@ -174,32 +188,47 @@ async function renderWithBrowser(targetUrl: string, outputPath: string, options?
   }
 
   let generated = false;
-  for (let i = 0; i < 35; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    for (let i = 0; i < 60; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      try {
+        if (fs.existsSync(outputPath)) {
+          const stats = await fs.promises.stat(outputPath);
+          if (stats.size > 0) {
+            generated = true;
+            break;
+          }
+        }
+      } catch {}
+      if (childExited && childExitCode !== 0 && i >= 2) {
+        break;
+      }
+    }
+  } finally {
+    if (!generated && stderrOutput.trim()) {
+      logger.app.warn('Headless browser print-to-pdf stderr output', {
+        browserCmd,
+        exitCode: childExitCode,
+        stderr: stderrOutput.trim().slice(0, 600),
+      });
+    }
     try {
-      if (fs.existsSync(outputPath)) {
-        const stats = await fs.promises.stat(outputPath);
-        if (stats.size > 0) {
-          generated = true;
-          break;
+      child.stderr?.destroy();
+    } catch {}
+    try {
+      if (child.pid) {
+        if (process.platform === 'win32') {
+          spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore' });
+        } else {
+          child.kill('SIGKILL');
         }
       }
     } catch {}
+
+    setTimeout(() => {
+      fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
+    }, 2000).unref();
   }
-
-  try {
-    if (child.pid) {
-      if (process.platform === 'win32') {
-        spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore' });
-      } else {
-        child.kill('SIGKILL');
-      }
-    }
-  } catch {}
-
-  setTimeout(() => {
-    fs.promises.rm(tempProfile, { force: true, recursive: true }).catch(() => {});
-  }, 2000).unref();
 
   return generated;
 }
@@ -272,13 +301,14 @@ async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Prom
   const destinationPath = path.join(OUTPUT_DIR, `${uniquePrefix}_${targetPdfName}`);
 
   try {
+    await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
     let browserSucceeded = await renderWithBrowser(rawUrl, destinationPath, options);
 
     if (!browserSucceeded) {
       try {
         const fetchRes = await fetch(rawUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': HEADLESS_USER_AGENT,
           },
           signal: AbortSignal.timeout(10000),
         });
@@ -315,7 +345,6 @@ async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Prom
 
     const buffer = await fs.promises.readFile(destinationPath);
     const fileSize = buffer.length;
-    await fs.promises.unlink(destinationPath).catch(() => {});
 
     const token = `pdf_url_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
 
@@ -338,8 +367,9 @@ async function convertUrlToPdf(rawUrl: string, options?: HtmlToPdfOptions): Prom
     };
   } catch (err) {
     logger.app.error('Error durante la conversión de URL hacia PDF', err);
-    await fs.promises.unlink(destinationPath).catch(() => {});
     throw new Error('Ocurrió un error al procesar la conversión de la página web a PDF.');
+  } finally {
+    await fs.promises.unlink(destinationPath).catch(() => {});
   }
 }
 
@@ -362,6 +392,8 @@ async function convertToPdf(
   const tempFilesToClean: string[] = [];
 
   try {
+    await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
+    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
     if (sourceType === 'html-to-pdf') {
       let inputPath = firstFile.path;
       if (!inputPath && firstFile.buffer) {
@@ -539,11 +571,9 @@ async function convertToPdf(
     };
   } catch (err) {
     logger.app.error('Error durante la conversión hacia PDF', err);
-    try {
-      await fs.promises.unlink(destinationPath);
-    } catch {}
     throw new Error('Ocurrió un error al procesar la conversión a PDF.');
   } finally {
+    await fs.promises.unlink(destinationPath).catch(() => {});
     for (const f of tempFilesToClean) {
       await fs.promises.unlink(f).catch(() => {});
     }
@@ -576,18 +606,28 @@ async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<st
   const tempProfile = path.join(os.tmpdir(), `shot_prof_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
 
   let child;
+  let stderrOutput = '';
+  let childExited = false;
+  let childExitCode: number | null = null;
+  let childExitIteration = -1;
   try {
     await fs.promises.mkdir(tempProfile, { recursive: true });
     const args = [
       '--headless=new',
       '--disable-gpu',
       '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--ignore-certificate-errors',
+      '--disable-blink-features=AutomationControlled',
+      `--user-agent=${HEADLESS_USER_AGENT}`,
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-extensions',
       '--disable-crash-reporter',
       '--hide-scrollbars',
       '--mute-audio',
+      '--run-all-compositor-stages-before-draw',
+      '--virtual-time-budget=6000',
       `--window-size=${windowSize}`,
       `--crash-dumps-dir=${tempProfile}`,
       `--user-data-dir=${tempProfile}`,
@@ -596,18 +636,33 @@ async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<st
     ];
 
     child = spawn(browserCmd, args, {
-      detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', 'ignore', 'pipe'],
     });
-    child.unref();
+    child.stderr?.on('data', (chunk: Buffer) => {
+      if (stderrOutput.length < 1500) {
+        stderrOutput += chunk.toString('utf8');
+      }
+    });
+    child.on('exit', (code) => {
+      childExited = true;
+      childExitCode = code;
+    });
 
     let captured = false;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 80; i++) {
       await new Promise((resolve) => setTimeout(resolve, 250));
       if (fs.existsSync(tempShotPath)) {
         const stats = await fs.promises.stat(tempShotPath);
         if (stats.size > 0) {
           captured = true;
+          break;
+        }
+      }
+      if (childExited) {
+        if (childExitIteration === -1) {
+          childExitIteration = i;
+        }
+        if (i - childExitIteration >= 3) {
           break;
         }
       }
@@ -618,10 +673,19 @@ async function captureUrlScreenshot(rawUrl: string, screen?: string): Promise<st
       if (buf.length > 0) {
         return `data:image/png;base64,${buf.toString('base64')}`;
       }
+    } else if (stderrOutput.trim()) {
+      logger.app.warn('Headless browser screenshot stderr output', {
+        browserCmd,
+        exitCode: childExitCode,
+        stderr: stderrOutput.trim().slice(0, 600),
+      });
     }
   } catch (err) {
-    logger.app.warn('Fallo capturando vista previa de URL:', err);
+    logger.app.warn('Failed to capture URL preview screenshot', err);
   } finally {
+    try {
+      child?.stderr?.destroy();
+    } catch {}
     try {
       if (child?.pid) {
         if (process.platform === 'win32') {

@@ -1,4 +1,4 @@
-import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
+import { getWorkflowToolName } from '../config/workflow-tools.config.js';
 import { SVG_TOOL_WORKFLOW } from '../graphics/tool-icons.graphics.js';
 import { t } from '../services/i18n.service.js';
 import { UserWorkflow } from '../types/workflow.types.js';
@@ -15,10 +15,7 @@ function escapeWorkflowHtml(str: string): string {
 
 function renderWorkflowCardHtml(wf: UserWorkflow): string {
   const stepNames = wf.steps
-    .map((s) => {
-      const tool = WORKFLOW_TOOLS.find((t) => t.id === s.tool);
-      return tool ? tool.name : s.tool;
-    })
+    .map((s) => getWorkflowToolName(s.tool))
     .join(' → ');
 
   return `

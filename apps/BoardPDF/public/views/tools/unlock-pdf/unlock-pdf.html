@@ -1,42 +1,43 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="unlock-pdf-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-unlock" disabled>
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
-<span class="component-button__text" >Desbloquear PDF</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-unlock" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
+        <span class="component-button__text" data-i18n="tools.unlock_pdf.unlock_btn"></span>
+      </button>
+    </div>
+  </header>
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="unlock-pdf-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="unlock-pdf-workspace">
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="unlock-workspace-card">
+        <div class="pdf-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
+          <span data-i18n="tools.unlock_pdf.workspace_hint"></span>
+        </div>
+        <div class="pdf-items-grid" data-ref="pdf-items-grid">
+          <div class="pdf-card">
+            <div class="pdf-card__actions">
+              <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" data-i18n-title="common.delete_file" data-i18n-aria="common.delete_file">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
+                <canvas class="pdf-card__canvas" data-ref="unlock-doc-canvas"></canvas>
+                <div class="security-doc-card__locked-placeholder is-hidden" data-ref="unlock-locked-placeholder">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                  <span class="security-doc-card__locked-text" data-i18n="tools.unlock_pdf.locked_label"></span>
+                </div>
+              </div>
+            </div>
+            <span class="pdf-card__filename" data-ref="txt-file-name"></span>
+            <span class="pdf-card__meta" data-ref="txt-file-size"></span>
+          </div>
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="unlock-global-error" role="alert"></div>
+      </div>
+    </main>
+  </div>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="unlock-pdf-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="unlock-pdf-workspace">
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="unlock-workspace-card">
-<div class="pdf-reorder-hint" >
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock_open"></use></svg>
-<span>Haz clic en Desbloquear PDF en la barra superior para quitar las restricciones a tu documento.</span>
-</div>
-<div class="pdf-items-grid" data-ref="pdf-items-grid">
-<div class="pdf-card" >
-<div class="pdf-card__actions" >
-<button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-remove-file" title="Eliminar archivo" data-i18n-aria="common.delete_file" aria-label="Eliminar archivo">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="pdf-card__sheet-wrapper" >
-<div class="pdf-card__sheet" >
-<canvas class="pdf-card__canvas" data-ref="unlock-doc-canvas"></canvas>
-<div class="security-doc-card__locked-placeholder is-hidden" data-ref="unlock-locked-placeholder">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-<span class="security-doc-card__locked-text" >Archivo protegido</span>
-</div>
-</div>
-</div>
-<span class="pdf-card__filename" data-ref="txt-file-name">documento.pdf</span>
-<span class="pdf-card__meta" data-ref="txt-file-size">0 KB</span>
-</div>
-</div>
-</div>
-</main>
-</div>
-</div> 

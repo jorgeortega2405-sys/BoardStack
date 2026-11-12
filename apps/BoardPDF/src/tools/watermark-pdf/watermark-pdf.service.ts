@@ -1,9 +1,35 @@
 import { logger } from '../../services/logger.service.js';
 import { storeTempFile } from '../../services/temp-storage.service.js';
+import { resolvePdfFont } from '../../utils/pdf-font.util.js';
 import { cleanTextForWinAnsi, parseHexColor, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { StoredWatermarkPdfResult, WatermarkOptions, WatermarkPdfResponse, WatermarkPosition } from './watermark-pdf.types.js';
 import crypto from 'crypto';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFArray, PDFDocument, PDFFont, PDFName, PDFPage, PDFRef, rgb } from 'pdf-lib';
+
+function extractPageContentRefs(doc: PDFDocument, page: PDFPage): PDFRef[] {
+  const raw = page.node.get(PDFName.of('Contents'));
+  if (!raw) return [];
+  if (raw instanceof PDFRef) {
+    const resolved = doc.context.lookup(raw);
+    if (resolved instanceof PDFArray) {
+      return resolved.asArray().filter((item): item is PDFRef => item instanceof PDFRef);
+    }
+    return [raw];
+  }
+  if (raw instanceof PDFArray) {
+    return raw.asArray().filter((item): item is PDFRef => item instanceof PDFRef);
+  }
+  return [];
+}
+
+function applyUnderLayerOrdering(doc: PDFDocument, page: PDFPage, prevRefs: PDFRef[]): void {
+  if (prevRefs.length === 0) return;
+  const afterRefs = extractPageContentRefs(doc, page);
+  const prevSet = new Set(prevRefs.map((ref) => ref.toString()));
+  const newRefs = afterRefs.filter((ref) => !prevSet.has(ref.toString()));
+  if (newRefs.length === 0) return;
+  page.node.set(PDFName.of('Contents'), doc.context.obj([...newRefs, ...prevRefs]));
+}
 
 function calculateCoords(
   pos: WatermarkPosition,
@@ -93,27 +119,30 @@ async function addWatermarkToPdf(
     };
   }
 
-  let font: any = null;
+  const isUnderLayer = options.layer === 'under';
+  let font: PDFFont | null = null;
   let text = '';
   let fontSize = 36;
   let textColor = rgb(0.6, 0.6, 0.6);
 
   if (!isImageWatermark) {
-    let fontName = StandardFonts.Helvetica;
-    if (options.fontFamily === 'Helvetica-Bold' || options.isBold) fontName = StandardFonts.HelveticaBold;
-    else if (options.fontFamily === 'Times-Roman') fontName = StandardFonts.TimesRoman;
-    else if (options.fontFamily === 'Courier') fontName = StandardFonts.Courier;
-
-    font = await doc.embedFont(fontName);
+    const resolvedStyle: 'normal' | 'italic' = options.fontStyle === 'italic' || options.isItalic ? 'italic' : 'normal';
+    const resolvedWeight = options.fontWeight || (options.isBold ? 700 : 400);
+    const resolved = await resolvePdfFont(doc, options.fontFamily, resolvedWeight, resolvedStyle);
+    font = resolved.font;
     fontSize = Math.max(12, Math.min(120, Number(options.fontSize) || 36));
-    const c = parseHexColor(options.color);
-    textColor = rgb(c.r, c.g, c.b);
-    text = cleanTextForWinAnsi(options.text?.trim() || 'CONFIDENCIAL');
+    if (options.color) {
+      const c = parseHexColor(options.color);
+      textColor = rgb(c.r, c.g, c.b);
+    }
+    const rawText = options.text?.trim() || 'CONFIDENCIAL';
+    text = resolved.isCustomEmbedded ? rawText : cleanTextForWinAnsi(rawText);
   }
 
   for (let i = fromPage - 1; i <= toPage - 1; i++) {
     const page = doc.getPage(i);
     const { height, width } = page.getSize();
+    const prevRefs = isUnderLayer ? extractPageContentRefs(doc, page) : [];
 
     if (isImageWatermark && embeddedImage) {
       if (isMosaic) {
@@ -143,6 +172,9 @@ async function addWatermarkToPdf(
           x: coords.x,
           y: coords.y,
         });
+      }
+      if (isUnderLayer) {
+        applyUnderLayerOrdering(doc, page, prevRefs);
       }
     } else if (font && text) {
       const textWidth = font.widthOfTextAtSize(text, fontSize);
@@ -177,6 +209,9 @@ async function addWatermarkToPdf(
           x: coords.x,
           y: coords.y,
         });
+      }
+      if (isUnderLayer) {
+        applyUnderLayerOrdering(doc, page, prevRefs);
       }
     }
   }

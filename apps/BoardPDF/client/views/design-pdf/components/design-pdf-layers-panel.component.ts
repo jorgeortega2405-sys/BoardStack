@@ -39,7 +39,7 @@ function renderLayersList(options: CollabLayersPanelOptions): void {
 
   const pageBadge = container.querySelector<HTMLElement>('[data-ref="txt-layers-page-badge"]');
   if (pageBadge) {
-    pageBadge.textContent = `Página ${targetPage + 1}`;
+    pageBadge.textContent = t('common.page_n', { page: targetPage + 1 });
   }
 
   listEl.innerHTML = '';
@@ -59,38 +59,38 @@ function renderLayersList(options: CollabLayersPanelOptions): void {
     const layerNum = pageElements.length - revIndex;
     const isSelected = el.id === selectedElementId;
 
-    let iconName = 'category';
-    let nameText = 'Elemento';
+    let iconName = 'apps';
+    let nameText = t('collaborative.layer_element');
 
     if (el.type === 'text') {
-      iconName = 'format_size';
+      iconName = 'text_fields';
       const txt = (el as any).text?.trim();
-      nameText = txt ? (txt.length > 22 ? `${txt.substring(0, 22)}...` : txt) : 'Texto';
+      nameText = txt ? (txt.length > 22 ? `${txt.substring(0, 22)}...` : txt) : t('collaborative.elements_text');
     } else if (el.type === 'shape') {
-      iconName = 'category';
+      iconName = 'apps';
       const st = (el as any).shapeType || 'forma';
       const map: Record<string, string> = {
         arrow: 'Flecha',
-        circle: 'Círculo',
+        circle: t('collaborative.shape_circle'),
         diamond: 'Rombo',
-        line: 'Línea',
-        'line-flexible': 'Línea curva',
+        line: t('collaborative.shape_line_solid'),
+        'line-flexible': t('collaborative.line_flexible'),
         'line-multiconnect': 'Conector',
-        rect: 'Rectángulo',
-        roundedRect: 'Rectángulo redondeado',
+        rect: t('collaborative.shape_rect'),
+        roundedRect: t('collaborative.shape_rounded_rect'),
         star: 'Estrella',
-        triangle: 'Triángulo',
+        triangle: t('collaborative.shape_triangle'),
       };
       nameText = map[st] || `Forma (${st})`;
     } else if (el.type === 'image') {
-      iconName = 'image';
-      nameText = 'Imagen';
+      iconName = 'photo_library';
+      nameText = t('collaborative.tab_images');
     } else if (el.type === 'table') {
       iconName = 'table_chart';
-      nameText = 'Tabla';
+      nameText = t('collaborative.elements_tables');
     } else if (el.type === 'chart') {
       iconName = 'bar_chart';
-      nameText = 'Gráfico';
+      nameText = t('collaborative.elements_charts');
     }
 
     const item = document.createElement('div');
@@ -102,24 +102,24 @@ function renderLayersList(options: CollabLayersPanelOptions): void {
     const isBottom = revIndex === reversed.length - 1;
 
     item.innerHTML = `
-      <div class="collab-layer-item__drag" title="Arrastrar para reordenar capa">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#drag_indicator"></use></svg>
+      <div class="collab-layer-item__drag" title="${t('collaborative.drag_reorder_layer')}">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
       </div>
       <div class="collab-layer-item__icon">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>
       </div>
       <div class="collab-layer-item__content">
         <span class="collab-layer-item__name">${nameText}</span>
-        <span class="collab-layer-item__badge">Capa ${layerNum}</span>
+        <span class="collab-layer-item__badge">${t('collaborative.layer')} ${layerNum}</span>
       </div>
       <div class="collab-layer-item__actions">
-        <button type="button" class="collab-layer-btn" data-layer-action="up" data-element-id="${el.id}" title="Subir capa" aria-label="Subir capa"${isTop ? ' disabled' : ''}>
+        <button type="button" class="collab-layer-btn" data-layer-action="up" data-element-id="${el.id}" title="${t('collaborative.layer_up')}" aria-label="${t('collaborative.layer_up')}"${isTop ? ' disabled' : ''}>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_less"></use></svg>
         </button>
-        <button type="button" class="collab-layer-btn" data-layer-action="down" data-element-id="${el.id}" title="Bajar capa" aria-label="Bajar capa"${isBottom ? ' disabled' : ''}>
+        <button type="button" class="collab-layer-btn" data-layer-action="down" data-element-id="${el.id}" title="${t('collaborative.layer_down')}" aria-label="${t('collaborative.layer_down')}"${isBottom ? ' disabled' : ''}>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
         </button>
-        <button type="button" class="collab-layer-btn" data-layer-action="delete" data-element-id="${el.id}" title="Eliminar elemento" aria-label="Eliminar elemento">
+        <button type="button" class="collab-layer-btn" data-layer-action="delete" data-element-id="${el.id}" title="${t('collaborative.delete_element')}" aria-label="${t('collaborative.delete_element')}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
         </button>
       </div>

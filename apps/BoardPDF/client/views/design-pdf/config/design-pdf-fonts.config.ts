@@ -109,16 +109,16 @@ const GOOGLE_FONTS_CATALOG: GoogleFontItem[] = [
   { category: 'monospace', family: 'Overpass Mono', hasItalic: false, weights: [300, 400, 600, 700] }
 ];
 
-const WEIGHT_LABELS: Record<number, string> = {
-  100: 'Ultradelgada',
-  200: 'Muy delgada',
-  300: 'Delgada',
-  400: 'Normal',
-  500: 'Media',
-  600: 'Seminegrita',
-  700: 'Negrita',
-  800: 'Extranegrita',
-  900: 'Ultragruesa',
+const WEIGHT_LABEL_KEYS: Record<number, string> = {
+  100: 'collaborative.font_weight_100',
+  200: 'collaborative.font_weight_200',
+  300: 'collaborative.font_weight_300',
+  400: 'collaborative.font_weight_400',
+  500: 'collaborative.font_weight_500',
+  600: 'collaborative.font_weight_600',
+  700: 'collaborative.font_weight_700',
+  800: 'collaborative.font_weight_800',
+  900: 'collaborative.font_weight_900',
 };
 
 const loadedFontHrefs = new Set<string>();
@@ -167,5 +167,5 @@ function loadGoogleFontPreview(family: string): void {
   document.head.appendChild(link);
 }
 
-export { GOOGLE_FONTS_CATALOG, WEIGHT_LABELS, loadGoogleFont, loadGoogleFontPreview };
+export { GOOGLE_FONTS_CATALOG, WEIGHT_LABEL_KEYS, loadGoogleFont, loadGoogleFontPreview };
 export type { GoogleFontItem };

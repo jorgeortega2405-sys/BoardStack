@@ -3,6 +3,7 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
@@ -12,7 +13,6 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ClientPdfCompressLevel, CompressResultData } from './compress-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class CompressPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -33,16 +33,16 @@ class CompressPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar archivo PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.reduce_el_tamano_de_tus_archivos_pdf_opt'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             this.handleFileSelected(files[0]);
           }
         },
-        title: 'Comprimir PDF',
+        title: t('tools.compress_pdf_title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -52,12 +52,13 @@ class CompressPdfController implements ViewController {
         }
       },
       toolId: 'compress-pdf',
-      toolName: 'Comprimir PDF',
+      toolName: t('tools.compress_pdf_title'),
     });
 
     await this.phaseManager.init();
     renderIcons(this.container);
     this.bindEvents();
+    this.setCompressLevel('recommended');
 
     const transferred = consumeTransferFile();
     if (transferred) {
@@ -87,7 +88,7 @@ class CompressPdfController implements ViewController {
 
     const sidebar = this.container.querySelector<HTMLElement>('[data-ref="compress-pdf-sidebar"]');
     const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="compress-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
 
@@ -120,20 +121,24 @@ class CompressPdfController implements ViewController {
     }, { signal });
   }
 
-  private readonly qualityDetails: Record<ClientPdfCompressLevel, { desc: string; title: string }> = {
-    extreme: {
-      desc: t('ui.menor_calidad_de_imagen_maxima_reduccion'),
-      title: 'Compresión extrema',
-    },
-    low: {
-      desc: t('ui.alta_calidad_visual_menor_reduccion_de_t'),
-      title: 'Baja compresión',
-    },
-    recommended: {
+  private getQualityDetail(level: ClientPdfCompressLevel): { desc: string; title: string } {
+    if (level === 'extreme') {
+      return {
+        desc: t('ui.menor_calidad_de_imagen_maxima_reduccion'),
+        title: t('tools.compress_extreme_title'),
+      };
+    }
+    if (level === 'low') {
+      return {
+        desc: t('ui.alta_calidad_visual_menor_reduccion_de_t'),
+        title: t('tools.compress_low_title'),
+      };
+    }
+    return {
       desc: t('ui.buena_calidad_visual_reduccion_sustancia'),
-      title: 'Compresión recomendada',
-    },
-  };
+      title: t('tools.compress_recommended_title'),
+    };
+  }
 
   private setCompressLevel(level: ClientPdfCompressLevel): void {
     this.selectedLevel = level;
@@ -152,9 +157,9 @@ class CompressPdfController implements ViewController {
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="compress-quality-title"]');
     const descEl = this.container.querySelector<HTMLElement>('[data-ref="compress-quality-desc"]');
-    const detail = this.qualityDetails[level];
-    if (titleEl && detail) titleEl.textContent = detail.title;
-    if (descEl && detail) descEl.textContent = detail.desc;
+    const detail = this.getQualityDetail(level);
+    if (titleEl) titleEl.textContent = detail.title;
+    if (descEl) descEl.textContent = detail.desc;
   }
 
   private handleFileSelected(file: File): void {
@@ -164,7 +169,7 @@ class CompressPdfController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Comprimir PDF',
+        toolName: t('tools.compress_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -175,10 +180,15 @@ class CompressPdfController implements ViewController {
     const fileNameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
     const fileSizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
     const compressBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compress-action"]');
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
 
     if (fileNameEl) fileNameEl.textContent = file.name;
     if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
     if (compressBtn) compressBtn.disabled = false;
+    if (docTitleInput) {
+      const base = file.name.replace(/\.[^/.]+$/, '');
+      docTitleInput.value = `${base}_compressed.pdf`;
+    }
 
     this.phaseManager?.setPhase('workspace');
 
@@ -231,6 +241,9 @@ class CompressPdfController implements ViewController {
       canvas.height = 0;
     }
 
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+    if (docTitleInput) docTitleInput.value = '';
+
     this.sidebarModal?.close();
     this.setCompressLevel('recommended');
     this.phaseManager?.setPhase('dropzone');
@@ -277,20 +290,21 @@ class CompressPdfController implements ViewController {
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.compressedSize,
           filename: customFilename || result.data.filename,
-          returnText: 'Comprimir otro documento PDF',
+          returnText: t('tools.compress_return_btn'),
           returnUrl: '/compress-pdf',
-          subtitle: `El archivo "${this.currentFile?.name}" se ha comprimido exitosamente.`,
-          title: '¡PDF comprimido con éxito!',
+          subtitle: t('tools.compress_success_subtitle', { filename: this.currentFile?.name || '' }),
+          title: t('tools.compress_completed_title'),
           token,
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_comprimir_el_pdf');
+        this.showError(errorMessage);
         this.phaseManager?.showError({
           boxText: t('ui.comprueba_que_el_documento_no_este_prote'),
-          boxTitle: 'Error de compresión',
+          boxTitle: t('tools.compress_error_box_title'),
           desc: errorMessage,
-          retryText: 'Reintentar Comprimir PDF',
-          title: '¡Oh no! No hemos podido comprimir tu archivo.',
+          retryText: t('tools.compress_retry_btn'),
+          title: t('tools.compress_error_title'),
         });
       } finally {
         this.isProcessing = false;

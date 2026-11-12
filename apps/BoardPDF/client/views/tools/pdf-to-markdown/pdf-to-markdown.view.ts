@@ -4,16 +4,16 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { PdfToMarkdownResultData } from './pdf-to-markdown.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class PdfToMarkdownController implements ViewController {
   private abortController: AbortController | null = null;
@@ -21,7 +21,6 @@ class PdfToMarkdownController implements ViewController {
   private currentFile: File | null = null;
   private isProcessing = false;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -33,16 +32,16 @@ class PdfToMarkdownController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar Archivo PDF',
+        buttonText: t('tools.select_pdf_file'),
         desc: t('ui.convierte_cualquier_documento_pdf_en_un_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             void this.handleFileSelected(files[0]);
           }
         },
-        title: 'PDF a Markdown',
+        title: t('home.tool_pdf_to_markdown_title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -52,7 +51,7 @@ class PdfToMarkdownController implements ViewController {
         }
       },
       toolId: 'pdf-to-markdown',
-      toolName: 'PDF a Markdown',
+      toolName: t('home.tool_pdf_to_markdown_title'),
     });
 
     await this.phaseManager.init();
@@ -66,10 +65,6 @@ class PdfToMarkdownController implements ViewController {
   }
 
   public destroy(): void {
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
     if (this.phaseManager) {
       this.phaseManager.destroy();
       this.phaseManager = null;
@@ -84,16 +79,6 @@ class PdfToMarkdownController implements ViewController {
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="pdf-to-markdown-sidebar"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="markdown-sidebar-drag-zone"]');
-    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-
-    if (sidebar && backdrop) {
-      this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
-    }
 
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
@@ -120,7 +105,7 @@ class PdfToMarkdownController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'pdf-to-markdown',
-        toolName: 'PDF a Markdown',
+        toolName: t('home.tool_pdf_to_markdown_title'),
         type: 'file_size',
       });
       return;
@@ -165,8 +150,6 @@ class PdfToMarkdownController implements ViewController {
 
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -193,7 +176,6 @@ class PdfToMarkdownController implements ViewController {
       canvas.height = 0;
     }
 
-    this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }
@@ -221,8 +203,8 @@ class PdfToMarkdownController implements ViewController {
         const result = (await response.json()) as { data?: PdfToMarkdownResultData; error?: string; success: boolean };
 
         this.phaseManager?.showProcessing(
-          'Convirtiendo documento a Markdown...',
-          'Analizando estructura semántica, tablas y contenido del documento'
+          t('tools.pdf_to_markdown_processing'),
+          t('tools.pdf_to_markdown_processing_subtitle')
         );
 
         if (!response.ok || !result.success || !result.data) {
@@ -238,11 +220,11 @@ class PdfToMarkdownController implements ViewController {
         this.phaseManager?.navigateToDownload({
           downloadUrl: result.data.downloadUrl || `/api/download/${token}`,
           fileSize: result.data.characterCount || 0,
-          filename: result.data.filename || 'documento.md',
-          returnText: 'Volver a PDF a Markdown',
+          filename: result.data.filename || `${this.currentFile?.name.replace(/\.[^/.]+$/, '') || 'document'}.md`,
+          returnText: t('tools.pdf_to_markdown_return_text'),
           returnUrl: '/pdf-to-markdown',
           subtitle: t('ui.tu_documento_se_ha_convertido_a_markdown'),
-          title: '¡Tu archivo Markdown está listo!',
+          title: t('tools.pdf_to_markdown_completed_title'),
           token,
         });
       } catch (err: unknown) {

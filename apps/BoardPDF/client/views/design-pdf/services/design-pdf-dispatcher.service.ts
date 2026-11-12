@@ -1,4 +1,5 @@
 import { PageDimension } from '../../../config/collab-page-presets.config.js';
+import { t } from '../../../services/i18n.service.js';
 import { wsService } from '../../../services/websocket.service.js';
 import { EditorElement, ManualGuide, PagePdfSource } from '../types/design-pdf.types.js';
 
@@ -362,7 +363,7 @@ class CollabActionDispatcher {
           ? { ...this.delegate.pageSizes[srcIdx] }
           : { ...this.delegate.docDefaultPageSize };
         this.delegate.pageSizes.splice(dstIdx, 0, copyDim);
-        this.delegate.pageTitles.splice(dstIdx, 0, this.delegate.pageTitles[srcIdx] ? `${this.delegate.pageTitles[srcIdx]} (Copia)` : '');
+        this.delegate.pageTitles.splice(dstIdx, 0, this.delegate.pageTitles[srcIdx] ? `${this.delegate.pageTitles[srcIdx]} (${t('collaborative.copy_suffix')})` : '');
         this.delegate.pageBackgrounds.splice(dstIdx, 0, this.delegate.pageBackgrounds[srcIdx] || '#ffffff');
         const srcPdf = this.delegate.pagePdfSources[srcIdx];
         this.delegate.pagePdfSources.splice(dstIdx, 0, srcPdf ? { ...srcPdf } : null);

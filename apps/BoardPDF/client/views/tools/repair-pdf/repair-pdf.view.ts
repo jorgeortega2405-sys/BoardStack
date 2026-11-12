@@ -3,16 +3,16 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { RepairResultData } from './repair-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class RepairPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -20,7 +20,6 @@ class RepairPdfController implements ViewController {
   private currentFile: File | null = null;
   private isProcessing = false;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -32,16 +31,16 @@ class RepairPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.recupera_y_repara_datos_de_documentos_pd'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             this.handleFileSelected(files[0]);
           }
         },
-        title: 'Reparar PDF',
+        title: t('home.tool_repair_pdf_title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -51,7 +50,7 @@ class RepairPdfController implements ViewController {
         }
       },
       toolId: 'repair-pdf',
-      toolName: 'Reparar PDF',
+      toolName: t('home.tool_repair_pdf_title'),
     });
 
     await this.phaseManager.init();
@@ -65,10 +64,6 @@ class RepairPdfController implements ViewController {
   }
 
   public destroy(): void {
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
     if (this.phaseManager) {
       this.phaseManager.destroy();
       this.phaseManager = null;
@@ -83,16 +78,6 @@ class RepairPdfController implements ViewController {
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="repair-pdf-sidebar"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="repair-sidebar-drag-zone"]');
-    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-
-    if (sidebar && backdrop && settingsBtn) {
-      this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
-    }
 
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const repairBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-repair-action"]');
@@ -115,7 +100,7 @@ class RepairPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'repair-pdf',
-        toolName: 'Reparar PDF',
+        toolName: t('home.tool_repair_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -136,7 +121,7 @@ class RepairPdfController implements ViewController {
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_reparado.pdf`;
+      outputNameInput.value = `${base}_${t('tools.repair_filename_suffix')}.pdf`;
     }
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
@@ -160,8 +145,6 @@ class RepairPdfController implements ViewController {
 
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -189,9 +172,8 @@ class RepairPdfController implements ViewController {
     }
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_reparado.pdf';
+    if (outputNameInput) outputNameInput.value = '';
 
-    this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }
@@ -224,7 +206,7 @@ class RepairPdfController implements ViewController {
         const result = (await response.json()) as { data?: RepairResultData; error?: string; success: boolean };
 
         this.phaseManager?.showProcessing(
-          'Analizando y reparando archivo PDF...',
+          t('tools.repair_pdf_processing'),
           t('ui.reconstruyendo_la_tabla_de_referencias_c')
         );
 
@@ -238,20 +220,21 @@ class RepairPdfController implements ViewController {
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.repairedSize,
           filename: result.data.filename,
-          returnText: 'Reparar otro archivo PDF',
+          returnText: t('tools.repair_pdf_return_text'),
           returnUrl: '/repair-pdf',
           subtitle: t('ui.tu_archivo_ha_sido_analizado_y_reparado_'),
-          title: '¡PDF reparado con éxito!',
+          title: t('tools.repair_pdf_completed_title'),
           token,
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_reparar_el_archivo_p');
+        this.showError(errorMessage);
         this.phaseManager?.showError({
           boxText: t('ui.comprueba_que_el_documento_no_este_danad'),
-          boxTitle: 'Error de reparación',
+          boxTitle: t('tools.repair_error_box_title'),
           desc: errorMessage,
-          retryText: 'Reintentar Reparar PDF',
-          title: '¡Oh no! No hemos podido reparar tu archivo.',
+          retryText: t('tools.repair_retry_btn'),
+          title: t('tools.repair_error_title'),
         });
       } finally {
         this.isProcessing = false;

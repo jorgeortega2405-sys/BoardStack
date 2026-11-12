@@ -36,7 +36,7 @@ async function handleSummarizePdf(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const mode: SummaryMode = req.body?.mode === 'standard' ? 'standard' : 'advanced';
+  const mode: SummaryMode = req.body?.mode === 'advanced' ? 'advanced' : 'standard';
   const customPrompt = typeof req.body?.customPrompt === 'string' ? req.body.customPrompt : undefined;
 
   try {

@@ -185,6 +185,27 @@ function renderUnlockPdfModalBody(): string {
   `;
 }
 
+function renderProtectPdfModalBody(): string {
+  return `
+    <div class="modal-form-stack" data-ref="modal-form-protect-pdf">
+      <label class="field" data-ref="field-protect-password">
+        <input class="field__input field__input--has-action" data-ref="input-protect-password" type="password" placeholder=" " autocomplete="new-password" />
+        <span class="field__label" data-ref="label-protect-password" data-i18n="tools.protect_pdf.password_label">${t('tools.protect_pdf.password_label')}</span>
+        <button type="button" class="field__action" data-ref="btn-toggle-protect-password" data-i18n-aria="common.show_password" data-i18n-tooltip="common.show_password" data-tooltip="${t('common.show_password')}" aria-label="${t('common.show_password')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+        </button>
+      </label>
+      <label class="field" data-ref="field-protect-confirm-password">
+        <input class="field__input field__input--has-action" data-ref="input-protect-confirm-password" type="password" placeholder=" " autocomplete="new-password" />
+        <span class="field__label" data-ref="label-protect-confirm-password" data-i18n="tools.protect_pdf.confirm_password_label">${t('tools.protect_pdf.confirm_password_label')}</span>
+        <button type="button" class="field__action" data-ref="btn-toggle-protect-confirm-password" data-i18n-aria="common.show_password" data-i18n-tooltip="common.show_password" data-tooltip="${t('common.show_password')}" aria-label="${t('common.show_password')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+        </button>
+      </label>
+    </div>
+  `;
+}
+
 function renderAddWebUrlModalBody(currentUrl = ''): string {
   return `
     <div class="modal-form-stack" data-ref="modal-form-add-url">
@@ -257,7 +278,7 @@ function renderThankYouShareModalBody(): string {
     <div class="modal-form-stack" data-ref="modal-form-social">
       <div class="modal-social-share-grid" data-ref="social-share-grid">
         <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-twitter" href="#" target="_blank" rel="noopener noreferrer">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#post_add"></use></svg>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
           <span data-i18n="download.social_twitter">${t('download.social_twitter')}</span>
         </a>
         <a class="component-badge component-badge--sm component-badge--interactive" data-ref="share-linkedin" href="#" target="_blank" rel="noopener noreferrer">
@@ -425,7 +446,7 @@ function renderWorkflowBuilderModalBody(workflowName = ''): string {
       <div class="dropdown-wrapper dropdown-wrapper--full workflow-tool-dropdown" data-ref="field-workflow-tool">
         <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-workflow-tool" data-i18n-aria="workflows.tool_placeholder" aria-label="${t('workflows.tool_placeholder')}">
           <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-tool">
-            <svg class="component-icon dropdown-trigger__icon is-hidden" data-ref="icon-selected-tool" aria-hidden="true"><use href="/icons.svg#widgets"></use></svg>
+            <svg class="component-icon dropdown-trigger__icon is-hidden" data-ref="icon-selected-tool" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
             <span class="dropdown-trigger__text" data-ref="txt-selected-tool" data-i18n="workflows.tool_placeholder">${t('workflows.tool_placeholder')}</span>
           </div>
           <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
@@ -568,6 +589,7 @@ export {
   renderDocumentLabelsModalBody,
   renderMoveFolderOptionsModalBody,
   renderNewPasswordModalBody,
+  renderProtectPdfModalBody,
   renderRenameFolderModalBody,
   renderShareDownloadModalContent,
   renderThankYouShareModalBody,

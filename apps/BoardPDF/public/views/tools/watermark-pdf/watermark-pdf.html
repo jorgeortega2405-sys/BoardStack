@@ -1,254 +1,280 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="watermark-pdf-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-<span class="component-button__text" >Opciones</span>
-</button>
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-watermark" disabled>
-<svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#branding_watermark"></use></svg>
-<span data-ref="txt-execute-watermark">Insertar marca de agua</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-i18n-tooltip="common.options" data-i18n-aria="common.options">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text" data-i18n="common.options"></span>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-watermark" disabled>
+        <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#branding_watermark"></use></svg>
+        <span class="component-button__text" data-ref="txt-execute-watermark" data-i18n="tools.watermark_action"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="watermark-pdf-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="watermark-pdf-workspace">
+      <input class="tool-dropzone__input" data-ref="input-watermark-image" type="file" accept="image/png,image/jpeg,image/webp" />
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="wm-workspace-card">
+        <div class="pdf-reorder-hint" data-ref="wm-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#branding_watermark"></use></svg>
+          <span data-i18n="tools.watermark_workspace_hint"></span>
+        </div>
+        <div class="pdf-items-grid wm-pages-grid" data-ref="wm-pages-grid"></div>
+        <div class="banner banner--danger is-hidden" data-ref="wm-global-error" role="alert"></div>
+      </div>
+    </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="watermark-pdf-sidebar">
+        <div class="menu-panel__drag-zone" data-ref="wm-sidebar-drag-zone" aria-hidden="true">
+          <div class="menu-panel__drag-handle"></div>
+        </div>
+        <div class="tool-sidebar__header">
+          <div class="component-title-badge" data-ref="wm-sidebar-title-badge">
+            <h1 class="component-title-badge__text" data-ref="wm-sidebar-title" data-i18n="tools.watermark_pdf_options"></h1>
+          </div>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="component-tabs" data-ref="toggle-watermark-type" data-active="0">
+            <button type="button" class="component-tab is-active" data-ref="tab-text" data-tab="text" data-type="text">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+              <span data-i18n="tools.watermark_tab_text"></span>
+            </button>
+            <button type="button" class="component-tab" data-ref="tab-image" data-tab="image" data-type="image">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
+              <span data-i18n="tools.watermark_tab_image"></span>
+            </button>
+          </div>
+
+          <div class="tool-sidebar__section" data-ref="section-text-options">
+            <label class="field" data-ref="field-wm-text">
+              <input class="field__input" data-ref="input-wm-text" data-i18n-placeholder="common.watermark_text_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+              <span class="field__label" data-i18n="tools.watermark_text"></span>
+            </label>
+
+            <div class="tool-sidebar__field-group--flex-row">
+              <button type="button" class="tool-font-trigger-btn tool-sidebar__flex-1" data-ref="btn-open-wm-font-drawer" data-i18n-aria="aria.font_family">
+                <span class="tool-font-trigger-btn__left">
+                  <svg class="component-icon tool-font-trigger-btn__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>
+                  <span class="tool-font-trigger-btn__label" data-ref="wm-font-selected-label" data-i18n="tools.font_standard_helvetica"></span>
+                </span>
+                <svg class="component-icon tool-font-trigger-btn__chevron" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+
+              <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--w120" data-ref="dropdown-wrapper-wm-size">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-wm-size" data-i18n-aria="aria.size">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="wm-size-selected-text">36 pt</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-wm-size">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-wm-size">
+                    <div class="menu-panel__drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item" data-ref="option-wm-size-24" data-value="24">
+                        <span class="menu-item__text">24 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-wm-size-24" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item is-active" data-ref="option-wm-size-36" data-value="36">
+                        <span class="menu-item__text">36 pt</span>
+                        <svg class="component-icon menu-item__check" data-ref="check-wm-size-36" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-wm-size-48" data-value="48">
+                        <span class="menu-item__text">48 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-wm-size-48" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-wm-size-72" data-value="72">
+                        <span class="menu-item__text">72 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-wm-size-72" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section is-hidden" data-ref="section-image-options">
+            <button type="button" class="component-button component-button--secondary component-button--h44 component-button--w-full" data-ref="btn-pick-image">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+              <span data-ref="txt-picked-image" data-i18n="tools.watermark_pick_image"></span>
+            </button>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.pn_position_title"></span>
+            <div class="wm-position-box" data-ref="wm-position-box">
+              <button type="button" class="wm-position-cell" data-pos="top-left" data-i18n-title="tools.pos_top_left" data-i18n-aria="tools.pos_top_left"></button>
+              <button type="button" class="wm-position-cell" data-pos="top-center" data-i18n-title="tools.pos_top_center" data-i18n-aria="tools.pos_top_center"></button>
+              <button type="button" class="wm-position-cell" data-pos="top-right" data-i18n-title="tools.pos_top_right" data-i18n-aria="tools.pos_top_right"></button>
+              <button type="button" class="wm-position-cell" data-pos="center-left" data-i18n-title="tools.pos_center_left" data-i18n-aria="tools.pos_center_left"></button>
+              <button type="button" class="wm-position-cell is-selected" data-pos="center" data-i18n-title="tools.pos_center" data-i18n-aria="tools.pos_center"></button>
+              <button type="button" class="wm-position-cell" data-pos="center-right" data-i18n-title="tools.pos_center_right" data-i18n-aria="tools.pos_center_right"></button>
+              <button type="button" class="wm-position-cell" data-pos="bottom-left" data-i18n-title="tools.pos_bottom_left" data-i18n-aria="tools.pos_bottom_left"></button>
+              <button type="button" class="wm-position-cell" data-pos="bottom-center" data-i18n-title="tools.pos_bottom_center" data-i18n-aria="tools.pos_bottom_center"></button>
+              <button type="button" class="wm-position-cell" data-pos="bottom-right" data-i18n-title="tools.pos_bottom_right" data-i18n-aria="tools.pos_bottom_right"></button>
+            </div>
+            <label class="split-option-card" data-ref="label-mosaic">
+              <div class="split-option-card__content">
+                <span class="split-option-card__title" data-i18n="tools.watermark_mosaic_title"></span>
+                <span class="split-option-card__subtitle" data-i18n="tools.watermark_mosaic_subtitle"></span>
+              </div>
+              <input class="component-checkbox" data-ref="check-mosaic" type="checkbox" />
+            </label>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <div class="wm-grid-options">
+              <div class="wm-column-gap4">
+                <span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin" data-i18n="tools.watermark_transparency_title"></span>
+                <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-transparency">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-transparency" data-i18n-aria="tools.watermark_transparency_aria">
+                    <div class="dropdown-trigger__left">
+                      <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#opacity"></use></svg>
+                      <span class="dropdown-trigger__text" data-ref="wm-transparency-selected-text" data-i18n="tools.watermark_transparency_none"></span>
+                    </div>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-transparency">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-transparency">
+                      <div class="menu-panel__drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list">
+                        <button type="button" class="menu-item is-active" data-ref="option-trans-0" data-value="0">
+                          <span class="menu-item__text" data-i18n="tools.watermark_transparency_none"></span>
+                          <svg class="component-icon menu-item__check" data-ref="check-trans-0" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-trans-25" data-value="25">
+                          <span class="menu-item__text">25%</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-trans-25" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-trans-50" data-value="50">
+                          <span class="menu-item__text">50%</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-trans-50" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-trans-75" data-value="75">
+                          <span class="menu-item__text">75%</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-trans-75" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wm-column-gap4">
+                <span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin" data-i18n="tools.watermark_rotation_title"></span>
+                <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-rotation">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-rotation" data-i18n-aria="aria.rotation">
+                    <div class="dropdown-trigger__left">
+                      <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                      <span class="dropdown-trigger__text" data-ref="wm-rotation-selected-text" data-i18n="tools.watermark_rotation_none"></span>
+                    </div>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-rotation">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-rotation">
+                      <div class="menu-panel__drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list">
+                        <button type="button" class="menu-item is-active" data-ref="option-rot-0" data-value="0">
+                          <span class="menu-item__text" data-i18n="tools.watermark_rotation_none"></span>
+                          <svg class="component-icon menu-item__check" data-ref="check-rot-0" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-rot-45" data-value="45">
+                          <span class="menu-item__text">45°</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-rot-45" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-rot-90" data-value="90">
+                          <span class="menu-item__text">90°</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-rot-90" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-rot-180" data-value="180">
+                          <span class="menu-item__text">180°</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-rot-180" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="option-rot-270" data-value="270">
+                          <span class="menu-item__text">270°</span>
+                          <svg class="component-icon menu-item__check is-hidden" data-ref="check-rot-270" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="split-range-card" data-ref="card-wm-pages-range">
+            <div class="split-range-card__header">
+              <div class="split-range-card__meta">
+                <span class="split-range-card__field-label" data-i18n="tools.pn_pages_range_title"></span>
+              </div>
+            </div>
+            <div class="split-range-card__body">
+              <div class="split-range-card__col">
+                <span class="split-range-card__field-label" data-i18n="tools.split_range_from"></span>
+                <div class="component-inline-control component-inline-control--sm split-range-card__control">
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.decrease_start_page" data-step-change="-1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-from-page" type="number" min="1" value="1" autocomplete="off" />
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.increase_start_page" data-step-change="1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="split-range-card__arrow" aria-hidden="true">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+              </div>
+              <div class="split-range-card__col">
+                <span class="split-range-card__field-label" data-i18n="tools.split_range_to"></span>
+                <div class="component-inline-control component-inline-control--sm split-range-card__control">
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.decrease_end_page" data-step-change="-1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-to-page" type="number" min="1" value="1" autocomplete="off" />
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.increase_end_page" data-step-change="1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.watermark_layer_title"></span>
+            <div class="component-tabs" data-ref="toggle-layer" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="layer-btn-over" data-layer="over" data-i18n="tools.watermark_layer_over"></button>
+              <button type="button" class="component-tab" data-ref="layer-btn-under" data-layer="under" data-i18n="tools.watermark_layer_under"></button>
+            </div>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="wm-error-banner" role="alert"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="watermark-pdf-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="watermark-pdf-workspace">
-<input class="tool-dropzone__input" data-ref="input-watermark-image" type="file" accept="image/png,image/jpeg,image/webp" />
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="wm-workspace-card">
-<div class="pdf-reorder-hint" data-ref="wm-reorder-hint">
-<span>Ajusta el texto o imagen de marca de agua, transparencia y posición en el panel de opciones.</span>
-</div>
-<div class="pdf-items-grid wm-pages-grid" data-ref="wm-pages-grid"></div>
-</div>
-</main>
-<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="watermark-pdf-sidebar">
-<div class="tool-sidebar__header">
-  <h2 class="tool-sidebar__title" data-i18n="tools.watermark_pdf_options"></h2>
-  <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="tool-sidebar__body" >
-<div class="component-tabs" data-ref="toggle-watermark-type" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="tab-text" data-tab="text" data-type="text">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
-<span>Texto</span>
-</button>
-<button type="button" class="component-tab" data-ref="tab-image" data-tab="image" data-type="image">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
-<span>Imagen</span>
-</button>
-</div>
-<div class="tool-sidebar__section" data-ref="section-text-options">
-<label class="field tool-sidebar__field-group--mb12" data-ref="field-wm-text">
-<input class="field__input field__input--h36" data-ref="input-wm-text" type="text" value="CONFIDENCIAL" data-i18n-placeholder="common.watermark_text_placeholder" placeholder=" " />
-<span class="field__label" data-i18n="tools.watermark_text"></span>
-</label>
-<div class="tool-sidebar__field-group--flex-row tool-sidebar__field-group--mb8" >
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin tool-sidebar__flex-1" data-ref="dropdown-wrapper-wm-font">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Fuente">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >Arial / Helvetica</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item is-active" data-value="Helvetica">
-<span class="menu-item__text" >Arial / Helvetica</span>
-</button>
-<button type="button" class="menu-item" data-value="Helvetica-Bold">
-<span class="menu-item__text" >Helvetica (Negrita)</span>
-</button>
-<button type="button" class="menu-item" data-value="Times-Roman">
-<span class="menu-item__text" >Times New Roman</span>
-</button>
-<button type="button" class="menu-item" data-value="Courier">
-<span class="menu-item__text" >Courier</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin tool-sidebar__dropdown--w85" data-ref="dropdown-wrapper-wm-size">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" data-i18n-aria="aria.size" aria-label="Tamaño">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >36 pt</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item" data-value="24">
-<span class="menu-item__text" >24 pt</span>
-</button>
-<button type="button" class="menu-item is-active" data-value="36">
-<span class="menu-item__text" >36 pt</span>
-</button>
-<button type="button" class="menu-item" data-value="48">
-<span class="menu-item__text" >48 pt</span>
-</button>
-<button type="button" class="menu-item" data-value="72">
-<span class="menu-item__text" >72 pt</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="tool-sidebar__section is-hidden" data-ref="section-image-options">
-<button type="button" class="component-button component-button--secondary component-button--h44 component-button--w-full" data-ref="btn-pick-image">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
-<span data-ref="txt-picked-image">Añadir Imagen (PNG/JPG)</span>
-</button>
-</div>
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Posición en la página</span>
-<div class="wm-position-box" data-ref="wm-position-box">
-<div class="wm-position-cell" data-pos="top-left" title="Superior Izquierda"></div>
-<div class="wm-position-cell" data-pos="top-center" title="Superior Centro"></div>
-<div class="wm-position-cell" data-pos="top-right" title="Superior Derecha"></div>
-<div class="wm-position-cell" data-pos="center-left" title="Centro Izquierda"></div>
-<div class="wm-position-cell is-selected" data-pos="center" title="Centro"></div>
-<div class="wm-position-cell" data-pos="center-right" title="Centro Derecha"></div>
-<div class="wm-position-cell" data-pos="bottom-left" title="Inferior Izquierda"></div>
-<div class="wm-position-cell" data-pos="bottom-center" title="Inferior Centro"></div>
-<div class="wm-position-cell" data-pos="bottom-right" title="Inferior Derecha"></div>
-</div>
-<label class="split-option-card tool-sidebar__field-group--mt10" data-ref="label-mosaic">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >Mosaico</span>
-<span class="split-option-card__subtitle" >Repetir la marca en toda la página</span>
-</div>
-<input class="component-checkbox" data-ref="check-mosaic" type="checkbox" />
-</label>
-</div>
-<div class="tool-sidebar__section" >
-<div class="wm-grid-options" >
-<div class="wm-column-gap4" >
-<span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin" >Transparencia:</span>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-transparency">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" aria-label="Transparencia">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >Sin transparencia</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item is-active" data-value="0">
-<span class="menu-item__text" >Sin transparencia</span>
-</button>
-<button type="button" class="menu-item" data-value="25">
-<span class="menu-item__text" >25%</span>
-</button>
-<button type="button" class="menu-item" data-value="50">
-<span class="menu-item__text" >50%</span>
-</button>
-<button type="button" class="menu-item" data-value="75">
-<span class="menu-item__text" >75%</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="wm-column-gap4" >
-<span class="tool-sidebar__section-title tool-sidebar__dropdown--nomargin" >Rotación:</span>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-rotation">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" data-i18n-aria="aria.rotation" aria-label="Rotación">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >No rotar</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item is-active" data-value="0">
-<span class="menu-item__text" >No rotar</span>
-</button>
-<button type="button" class="menu-item" data-value="45">
-<span class="menu-item__text" >45°</span>
-</button>
-<button type="button" class="menu-item" data-value="90">
-<span class="menu-item__text" >90°</span>
-</button>
-<button type="button" class="menu-item" data-value="180">
-<span class="menu-item__text" >180°</span>
-</button>
-<button type="button" class="menu-item" data-value="270">
-<span class="menu-item__text" >270°</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Páginas:</span>
-<div class="wm-range-row" >
-<span class="tool-sidebar__hint-text" >de la página</span>
-<div class="component-inline-control component-inline-control--compact component-inline-control--sm" >
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="-1" data-i18n-aria="aria.decrease_start_page" aria-label="Disminuir página inicial">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-</div>
-<input class="component-inline-control__input" data-ref="input-from-page" type="number" min="1" value="1" autocomplete="off" />
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="1" data-i18n-aria="aria.increase_start_page" aria-label="Aumentar página inicial">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-<span class="tool-sidebar__hint-text" >a</span>
-<div class="component-inline-control component-inline-control--compact component-inline-control--sm" >
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="-1" data-i18n-aria="aria.decrease_end_page" aria-label="Disminuir página final">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-</div>
-<input class="component-inline-control__input" data-ref="input-to-page" type="number" min="1" value="1" autocomplete="off" />
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="1" data-i18n-aria="aria.increase_end_page" aria-label="Aumentar página final">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-</div>
-</div>
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Capa:</span>
-<div class="component-tabs" data-ref="toggle-layer" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="layer-btn-over" data-layer="over">Sobre el contenido</button>
-<button type="button" class="component-tab" data-ref="layer-btn-under" data-layer="under">Bajo el contenido</button>
-</div>
-</div>
-</div>
-</aside>
-</div>
-</div>
-</div> 

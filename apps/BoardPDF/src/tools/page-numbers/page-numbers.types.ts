@@ -13,8 +13,10 @@ type PageNumberMode = 'double' | 'single';
 interface PageNumberOptions {
   filename?: string;
   firstPageIsCover?: boolean;
-  fontFamily?: 'Courier' | 'Helvetica' | 'Helvetica-Bold' | 'Times-Roman';
+  fontFamily?: string;
   fontSize?: number;
+  fontStyle?: 'normal' | 'italic';
+  fontWeight?: number;
   format?: string;
   fromPage?: number;
   margin?: PageNumberMargin;

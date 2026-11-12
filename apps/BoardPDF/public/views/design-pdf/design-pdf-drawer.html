@@ -1,5 +1,5 @@
 <aside class="layout-drawer" data-ref="layout-drawer">
-<button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-tooltip="Cerrar menú" data-i18n-tooltip="common.close" data-i18n-aria="common.close" aria-label="Cerrar menú">
+<button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-i18n-tooltip="common.close" data-i18n-aria="common.close">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
 </button>
 <div class="layout-drawer__header collaborative-drawer-header" data-ref="drawer-header">
@@ -7,15 +7,15 @@
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-drawer-back-btn is-hidden" data-ref="btn-drawer-back" data-tooltip="Volver" aria-label="Volver">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
 </button>
-<span class="collaborative-drawer-header__title" data-ref="side-panel-title">Elementos</span>
+<span class="collaborative-drawer-header__title" data-ref="side-panel-title" data-i18n="collaborative.elements_title"></span>
 </div>
 </div>
 <div class="layout-drawer__body" data-ref="side-panel-body">
 <div class="collaborative-panel-section" data-ref="panel-section-elements">
 <div class="collaborative-elements-main" data-ref="elements-main-view">
 <div class="collaborative-panel-grid collaborative-panel-grid--3" data-ref="list-elements">
-<button type="button" class="collaborative-element-card" data-ref="btn-elem-tables" data-tooltip="Tablas" aria-label="Tablas">
-<div class="collaborative-element-card__icon-wrap" >
+<button type="button" class="collaborative-element-card" data-ref="btn-elem-tables" data-i18n-tooltip="collaborative.elements_tables" data-i18n-aria="collaborative.elements_tables">
+<div class="collaborative-element-card__icon-wrap">
 <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
 <rect x="7" y="3" width="50" height="50" rx="14" fill="#fb923c" transform="rotate(3 32 28)"></rect>
 <rect x="7" y="7" width="50" height="50" rx="14" fill="#ea580c"></rect>
@@ -27,10 +27,10 @@
 <line x1="38" y1="16" x2="38" y2="48" stroke="#ffffff" stroke-width="2.5"></line>
 </svg>
 </div>
-<span class="collaborative-element-card__text" >Tablas</span>
+<span class="collaborative-element-card__text" data-i18n="collaborative.elements_tables"></span>
 </button>
-<button type="button" class="collaborative-element-card" data-ref="btn-elem-photos" data-tooltip="Fotos" aria-label="Fotos">
-<div class="collaborative-element-card__icon-wrap" >
+<button type="button" class="collaborative-element-card" data-ref="btn-elem-photos" data-i18n-tooltip="collaborative.elements_photos" data-i18n-aria="collaborative.elements_photos">
+<div class="collaborative-element-card__icon-wrap">
 <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
 <rect x="7" y="3" width="50" height="50" rx="14" fill="#60a5fa" transform="rotate(-3 32 28)"></rect>
 <rect x="7" y="7" width="50" height="50" rx="14" fill="#1d4ed8"></rect>
@@ -42,10 +42,10 @@
 <polygon points="26,45 33,37 40,45" fill="#15803d"></polygon>
 </svg>
 </div>
-<span class="collaborative-element-card__text" >Fotos</span>
+<span class="collaborative-element-card__text" data-i18n="collaborative.elements_photos"></span>
 </button>
-<button type="button" class="collaborative-element-card" data-ref="btn-elem-charts" data-tooltip="Gráficas" data-i18n-aria="aria.charts" aria-label="Gráficas">
-<div class="collaborative-element-card__icon-wrap" >
+<button type="button" class="collaborative-element-card" data-ref="btn-elem-charts" data-i18n-tooltip="collaborative.elements_charts" data-i18n-aria="aria.charts">
+<div class="collaborative-element-card__icon-wrap">
 <svg class="collaborative-element-svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
 <rect x="7" y="3" width="50" height="50" rx="14" fill="#2dd4bf" transform="rotate(3 32 28)"></rect>
 <rect x="7" y="7" width="50" height="50" rx="14" fill="#0f766e"></rect>
@@ -59,169 +59,169 @@
 <circle cx="40" cy="24" r="2.5" fill="#ffffff"></circle>
 </svg>
 </div>
-<span class="collaborative-element-card__text" >Gráficas</span>
+<span class="collaborative-element-card__text" data-i18n="collaborative.elements_charts"></span>
 </button>
 </div>
 </div>
 </div>
 <div class="collaborative-panel-section is-hidden" data-ref="panel-section-colors">
 <div class="collaborative-colors-container" data-ref="colors-container">
-<div class="collaborative-color-section" >
-<span class="collaborative-color-section__title" data-ref="txt-color-section-first-title">Colores</span>
+<div class="collaborative-color-section">
+<span class="collaborative-color-section__title" data-ref="txt-color-section-first-title" data-i18n="collaborative.colors_section_title"></span>
 <div class="collaborative-colors-grid" data-ref="grid-category-colors">
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--gradient-picker" data-ref="btn-color-custom-picker" data-tooltip="Color personalizado" aria-label="Color personalizado">
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--gradient-picker" data-ref="btn-color-custom-picker" data-i18n-tooltip="collaborative.color_custom_picker" data-i18n-aria="collaborative.color_custom_picker">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
 </button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--eyedropper" data-ref="btn-color-eyedropper" data-tooltip="Gotero con zoom" aria-label="Gotero con zoom">
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--eyedropper" data-ref="btn-color-eyedropper" data-i18n-tooltip="collaborative.color_eyedropper" data-i18n-aria="collaborative.color_eyedropper">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#colorize"></use></svg>
 </button>
 </div>
 </div>
-<div class="collaborative-color-section" >
-<div class="collaborative-color-section__header" >
-<span class="collaborative-color-section__title" >Colores sólidos predeterminados</span>
-<button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-solid-colors-more">Mostrar más</button>
+<div class="collaborative-color-section">
+<div class="collaborative-color-section__header">
+<span class="collaborative-color-section__title" data-i18n="collaborative.colors_default_solids"></span>
+<button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-solid-colors-more" data-i18n="collaborative.show_more"></button>
 </div>
 <div class="collaborative-colors-grid" data-ref="grid-solid-colors">
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#000b3d" data-tooltip="#000b3d" aria-label="#000b3d" data-color="#000b3d" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#00167a" data-tooltip="#00167a" aria-label="#00167a" data-color="#00167a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#0025cc" data-tooltip="#0025cc" aria-label="#0025cc" data-color="#0025cc" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#1f48ff" data-tooltip="#1f48ff" aria-label="#1f48ff" data-color="#1f48ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#5271ff" data-tooltip="#5271ff" aria-label="#5271ff" data-color="#5271ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#99acff" data-tooltip="#99acff" aria-label="#99acff" data-color="#99acff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#c2cdff" data-tooltip="#c2cdff" aria-label="#c2cdff" data-color="#c2cdff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#020c45" data-tooltip="#020c45" aria-label="#020c45" data-color="#020c45" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#2c0a71" data-tooltip="#2c0a71" aria-label="#2c0a71" data-color="#2c0a71" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#4910bc" data-tooltip="#4910bc" aria-label="#4910bc" data-color="#4910bc" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#5e17eb" data-tooltip="#5e17eb" aria-label="#5e17eb" data-color="#5e17eb" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#8c52ff" data-tooltip="#8c52ff" aria-label="#8c52ff" data-color="#8c52ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#bea1f7" data-tooltip="#bea1f7" aria-label="#bea1f7" data-color="#bea1f7" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#d8c7fa" data-tooltip="#d8c7fa" aria-label="#d8c7fa" data-color="#d8c7fa" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#200934" data-tooltip="#200934" aria-label="#200934" data-color="#200934" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#401268" data-tooltip="#401268" aria-label="#401268" data-color="#401268" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#6b1fad" data-tooltip="#6b1fad" aria-label="#6b1fad" data-color="#6b1fad" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#9440dd" data-tooltip="#9440dd" aria-label="#9440dd" data-color="#9440dd" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#bc3fde" data-tooltip="#bc3fde" aria-label="#bc3fde" data-color="#bc3fde" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#cb6ce6" data-tooltip="#cb6ce6" aria-label="#cb6ce6" data-color="#cb6ce6" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#e1a8f0" data-tooltip="#e1a8f0" aria-label="#e1a8f0" data-color="#e1a8f0" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#edcbf6" data-tooltip="#edcbf6" aria-label="#edcbf6" data-color="#edcbf6" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#3d0026" data-tooltip="#3d0026" aria-label="#3d0026" data-color="#3d0026" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#7a004b" data-tooltip="#7a004b" aria-label="#7a004b" data-color="#7a004b" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#cc007e" data-tooltip="#cc007e" aria-label="#cc007e" data-color="#cc007e" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff1fa9" data-tooltip="#ff1fa9" aria-label="#ff1fa9" data-color="#ff1fa9" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff66c4" data-tooltip="#ff66c4" aria-label="#ff66c4" data-color="#ff66c4" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff99d8" data-tooltip="#ff99d8" aria-label="#ff99d8" data-color="#ff99d8" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ffc2e8" data-tooltip="#ffc2e8" aria-label="#ffc2e8" data-color="#ffc2e8" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#330a0a" data-tooltip="#330a0a" aria-label="#330a0a" data-color="#330a0a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#661414" data-tooltip="#661414" aria-label="#661414" data-color="#661414" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff2828" data-tooltip="#ff2828" aria-label="#ff2828" data-color="#ff2828" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff3a3a" data-tooltip="#ff3a3a" aria-label="#ff3a3a" data-color="#ff3a3a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff5050" data-tooltip="#ff5050" aria-label="#ff5050" data-color="#ff5050" data-border=""></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ffadad" data-tooltip="#ffadad" aria-label="#ffadad" data-color="#ffadad" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd6d6" data-tooltip="#ffd6d6" aria-label="#ffd6d6" data-color="#ffd6d6" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d0000" data-tooltip="#3d0000" aria-label="#3d0000" data-color="#3d0000" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a0000" data-tooltip="#7a0000" aria-label="#7a0000" data-color="#7a0000" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc0000" data-tooltip="#cc0000" aria-label="#cc0000" data-color="#cc0000" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff3131" data-tooltip="#ff3131" aria-label="#ff3131" data-color="#ff3131" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff5757" data-tooltip="#ff5757" aria-label="#ff5757" data-color="#ff5757" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff9999" data-tooltip="#ff9999" aria-label="#ff9999" data-color="#ff9999" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffc2c2" data-tooltip="#ffc2c2" aria-label="#ffc2c2" data-color="#ffc2c2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d1700" data-tooltip="#3d1700" aria-label="#3d1700" data-color="#3d1700" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a2f00" data-tooltip="#7a2f00" aria-label="#7a2f00" data-color="#7a2f00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc4e00" data-tooltip="#cc4e00" aria-label="#cc4e00" data-color="#cc4e00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff751f" data-tooltip="#ff751f" aria-label="#ff751f" data-color="#ff751f" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff914d" data-tooltip="#ff914d" aria-label="#ff914d" data-color="#ff914d" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffc099" data-tooltip="#ffc099" aria-label="#ffc099" data-color="#ffc099" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd9c2" data-tooltip="#ffd9c2" aria-label="#ffd9c2" data-color="#ffd9c2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d2500" data-tooltip="#3d2500" aria-label="#3d2500" data-color="#3d2500" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a4900" data-tooltip="#7a4900" aria-label="#7a4900" data-color="#7a4900" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc7a00" data-tooltip="#cc7a00" aria-label="#cc7a00" data-color="#cc7a00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffa51f" data-tooltip="#ffa51f" aria-label="#ffa51f" data-color="#ffa51f" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffbd59" data-tooltip="#ffbd59" aria-label="#ffbd59" data-color="#ffbd59" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd699" data-tooltip="#ffd699" aria-label="#ffd699" data-color="#ffd699" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffe7c2" data-tooltip="#ffe7c2" aria-label="#ffe7c2" data-color="#ffe7c2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d3100" data-tooltip="#3d3100" aria-label="#3d3100" data-color="#3d3100" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a6200" data-tooltip="#7a6200" aria-label="#7a6200" data-color="#7a6200" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cca300" data-tooltip="#cca300" aria-label="#cca300" data-color="#cca300" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd21f" data-tooltip="#ffd21f" aria-label="#ffd21f" data-color="#ffd21f" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffde59" data-tooltip="#ffde59" aria-label="#ffde59" data-color="#ffde59" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffeb99" data-tooltip="#ffeb99" aria-label="#ffeb99" data-color="#ffeb99" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#fff3c2" data-tooltip="#fff3c2" aria-label="#fff3c2" data-color="#fff3c2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#233d00" data-tooltip="#233d00" aria-label="#233d00" data-color="#233d00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#457a00" data-tooltip="#457a00" aria-label="#457a00" data-color="#457a00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#74cc00" data-tooltip="#74cc00" aria-label="#74cc00" data-color="#74cc00" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#9eff1f" data-tooltip="#9eff1f" aria-label="#9eff1f" data-color="#9eff1f" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c1ff72" data-tooltip="#c1ff72" aria-label="#c1ff72" data-color="#c1ff72" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#d3ff99" data-tooltip="#d3ff99" aria-label="#d3ff99" data-color="#d3ff99" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#e4ffc2" data-tooltip="#e4ffc2" aria-label="#e4ffc2" data-color="#e4ffc2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#17320b" data-tooltip="#17320b" aria-label="#17320b" data-color="#17320b" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#2e6417" data-tooltip="#2e6417" aria-label="#2e6417" data-color="#2e6417" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#4ca626" data-tooltip="#4ca626" aria-label="#4ca626" data-color="#4ca626" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7ed957" data-tooltip="#7ed957" aria-label="#7ed957" data-color="#7ed957" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99e17a" data-tooltip="#99e17a" aria-label="#99e17a" data-color="#99e17a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#bfecac" data-tooltip="#bfecac" aria-label="#bfecac" data-color="#bfecac" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#d9f4cd" data-tooltip="#d9f4cd" aria-label="#d9f4cd" data-color="#d9f4cd" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#003d20" data-tooltip="#003d20" aria-label="#003d20" data-color="#003d20" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#007a3f" data-tooltip="#007a3f" aria-label="#007a3f" data-color="#007a3f" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00bf63" data-tooltip="#00bf63" aria-label="#00bf63" data-color="#00bf63" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1fff93" data-tooltip="#1fff93" aria-label="#1fff93" data-color="#1fff93" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5cffb0" data-tooltip="#5cffb0" aria-label="#5cffb0" data-color="#5cffb0" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99ffce" data-tooltip="#99ffce" aria-label="#99ffce" data-color="#99ffce" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2ffe1" data-tooltip="#c2ffe1" aria-label="#c2ffe1" data-color="#c2ffe1" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#053827" data-tooltip="#053827" aria-label="#053827" data-color="#053827" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0a714e" data-tooltip="#0a714e" aria-label="#0a714e" data-color="#0a714e" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#10bb82" data-tooltip="#10bb82" aria-label="#10bb82" data-color="#10bb82" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#31edae" data-tooltip="#31edae" aria-label="#31edae" data-color="#31edae" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#69f2c4" data-tooltip="#69f2c4" aria-label="#69f2c4" data-color="#69f2c4" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#a1f7da" data-tooltip="#a1f7da" aria-label="#a1f7da" data-color="#a1f7da" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c7fae9" data-tooltip="#c7fae9" aria-label="#c7fae9" data-color="#c7fae9" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#083335" data-tooltip="#083335" aria-label="#083335" data-color="#083335" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#11676a" data-tooltip="#11676a" aria-label="#11676a" data-color="#11676a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1cabb0" data-tooltip="#1cabb0" aria-label="#1cabb0" data-color="#1cabb0" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3ddbe1" data-tooltip="#3ddbe1" aria-label="#3ddbe1" data-color="#3ddbe1" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ce1e6" data-tooltip="#5ce1e6" aria-label="#5ce1e6" data-color="#5ce1e6" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#a7eff1" data-tooltip="#a7eff1" aria-label="#a7eff1" data-color="#a7eff1" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#caf5f7" data-tooltip="#caf5f7" aria-label="#caf5f7" data-color="#caf5f7" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00343d" data-tooltip="#00343d" aria-label="#00343d" data-color="#00343d" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00687a" data-tooltip="#00687a" aria-label="#00687a" data-color="#00687a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0097b2" data-tooltip="#0097b2" aria-label="#0097b2" data-color="#0097b2" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0cc0df" data-tooltip="#0cc0df" aria-label="#0cc0df" data-color="#0cc0df" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ce7ff" data-tooltip="#5ce7ff" aria-label="#5ce7ff" data-color="#5ce7ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99f0ff" data-tooltip="#99f0ff" aria-label="#99f0ff" data-color="#99f0ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2f6ff" data-tooltip="#c2f6ff" aria-label="#c2f6ff" data-color="#c2f6ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00273d" data-tooltip="#00273d" aria-label="#00273d" data-color="#00273d" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#004e7a" data-tooltip="#004e7a" aria-label="#004e7a" data-color="#004e7a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0081cc" data-tooltip="#0081cc" aria-label="#0081cc" data-color="#0081cc" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#38b6ff" data-tooltip="#38b6ff" aria-label="#38b6ff" data-color="#38b6ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#70cbff" data-tooltip="#70cbff" aria-label="#70cbff" data-color="#70cbff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99daff" data-tooltip="#99daff" aria-label="#99daff" data-color="#99daff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2e9ff" data-tooltip="#c2e9ff" aria-label="#c2e9ff" data-color="#c2e9ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#001b3d" data-tooltip="#001b3d" aria-label="#001b3d" data-color="#001b3d" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00357a" data-tooltip="#00357a" aria-label="#00357a" data-color="#00357a" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#004aad" data-tooltip="#004aad" aria-label="#004aad" data-color="#004aad" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1f80ff" data-tooltip="#1f80ff" aria-label="#1f80ff" data-color="#1f80ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ca3ff" data-tooltip="#5ca3ff" aria-label="#5ca3ff" data-color="#5ca3ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99c5ff" data-tooltip="#99c5ff" aria-label="#99c5ff" data-color="#99c5ff" data-border=""></button>
-<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2dcff" data-tooltip="#c2dcff" aria-label="#c2dcff" data-color="#c2dcff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#000b3d" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#00167a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#0025cc" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#1f48ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#5271ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#99acff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#c2cdff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#020c45" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#2c0a71" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#4910bc" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#5e17eb" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#8c52ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#bea1f7" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#d8c7fa" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#200934" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#401268" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#6b1fad" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#9440dd" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#bc3fde" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#cb6ce6" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#e1a8f0" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#edcbf6" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#3d0026" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#7a004b" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#cc007e" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff1fa9" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff66c4" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff99d8" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ffc2e8" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#330a0a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#661414" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff2828" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff3a3a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ff5050" data-border=""></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="#ffadad" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd6d6" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d0000" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a0000" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc0000" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff3131" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff5757" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff9999" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffc2c2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d1700" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a2f00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc4e00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff751f" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ff914d" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffc099" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd9c2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d2500" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a4900" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cc7a00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffa51f" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffbd59" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd699" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffe7c2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3d3100" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7a6200" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#cca300" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffd21f" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffde59" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#ffeb99" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#fff3c2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#233d00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#457a00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#74cc00" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#9eff1f" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c1ff72" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#d3ff99" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#e4ffc2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#17320b" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#2e6417" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#4ca626" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#7ed957" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99e17a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#bfecac" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#d9f4cd" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#003d20" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#007a3f" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00bf63" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1fff93" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5cffb0" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99ffce" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2ffe1" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#053827" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0a714e" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#10bb82" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#31edae" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#69f2c4" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#a1f7da" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c7fae9" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#083335" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#11676a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1cabb0" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#3ddbe1" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ce1e6" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#a7eff1" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#caf5f7" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00343d" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00687a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0097b2" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0cc0df" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ce7ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99f0ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2f6ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00273d" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#004e7a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#0081cc" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#38b6ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#70cbff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99daff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2e9ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#001b3d" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#00357a" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#004aad" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#1f80ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#5ca3ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#99c5ff" data-border=""></button>
+<button type="button" class="collaborative-color-swatch collaborative-color-swatch--extra is-hidden" data-ref="swatch-color" data-color="#c2dcff" data-border=""></button>
 </div>
 </div>
-<div class="collaborative-color-section" >
-<span class="collaborative-color-section__title" >Colores degradados predeterminados</span>
+<div class="collaborative-color-section">
+<span class="collaborative-color-section__title" data-i18n="collaborative.colors_default_gradients"></span>
 <div class="collaborative-colors-grid" data-ref="grid-gradient-colors">
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #f6d365 0%, #fda085 100%)" data-tooltip="Atardecer" aria-label="Atardecer" data-gradient="linear-gradient(135deg, #f6d365 0%, #fda085 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" data-tooltip="Flamingo" aria-label="Flamingo" data-gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)" data-tooltip="Océano" data-i18n-aria="aria.ocean" aria-label="Océano" data-gradient="linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" data-tooltip="Violeta real" aria-label="Violeta real" data-gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)" data-tooltip="Cielo azul" aria-label="Cielo azul" data-gradient="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #13547a 0%, #80d0c7 100%)" data-tooltip="Aguamarina" aria-label="Aguamarina" data-gradient="linear-gradient(135deg, #13547a 0%, #80d0c7 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #ff0844 0%, #ffb199 100%)" data-tooltip="Amanecer coral" aria-label="Amanecer coral" data-gradient="linear-gradient(135deg, #ff0844 0%, #ffb199 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #b224ef 0%, #7579ff 100%)" data-tooltip="Magia púrpura" data-i18n-aria="aria.purple_magic" aria-label="Magia púrpura" data-gradient="linear-gradient(135deg, #b224ef 0%, #7579ff 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #0ba360 0%, #3cba92 100%)" data-tooltip="Menta fresca" aria-label="Menta fresca" data-gradient="linear-gradient(135deg, #0ba360 0%, #3cba92 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)" data-tooltip="Rubor" aria-label="Rubor" data-gradient="linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" data-tooltip="Neón lima" data-i18n-aria="aria.lime_neon" aria-label="Neón lima" data-gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #fa709a 0%, #fee140 100%)" data-tooltip="Sol de verano" aria-label="Sol de verano" data-gradient="linear-gradient(135deg, #fa709a 0%, #fee140 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #30cfd0 0%, #330867 100%)" data-tooltip="Espacio profundo" aria-label="Espacio profundo" data-gradient="linear-gradient(135deg, #30cfd0 0%, #330867 100%)"></button>
-<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)" data-tooltip="Algodón de azúcar" data-i18n-aria="aria.cotton_candy" aria-label="Algodón de azúcar" data-gradient="linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #f6d365 0%, #fda085 100%)" data-i18n-tooltip="gradient.sunset" data-i18n-aria="gradient.sunset" data-gradient="linear-gradient(135deg, #f6d365 0%, #fda085 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" data-i18n-tooltip="gradient.flamingo" data-i18n-aria="gradient.flamingo" data-gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)" data-i18n-tooltip="gradient.ocean" data-i18n-aria="aria.ocean" data-gradient="linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" data-i18n-tooltip="gradient.royal_violet" data-i18n-aria="gradient.royal_violet" data-gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)" data-i18n-tooltip="gradient.blue_sky" data-i18n-aria="gradient.blue_sky" data-gradient="linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #13547a 0%, #80d0c7 100%)" data-i18n-tooltip="gradient.aquamarine" data-i18n-aria="gradient.aquamarine" data-gradient="linear-gradient(135deg, #13547a 0%, #80d0c7 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #ff0844 0%, #ffb199 100%)" data-i18n-tooltip="gradient.coral_sunrise" data-i18n-aria="gradient.coral_sunrise" data-gradient="linear-gradient(135deg, #ff0844 0%, #ffb199 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #b224ef 0%, #7579ff 100%)" data-i18n-tooltip="gradient.purple_magic" data-i18n-aria="aria.purple_magic" data-gradient="linear-gradient(135deg, #b224ef 0%, #7579ff 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #0ba360 0%, #3cba92 100%)" data-i18n-tooltip="gradient.fresh_mint" data-i18n-aria="gradient.fresh_mint" data-gradient="linear-gradient(135deg, #0ba360 0%, #3cba92 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)" data-i18n-tooltip="gradient.blush" data-i18n-aria="gradient.blush" data-gradient="linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" data-i18n-tooltip="gradient.lime_neon" data-i18n-aria="aria.lime_neon" data-gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #fa709a 0%, #fee140 100%)" data-i18n-tooltip="gradient.summer_sun" data-i18n-aria="gradient.summer_sun" data-gradient="linear-gradient(135deg, #fa709a 0%, #fee140 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #30cfd0 0%, #330867 100%)" data-i18n-tooltip="gradient.deep_space" data-i18n-aria="gradient.deep_space" data-gradient="linear-gradient(135deg, #30cfd0 0%, #330867 100%)"></button>
+<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)" data-i18n-tooltip="gradient.cotton_candy" data-i18n-aria="aria.cotton_candy" data-gradient="linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)"></button>
 </div>
 </div>
 </div>
@@ -230,17 +230,17 @@
 <div class="collaborative-panel-section is-hidden" data-ref="panel-section-text">
 <button type="button" class="component-button component-button--black component-button--h48 component-button--w-full" data-ref="btn-add-text-box">
 <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-<span class="component-button__text" >Agregar caja de texto</span>
+<span class="component-button__text" data-i18n="collaborative.add_text_box"></span>
 </button>
 <div class="collaborative-text-presets" data-ref="text-presets-container">
 <button type="button" class="collaborative-text-preset collaborative-text-preset--title" data-ref="btn-preset-title">
-<span class="collaborative-preset-title" >Agregar un título</span>
+<span class="collaborative-preset-title" data-i18n="collaborative.preset_title"></span>
 </button>
 <button type="button" class="collaborative-text-preset collaborative-text-preset--subtitle" data-ref="btn-preset-subtitle">
-<span class="collaborative-preset-subtitle" >Agregar un subtítulo</span>
+<span class="collaborative-preset-subtitle" data-i18n="collaborative.preset_subtitle"></span>
 </button>
 <button type="button" class="collaborative-text-preset collaborative-text-preset--body" data-ref="btn-preset-body">
-<span class="collaborative-preset-body" >Agregar algo de texto</span>
+<span class="collaborative-preset-body" data-i18n="collaborative.preset_body"></span>
 </button>
 </div>
 </div>
@@ -257,7 +257,7 @@
 <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs" data-i18n="collaborative.upload_tab_pdfs"></button>
 </div>
 <div class="collaborative-upload-progress is-hidden" data-ref="upload-progress-indicator">
-<div class="collaborative-upload-spinner" ></div>
+<div class="collaborative-upload-spinner"></div>
 <span class="collaborative-upload-progress__text" data-i18n="collaborative.upload_in_progress"></span>
 </div>
 <div class="collaborative-uploads-grid" data-ref="uploads-grid"></div>
@@ -274,24 +274,24 @@
 </div>
 </div>
 <div class="collaborative-pdf-apply-panel is-hidden" data-ref="pdf-apply-panel">
-<div class="collaborative-pdf-apply-header" >
-<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-pdf-back-btn" data-ref="btn-pdf-apply-back" data-tooltip="Volver a subidos" aria-label="Volver">
+<div class="collaborative-pdf-apply-header">
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-pdf-back-btn" data-ref="btn-pdf-apply-back" data-i18n-tooltip="collaborative.back_to_uploads" data-i18n-aria="common.back">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
 </button>
 <span class="collaborative-pdf-apply-title" data-ref="txt-pdf-apply-name">documento.pdf</span>
 </div>
-<div class="collaborative-pdf-apply-actions" >
-<button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full is-disabled" data-ref="btn-embed-design" disabled data-tooltip="Próximamente">
+<div class="collaborative-pdf-apply-actions">
+<button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full is-disabled" data-ref="btn-embed-design" disabled data-i18n-tooltip="common.coming_soon">
 <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-<span class="component-button__text" >Incrustar diseño</span>
+<span class="component-button__text" data-i18n="collaborative.embed_design"></span>
 </button>
 <button type="button" class="component-button component-button--black component-button--h40 component-button--w-full" data-ref="btn-apply-all-pages">
 <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
-<span class="component-button__text" data-ref="txt-apply-all-pages">Aplicar todas las páginas</span>
+<span class="component-button__text" data-ref="txt-apply-all-pages" data-i18n="collaborative.apply_all_pages"></span>
 </button>
 </div>
-<div class="collaborative-pdf-pages-hint" >
-<span>O haz clic en una página para aplicarla a la actual:</span>
+<div class="collaborative-pdf-pages-hint">
+<span data-i18n="collaborative.click_page_to_apply"></span>
 </div>
 <div class="collaborative-pdf-pages-grid" data-ref="pdf-pages-thumbnails-grid"></div>
 </div>

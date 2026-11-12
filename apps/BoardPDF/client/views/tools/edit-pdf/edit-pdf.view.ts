@@ -3,12 +3,12 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormApi } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { navigate } from '../../../services/navigation.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class EditPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -24,17 +24,17 @@ class EditPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar Archivo PDF',
+        buttonText: t('tools.select_pdf_file'),
         desc: t('ui.anade_texto_imagenes_formas_y_dibujos_o_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Editar PDF',
+        title: t('home.tool_edit_pdf_title'),
       },
       toolId: 'edit-pdf',
-      toolName: 'Editar PDF',
+      toolName: t('home.tool_edit_pdf_title'),
     });
     await this.phaseManager.init();
     renderIcons(this.container);
@@ -66,7 +66,7 @@ class EditPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'edit-pdf',
-        toolName: 'Editar PDF',
+        toolName: t('home.tool_edit_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -105,7 +105,7 @@ class EditPdfController implements ViewController {
     if (this.phaseManager?.statusManager) {
       this.phaseManager.statusManager.showError({
         boxText: message,
-        boxTitle: 'Error de procesamiento',
+        boxTitle: t('tools.edit_pdf_error_box_title'),
         desc: message,
         title: t('ui.no_se_pudo_abrir_el_documento'),
       });

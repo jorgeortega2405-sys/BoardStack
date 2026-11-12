@@ -14,8 +14,10 @@ type WatermarkPosition =
 interface WatermarkOptions {
   color?: string;
   filename?: string;
-  fontFamily?: 'Courier' | 'Helvetica' | 'Helvetica-Bold' | 'Times-Roman';
+  fontFamily?: string;
   fontSize?: number;
+  fontStyle?: 'normal' | 'italic';
+  fontWeight?: number;
   fromPage?: number;
   isBold?: boolean;
   isItalic?: boolean;

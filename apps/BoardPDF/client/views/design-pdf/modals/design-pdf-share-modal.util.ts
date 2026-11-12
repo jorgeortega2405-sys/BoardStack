@@ -1,7 +1,7 @@
 import { showAuthGateModal } from '../../../components/auth-gate-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi, updateDocTeamAccessApi } from '../../../services/api.service.js';
-import { t } from '../../../services/i18n.service.js';
+import { t, translateElement } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { debounce, setupDropdown, withButtonLoading } from '../../../utils/dom.util.js';
@@ -97,10 +97,11 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
     return { icon: 'lock', label: t('collaborative.team_access_none') };
   };
   const initialTeamMeta = getTeamAccessMeta(currentTeamAccess);
-  const ownerName = currentUser?.username || 'Propietario';
+  const ownerName = currentUser?.username || t('collaborative.owner');
   const ownerAvatar = currentUser?.avatar_url || (currentUser?.username ? `/api/avatar?name=${encodeURIComponent(currentUser.username)}&size=80` : null);
   const ownerInitials = ownerName.substring(0, 2).toUpperCase();
 
+  // mount
   popover.innerHTML = `
     <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-open collab-share-card" data-ref="collab-share-card">
       <div class="tool-sidebar__panel" data-ref="collab-share-view-main">
@@ -115,7 +116,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
         <div class="tool-sidebar__body">
           <div class="tool-sidebar__section">
-            <div class="tool-sidebar__section-title">Personas con acceso</div>
+            <div class="tool-sidebar__section-title" data-i18n="collaborative.people_with_access"></div>
             ${canManagePermissions ? `
               <div class="component-search component-search--full" data-ref="share-search-user-box">
                 <div class="component-search__icon">
@@ -131,7 +132,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <div class="collab-share-members-row" data-ref="collab-share-members-row">
               <div class="collab-share-avatars-list" data-ref="collab-share-avatars-list"></div>
               ${canManagePermissions ? `
-                <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-tooltip="Agregar personas" aria-label="Agregar personas">
+                <button type="button" class="collab-share-add-btn" data-ref="btn-focus-search-user" data-i18n-tooltip="collaborative.add_people" data-i18n-aria="collaborative.add_people">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
                 </button>
               ` : ''}
@@ -141,12 +142,12 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           </div>
 
           <div class="tool-sidebar__section">
-            <div class="tool-sidebar__section-title">Nivel de acceso</div>
+            <div class="tool-sidebar__section-title" data-i18n="collaborative.access_level"></div>
             <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-access">
-              <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" aria-label="Nivel de acceso" ${!canManagePermissions ? 'disabled' : ''}>
+              <button type="button" class="dropdown-trigger dropdown-trigger--full ${!canManagePermissions ? 'is-disabled' : ''}" data-ref="btn-access-trigger" data-i18n-aria="collaborative.access_level" ${!canManagePermissions ? 'disabled' : ''}>
                 <div class="dropdown-trigger__left" data-ref="dropdown-trigger-left-access">
                   <svg class="component-icon dropdown-trigger__icon" data-ref="access-trigger-icon" aria-hidden="true"><use href="/icons.svg#${isLinkMode ? 'language' : 'groups'}"></use></svg>
-                  <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? t('ui.cualquier_persona_que_tenga_el_enlace') : 'Solo las personas que agregues'}</span>
+                  <span class="dropdown-trigger__text" data-ref="access-trigger-label">${isLinkMode ? t('ui.cualquier_persona_que_tenga_el_enlace') : t('collaborative.access_only_added')}</span>
                 </div>
                 ${canManagePermissions ? `<svg class="component-icon dropdown-trigger__chevron" data-ref="icon-access-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>` : ''}
               </button>
@@ -160,8 +161,8 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
                           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
                         </div>
                         <div class="menu-item__text-group">
-                          <span class="menu-item__title">Solo las personas que agregues</span>
-                          <span class="menu-item__subtitle">Solo las personas con acceso al diseño pueden usar este enlace.</span>
+                          <span class="menu-item__title" data-i18n="collaborative.access_only_added"></span>
+                          <span class="menu-item__subtitle" data-i18n="collaborative.access_restricted_desc"></span>
                         </div>
                         <svg class="component-icon menu-item__check ${isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-restricted" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                       </button>
@@ -171,8 +172,8 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
                           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
                         </div>
                         <div class="menu-item__text-group">
-                          <span class="menu-item__title">Cualquier persona que tenga el enlace</span>
-                          <span class="menu-item__subtitle">Cualquiera podrá acceder al diseño con el enlace.</span>
+                          <span class="menu-item__title" data-i18n="ui.cualquier_persona_que_tenga_el_enlace"></span>
+                          <span class="menu-item__subtitle" data-i18n="collaborative.access_link_desc"></span>
                         </div>
                         <svg class="component-icon menu-item__check ${!isLinkMode ? 'is-hidden' : ''}" data-ref="check-access-link" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
                       </button>
@@ -239,7 +240,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
           <div class="collab-share-actions">
             <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-collab-copy-link">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
-              <span data-ref="txt-copy-link">Copiar el enlace</span>
+              <span data-ref="txt-copy-link">${t('collaborative.copy_link')}</span>
             </button>
             <button type="button" class="component-button component-button--ghost component-button--h44 component-button--w-full" data-ref="btn-collab-customize-link">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
@@ -274,54 +275,54 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
         <div class="tool-sidebar__body">
           <div class="tool-sidebar__section">
-            <div class="tool-sidebar__section-title">Tipo de archivo</div>
+            <div class="tool-sidebar__section-title" data-i18n="collaborative.download_file_type"></div>
             <div class="component-tabs" data-ref="toggle-download-type" data-active="0">
               <button type="button" class="component-tab is-active active" data-ref="btn-download-type-digital" data-type="digital">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-                <span>Digital</span>
+                <span data-i18n="collaborative.download_type_digital"></span>
               </button>
               <button type="button" class="component-tab" data-ref="btn-download-type-print" data-type="print">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-                <span>Impresión</span>
+                <span data-i18n="collaborative.download_type_print"></span>
               </button>
             </div>
           </div>
 
           <div class="tool-sidebar__section collab-download-digital-section" data-ref="section-digital-options">
-            <div class="tool-sidebar__section-title">Opciones adicionales</div>
+            <div class="tool-sidebar__section-title" data-i18n="collaborative.additional_options"></div>
             <div class="collab-download-options-list">
               <label class="collab-download-checkbox-row" data-ref="lbl-compress-pdf">
                 <input class="component-checkbox" data-ref="chk-compress-pdf" type="checkbox" />
                 <div class="collab-download-checkbox-info">
-                  <span class="collab-download-checkbox-title">Comprimir PDF</span>
-                  <span class="collab-download-checkbox-desc">Menor tamaño de archivo para compartir fácil</span>
+                  <span class="collab-download-checkbox-title" data-i18n="collaborative.compress_pdf"></span>
+                  <span class="collab-download-checkbox-desc" data-i18n="collaborative.download_opt_smaller_size"></span>
                 </div>
               </label>
               <label class="collab-download-checkbox-row" data-ref="lbl-separate-pages">
                 <input class="component-checkbox" data-ref="chk-separate-pages" type="checkbox" />
                 <div class="collab-download-checkbox-info">
-                  <span class="collab-download-checkbox-title">Descargar páginas como archivos separados</span>
-                  <span class="collab-download-checkbox-desc">Genera un archivo independiente para cada página</span>
+                  <span class="collab-download-checkbox-title" data-i18n="collaborative.download_opt_separate_files"></span>
+                  <span class="collab-download-checkbox-desc" data-i18n="collaborative.download_opt_separate_desc"></span>
                 </div>
               </label>
             </div>
           </div>
 
           <div class="tool-sidebar__section">
-            <div class="tool-sidebar__section-title">Seleccionar páginas</div>
+            <div class="tool-sidebar__section-title" data-i18n="collaborative.select_pages"></div>
             <div class="component-tabs" data-ref="toggle-download-pages" data-active="0">
               <button type="button" class="component-tab is-active active" data-ref="btn-download-pages-all" data-mode="all">
-                <span>Todas las páginas</span>
+                <span data-i18n="collaborative.all_pages"></span>
               </button>
               <button type="button" class="component-tab" data-ref="btn-download-pages-custom" data-mode="custom">
-                <span>Personalizar</span>
+                <span data-i18n="collaborative.custom_pages"></span>
               </button>
             </div>
 
             <div class="collab-download-custom-container is-hidden" data-ref="container-custom-pages">
               <div class="collab-download-custom-header">
-                <span class="collab-download-custom-count" data-ref="txt-selected-pages-count">${pageCount} de ${pageCount} páginas seleccionadas</span>
-                <button type="button" class="collab-download-toggle-all" data-ref="btn-toggle-all-pages">Deseleccionar todas</button>
+                <span class="collab-download-custom-count" data-ref="txt-selected-pages-count">${t('collaborative.pages_selected_count', { count: pageCount, total: pageCount })}</span>
+                <button type="button" class="collab-download-toggle-all" data-ref="btn-toggle-all-pages" data-i18n="collaborative.deselect_all"></button>
               </div>
               <div class="collab-download-pages-grid" data-ref="grid-download-pages"></div>
             </div>
@@ -375,7 +376,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <div class="tool-sidebar__section-title">${t('collaborative.replace_label')}</div>
             <div class="component-search component-search--full" data-ref="find-replace-box">
               <div class="component-search__icon">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#find_replace"></use></svg>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
               </div>
               <div class="component-search__input-box">
                 <input class="component-search__input" data-ref="input-find-replace" type="text" placeholder="${t('collaborative.replace_placeholder')}" autocomplete="off" />
@@ -387,7 +388,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <label class="split-option-card" data-ref="card-find-match-case">
               <div class="split-option-card__content">
                 <span class="split-option-card__title">${t('collaborative.match_case')}</span>
-                <span class="split-option-card__subtitle">${t('collaborative.match_case_subtitle') || 'Diferenciar mayúsculas y minúsculas'}</span>
+                <span class="split-option-card__subtitle" data-i18n="collaborative.match_case_subtitle"></span>
               </div>
               <input class="component-checkbox" data-ref="check-find-match-case" type="checkbox" />
             </label>
@@ -449,6 +450,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
   `;
 
   document.body.appendChild(popover);
+  translateElement(popover);
   renderIcons(popover);
 
   const accessDropdown = popover.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-access"]');
@@ -579,7 +581,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <span class="collab-share-member-badge">${m.email || 'Miembro'} • ${m.role === 'editor' ? 'Editor' : 'Lector'}</span>
           </div>
           ${canManagePermissions ? `
-          <button type="button" class="collab-share-remove-btn" data-user-id="${m.user_id}" data-tooltip="Remover acceso" aria-label="Remover acceso a ${m.username}">
+          <button type="button" class="collab-share-remove-btn" data-user-id="${m.user_id}" data-i18n-tooltip="collaborative.remove_access" aria-label="${t('collaborative.remove_access_to', { name: m.username })}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
           </button>
           ` : ''}
@@ -1038,10 +1040,10 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
 
   const updatePagesSelectionUi = () => {
     if (txtSelectedPagesCount) {
-      txtSelectedPagesCount.textContent = `${selectedPages.size} de ${pageCount} páginas seleccionadas`;
+      txtSelectedPagesCount.textContent = t('collaborative.pages_selected_count', { count: selectedPages.size, total: pageCount });
     }
     if (btnToggleAllPages) {
-      btnToggleAllPages.textContent = selectedPages.size === pageCount ? 'Deseleccionar todas' : 'Seleccionar todas';
+      btnToggleAllPages.textContent = selectedPages.size === pageCount ? t('collaborative.deselect_all') : t('collaborative.select_all');
     }
     const cards = gridDownloadPages?.querySelectorAll<HTMLElement>('.collab-download-page-card');
     cards?.forEach((card) => {
@@ -1065,7 +1067,7 @@ function createCollabSharePopover(options: CollabShareModalOptions): CollabShare
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
           </div>
         </div>
-        <span class="collab-download-page-card__label">Pág. ${p}</span>
+        <span class="collab-download-page-card__label">${t('common.page_abbr', { page: p })}</span>
       `;
       card.addEventListener('click', () => {
         if (selectedPages.has(p)) {

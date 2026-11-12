@@ -1,18 +1,19 @@
+import { openProtectPdfPasswordModal } from '../../../components/modal-dialogs.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { ProtectPdfResponseData } from './protect-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class ProtectPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -21,7 +22,6 @@ class ProtectPdfController implements ViewController {
   private isProcessing = false;
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -33,16 +33,16 @@ class ProtectPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.anade_una_contrasena_robusta_y_cifra_tu_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             void this.handleFileSelected(files[0]);
           }
         },
-        title: 'Proteger PDF',
+        title: t('tools.protect_pdf.title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -52,7 +52,7 @@ class ProtectPdfController implements ViewController {
         }
       },
       toolId: 'protect-pdf',
-      toolName: 'Proteger PDF',
+      toolName: t('tools.protect_pdf.title'),
     });
 
     await this.phaseManager.init();
@@ -66,10 +66,6 @@ class ProtectPdfController implements ViewController {
   }
 
   public destroy(): void {
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
     if (this.phaseManager) {
       this.phaseManager.destroy();
       this.phaseManager = null;
@@ -91,52 +87,16 @@ class ProtectPdfController implements ViewController {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="protect-pdf-sidebar"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-
-    if (sidebar && backdrop && settingsBtn) {
-      this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
-    }
-
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-protect"]');
-    const togglePasswordBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-password"]');
-    const toggleConfirmBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-confirm-password"]');
 
     removeBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.resetToInitial();
     }, { signal });
 
-    togglePasswordBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-password"]');
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      const useEl = togglePasswordBtn.querySelector('use');
-      if (useEl) {
-        useEl.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-      }
-    }, { signal });
-
-    toggleConfirmBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-confirm-password"]');
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      const useEl = toggleConfirmBtn.querySelector('use');
-      if (useEl) {
-        useEl.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-      }
-    }, { signal });
-
     executeBtn?.addEventListener('click', () => {
-      void this.handleExecuteProtect(executeBtn);
+      this.handleOpenPasswordModal(executeBtn);
     }, { signal });
   }
 
@@ -148,7 +108,7 @@ class ProtectPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'protect-pdf',
-        toolName: 'Proteger PDF',
+        toolName: t('tools.protect_pdf.title'),
         type: 'file_size',
       });
       return;
@@ -169,7 +129,7 @@ class ProtectPdfController implements ViewController {
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_protegido.pdf`;
+      outputNameInput.value = `${base}${t('tools.protect_pdf.default_suffix')}.pdf`;
     }
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="protect-doc-canvas"]');
@@ -209,24 +169,24 @@ class ProtectPdfController implements ViewController {
     }
   }
 
-  private async handleExecuteProtect(button: HTMLButtonElement): Promise<void> {
+  private handleOpenPasswordModal(button: HTMLButtonElement): void {
     if (!this.currentFile || this.isProcessing) return;
     this.hideError();
 
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-password"]');
-    const confirmInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-confirm-password"]');
-    const password = passwordInput?.value ?? '';
-    const confirm = confirmInput?.value ?? '';
+    openProtectPdfPasswordModal({
+      onConfirm: async (password, inst) => {
+        inst.close();
+        await this.executeProtectWithPassword(button, password);
+        return true;
+      },
+    });
+  }
 
-    if (!password) {
-      this.showError(t('ui.introduce_una_contrasena_para_proteger_e'));
-      return;
-    }
+  private async executeProtectWithPassword(button: HTMLButtonElement, password: string): Promise<void> {
+    if (!this.currentFile || this.isProcessing) return;
 
-    if (password !== confirm) {
-      this.showError('Las contraseñas no coinciden. Por favor verifícalas.');
-      return;
-    }
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+    const customFilename = filenameInput?.value.trim() || undefined;
 
     this.isProcessing = true;
     this.phaseManager?.showUploading(1, 1);
@@ -235,7 +195,7 @@ class ProtectPdfController implements ViewController {
       try {
         const formData = new FormData();
         formData.append('file', this.currentFile as Blob, this.currentFile?.name);
-        formData.append('options', JSON.stringify({ password }));
+        formData.append('options', JSON.stringify({ filename: customFilename, password }));
 
         const response = await postFormWithProgress(
           API_ROUTES.tools.protectPdf.process,
@@ -256,23 +216,25 @@ class ProtectPdfController implements ViewController {
 
         const token = result.data.fileId;
         showToast(t('toasts.pdf_protegido_correctamente'), 'success');
-        this.phaseManager?.navigateToDownload({
+        await this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
-          returnText: 'Proteger otro documento PDF',
+          returnText: t('tools.protect_pdf.return_btn'),
           returnUrl: '/protect-pdf',
-          subtitle: t('tools.protect_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡PDF protegido con éxito!',
+          subtitle: `${t('tools.protect_success_prefix')}"${this.currentFile?.name}".`,
+          title: t('tools.protect_pdf.success_title'),
           token,
         });
-      } catch {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : t('ui.no_se_pudo_aplicar_el_cifrado_de_segurid');
+        this.showError(errMsg);
         this.phaseManager?.showError({
-          boxText: 'Comprueba que el archivo PDF no esté protegido o dañado y vuelve a intentarlo.',
+          boxText: t('tools.protect_pdf.error_box_text'),
           boxTitle: t('ui.error_al_cifrar_el_documento'),
           desc: t('ui.no_se_pudo_aplicar_el_cifrado_de_segurid'),
-          retryText: 'Reintentar Protección',
-          title: '¡Oh no! No hemos podido proteger tu archivo.',
+          retryText: t('tools.protect_pdf.retry_btn'),
+          title: t('tools.protect_pdf.error_title'),
         });
       } finally {
         this.isProcessing = false;
@@ -286,11 +248,6 @@ class ProtectPdfController implements ViewController {
     this.isProcessing = false;
 
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-protect"]');
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-password"]');
-    const confirmInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-confirm-password"]');
-
-    if (passwordInput) passwordInput.value = '';
-    if (confirmInput) confirmInput.value = '';
     if (executeBtn) executeBtn.disabled = true;
 
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="protect-doc-canvas"]');
@@ -299,7 +256,6 @@ class ProtectPdfController implements ViewController {
       canvas.height = 0;
     }
 
-    this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }

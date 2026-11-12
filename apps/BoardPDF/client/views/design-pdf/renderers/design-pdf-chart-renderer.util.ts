@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { CHART_PALETTES, ElementChart } from '../types/design-pdf.types.js';
 
 function applyChartPalette(el: ElementChart): void {
@@ -75,7 +76,7 @@ function renderChartSvg(el: ElementChart): string {
     const cx = W / 2;
     const cy = hasTitle ? (H - (hasSubtitle ? 44 : 32)) / 2 + (hasSubtitle ? 44 : 32) : H / 2;
     const r = Math.min(W / 2 - 36, H / 2 - (hasTitle ? 32 : 20));
-    const s0 = el.series[0] || { name: 'Valores', values: [40, 30, 20, 10] };
+    const s0 = el.series[0] || { name: t('collaborative.chart_values'), values: [40, 30, 20, 10] };
     const vals = s0.values.length > 0 ? s0.values : [1];
     const total = vals.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
 
@@ -173,7 +174,7 @@ function renderChartSvg(el: ElementChart): string {
   }
 
   if (el.chartType === 'bar-vertical') {
-    const s0 = el.series[0] || { color: palette[0], name: 'Serie 1', values: [20, 40, 60, 30] };
+    const s0 = el.series[0] || { color: palette[0], name: t('collaborative.chart_series_1'), values: [20, 40, 60, 30] };
     const barW = Math.min(48, Math.max(12, slotW * 0.55));
     s0.values.forEach((v, i) => {
       const num = Number(v) || 0;
@@ -187,7 +188,7 @@ function renderChartSvg(el: ElementChart): string {
       }
     });
   } else if (el.chartType === 'bar-horizontal') {
-    const s0 = el.series[0] || { color: palette[0], name: 'Serie 1', values: [20, 40, 60, 30] };
+    const s0 = el.series[0] || { color: palette[0], name: t('collaborative.chart_series_1'), values: [20, 40, 60, 30] };
     const rowH = plotH / numCategories;
     const barH = Math.min(28, Math.max(8, rowH * 0.6));
     s0.values.forEach((v, i) => {

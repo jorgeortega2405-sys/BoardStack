@@ -1,9 +1,10 @@
 import { logger } from '../../services/logger.service.js';
 import { storeTempFile } from '../../services/temp-storage.service.js';
+import { resolvePdfFont } from '../../utils/pdf-font.util.js';
 import { cleanTextForWinAnsi, sanitizePdfFilename } from '../../utils/pdf.util.js';
 import { PageNumberOptions, PageNumberPosition, PageNumberResponse, StoredPageNumberResult } from './page-numbers.types.js';
 import crypto from 'crypto';
-import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { degrees, PDFDocument, rgb } from 'pdf-lib';
 
 function resolveMargin(margin?: string): number {
   if (margin === 'small') return 18;
@@ -53,12 +54,12 @@ async function addPageNumbers(
     throw new Error('El documento no contiene páginas válidas.');
   }
 
-  let selectedStandardFont = StandardFonts.Helvetica;
-  if (options.fontFamily === 'Helvetica-Bold') selectedStandardFont = StandardFonts.HelveticaBold;
-  else if (options.fontFamily === 'Times-Roman') selectedStandardFont = StandardFonts.TimesRoman;
-  else if (options.fontFamily === 'Courier') selectedStandardFont = StandardFonts.Courier;
-
-  const font = await doc.embedFont(selectedStandardFont);
+  const { font, isCustomEmbedded } = await resolvePdfFont(
+    doc,
+    options.fontFamily,
+    options.fontWeight,
+    options.fontStyle
+  );
   const fontSize = Math.max(8, Math.min(24, options.fontSize || 10.5));
   const margin = resolveMargin(options.margin);
   const startNumber = typeof options.startNumber === 'number' ? options.startNumber : 1;
@@ -89,7 +90,7 @@ async function addPageNumbers(
     const rawText = formatTemplate
       .replace(/\{n\}/g, String(currentNumber))
       .replace(/\{p\}/g, String(totalNumberedPages));
-    const text = cleanTextForWinAnsi(rawText) || String(currentNumber);
+    const text = (isCustomEmbedded ? rawText : cleanTextForWinAnsi(rawText)) || String(currentNumber);
 
     const page = doc.getPage(pageIndex);
     const { height, width } = page.getSize();

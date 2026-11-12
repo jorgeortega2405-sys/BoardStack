@@ -1,13 +1,16 @@
-import { COMPACT_GRADIENT_COLORS, COMPACT_SOLID_COLORS, EXPANDED_GRADIENT_GROUPS, FULL_SOLID_COLORS, formatGradientLabel } from '../config/design-pdf-colors.config.js';
+import { COMPACT_GRADIENT_COLORS, COMPACT_SOLID_COLORS, EXPANDED_GRADIENT_GROUPS, FULL_SOLID_COLORS, formatGradientLabel, getGradientClass, getSolidClass } from '../config/design-pdf-colors.config.js';
+import { t, translateElement } from '../../../services/i18n.service.js';
 import { SHAPES_CATALOG } from '../config/design-pdf-shapes.config.js';
 
 function renderSolidSwatch(colorHex: string): string {
-  return `<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="${colorHex}" data-tooltip="${colorHex}" aria-label="${colorHex}"><span class="collaborative-color-swatch__fill" style="background-color: ${colorHex};"></span></button>`;
+  const cls = getSolidClass(colorHex);
+  return `<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="${colorHex}" data-i18n-tooltip="color.${colorHex}" data-i18n-aria="color.${colorHex}"><span class="collaborative-color-swatch__fill ${cls}"></span></button>`;
 }
 
 function renderGradientSwatch(gradientCss: string): string {
+  const cls = getGradientClass(gradientCss);
   const label = formatGradientLabel(gradientCss);
-  return `<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="${gradientCss}" data-tooltip="${label}" aria-label="${label}"><span class="collaborative-color-swatch__fill" style="background-image: ${gradientCss};"></span></button>`;
+  return `<button type="button" class="collaborative-color-swatch" data-ref="swatch-color" data-color="${gradientCss}" data-tooltip="${label}" aria-label="${label}"><span class="collaborative-color-swatch__fill ${cls}"></span></button>`;
 }
 
 const TABLE_THEMES = [
@@ -19,42 +22,42 @@ const TABLE_THEMES = [
 ];
 
 function createCollaborativeDrawerElement(): HTMLElement {
-  const tablePresetButtons = TABLE_THEMES.map((t) => `
-    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="grid" data-table-color="${t.colorName}" data-tooltip="Cuadrícula" aria-label="Cuadrícula">
+  const tablePresetButtons = TABLE_THEMES.map((theme) => `
+    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="grid" data-table-color="${theme.colorName}" data-i18n-tooltip="collaborative.table_preset_grid" data-i18n-aria="collaborative.table_preset_grid">
       <svg class="collaborative-table-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-        <rect x="3" y="3" width="58" height="58" stroke="${t.accent}" stroke-width="2.5"></rect>
-        <line x1="3" y1="18" x2="61" y2="18" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="3" y1="32" x2="61" y2="32" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="3" y1="46" x2="61" y2="46" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="22" y1="3" x2="22" y2="61" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="42" y1="3" x2="42" y2="61" stroke="${t.accent}" stroke-width="2.5"></line>
+        <rect x="3" y="3" width="58" height="58" stroke="${theme.accent}" stroke-width="2.5"></rect>
+        <line x1="3" y1="18" x2="61" y2="18" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="3" y1="32" x2="61" y2="32" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="3" y1="46" x2="61" y2="46" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="22" y1="3" x2="22" y2="61" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="42" y1="3" x2="42" y2="61" stroke="${theme.accent}" stroke-width="2.5"></line>
       </svg>
     </button>
-    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="header-accent" data-table-color="${t.colorName}" data-tooltip="Encabezado con color" aria-label="Encabezado con color">
+    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="header-accent" data-table-color="${theme.colorName}" data-i18n-tooltip="collaborative.table_preset_header_accent" data-i18n-aria="collaborative.table_preset_header_accent">
       <svg class="collaborative-table-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-        <rect x="3" y="3" width="58" height="15" fill="${t.accent}"></rect>
-        <rect x="3" y="3" width="58" height="58" stroke="${t.accent}" stroke-width="2.5"></rect>
-        <line x1="3" y1="18" x2="61" y2="18" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="3" y1="32" x2="61" y2="32" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="3" y1="46" x2="61" y2="46" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="22" y1="3" x2="22" y2="61" stroke="${t.accent}" stroke-width="2.5"></line>
-        <line x1="42" y1="3" x2="42" y2="61" stroke="${t.accent}" stroke-width="2.5"></line>
+        <rect x="3" y="3" width="58" height="15" fill="${theme.accent}"></rect>
+        <rect x="3" y="3" width="58" height="58" stroke="${theme.accent}" stroke-width="2.5"></rect>
+        <line x1="3" y1="18" x2="61" y2="18" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="3" y1="32" x2="61" y2="32" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="3" y1="46" x2="61" y2="46" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="22" y1="3" x2="22" y2="61" stroke="${theme.accent}" stroke-width="2.5"></line>
+        <line x1="42" y1="3" x2="42" y2="61" stroke="${theme.accent}" stroke-width="2.5"></line>
       </svg>
     </button>
-    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="cards" data-table-color="${t.colorName}" data-tooltip="Celdas separadas" aria-label="Celdas separadas">
+    <button type="button" class="collaborative-table-card" data-ref="btn-table-preset" data-table-preset="cards" data-table-color="${theme.colorName}" data-i18n-tooltip="collaborative.table_preset_cards" data-i18n-aria="collaborative.table_preset_cards">
       <svg class="collaborative-table-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
-        <rect x="3" y="3" width="16" height="13" rx="1.5" fill="${t.accent}"></rect>
-        <rect x="24" y="3" width="16" height="13" rx="1.5" fill="${t.accent}"></rect>
-        <rect x="45" y="3" width="16" height="13" rx="1.5" fill="${t.accent}"></rect>
-        <rect x="3" y="19" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="24" y="19" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="45" y="19" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="3" y="33" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="24" y="33" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="45" y="33" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="3" y="47" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="24" y="47" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
-        <rect x="45" y="47" width="16" height="12" rx="1.5" fill="${t.tint}"></rect>
+        <rect x="3" y="3" width="16" height="13" rx="1.5" fill="${theme.accent}"></rect>
+        <rect x="24" y="3" width="16" height="13" rx="1.5" fill="${theme.accent}"></rect>
+        <rect x="45" y="3" width="16" height="13" rx="1.5" fill="${theme.accent}"></rect>
+        <rect x="3" y="19" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="24" y="19" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="45" y="19" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="3" y="33" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="24" y="33" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="45" y="33" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="3" y="47" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="24" y="47" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
+        <rect x="45" y="47" width="16" height="12" rx="1.5" fill="${theme.tint}"></rect>
       </svg>
     </button>
   `).join('');
@@ -74,8 +77,8 @@ function createCollaborativeDrawerElement(): HTMLElement {
   const shapesSectionsHtml = Object.values(SHAPES_CATALOG).map((cat) => `
     <div class="collaborative-shapes-section">
       <div class="collaborative-shapes-section__header">
-        <span class="collaborative-shapes-section__title">${cat.title}</span>
-        <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-shapes-more-${cat.id}" data-shape-cat="${cat.id}">Mostrar más</button>
+        <span class="collaborative-shapes-section__title" data-i18n="${cat.titleKey}"></span>
+        <button type="button" class="collaborative-shapes-section__more-btn" data-ref="btn-shapes-more-${cat.id}" data-shape-cat="${cat.id}" data-i18n="collaborative.show_more"></button>
       </div>
       <div class="collaborative-shapes-grid" data-ref="shapes-grid-${cat.id}">
         ${cat.shapes.slice(0, 6).map((s) => s.cardHtml).join('')}
@@ -88,17 +91,17 @@ function createCollaborativeDrawerElement(): HTMLElement {
   drawer.setAttribute('data-ref', 'layout-drawer');
   drawer.innerHTML = `
   <div class="layout-drawer__collapse-wrapper">
-    <button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-tooltip="Cerrar menú" data-i18n-tooltip="common.close" data-i18n-aria="common.close" aria-label="Cerrar menú">
+    <button type="button" class="layout-drawer__collapse-pill" data-ref="btn-drawer-collapse" data-i18n-tooltip="common.close" data-i18n-aria="common.close">
       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
     </button>
   </div>
   <div class="layout-drawer__header collaborative-drawer-header" data-ref="drawer-header">
     <div class="collaborative-drawer-header__left" data-ref="drawer-header-left">
-      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-drawer-back-btn is-hidden" data-ref="btn-drawer-back" data-tooltip="Volver" aria-label="Volver">
+      <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-drawer-back-btn is-hidden" data-ref="btn-drawer-back" data-i18n-tooltip="common.back" data-i18n-aria="common.back">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
       </button>
-      <svg class="component-icon collaborative-drawer-header__icon" data-ref="drawer-header-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-      <span class="collaborative-drawer-header__title" data-ref="side-panel-title">Elementos</span>
+      <svg class="component-icon collaborative-drawer-header__icon" data-ref="drawer-header-icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+      <span class="collaborative-drawer-header__title" data-ref="side-panel-title" data-i18n="collaborative.elements_title"></span>
     </div>
   </div>
 
@@ -108,22 +111,22 @@ function createCollaborativeDrawerElement(): HTMLElement {
         <div class="menu-list" data-ref="list-elements">
           <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-shapes">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
-            <span class="menu-item__text">Formas</span>
+            <span class="menu-item__text" data-i18n="collaborative.elements_shapes"></span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
           <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-tables">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
-            <span class="menu-item__text">Tablas</span>
+            <span class="menu-item__text" data-i18n="collaborative.elements_tables"></span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
           <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-photos">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
-            <span class="menu-item__text">Fotos</span>
+            <span class="menu-item__text" data-i18n="collaborative.elements_photos"></span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
           <button type="button" class="menu-item menu-item--bordered" data-ref="btn-elem-charts">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#show_chart"></use></svg>
-            <span class="menu-item__text">Gráficas</span>
+            <span class="menu-item__text" data-i18n="collaborative.elements_charts"></span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
         </div>
@@ -131,10 +134,10 @@ function createCollaborativeDrawerElement(): HTMLElement {
 
       <div class="collaborative-shapes-view is-hidden" data-ref="elements-shapes-view">
         <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-shapes-back" data-tooltip="Volver a elementos" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-shapes-back" data-i18n-tooltip="collaborative.back_to_elements" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <span class="collaborative-shapes-title">Formas</span>
+          <span class="collaborative-shapes-title" data-i18n="collaborative.elements_shapes"></span>
         </div>
 
         <div class="collaborative-shapes-content" data-ref="shapes-content">
@@ -144,7 +147,7 @@ function createCollaborativeDrawerElement(): HTMLElement {
 
       <div class="collaborative-shapes-category-view is-hidden" data-ref="elements-shapes-category-view">
         <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-shapes-cat-back" data-tooltip="Volver" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-shapes-cat-back" data-i18n-tooltip="common.back" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
           <span class="collaborative-shapes-title" data-ref="shapes-cat-title">Formas</span>
@@ -157,10 +160,10 @@ function createCollaborativeDrawerElement(): HTMLElement {
 
       <div class="collaborative-tables-view is-hidden" data-ref="elements-tables-view">
         <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-tables-back" data-tooltip="Volver a elementos" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-tables-back" data-i18n-tooltip="collaborative.back_to_elements" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <span class="collaborative-shapes-title">Tablas</span>
+          <span class="collaborative-shapes-title" data-i18n="collaborative.elements_tables"></span>
         </div>
 
         <div class="collaborative-tables-content" data-ref="tables-content">
@@ -172,35 +175,35 @@ function createCollaborativeDrawerElement(): HTMLElement {
 
       <div class="collaborative-charts-view is-hidden" data-ref="elements-charts-view">
         <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-charts-back" data-tooltip="Volver a elementos" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-charts-back" data-i18n-tooltip="collaborative.back_to_elements" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <span class="collaborative-shapes-title">Gráficas</span>
+          <span class="collaborative-shapes-title" data-i18n="collaborative.elements_charts"></span>
         </div>
 
         <div class="collaborative-charts-content" data-ref="charts-content">
           <div class="collaborative-charts-section">
-            <span class="collaborative-charts-section__title">Gráficas de barras</span>
+            <span class="collaborative-charts-section__title" data-i18n="collaborative.charts_sec_bar"></span>
             <div class="collaborative-charts-grid">
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-vertical" data-tooltip="Barras verticales" aria-label="Barras verticales">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-vertical" data-i18n-tooltip="collaborative.chart_type_bar_vertical" data-i18n-aria="collaborative.chart_type_bar_vertical">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <rect x="8" y="24" width="10" height="32" rx="2" fill="#3b82f6"></rect>
                   <rect x="23" y="14" width="10" height="42" rx="2" fill="#3b82f6"></rect>
                   <rect x="38" y="32" width="10" height="24" rx="2" fill="#3b82f6"></rect>
                   <rect x="53" y="20" width="10" height="36" rx="2" fill="#3b82f6"></rect>
                 </svg>
-                <span class="collaborative-chart-card__label">Barras verticales</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_bar_vertical"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-horizontal" data-tooltip="Barras horizontales" aria-label="Barras horizontales">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-horizontal" data-i18n-tooltip="collaborative.chart_type_bar_horizontal" data-i18n-aria="collaborative.chart_type_bar_horizontal">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <rect x="6" y="8" width="46" height="9" rx="2" fill="#3b82f6"></rect>
                   <rect x="6" y="22" width="36" height="9" rx="2" fill="#3b82f6"></rect>
                   <rect x="6" y="36" width="50" height="9" rx="2" fill="#3b82f6"></rect>
                   <rect x="6" y="50" width="26" height="9" rx="2" fill="#3b82f6"></rect>
                 </svg>
-                <span class="collaborative-chart-card__label">Barras horizontales</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_bar_horizontal"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-grouped" data-tooltip="Columnas agrupadas" aria-label="Columnas agrupadas">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-grouped" data-i18n-tooltip="collaborative.chart_type_bar_grouped" data-i18n-aria="collaborative.chart_type_bar_grouped">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <rect x="6" y="26" width="6" height="30" rx="1.5" fill="#3b82f6"></rect>
                   <rect x="13" y="16" width="6" height="40" rx="1.5" fill="#64748b"></rect>
@@ -209,9 +212,9 @@ function createCollaborativeDrawerElement(): HTMLElement {
                   <rect x="41" y="28" width="6" height="28" rx="1.5" fill="#64748b"></rect>
                   <rect x="48" y="12" width="6" height="44" rx="1.5" fill="#f59e0b"></rect>
                 </svg>
-                <span class="collaborative-chart-card__label">Columnas agrupadas</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_bar_grouped"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-stacked" data-tooltip="Barras apiladas" aria-label="Barras apiladas">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="bar-stacked" data-i18n-tooltip="collaborative.chart_type_bar_stacked" data-i18n-aria="collaborative.chart_type_bar_stacked">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <rect x="12" y="38" width="14" height="18" rx="2" fill="#3b82f6"></rect>
                   <rect x="12" y="22" width="14" height="14" rx="2" fill="#64748b"></rect>
@@ -220,15 +223,15 @@ function createCollaborativeDrawerElement(): HTMLElement {
                   <rect x="38" y="18" width="14" height="12" rx="2" fill="#64748b"></rect>
                   <rect x="38" y="6" width="14" height="10" rx="2" fill="#f59e0b"></rect>
                 </svg>
-                <span class="collaborative-chart-card__label">Barras apiladas</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_bar_stacked"></span>
               </button>
             </div>
           </div>
 
           <div class="collaborative-charts-section">
-            <span class="collaborative-charts-section__title">Líneas y tendencias</span>
+            <span class="collaborative-charts-section__title" data-i18n="collaborative.charts_sec_line"></span>
             <div class="collaborative-charts-grid">
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line" data-tooltip="Líneas" aria-label="Líneas">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line" data-i18n-tooltip="collaborative.chart_type_line" data-i18n-aria="collaborative.chart_type_line">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <polyline points="8,48 22,34 36,40 54,14" stroke="#3b82f6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
                   <circle cx="8" cy="48" r="3.5" fill="#3b82f6"></circle>
@@ -236,66 +239,66 @@ function createCollaborativeDrawerElement(): HTMLElement {
                   <circle cx="36" cy="40" r="3.5" fill="#3b82f6"></circle>
                   <circle cx="54" cy="14" r="3.5" fill="#3b82f6"></circle>
                 </svg>
-                <span class="collaborative-chart-card__label">Líneas</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_line"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line-multi" data-tooltip="Varias líneas" aria-label="Varias líneas">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="line-multi" data-i18n-tooltip="collaborative.chart_type_line_multi" data-i18n-aria="collaborative.chart_type_line_multi">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <polyline points="8,44 24,38 40,24 56,12" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
                   <polyline points="8,50 24,30 40,34 56,22" stroke="#64748b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
                   <polyline points="8,54 24,52 40,40 56,32" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
                 </svg>
-                <span class="collaborative-chart-card__label">Varias líneas</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_line_multi"></span>
               </button>
             </div>
           </div>
 
           <div class="collaborative-charts-section">
-            <span class="collaborative-charts-section__title">Pastel y anillos</span>
+            <span class="collaborative-charts-section__title" data-i18n="collaborative.charts_sec_pie"></span>
             <div class="collaborative-charts-grid">
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="pie" data-tooltip="Pastel" aria-label="Pastel">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="pie" data-i18n-tooltip="collaborative.chart_type_pie" data-i18n-aria="collaborative.chart_type_pie">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <circle cx="32" cy="32" r="26" fill="#3b82f6"></circle>
                   <path d="M 32 32 L 32 6 A 26 26 0 0 0 7 24 Z" fill="#f59e0b"></path>
                   <path d="M 32 32 L 7 24 A 26 26 0 0 0 16 52 Z" fill="#64748b"></path>
                 </svg>
-                <span class="collaborative-chart-card__label">Pastel</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_pie"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="donut" data-tooltip="Anillos" aria-label="Anillos">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="donut" data-i18n-tooltip="collaborative.chart_type_donut" data-i18n-aria="collaborative.chart_type_donut">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <circle cx="32" cy="32" r="26" fill="#3b82f6"></circle>
                   <path d="M 32 32 L 32 6 A 26 26 0 0 0 7 24 Z" fill="#f59e0b"></path>
                   <path d="M 32 32 L 7 24 A 26 26 0 0 0 16 52 Z" fill="#64748b"></path>
                   <circle cx="32" cy="32" r="14" fill="var(--bg-surface, #ffffff)"></circle>
                 </svg>
-                <span class="collaborative-chart-card__label">Anillos</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_donut"></span>
               </button>
             </div>
           </div>
 
           <div class="collaborative-charts-section">
-            <span class="collaborative-charts-section__title">Gráficas de área</span>
+            <span class="collaborative-charts-section__title" data-i18n="collaborative.charts_sec_area"></span>
             <div class="collaborative-charts-grid">
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-stacked" data-tooltip="Área apilada" aria-label="Área apilada">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-stacked" data-i18n-tooltip="collaborative.chart_type_area_stacked" data-i18n-aria="collaborative.chart_type_area_stacked">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <path d="M 8 52 L 24 38 L 40 44 L 56 22 L 56 52 Z" fill="#3b82f6" opacity="0.85"></path>
                   <path d="M 8 38 L 24 24 L 40 30 L 56 12 L 56 22 L 40 44 L 24 38 L 8 52 Z" fill="#64748b" opacity="0.85"></path>
                 </svg>
-                <span class="collaborative-chart-card__label">Área apilada</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_area_stacked"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-overlap" data-tooltip="Área sin apilar" aria-label="Área sin apilar">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="area-overlap" data-i18n-tooltip="collaborative.chart_type_area_overlap" data-i18n-aria="collaborative.chart_type_area_overlap">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <path d="M 8 52 L 20 22 L 36 34 L 56 16 L 56 52 Z" fill="#3b82f6" fill-opacity="0.65"></path>
                   <path d="M 8 52 L 24 34 L 42 18 L 56 28 L 56 52 Z" fill="#64748b" fill-opacity="0.65"></path>
                 </svg>
-                <span class="collaborative-chart-card__label">Área sin apilar</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_area_overlap"></span>
               </button>
             </div>
           </div>
 
           <div class="collaborative-charts-section">
-            <span class="collaborative-charts-section__title">Dispersión e infografía</span>
+            <span class="collaborative-charts-section__title" data-i18n="collaborative.charts_sec_scatter"></span>
             <div class="collaborative-charts-grid">
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="scatter" data-tooltip="Dispersión" aria-label="Dispersión">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="scatter" data-i18n-tooltip="collaborative.chart_type_scatter" data-i18n-aria="collaborative.chart_type_scatter">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <circle cx="12" cy="46" r="4.5" fill="#3b82f6"></circle>
                   <circle cx="24" cy="34" r="4.5" fill="#3b82f6"></circle>
@@ -304,30 +307,30 @@ function createCollaborativeDrawerElement(): HTMLElement {
                   <circle cx="44" cy="30" r="4" fill="#3b82f6"></circle>
                   <circle cx="52" cy="14" r="4.5" fill="#3b82f6"></circle>
                 </svg>
-                <span class="collaborative-chart-card__label">Dispersión</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_scatter"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-ring" data-tooltip="Anillo de progreso" aria-label="Anillo de progreso">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-ring" data-i18n-tooltip="collaborative.chart_type_progress_ring" data-i18n-aria="collaborative.chart_type_progress_ring">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <circle cx="32" cy="32" r="22" stroke="#e2e8f0" stroke-width="8"></circle>
                   <circle cx="32" cy="32" r="22" stroke="#3b82f6" stroke-width="8" stroke-dasharray="138" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 32 32)"></circle>
                 </svg>
-                <span class="collaborative-chart-card__label">Progreso circular</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_progress_ring"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-bar" data-tooltip="Barra de progreso" aria-label="Barra de progreso">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-bar" data-i18n-tooltip="collaborative.chart_type_progress_bar" data-i18n-aria="collaborative.chart_type_progress_bar">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <rect x="6" y="24" width="52" height="16" rx="8" fill="#e2e8f0"></rect>
                   <rect x="6" y="24" width="36" height="16" rx="8" fill="#3b82f6"></rect>
                 </svg>
-                <span class="collaborative-chart-card__label">Barra progreso</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_progress_bar"></span>
               </button>
-              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-gauge" data-tooltip="Indicador radial" aria-label="Indicador radial">
+              <button type="button" class="collaborative-chart-card" data-ref="btn-chart-card" data-chart-type="progress-gauge" data-i18n-tooltip="collaborative.chart_type_progress_gauge" data-i18n-aria="collaborative.chart_type_progress_gauge">
                 <svg class="collaborative-chart-card__svg" viewBox="0 0 64 64" width="56" height="56" fill="none">
                   <path d="M 10 44 A 24 24 0 0 1 54 44" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round"></path>
                   <path d="M 10 44 A 24 24 0 0 1 44 20" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"></path>
                   <line x1="32" y1="44" x2="42" y2="24" stroke="#1e293b" stroke-width="3" stroke-linecap="round"></line>
                   <circle cx="32" cy="44" r="4" fill="#1e293b"></circle>
                 </svg>
-                <span class="collaborative-chart-card__label">Indicador radial</span>
+                <span class="collaborative-chart-card__label" data-i18n="collaborative.chart_type_progress_gauge"></span>
               </button>
             </div>
           </div>
@@ -377,7 +380,7 @@ function createCollaborativeDrawerElement(): HTMLElement {
 
       <div class="collaborative-colors-category-view is-hidden" data-ref="colors-category-view">
         <div class="collaborative-shapes-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-colors-cat-back" data-tooltip="Volver" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-shapes-back-btn" data-ref="btn-colors-cat-back" data-i18n-tooltip="common.back" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
           <span class="collaborative-shapes-title" data-ref="colors-cat-title"></span>
@@ -385,24 +388,24 @@ function createCollaborativeDrawerElement(): HTMLElement {
         <div class="collaborative-shapes-content" data-ref="colors-cat-content"></div>
       </div>
 
-      <input class="is-hidden" data-ref="input-custom-color" type="color" value="#000000" style="display: none;" />
+      <input class="is-hidden" data-ref="input-custom-color" type="color" value="#000000" />
     </div>
 
     <div class="collaborative-panel-section is-hidden" data-ref="panel-section-text">
       <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-add-text-box">
         <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        <span class="component-button__text">Agregar caja de texto</span>
+        <span class="component-button__text" data-i18n="collaborative.add_text_box"></span>
       </button>
 
       <div class="collaborative-text-presets" data-ref="text-presets-container">
         <button type="button" class="collaborative-text-preset collaborative-text-preset--title" data-ref="btn-preset-title">
-          <span class="collaborative-preset-title">Agregar un título</span>
+          <span class="collaborative-preset-title" data-i18n="collaborative.preset_title"></span>
         </button>
         <button type="button" class="collaborative-text-preset collaborative-text-preset--subtitle" data-ref="btn-preset-subtitle">
-          <span class="collaborative-preset-subtitle">Agregar un subtítulo</span>
+          <span class="collaborative-preset-subtitle" data-i18n="collaborative.preset_subtitle"></span>
         </button>
         <button type="button" class="collaborative-text-preset collaborative-text-preset--body" data-ref="btn-preset-body">
-          <span class="collaborative-preset-body">Agregar algo de texto</span>
+          <span class="collaborative-preset-body" data-i18n="collaborative.preset_body"></span>
         </button>
       </div>
     </div>
@@ -415,9 +418,9 @@ function createCollaborativeDrawerElement(): HTMLElement {
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </div>
             <div class="component-search__input-box" data-ref="fonts-search-input-box">
-              <input class="component-search__input" data-ref="input-search-fonts" placeholder="Buscar fuentes..." type="text" autocomplete="off" />
+              <input class="component-search__input" data-ref="input-search-fonts" data-i18n-placeholder="collaborative.search_fonts" placeholder=" " type="text" autocomplete="off" />
             </div>
-            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-fonts-search" style="display: none;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-fonts-search" data-i18n-aria="collaborative.clear_search">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -431,51 +434,51 @@ function createCollaborativeDrawerElement(): HTMLElement {
       <div class="collaborative-uploads-main" data-ref="uploads-main-view">
         <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full" data-ref="btn-upload-file">
           <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
-          <span class="component-button__text">Subir archivos</span>
+          <span class="component-button__text" data-i18n="collaborative.upload_files"></span>
         </button>
-        <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple style="display: none;" />
+        <input class="is-hidden" data-ref="input-file-upload" type="file" accept="image/*,.pdf,application/pdf" multiple />
 
         <div class="component-tabs" data-ref="upload-tabs">
-          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all">Todos</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images">Imágenes</button>
-          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs">PDFs</button>
+          <button type="button" class="component-tab is-active" data-ref="tab-upload-all" data-tab="all" data-i18n="common.all"></button>
+          <button type="button" class="component-tab" data-ref="tab-upload-images" data-tab="images" data-i18n="collaborative.tab_images"></button>
+          <button type="button" class="component-tab" data-ref="tab-upload-pdfs" data-tab="pdfs" data-i18n="collaborative.tab_pdfs"></button>
         </div>
 
         <div class="collaborative-upload-progress is-hidden" data-ref="upload-progress-indicator">
           <div class="collaborative-upload-spinner"></div>
-          <span class="collaborative-upload-progress__text">Subiendo archivos...</span>
+          <span class="collaborative-upload-progress__text" data-i18n="collaborative.uploading_files"></span>
         </div>
 
         <div class="collaborative-uploads-grid" data-ref="uploads-grid"></div>
 
         <div class="collaborative-empty-state" data-ref="empty-uploads">
           <svg class="component-icon collaborative-empty-state__icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
-          <span class="collaborative-empty-state__title">Sin archivos subidos</span>
-          <span class="collaborative-empty-state__subtitle">Sube imágenes o documentos PDF para usarlos aquí</span>
+          <span class="collaborative-empty-state__title" data-i18n="collaborative.empty_uploads_title"></span>
+          <span class="collaborative-empty-state__subtitle" data-i18n="collaborative.empty_uploads_desc"></span>
         </div>
       </div>
 
       <div class="collaborative-pdf-apply-panel is-hidden" data-ref="pdf-apply-panel">
         <div class="collaborative-pdf-apply-header">
-          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-pdf-back-btn" data-ref="btn-pdf-apply-back" data-tooltip="Volver a subidos" aria-label="Volver">
+          <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 collaborative-pdf-back-btn" data-ref="btn-pdf-apply-back" data-i18n-tooltip="collaborative.back_to_uploads" data-i18n-aria="common.back">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
           <span class="collaborative-pdf-apply-title" data-ref="txt-pdf-apply-name">documento.pdf</span>
         </div>
 
         <div class="collaborative-pdf-apply-actions">
-          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full" data-ref="btn-embed-design" data-tooltip=t('ui.insertar_como_diseno_editable_en_la_pagi')>
+          <button type="button" class="component-button component-button--ghost component-button--h36 component-button--w-full" data-ref="btn-embed-design" data-i18n-tooltip="ui.insertar_como_diseno_editable_en_la_pagi" data-i18n-aria="ui.insertar_como_diseno_editable_en_la_pagi">
             <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            <span class="component-button__text">Incrustar en página actual</span>
+            <span class="component-button__text" data-i18n="collaborative.embed_current_page"></span>
           </button>
           <button type="button" class="component-button component-button--black component-button--h40 component-button--w-full" data-ref="btn-apply-all-pages">
             <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
-            <span class="component-button__text" data-ref="txt-apply-all-pages">Aplicar todas las páginas</span>
+            <span class="component-button__text" data-ref="txt-apply-all-pages" data-i18n="collaborative.apply_all_pages"></span>
           </button>
         </div>
 
         <div class="collaborative-pdf-pages-hint">
-          <span>O haz clic en una página para aplicarla a la actual:</span>
+          <span data-i18n="collaborative.click_page_to_apply"></span>
         </div>
 
         <div class="collaborative-pdf-pages-grid" data-ref="pdf-pages-thumbnails-grid"></div>
@@ -697,6 +700,7 @@ function createCollaborativeDrawerElement(): HTMLElement {
     </div>
   </div>
   `;
+  translateElement(drawer);
   return drawer;
 }
 

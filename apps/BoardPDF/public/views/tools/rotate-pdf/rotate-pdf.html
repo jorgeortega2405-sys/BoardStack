@@ -1,23 +1,34 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="rotate-pdf-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-rotate" disabled>
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-<span class="component-button__text" >Rotar PDF</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-rotate-all-left" data-i18n-tooltip="tools.rotate_all_left" data-i18n-aria="tools.rotate_all_left" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-rotate-all-right" data-i18n-tooltip="tools.rotate_all_right" data-i18n-aria="tools.rotate_all_right" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-top-icon-btn" data-ref="btn-reset-rotations" data-i18n-tooltip="tools.rotate_reset_all" data-i18n-aria="tools.rotate_reset_all" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-rotate" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+        <span class="component-button__text" data-i18n="tools.rotate_pdf_title"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="rotate-pdf-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="rotate-pdf-workspace">
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="rotate-workspace-card">
+        <div class="pdf-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+          <span data-i18n="tools.rotate_pdf_workspace_hint"></span>
+        </div>
+        <div class="pdf-items-grid rotate-pages-grid" data-ref="rotate-pages-grid"></div>
+        <div class="banner banner--danger is-hidden" data-ref="rotate-global-error" role="alert"></div>
+      </div>
+    </main>
+  </div>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="rotate-pdf-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="rotate-pdf-workspace">
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="rotate-workspace-card">
-<div class="pdf-reorder-hint" >
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-<span>Pasa el cursor por encima de una página para rotarla individualmente.</span>
-</div>
-<div class="pdf-items-grid rotate-pages-grid" data-ref="rotate-pages-grid"></div>
-</div>
-</main>
-</div>
-</div> 

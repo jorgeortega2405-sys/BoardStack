@@ -3,15 +3,15 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { loadPdfDocument, loadPdfJs } from '../../../services/pdf-loader.service.js';
+import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { RotatePageItem, RotatePdfResponseData } from './rotate-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class RotatePdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -21,7 +21,6 @@ class RotatePdfController implements ViewController {
   private pages: RotatePageItem[] = [];
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -33,16 +32,16 @@ class RotatePdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.gira_tus_paginas_pdf_permanentemente_a_9'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             void this.handleFileSelected(files[0]);
           }
         },
-        title: 'Rotar PDF',
+        title: t('tools.rotate_pdf_title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -52,7 +51,9 @@ class RotatePdfController implements ViewController {
         }
       },
       toolId: 'rotate-pdf',
-      toolName: 'Rotar PDF',
+      toolName: t('tools.rotate_pdf_title'),
+      topHeaderRef: 'component-top',
+      workspaceCardRef: 'rotate-workspace-card',
     });
 
     await this.phaseManager.init();
@@ -74,10 +75,6 @@ class RotatePdfController implements ViewController {
       this.phaseManager.destroy();
       this.phaseManager = null;
     }
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
     if (this.pdfDocument) {
       try {
         void this.pdfDocument.destroy();
@@ -89,23 +86,6 @@ class RotatePdfController implements ViewController {
   private bindEvents(): void {
     if (!this.abortController) return;
     const { signal } = this.abortController;
-
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="rotate-pdf-sidebar"]');
-    const sidebarBackdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const sidebarCloseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const sidebarDragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-
-    if (sidebar && sidebarBackdrop && settingsBtn) {
-      this.sidebarModal = setupToolSidebarModal({
-        backdrop: sidebarBackdrop,
-        closeBtn: sidebarCloseBtn,
-        dragZone: sidebarDragZone,
-        settingsBtn,
-        sidebar,
-        signal,
-      });
-    }
 
     const rotateAllRightBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all-right"]');
     const rotateAllLeftBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-rotate-all-left"]');
@@ -141,31 +121,43 @@ class RotatePdfController implements ViewController {
     }, { signal });
   }
 
+  private setToolbarButtonsDisabled(disabled: boolean): void {
+    const refs = ['btn-execute-rotate', 'btn-rotate-all-left', 'btn-rotate-all-right', 'btn-reset-rotations'];
+    for (const ref of refs) {
+      const btn = this.container.querySelector<HTMLButtonElement>(`[data-ref="${ref}"]`);
+      if (btn) btn.disabled = disabled;
+    }
+  }
+
   private async handleFileSelected(file: File): Promise<void> {
     this.hideError();
+    const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
+    const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
+    if (!isPdfExt && !isPdfMime) {
+      this.showError(t('tools.only_pdf_allowed'));
+      return;
+    }
+
     const limits = getCurrentUserToolLimits('rotate-pdf');
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'rotate-pdf',
-        toolName: 'Rotar PDF',
+        toolName: t('tools.rotate_pdf_title'),
         type: 'file_size',
       });
       return;
     }
 
     this.currentFile = file;
-
-    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-rotate"]');
-    if (executeBtn) executeBtn.disabled = false;
-
+    this.setToolbarButtonsDisabled(false);
     this.phaseManager?.setPhase('workspace');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_rotado.pdf`;
+      outputNameInput.value = `${base}_${t('tools.rotate_filename_suffix')}.pdf`;
     }
 
     await this.loadPdfPages(file);
@@ -191,7 +183,7 @@ class RotatePdfController implements ViewController {
       for (const item of this.pages) {
         const card = this.createPageCardElement(item);
         pagesGrid.appendChild(card);
-        void this.renderPageThumbnail(item.pageNum, card);
+        void this.renderPageThumbnail(item.pageNum, item.id, card);
       }
     } catch {
       this.showError(t('ui.no_se_pudo_leer_el_archivo_pdf_asegurate'));
@@ -202,49 +194,83 @@ class RotatePdfController implements ViewController {
   private createPageCardElement(item: RotatePageItem): HTMLElement {
     const card = document.createElement('div');
     card.className = 'pdf-card rotate-page-card';
+    card.setAttribute('data-ref', `card-${item.id}`);
     card.setAttribute('data-page-id', item.id);
 
     card.innerHTML = `
+      <div class="pdf-card__actions">
+        <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-card-rotate-left" title="${t('tools.rotate_left_aria')}" aria-label="${t('tools.rotate_left_aria')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+        </button>
+        <button type="button" class="component-button pdf-card__btn-rotate" data-ref="btn-card-rotate-right" title="${t('tools.rotate_right_aria')}" aria-label="${t('tools.rotate_right_aria')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+        </button>
+      </div>
       <div class="pdf-card__sheet-wrapper">
         <div class="pdf-card__sheet" data-ref="page-sheet">
-          <canvas class="pdf-card__canvas" data-ref="page-canvas"></canvas>
+          <div class="pdf-card__spinner"></div>
         </div>
       </div>
-      <div class="rotate-card-hover-actions">
-        <button type="button" class="component-button component-button--icon-only component-button--h32 rotate-card-btn" data-ref="btn-card-rotate-left" title="Rotar izquierda (-90°)" aria-label="Rotar izquierda">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_left"></use></svg>
-        </button>
-        <button type="button" class="component-button component-button--icon-only component-button--h32 rotate-card-btn" data-ref="btn-card-rotate-right" title="Rotar derecha (+90°)" aria-label="Rotar derecha">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rotate_right"></use></svg>
-        </button>
+      <div class="pdf-card__footer">
+        <span class="pdf-card__title">${t('tools.rotate_page_label', { num: item.pageNum })}</span>
+        <span class="rotate-page-card__rot-badge is-hidden" data-ref="rot-badge-${item.id}"></span>
       </div>
-      <span class="pdf-card__page-badge" data-ref="page-badge">${item.pageNum}</span>
     `;
 
     renderIcons(card);
     return card;
   }
 
-  private async renderPageThumbnail(pageNum: number, card: HTMLElement): Promise<void> {
+  private async renderPageThumbnail(pageNum: number, pageId: string, card: HTMLElement): Promise<void> {
     if (!this.pdfDocument) return;
     try {
       const page = await this.pdfDocument.getPage(pageNum);
-      const canvas = card.querySelector<HTMLCanvasElement>('[data-ref="page-canvas"]');
-      if (!canvas) return;
+      const sheet = card.querySelector<HTMLElement>('[data-ref="page-sheet"]');
+      if (!sheet) return;
 
-      const viewport = page.getViewport({ scale: 0.3 });
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(viewport.width * dpr);
-      canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+      const origViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 220;
+      const scale = targetWidth / Math.max(origViewport.width, 1);
+      const viewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.scale(dpr, dpr);
         await page.render({ canvasContext: ctx, viewport }).promise;
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-${pageId}" src="${dataUrl}" alt="${t('tools.rotate_page_label', { num: pageNum })}" />`;
       }
     } catch {}
+  }
+
+  private updateCardVisualRotation(item: RotatePageItem): void {
+    const card = this.container.querySelector<HTMLElement>(`[data-page-id="${item.id}"]`);
+    if (!card) return;
+
+    const sheet = card.querySelector<HTMLElement>('[data-ref="page-sheet"]');
+    if (sheet) {
+      if (item.rotation === 0) {
+        sheet.removeAttribute('data-rotation');
+      } else {
+        sheet.setAttribute('data-rotation', item.rotation.toString());
+      }
+    }
+
+    const badge = card.querySelector<HTMLElement>(`[data-ref="rot-badge-${item.id}"]`);
+    if (badge) {
+      if (item.rotation === 0) {
+        badge.textContent = '';
+        badge.classList.remove('is-rotated');
+        badge.classList.add('is-hidden');
+      } else {
+        badge.textContent = `+${item.rotation}°`;
+        badge.classList.add('is-rotated');
+        badge.classList.remove('is-hidden');
+      }
+    }
   }
 
   private rotatePage(pageId: string, delta: number): void {
@@ -254,11 +280,7 @@ class RotatePdfController implements ViewController {
     page.rotation = (page.rotation + delta) % 360;
     if (page.rotation < 0) page.rotation += 360;
 
-    const card = this.container.querySelector<HTMLElement>(`[data-page-id="${pageId}"]`);
-    const sheet = card?.querySelector<HTMLElement>('[data-ref="page-sheet"]');
-    if (sheet) {
-      sheet.style.transform = `rotate(${page.rotation}deg)`;
-    }
+    this.updateCardVisualRotation(page);
   }
 
   private rotateAll(delta: number): void {
@@ -270,11 +292,7 @@ class RotatePdfController implements ViewController {
   private resetRotations(): void {
     for (const page of this.pages) {
       page.rotation = 0;
-      const card = this.container.querySelector<HTMLElement>(`[data-page-id="${page.id}"]`);
-      const sheet = card?.querySelector<HTMLElement>('[data-ref="page-sheet"]');
-      if (sheet) {
-        sheet.style.transform = 'rotate(0deg)';
-      }
+      this.updateCardVisualRotation(page);
     }
   }
 
@@ -318,7 +336,7 @@ class RotatePdfController implements ViewController {
           success: boolean;
         };
 
-        this.phaseManager?.showProcessing('Rotando páginas del PDF...');
+        this.phaseManager?.showProcessing(t('tools.rotate_processing_title'), t('tools.rotate_processing_desc'));
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
           throw new Error(result.error || t('ui.ocurrio_un_error_al_procesar_la_rotacion'));
@@ -330,10 +348,10 @@ class RotatePdfController implements ViewController {
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
-          returnText: 'Rotar otro archivo PDF',
+          returnText: t('tools.rotate_return_text'),
           returnUrl: '/rotate-pdf',
           subtitle: t('tools.rotate_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡PDF rotado con éxito!',
+          title: t('tools.rotate_success_title'),
           token,
         });
       } catch (err: unknown) {
@@ -352,16 +370,14 @@ class RotatePdfController implements ViewController {
     this.pdfDocument = null;
     this.isProcessing = false;
 
-    const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-rotate"]');
-    if (executeBtn) executeBtn.disabled = true;
+    this.setToolbarButtonsDisabled(true);
 
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="rotate-pages-grid"]');
     if (pagesGrid) pagesGrid.innerHTML = '';
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_rotado.pdf';
+    if (outputNameInput) outputNameInput.value = '';
 
-    this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }

@@ -3,11 +3,13 @@ import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { convertPdfFile, UPLOADS_DIR } from './pdf-converter.service.js';
 import { ConversionType } from './pdf-converter.types.js';
 import { Request, Response } from 'express';
+import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     cb(null, UPLOADS_DIR);
   },
   filename: (_req, file, cb) => {
@@ -39,6 +41,7 @@ const VALID_CONVERSION_TYPES: ConversionType[] = [
 ];
 
 async function handleConvertPdf(req: Request, res: Response): Promise<void> {
+  const uploadedPath = req.file?.path;
   try {
     const file = validatePdfUpload(req, res, 'pdf-converter');
     if (!file) return;
@@ -52,10 +55,6 @@ async function handleConvertPdf(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const customFilename = typeof req.body?.filename === 'string' && req.body.filename.trim()
-      ? req.body.filename.trim()
-      : undefined;
-
     const result = await convertPdfFile(file, targetType);
 
     res.status(200).json({
@@ -68,6 +67,10 @@ async function handleConvertPdf(req: Request, res: Response): Promise<void> {
       error: 'Ha ocurrido un error inesperado al convertir el documento PDF. Por favor intenta más tarde.',
       success: false,
     });
+  } finally {
+    if (uploadedPath) {
+      await fs.promises.unlink(uploadedPath).catch(() => {});
+    }
   }
 }
 

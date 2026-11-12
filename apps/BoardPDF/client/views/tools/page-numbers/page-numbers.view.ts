@@ -1,16 +1,17 @@
+import { FontDrawerComponent, SelectedFontConfig } from '../../../components/font-drawer.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { bindInlineControls, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageNumberMargin, PageNumberMode, PageNumberPosition, PageNumberResponseData, PageThumbnailItem } from './page-numbers.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class PageNumbersController implements ViewController {
   private abortController: AbortController | null = null;
@@ -18,9 +19,12 @@ class PageNumbersController implements ViewController {
   private currentFile: File | null = null;
   private dropdownControllers: Array<{ destroy: () => void }> = [];
   private firstPageIsCover = false;
+  private fontDrawer: FontDrawerComponent | null = null;
   private fontFamily = 'Helvetica';
   private fontSize = 11;
-  private format = '{n}';
+  private fontStyle: 'italic' | 'normal' = 'normal';
+  private fontWeight = 400;
+  private formatMode: 'custom' | 'of' | 'only' | 'page' = 'only';
   private isProcessing = false;
   private margin: PageNumberMargin = 'recommended';
   private mode: PageNumberMode = 'single';
@@ -39,9 +43,9 @@ class PageNumbersController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.anade_numeracion_de_paginas_en_cualquier'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
@@ -56,6 +60,13 @@ class PageNumbersController implements ViewController {
     });
     await this.phaseManager.init();
     renderIcons(this.container);
+
+    const customTextInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-text"]');
+    if (customTextInput && !customTextInput.value) {
+      customTextInput.value = t('tools.pn_format_page_n_of_p');
+    }
+
+    this.initFontDrawer();
     this.bindEvents();
   }
 
@@ -72,6 +83,10 @@ class PageNumbersController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
+    if (this.fontDrawer) {
+      this.fontDrawer.destroy();
+      this.fontDrawer = null;
+    }
     this.dropdownControllers.forEach((ctrl) => ctrl.destroy());
     this.dropdownControllers = [];
     if (this.pdfDocument) {
@@ -80,6 +95,33 @@ class PageNumbersController implements ViewController {
       } catch {}
       this.pdfDocument = null;
     }
+  }
+
+  private initFontDrawer(): void {
+    const layoutEl = this.container.querySelector<HTMLElement>('[data-ref="page-numbers-layout"]');
+    const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-pn-font-drawer"]');
+    const triggerLabel = this.container.querySelector<HTMLElement>('[data-ref="pn-font-selected-label"]');
+    if (!layoutEl) return;
+
+    this.fontDrawer = new FontDrawerComponent({
+      initialFont: {
+        family: this.fontFamily,
+        style: this.fontStyle,
+        weight: this.fontWeight,
+      },
+      mountPoint: layoutEl,
+      onChange: (font: SelectedFontConfig) => {
+        this.fontFamily = font.family;
+        this.fontWeight = font.weight;
+        this.fontStyle = font.style;
+        if (triggerLabel) {
+          triggerLabel.textContent = font.displayName;
+        }
+      },
+      onClose: () => {
+        triggerBtn?.classList.remove('is-active');
+      },
+    });
   }
 
   private bindEvents(): void {
@@ -104,6 +146,13 @@ class PageNumbersController implements ViewController {
 
     executeBtn?.addEventListener('click', () => {
       void this.handleExecutePageNumbers(executeBtn);
+    }, { signal });
+
+    const fontDrawerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-pn-font-drawer"]');
+    fontDrawerBtn?.addEventListener('click', () => {
+      if (!this.fontDrawer) return;
+      this.fontDrawer.toggle();
+      fontDrawerBtn.classList.toggle('is-active', this.fontDrawer.isOpen());
     }, { signal });
 
     const modePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-page-mode"]');
@@ -134,7 +183,7 @@ class PageNumbersController implements ViewController {
     });
 
     const posGrid = this.container.querySelector<HTMLElement>('[data-ref="grid-pn-position"]');
-    const posCells = posGrid?.querySelectorAll<HTMLButtonElement>('.pn-position-cell');
+    const posCells = posGrid?.querySelectorAll<HTMLButtonElement>('.pn-position-cell:not(:disabled)');
     posCells?.forEach((cell) => {
       cell.addEventListener('click', () => {
         posCells.forEach((c) => c.classList.remove('is-selected'));
@@ -150,63 +199,75 @@ class PageNumbersController implements ViewController {
       this.updateIndicators();
     }, { signal });
 
-    this.setupDropdowns(signal);
+    bindInlineControls(this.container, signal);
+    this.setupDropdowns();
   }
 
-  private setupDropdowns(signal: AbortSignal): void {
-    const marginWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-margin"]');
-    if (marginWrap) {
-      const ctrl = setupDropdown(marginWrap, {
-        isSelect: true,
-        onSelect: (val) => {
-          this.margin = val as PageNumberMargin;
-          const text = marginWrap.querySelector<HTMLElement>('[data-ref="pn-margin-selected-text"]');
-          if (text) {
-            text.textContent = val === 'small' ? 'Pequeño' : val === 'recommended' ? 'Recomendado' : 'Grande';
-          }
-        },
-      });
-      this.dropdownControllers.push(ctrl);
-    }
-
+  private setupDropdowns(): void {
     const formatWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-format"]');
-    const customTextGroup = this.container.querySelector<HTMLElement>('[data-ref="group-custom-text"]');
+    const customTextBox = this.container.querySelector<HTMLElement>('[data-ref="box-custom-text"]');
     if (formatWrap) {
       const ctrl = setupDropdown(formatWrap, {
         isSelect: true,
-        onSelect: (val) => {
-          this.format = val;
-          const text = formatWrap.querySelector<HTMLElement>('[data-ref="pn-format-selected-text"]');
-          if (text) {
-            text.textContent = val === '{n}' ? 'Solo número de página' : val === '{n}/{p}' ? 'Página {n} de {p}' : 'Texto personalizado';
+        onSelect: (val: string, item?: HTMLElement) => {
+          this.formatMode = (val || 'only') as 'custom' | 'of' | 'only' | 'page';
+          const textEl = formatWrap.querySelector<HTMLElement>('[data-ref="pn-format-selected-text"]');
+          const labelMap: Record<string, string> = {
+            custom: t('tools.pn_format_custom'),
+            of: t('tools.pn_format_page_n_of_p'),
+            only: t('tools.pn_format_only_num'),
+            page: t('tools.pn_format_page_n'),
+          };
+          if (textEl) {
+            textEl.textContent = labelMap[this.formatMode] || t('tools.pn_format_only_num');
           }
-          toggleElement(customTextGroup, val === 'custom');
+          const checks = formatWrap.querySelectorAll<HTMLElement>('[data-ref^="check-format-"]');
+          checks.forEach((icon) => icon.classList.add('is-hidden'));
+          item?.querySelector<HTMLElement>('[data-ref^="check-format-"]')?.classList.remove('is-hidden');
+          toggleElement(customTextBox, this.formatMode === 'custom');
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const fontWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-font"]');
-    if (fontWrap) {
-      const ctrl = setupDropdown(fontWrap, {
+    const sizeWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pn-font-size"]');
+    if (sizeWrap) {
+      const ctrl = setupDropdown(sizeWrap, {
         isSelect: true,
-        onSelect: (val) => {
-          this.fontFamily = val;
-          const text = fontWrap.querySelector<HTMLElement>('[data-ref="pn-font-selected-text"]');
-          if (text) text.textContent = val;
+        onSelect: (val: string, item?: HTMLElement) => {
+          const parsed = Number(val) || 11;
+          this.fontSize = parsed;
+          const textEl = sizeWrap.querySelector<HTMLElement>('[data-ref="pn-font-size-selected-text"]');
+          if (textEl) {
+            textEl.textContent = `${parsed} pt`;
+          }
+          const checks = sizeWrap.querySelectorAll<HTMLElement>('[data-ref^="check-pn-size-"]');
+          checks.forEach((icon) => icon.classList.add('is-hidden'));
+          item?.querySelector<HTMLElement>('[data-ref^="check-pn-size-"]')?.classList.remove('is-hidden');
         },
       });
       this.dropdownControllers.push(ctrl);
     }
+  }
+
+  private resolveFormatTemplate(): string {
+    if (this.formatMode === 'page') return t('tools.pn_format_page_n');
+    if (this.formatMode === 'of') return t('tools.pn_format_page_n_of_p');
+    if (this.formatMode === 'custom') {
+      const customTextInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-text"]');
+      return customTextInput?.value.trim() || t('tools.pn_format_page_n_of_p');
+    }
+    return '{n}';
   }
 
   private async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
+    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast(t('ui.selecciona_unicamente_un_archivo_pdf_val'), 'danger');
+      this.showError(t('ui.selecciona_unicamente_un_archivo_pdf_val'));
       return;
     }
 
@@ -216,7 +277,7 @@ class PageNumbersController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'page-numbers',
-        toolName: 'Números de página',
+        toolName: t('ui.insertar_numeros_de_pagina'),
         type: 'file_size',
       });
       return;
@@ -235,7 +296,7 @@ class PageNumbersController implements ViewController {
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      filenameInput.value = `${base}_numerado.pdf`;
+      filenameInput.value = `${base}_${t('tools.pn_filename_suffix')}.pdf`;
     }
 
     try {
@@ -250,12 +311,19 @@ class PageNumbersController implements ViewController {
       }));
 
       const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
-      if (toPageInput) toPageInput.value = numPages.toString();
+      if (toPageInput) {
+        toPageInput.max = numPages.toString();
+        toPageInput.value = numPages.toString();
+      }
+      const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
+      if (fromPageInput) {
+        fromPageInput.max = numPages.toString();
+      }
 
       if (executeBtn) executeBtn.disabled = false;
       this.renderPagesView();
     } catch {
-      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
+      this.showError(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'));
       this.resetToInitial();
     }
   }
@@ -265,20 +333,27 @@ class PageNumbersController implements ViewController {
     if (!grid) return;
     grid.innerHTML = '';
 
+    const coverLabel = t('tools.pn_cover_badge');
+
     if (this.mode === 'single') {
       grid.className = 'pdf-items-grid pn-pages-grid';
-      grid.innerHTML = this.pages.map((p) => `
-        <div class="pdf-card pn-page-card" data-ref="card-page-${p.id}" data-page-num="${p.pageNum}">
-          <div class="pdf-card__sheet-wrapper">
-            <div class="pdf-card__sheet">
-              <span class="pn-page-card__cover-badge" data-ref="cover-badge-${p.id}" style="${this.firstPageIsCover && p.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
-              <div class="pn-indicator-dot ${this.resolveDotClass(p.pageNum)}" data-ref="dot-${p.id}"></div>
-              <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
+      grid.innerHTML = this.pages.map((p) => {
+        const showCoverBadge = this.firstPageIsCover && p.pageNum === 1;
+        return `
+          <div class="pdf-card pn-page-card" data-ref="card-page-${p.id}" data-page-num="${p.pageNum}">
+            <div class="pdf-card__sheet-wrapper">
+              <div class="pdf-card__sheet">
+                <span class="pn-page-card__cover-badge${showCoverBadge ? '' : ' is-hidden'}" data-ref="cover-badge-${p.id}">${coverLabel}</span>
+                <div class="pn-indicator-dot ${this.resolveDotClass(p.pageNum)}" data-ref="dot-${p.id}"></div>
+                <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
+              </div>
+            </div>
+            <div class="pdf-card__footer">
+              <span class="pdf-card__title">${t('tools.rotate_page_label', { num: p.pageNum })}</span>
             </div>
           </div>
-          <span class="pdf-card__title">Página ${p.pageNum}</span>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     } else {
       grid.className = 'pdf-items-grid pn-pages-grid pn-pages-grid--facing';
       let html = '';
@@ -286,29 +361,36 @@ class PageNumbersController implements ViewController {
       for (let i = 0; i < this.pages.length; i += 2) {
         const leftPage = this.pages[i];
         const rightPage = this.pages[i + 1];
+        const showLeftCover = this.firstPageIsCover && leftPage.pageNum === 1;
 
         html += `<div class="pn-facing-pair" data-ref="facing-pair-${i / 2}">`;
         html += `
-          <div class="pdf-card pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}" style="width: 170px;">
+          <div class="pdf-card pn-page-card" data-ref="card-page-${leftPage.id}" data-page-num="${leftPage.pageNum}">
             <div class="pdf-card__sheet-wrapper">
               <div class="pdf-card__sheet">
-                <span class="pn-page-card__cover-badge" data-ref="cover-badge-${leftPage.id}" style="${this.firstPageIsCover && leftPage.pageNum === 1 ? '' : 'display: none;'}">Portada</span>
+                <span class="pn-page-card__cover-badge${showLeftCover ? '' : ' is-hidden'}" data-ref="cover-badge-${leftPage.id}">${coverLabel}</span>
                 <div class="pn-indicator-dot ${this.resolveDotClass(leftPage.pageNum)}" data-ref="dot-${leftPage.id}"></div>
                 <canvas class="pdf-card__canvas" data-ref="canvas-${leftPage.id}"></canvas>
               </div>
+            </div>
+            <div class="pdf-card__footer">
+              <span class="pdf-card__title">${t('tools.rotate_page_label', { num: leftPage.pageNum })}</span>
             </div>
           </div>
         `;
 
         if (rightPage) {
           html += `
-            <div class="pdf-card pn-page-card" data-ref="card-page-${rightPage.id}" data-page-num="${rightPage.pageNum}" style="width: 170px;">
+            <div class="pdf-card pn-page-card" data-ref="card-page-${rightPage.id}" data-page-num="${rightPage.pageNum}">
               <div class="pdf-card__sheet-wrapper">
                 <div class="pdf-card__sheet">
-                  <span class="pn-page-card__cover-badge" data-ref="cover-badge-${rightPage.id}" style="display: none;">Portada</span>
+                  <span class="pn-page-card__cover-badge is-hidden" data-ref="cover-badge-${rightPage.id}">${coverLabel}</span>
                   <div class="pn-indicator-dot ${this.resolveDotClass(rightPage.pageNum)}" data-ref="dot-${rightPage.id}"></div>
                   <canvas class="pdf-card__canvas" data-ref="canvas-${rightPage.id}"></canvas>
                 </div>
+              </div>
+              <div class="pdf-card__footer">
+                <span class="pdf-card__title">${t('tools.rotate_page_label', { num: rightPage.pageNum })}</span>
               </div>
             </div>
           `;
@@ -342,9 +424,8 @@ class PageNumbersController implements ViewController {
 
     if (isLeftPage) {
       return this.position.startsWith('top') ? 'is-pos-top-left' : 'is-pos-bottom-left';
-    } else {
-      return this.position.startsWith('top') ? 'is-pos-top-right' : 'is-pos-bottom-right';
     }
+    return this.position.startsWith('top') ? 'is-pos-top-right' : 'is-pos-bottom-right';
   }
 
   private updateIndicators(): void {
@@ -356,7 +437,7 @@ class PageNumbersController implements ViewController {
         dot.className = `pn-indicator-dot ${this.resolveDotClass(page.pageNum)}`;
       }
       if (coverBadge && page.pageNum === 1) {
-        toggleElement(coverBadge, this.firstPageIsCover);
+        coverBadge.classList.toggle('is-hidden', !this.firstPageIsCover);
       }
     }
   }
@@ -380,21 +461,20 @@ class PageNumbersController implements ViewController {
 
   private async handleExecutePageNumbers(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
 
     const startNumberInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-start-number"]');
     const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
     const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
-    const customTextInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-text"]');
 
-    let format = this.format;
-    if (format === 'custom') {
-      format = customTextInput?.value.trim() || 'Página {n} de {p}';
-    }
+    const format = this.resolveFormatTemplate();
 
-    let optionsPayload: any = {
+    let optionsPayload: Record<string, unknown> = {
       firstPageIsCover: this.firstPageIsCover,
       fontFamily: this.fontFamily,
       fontSize: this.fontSize,
+      fontStyle: this.fontStyle,
+      fontWeight: this.fontWeight,
       format,
       fromPage: Math.max(1, Number(fromPageInput?.value) || 1),
       margin: this.margin,
@@ -415,7 +495,7 @@ class PageNumbersController implements ViewController {
         const formData = new FormData();
         formData.append('file', this.currentFile as Blob, this.currentFile?.name);
         if (customFilename) {
-          optionsPayload = { ...optionsPayload, filename: customFilename } as any;
+          optionsPayload = { ...optionsPayload, filename: customFilename };
         }
         formData.append('options', JSON.stringify(optionsPayload));
 
@@ -444,10 +524,10 @@ class PageNumbersController implements ViewController {
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: customFilename || result.data.filename,
-          returnText: 'Numerar otro documento PDF',
+          returnText: t('tools.pn_return_text'),
           returnUrl: '/page-numbers',
           subtitle: t('tools.page_numbers_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡Números de página insertados!',
+          title: t('tools.pn_success_title'),
           token,
         });
       } catch (err: unknown) {
@@ -455,7 +535,7 @@ class PageNumbersController implements ViewController {
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
-        showToast(errorMessage, 'danger');
+        this.showError(errorMessage);
       } finally {
         this.isProcessing = false;
       }
@@ -477,10 +557,39 @@ class PageNumbersController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_numerado.pdf';
+    if (outputNameInput) outputNameInput.value = '';
     if (this.sidebarModal) this.sidebarModal.close();
+    this.fontDrawer?.close();
 
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(message: string): void {
+    const sidebarBanner = this.container.querySelector<HTMLElement>('[data-ref="pn-error-banner"]');
+    const globalBanner = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
+    if (sidebarBanner) {
+      sidebarBanner.textContent = message;
+      showElement(sidebarBanner);
+    }
+    if (globalBanner) {
+      globalBanner.textContent = message;
+      showElement(globalBanner);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const sidebarBanner = this.container.querySelector<HTMLElement>('[data-ref="pn-error-banner"]');
+    const globalBanner = this.container.querySelector<HTMLElement>('[data-ref="pn-global-error"]');
+    if (sidebarBanner) {
+      sidebarBanner.textContent = '';
+      hideElement(sidebarBanner);
+    }
+    if (globalBanner) {
+      globalBanner.textContent = '';
+      hideElement(globalBanner);
+    }
   }
 }
 

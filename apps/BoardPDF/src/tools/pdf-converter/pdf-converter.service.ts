@@ -3,21 +3,12 @@ import { IConverterEngine } from './engine/converter-engine.interface.js';
 import { LocalConverterEngine } from './engine/local-converter.engine.js';
 import { ConversionType, ConvertJobResult, PdfConversionOptions } from './pdf-converter.types.js';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const CONVERTER_DIR = path.resolve(__dirname, '../../../data/converter');
+const CONVERTER_DIR = path.join(os.tmpdir(), 'boardpdf-converter');
 const UPLOADS_DIR = path.join(CONVERTER_DIR, 'uploads');
 const OUTPUT_DIR = path.join(CONVERTER_DIR, 'output');
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-if (!fs.existsSync(OUTPUT_DIR)) {
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-}
 
 const activeEngine: IConverterEngine = new LocalConverterEngine();
 
@@ -26,6 +17,7 @@ async function convertPdfFile(
   targetType: ConversionType,
   options?: PdfConversionOptions
 ): Promise<ConvertJobResult> {
+  await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
   let inputPath = file.path;
   if (!inputPath && file.buffer) {
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
@@ -33,6 +25,7 @@ async function convertPdfFile(
     await fs.promises.writeFile(inputPath, file.buffer);
   }
   const originalFilename = file.originalname;
+  let generatedOutputPath = '';
 
   try {
     const result = await activeEngine.convert({
@@ -42,14 +35,11 @@ async function convertPdfFile(
       outputDir: OUTPUT_DIR,
       targetType,
     });
+    generatedOutputPath = result.outputPath;
 
     const buffer = await fs.promises.readFile(result.outputPath);
     const fileSize = buffer.length;
     const token = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-    try {
-      await fs.promises.unlink(result.outputPath);
-    } catch {}
 
     const tokenResult = await storeTempFile(token, {
       buffer,
@@ -71,10 +61,11 @@ async function convertPdfFile(
       success: true,
     };
   } finally {
-    if (fs.existsSync(inputPath)) {
-      try {
-        fs.unlinkSync(inputPath);
-      } catch {}
+    if (generatedOutputPath) {
+      await fs.promises.unlink(generatedOutputPath).catch(() => {});
+    }
+    if (inputPath && fs.existsSync(inputPath)) {
+      await fs.promises.unlink(inputPath).catch(() => {});
     }
   }
 }

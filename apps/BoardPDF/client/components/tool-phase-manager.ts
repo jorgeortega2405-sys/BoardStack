@@ -1,5 +1,5 @@
 import { getCurrentUserToolLimits } from '../config/tools-limits.config.js';
-import { WORKFLOW_TOOLS } from '../config/workflow-tools.config.js';
+import { getWorkflowToolName } from '../config/workflow-tools.config.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { navigate } from '../services/navigation.service.js';
@@ -527,8 +527,7 @@ class ToolPhaseManager {
       const badgesWrap = document.createElement('div');
       badgesWrap.className = 'workflow-steps-badges';
       session.steps.forEach((step, idx) => {
-        const toolDef = WORKFLOW_TOOLS.find((t) => t.id === step.tool);
-        const toolName = toolDef ? toolDef.name : step.tool;
+        const toolName = getWorkflowToolName(step.tool);
         const isCurrent = idx === session.currentStepIndex;
         const badge = document.createElement('span');
         badge.className = `component-badge component-badge--sm ${isCurrent ? 'component-badge--brand' : ''}`;

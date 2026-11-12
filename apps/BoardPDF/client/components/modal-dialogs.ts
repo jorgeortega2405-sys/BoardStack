@@ -7,7 +7,7 @@ import { DocumentLabel, LabelColorKey, ModalInstance } from '../types/common.typ
 import { setupDropdown, setupPasswordToggle } from '../utils/dom.util.js';
 import { openCollabPageSizeModal } from '../views/design-pdf/modals/design-pdf-page-size-modal.util.js';
 import type { CollabPageSizeModalOptions, CollabPageSizeResult } from '../views/design-pdf/modals/design-pdf-page-size-modal.util.js';
-import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderDocumentLabelsModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
+import { renderAddWebUrlModalBody, renderCreateFolderModalBody, renderDeleteAccountModalBody, renderDisable2FAModalBody, renderDocumentLabelsModalBody, renderMoveFolderOptionsModalBody, renderNewPasswordModalBody, renderProtectPdfModalBody, renderRenameFolderModalBody, renderShareDownloadModalContent, renderThankYouShareModalBody, renderUnlockPdfModalBody, renderVerifyEmailCodeModalBody, renderVerifyPasswordModalBody } from './modal-templates.js';
 import { openModal, setupSheetDragToDismiss } from './modal.component.js';
 
 function getPasswordToggleTooltipOptions(): { hideTooltip: string; showTooltip: string } {
@@ -427,6 +427,59 @@ function openUnlockPdfPasswordModal(options: {
   const toggleBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-unlock-pwd"]');
   const input = modal.body.querySelector<HTMLInputElement>('[data-ref="input-unlock-password"]');
   setupPasswordToggle(toggleBtn, input, getPasswordToggleTooltipOptions());
+
+  return modal;
+}
+
+function openProtectPdfPasswordModal(options: {
+  onConfirm: (password: string, inst: ModalInstance) => Promise<boolean | void>;
+}): ModalInstance {
+  const modal = openModal({
+    bodyHtml: renderProtectPdfModalBody(),
+    cancelText: t('common.cancel'),
+    confirmClass: 'component-button--black',
+    confirmText: t('tools.protect_pdf.protect_btn'),
+    description: t('tools.protect_pdf.modal_desc'),
+    onConfirm: async (inst) => {
+      inst.clearError();
+      const pwdInput = inst.body.querySelector<HTMLInputElement>('[data-ref="input-protect-password"]');
+      const confirmInput = inst.body.querySelector<HTMLInputElement>('[data-ref="input-protect-confirm-password"]');
+      const password = pwdInput?.value.trim() || '';
+      const confirm = confirmInput?.value.trim() || '';
+
+      if (!password) {
+        inst.showError(t('tools.protect_pdf.password_required'));
+        pwdInput?.focus();
+        return false;
+      }
+      if (password !== confirm) {
+        inst.showError(t('tools.protect_pdf.passwords_mismatch'));
+        confirmInput?.focus();
+        return false;
+      }
+
+      return options.onConfirm(password, inst);
+    },
+    size: 'sm',
+    title: t('tools.protect_pdf.modal_title'),
+  });
+
+  const togglePwdBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-protect-password"]');
+  const pwdInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-protect-password"]');
+  const toggleConfirmBtn = modal.body.querySelector<HTMLElement>('[data-ref="btn-toggle-protect-confirm-password"]');
+  const confirmInput = modal.body.querySelector<HTMLInputElement>('[data-ref="input-protect-confirm-password"]');
+
+  setupPasswordToggle(togglePwdBtn, pwdInput, getPasswordToggleTooltipOptions());
+  setupPasswordToggle(toggleConfirmBtn, confirmInput, getPasswordToggleTooltipOptions());
+
+  const handleEnter = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      modal.confirmBtn?.click();
+    }
+  };
+  pwdInput?.addEventListener('keydown', handleEnter);
+  confirmInput?.addEventListener('keydown', handleEnter);
 
   return modal;
 }
@@ -884,6 +937,7 @@ export {
   openDocumentLabelsModal,
   openMoveDocModal,
   openMoveUploadModal,
+  openProtectPdfPasswordModal,
   openRenameFolderModal,
   openShareDownloadModal,
   openThankYouShareModal,

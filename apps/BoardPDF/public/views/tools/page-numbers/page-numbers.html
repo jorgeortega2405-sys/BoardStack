@@ -1,212 +1,251 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="page-numbers-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Opciones" aria-label="Opciones">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-<span class="component-button__text" >Opciones</span>
-</button>
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-page-numbers" disabled>
-<svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#format_list_numbered"></use></svg>
-<span class="component-button__text" data-ref="txt-execute-page-numbers">Insertar números de página</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-i18n-tooltip="common.options" data-i18n-aria="common.options">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text" data-i18n="common.options"></span>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-execute-page-numbers" disabled>
+        <svg class="component-icon component-button__icon-left" aria-hidden="true"><use href="/icons.svg#format_list_numbered"></use></svg>
+        <span class="component-button__text" data-ref="txt-execute-page-numbers" data-i18n="tools.page_numbers_action"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="page-numbers-layout">
+    <main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="page-numbers-workspace">
+      <div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="pn-workspace-card">
+        <div class="pdf-reorder-hint">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_list_numbered"></use></svg>
+          <span data-i18n="tools.page_numbers_workspace_hint"></span>
+        </div>
+        <div class="pdf-items-grid pn-pages-grid" data-ref="pn-pages-grid"></div>
+        <div class="banner banner--danger is-hidden" data-ref="pn-global-error" role="alert"></div>
+      </div>
+    </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="page-numbers-sidebar">
+        <div class="menu-panel__drag-zone" data-ref="page-numbers-sidebar-drag-zone" aria-hidden="true">
+          <div class="menu-panel__drag-handle"></div>
+        </div>
+        <div class="tool-sidebar__header">
+          <div class="component-title-badge" data-ref="pn-sidebar-title-badge">
+            <h1 class="component-title-badge__text" data-ref="pn-sidebar-title" data-i18n="tools.page_numbers_options"></h1>
+          </div>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.pn_page_mode_title"></span>
+            <div class="component-tabs" data-ref="toggle-page-mode" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-mode-single" data-mode="single" data-val="single" data-i18n="tools.pn_mode_single"></button>
+              <button type="button" class="component-tab" data-ref="btn-mode-double" data-mode="double" data-val="double" data-i18n="tools.pn_mode_double"></button>
+            </div>
+          </div>
+
+          <label class="split-option-card" data-ref="card-cover">
+            <div class="split-option-card__content">
+              <span class="split-option-card__title" data-i18n="tools.pn_cover_title"></span>
+              <span class="split-option-card__subtitle" data-i18n="tools.pn_cover_subtitle"></span>
+            </div>
+            <input class="component-checkbox" data-ref="check-first-page-cover" type="checkbox" />
+          </label>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.pn_position_title"></span>
+            <div class="pn-position-box" data-ref="grid-pn-position">
+              <button type="button" class="pn-position-cell" data-ref="pos-cell-top-left" data-pos="top-left" data-i18n-title="tools.pos_top_left" data-i18n-aria="tools.pos_top_left"></button>
+              <button type="button" class="pn-position-cell" data-ref="pos-cell-top-center" data-pos="top-center" data-i18n-title="tools.pos_top_center" data-i18n-aria="tools.pos_top_center"></button>
+              <button type="button" class="pn-position-cell" data-ref="pos-cell-top-right" data-pos="top-right" data-i18n-title="tools.pos_top_right" data-i18n-aria="tools.pos_top_right"></button>
+              <button type="button" class="pn-position-cell is-disabled" data-i18n-title="common.not_available" data-i18n-aria="common.not_available" disabled></button>
+              <button type="button" class="pn-position-cell is-disabled" data-i18n-title="common.not_available" data-i18n-aria="common.not_available" disabled></button>
+              <button type="button" class="pn-position-cell is-disabled" data-i18n-title="common.not_available" data-i18n-aria="common.not_available" disabled></button>
+              <button type="button" class="pn-position-cell" data-ref="pos-cell-bottom-left" data-pos="bottom-left" data-i18n-title="tools.pos_bottom_left" data-i18n-aria="tools.pos_bottom_left"></button>
+              <button type="button" class="pn-position-cell" data-ref="pos-cell-bottom-center" data-pos="bottom-center" data-i18n-title="tools.pos_bottom_center" data-i18n-aria="tools.pos_bottom_center"></button>
+              <button type="button" class="pn-position-cell is-selected" data-ref="pos-cell-bottom-right" data-pos="bottom-right" data-i18n-title="tools.pos_bottom_right" data-i18n-aria="tools.pos_bottom_right"></button>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.pn_margin_title"></span>
+            <div class="component-tabs" data-ref="toggle-margin" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-margin-recommended" data-val="recommended" data-i18n="tools.pn_margin_recommended"></button>
+              <button type="button" class="component-tab" data-ref="btn-margin-small" data-val="small" data-i18n="tools.pn_margin_small"></button>
+              <button type="button" class="component-tab" data-ref="btn-margin-large" data-val="large" data-i18n="tools.pn_margin_large"></button>
+            </div>
+          </div>
+
+          <div class="split-range-card" data-ref="card-pn-start-number">
+            <div class="split-range-card__col">
+              <span class="split-range-card__field-label" data-i18n="tools.pn_start_number_label"></span>
+              <div class="component-inline-control component-inline-control--sm split-range-card__control">
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.decrease_first_number" data-step-change="-1">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                </div>
+                <input class="component-inline-control__input" data-ref="input-start-number" type="number" min="1" value="1" autocomplete="off" />
+                <div class="component-inline-control__group">
+                  <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.increase_first_number" data-step-change="1">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="split-range-card" data-ref="card-pn-pages-range">
+            <div class="split-range-card__header">
+              <div class="split-range-card__meta">
+                <span class="split-range-card__field-label" data-i18n="tools.pn_pages_range_title"></span>
+              </div>
+            </div>
+            <div class="split-range-card__body">
+              <div class="split-range-card__col">
+                <span class="split-range-card__field-label" data-i18n="tools.split_range_from"></span>
+                <div class="component-inline-control component-inline-control--sm split-range-card__control">
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.decrease_start_page" data-step-change="-1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-from-page" type="number" min="1" value="1" autocomplete="off" />
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.increase_start_page" data-step-change="1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="split-range-card__arrow" aria-hidden="true">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+              </div>
+              <div class="split-range-card__col">
+                <span class="split-range-card__field-label" data-i18n="tools.split_range_to"></span>
+                <div class="component-inline-control component-inline-control--sm split-range-card__control">
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.decrease_end_page" data-step-change="-1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-to-page" type="number" min="1" value="1" autocomplete="off" />
+                  <div class="component-inline-control__group">
+                    <button type="button" class="component-inline-control__btn" data-i18n-aria="aria.increase_end_page" data-step-change="1">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.pn_format_title"></span>
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin" data-ref="dropdown-wrapper-pn-format">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-pn-format" data-i18n-aria="aria.number_format">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#format_list_numbered"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="pn-format-selected-text" data-i18n="tools.pn_format_only_num"></span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-pn-format">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-pn-format">
+                  <div class="menu-panel__drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="option-format-only" data-value="only">
+                      <span class="menu-item__text" data-i18n="tools.pn_format_only_num"></span>
+                      <svg class="component-icon menu-item__check" data-ref="check-format-only" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-format-page" data-value="page">
+                      <span class="menu-item__text" data-i18n="tools.pn_format_page_n"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-format-page" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-format-of" data-value="of">
+                      <span class="menu-item__text" data-i18n="tools.pn_format_page_n_of_p"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-format-of" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-format-custom" data-value="custom">
+                      <span class="menu-item__text" data-i18n="tools.pn_format_custom"></span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-format-custom" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pn-custom-text-box is-hidden" data-ref="box-custom-text">
+            <label class="field" data-ref="field-pn-custom-text">
+              <input class="field__input" data-ref="input-custom-text" data-i18n-placeholder="common.page_number_format_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+              <span class="field__label" data-i18n="tools.pn_custom_format_label"></span>
+            </label>
+          </div>
+
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.typography_title"></span>
+            <div class="tool-sidebar__field-group--flex-row">
+              <button type="button" class="tool-font-trigger-btn tool-sidebar__flex-1" data-ref="btn-open-pn-font-drawer" data-i18n-aria="aria.font_family">
+                <span class="tool-font-trigger-btn__left">
+                  <svg class="component-icon tool-font-trigger-btn__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>
+                  <span class="tool-font-trigger-btn__label" data-ref="pn-font-selected-label" data-i18n="tools.font_standard_helvetica"></span>
+                </span>
+                <svg class="component-icon tool-font-trigger-btn__chevron" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+
+              <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--w120" data-ref="dropdown-wrapper-pn-font-size">
+                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-pn-font-size" data-i18n-aria="aria.font_size">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="pn-font-size-selected-text">11 pt</span>
+                  </div>
+                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-pn-font-size">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-pn-font-size">
+                    <div class="menu-panel__drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item" data-ref="option-pn-size-9" data-value="9">
+                        <span class="menu-item__text">9 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-pn-size-9" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item is-active" data-ref="option-pn-size-11" data-value="11">
+                        <span class="menu-item__text">11 pt</span>
+                        <svg class="component-icon menu-item__check" data-ref="check-pn-size-11" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-pn-size-14" data-value="14">
+                        <span class="menu-item__text">14 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-pn-size-14" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-pn-size-18" data-value="18">
+                        <span class="menu-item__text">18 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-pn-size-18" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="option-pn-size-24" data-value="24">
+                        <span class="menu-item__text">24 pt</span>
+                        <svg class="component-icon menu-item__check is-hidden" data-ref="check-pn-size-24" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="pn-error-banner" role="alert"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--grid tool-layout tool-layout--grid" data-ref="page-numbers-layout">
-<main class="tool-layout__workspace tool-layout__workspace--grid" data-ref="page-numbers-workspace">
-<div class="pdf-items-view pdf-items-view--full-width is-hidden" data-ref="pn-workspace-card">
-<div class="pdf-reorder-hint" >
-<span>Personaliza la posición, márgenes y formato de los números de página en el panel de opciones.</span>
-</div>
-<div class="pdf-items-grid pn-pages-grid" data-ref="pn-pages-grid"></div>
-</div>
-</main>
-<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="page-numbers-sidebar">
-<div class="tool-sidebar__header">
-  <h2 class="tool-sidebar__title" data-i18n="tools.page_numbers_options"></h2>
-  <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="tool-sidebar__body" >
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Modo de página</span>
-<div class="component-tabs" data-ref="toggle-page-mode" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-mode-single" data-val="single" data-mode="single">Página única</button>
-<button type="button" class="component-tab" data-ref="btn-mode-double" data-val="double" data-mode="double">Doble cara</button>
-</div>
-</div>
-<label class="split-option-card tool-sidebar__field-group--mt10" data-ref="card-cover">
-<div class="split-option-card__content" >
-<span class="split-option-card__title" >La primera página es la portada</span>
-<span class="split-option-card__subtitle" >No incluir número en la carátula</span>
-</div>
-<input class="component-checkbox" data-ref="check-cover" type="checkbox" />
-</label>
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Posición en página</span>
-<div class="pn-position-box" data-ref="pn-position-box">
-<div class="pn-position-cell" data-ref="pos-cell-top-left" data-pos="top-left" title="Superior Izquierda"></div>
-<div class="pn-position-cell" data-ref="pos-cell-top-center" data-pos="top-center" title="Superior Centro"></div>
-<div class="pn-position-cell" data-ref="pos-cell-top-right" data-pos="top-right" title="Superior Derecha"></div>
-<div class="pn-position-cell is-disabled" title="No disponible"></div>
-<div class="pn-position-cell is-disabled" title="No disponible"></div>
-<div class="pn-position-cell is-disabled" title="No disponible"></div>
-<div class="pn-position-cell" data-ref="pos-cell-bottom-left" data-pos="bottom-left" title="Inferior Izquierda"></div>
-<div class="pn-position-cell" data-ref="pos-cell-bottom-center" data-pos="bottom-center" title="Inferior Centro"></div>
-<div class="pn-position-cell is-selected" data-ref="pos-cell-bottom-right" data-pos="bottom-right" title="Inferior Derecha"></div>
-</div>
-</div>
-<div class="tool-sidebar__section" >
-<span class="tool-sidebar__section-title" >Margen</span>
-<div class="component-tabs" data-ref="toggle-margin" data-active="0">
-<button type="button" class="component-tab is-active" data-ref="btn-margin-recommended" data-val="recommended">Recomendado</button>
-<button type="button" class="component-tab" data-ref="btn-margin-small" data-val="small">Pequeño</button>
-<button type="button" class="component-tab" data-ref="btn-margin-large" data-val="large">Grande</button>
-</div>
-</div>
-<div class="tool-sidebar__row-between" >
-<span class="tool-sidebar__hint-text" >Primer número:</span>
-<div class="component-inline-control component-inline-control--compact component-inline-control--sm" >
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="-1" data-i18n-aria="aria.decrease_first_number" aria-label="Disminuir primer número">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-</div>
-<input class="component-inline-control__input" data-ref="input-start-number" type="number" min="1" value="1" autocomplete="off" />
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="1" data-i18n-aria="aria.increase_first_number" aria-label="Aumentar primer número">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-</div>
-<div class="pn-range-row" >
-<span class="tool-sidebar__hint-text--compact" >De</span>
-<div class="component-inline-control component-inline-control--compact component-inline-control--sm" >
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="-1" data-i18n-aria="aria.decrease_start_page" aria-label="Disminuir página inicial">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-</div>
-<input class="component-inline-control__input" data-ref="input-from-page" type="number" min="1" value="1" autocomplete="off" />
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="1" data-i18n-aria="aria.increase_start_page" aria-label="Aumentar página inicial">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-<span class="tool-sidebar__hint-text--compact" >a</span>
-<div class="component-inline-control component-inline-control--compact component-inline-control--sm" >
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="-1" data-i18n-aria="aria.decrease_end_page" aria-label="Disminuir página final">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-</button>
-</div>
-<input class="component-inline-control__input" data-ref="input-to-page" type="number" min="1" value="1" autocomplete="off" />
-<div class="component-inline-control__group" >
-<button type="button" class="component-inline-control__btn" data-step-change="1" data-i18n-aria="aria.increase_end_page" aria-label="Aumentar página final">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-</button>
-</div>
-</div>
-</div>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__field-group--mb8" data-ref="dropdown-wrapper-format">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" data-i18n-aria="aria.number_format" aria-label="Formato de numeración">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >Inserta solo números de página (recomendado)</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item is-active" data-value="{n}">
-<span class="menu-item__text" >Inserta solo números de página (recomendado)</span>
-</button>
-<button type="button" class="menu-item" data-value="Página {n}">
-<span class="menu-item__text" >Página {n}</span>
-</button>
-<button type="button" class="menu-item" data-value="Página {n} de {p}">
-<span class="menu-item__text" >Página {n} de {p}</span>
-</button>
-<button type="button" class="menu-item" data-value="custom">
-<span class="menu-item__text" >Personalizado</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-<div class="pn-custom-text-box is-hidden" data-ref="box-custom-text">
-<label class="field tool-sidebar__field-group--mb4" >
-<input class="field__input field__input--h36" data-ref="input-custom-text" type="text" value="Página {n} de {p}" data-i18n-placeholder="common.page_number_format_placeholder" placeholder=" " />
-</label>
-</div>
-<div class="tool-sidebar__field-group--flex-row" >
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--nomargin tool-sidebar__flex-1" data-ref="dropdown-wrapper-font-family">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" data-i18n-aria="aria.font_family" aria-label="Familia tipográfica">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >Arial / Helvetica</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item is-active" data-value="Helvetica">
-<span class="menu-item__text" >Arial / Helvetica</span>
-</button>
-<button type="button" class="menu-item" data-value="Helvetica-Bold">
-<span class="menu-item__text" >Helvetica (Negrita)</span>
-</button>
-<button type="button" class="menu-item" data-value="Times-Roman">
-<span class="menu-item__text" >Times New Roman</span>
-</button>
-<button type="button" class="menu-item" data-value="Courier">
-<span class="menu-item__text" >Courier</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-<div class="settings-dropdown-wrapper settings-dropdown-wrapper--full tool-sidebar__dropdown--w90" data-ref="dropdown-wrapper-font-size">
-<button type="button" class="dropdown-trigger dropdown-trigger--full" data-i18n-aria="aria.font_size" aria-label="Tamaño tipográfico">
-<div class="dropdown-trigger__left" >
-<span class="dropdown-trigger__text" >11 pt</span>
-</div>
-<svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-</button>
-<div class="dropdown-backdrop" >
-<div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" >
-<div class="menu-panel__drag-zone" aria-hidden="true">
-<div class="menu-panel__drag-handle" ></div>
-</div>
-<div class="menu-panel__list" >
-<button type="button" class="menu-item" data-value="9">
-<span class="menu-item__text" >9 pt</span>
-</button>
-<button type="button" class="menu-item is-active" data-value="11">
-<span class="menu-item__text" >11 pt</span>
-</button>
-<button type="button" class="menu-item" data-value="14">
-<span class="menu-item__text" >14 pt</span>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</aside>
-</div>
-</div>
-</div> 

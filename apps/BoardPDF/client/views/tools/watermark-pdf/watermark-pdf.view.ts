@@ -1,3 +1,4 @@
+import { FontDrawerComponent, SelectedFontConfig } from '../../../components/font-drawer.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
@@ -9,7 +10,7 @@ import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { hideElement, setupDropdown, setupToolSidebarModal, showElement, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
+import { bindInlineControls, hideElement, setupDropdown, setupToolSidebarModal, showElement, ToolSidebarModalController, withButtonLoading } from '../../../utils/dom.util.js';
 import { PageThumbnailItem, WatermarkPdfResponseData, WatermarkPosition, WatermarkType } from './watermark-pdf.types.js';
 
 class WatermarkPdfController implements ViewController {
@@ -18,8 +19,11 @@ class WatermarkPdfController implements ViewController {
   private container: HTMLElement;
   private currentFile: File | null = null;
   private dropdownControllers: Array<{ destroy: () => void }> = [];
+  private fontDrawer: FontDrawerComponent | null = null;
   private fontFamily = 'Helvetica';
   private fontSize = 36;
+  private fontStyle: 'italic' | 'normal' = 'normal';
+  private fontWeight = 400;
   private isMosaic = false;
   private isProcessing = false;
   private layer: 'over' | 'under' = 'over';
@@ -41,23 +45,30 @@ class WatermarkPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.anade_marcas_de_agua_personalizadas_de_t'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.drop_pdf_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Insertar marca de agua',
+        title: t('tools.watermark_pdf_title'),
       },
       sidebarRef: 'watermark-pdf-sidebar',
       toolId: 'watermark-pdf',
-      toolName: 'Insertar marca de agua',
+      toolName: t('tools.watermark_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'wm-workspace-card',
     });
     await this.phaseManager.init();
     renderIcons(this.container);
+
+    const textInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-wm-text"]');
+    if (textInput && !textInput.value) {
+      textInput.value = t('tools.watermark_default_text');
+    }
+
+    this.initFontDrawer();
     this.bindEvents();
   }
 
@@ -74,6 +85,10 @@ class WatermarkPdfController implements ViewController {
       this.sidebarModal.destroy();
       this.sidebarModal = null;
     }
+    if (this.fontDrawer) {
+      this.fontDrawer.destroy();
+      this.fontDrawer = null;
+    }
     this.dropdownControllers.forEach((ctrl) => ctrl.destroy());
     this.dropdownControllers = [];
     if (this.pdfDocument) {
@@ -82,6 +97,34 @@ class WatermarkPdfController implements ViewController {
       } catch {}
       this.pdfDocument = null;
     }
+  }
+
+  private initFontDrawer(): void {
+    const layoutEl = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-layout"]');
+    const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-wm-font-drawer"]');
+    const triggerLabel = this.container.querySelector<HTMLElement>('[data-ref="wm-font-selected-label"]');
+    if (!layoutEl) return;
+
+    this.fontDrawer = new FontDrawerComponent({
+      initialFont: {
+        family: this.fontFamily,
+        style: this.fontStyle,
+        weight: this.fontWeight,
+      },
+      mountPoint: layoutEl,
+      onChange: (font: SelectedFontConfig) => {
+        this.fontFamily = font.family;
+        this.fontWeight = font.weight;
+        this.fontStyle = font.style;
+        if (triggerLabel) {
+          triggerLabel.textContent = font.displayName;
+        }
+        this.updateIndicators();
+      },
+      onClose: () => {
+        triggerBtn?.classList.remove('is-active');
+      },
+    });
   }
 
   private bindEvents(): void {
@@ -108,7 +151,14 @@ class WatermarkPdfController implements ViewController {
       void this.handleExecuteWatermark(executeBtn);
     }, { signal });
 
-    const typePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-watermark-type"], [data-ref="toggle-wm-type"]');
+    const fontDrawerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-wm-font-drawer"]');
+    fontDrawerBtn?.addEventListener('click', () => {
+      if (!this.fontDrawer) return;
+      this.fontDrawer.toggle();
+      fontDrawerBtn.classList.toggle('is-active', this.fontDrawer.isOpen());
+    }, { signal });
+
+    const typePill = this.container.querySelector<HTMLElement>('[data-ref="toggle-watermark-type"]');
     const typeButtons = typePill?.querySelectorAll<HTMLButtonElement>('.component-tab, .component-button, button');
     typeButtons?.forEach((btn, index) => {
       btn.addEventListener('click', () => {
@@ -117,14 +167,15 @@ class WatermarkPdfController implements ViewController {
         typePill?.setAttribute('data-active', index.toString());
         this.activeTab = (btn.getAttribute('data-type') || 'text') as WatermarkType;
 
-        const textSection = this.container.querySelector<HTMLElement>('[data-ref="section-text-options"], [data-ref="section-wm-text"]');
-        const imgSection = this.container.querySelector<HTMLElement>('[data-ref="section-image-options"], [data-ref="section-wm-image"]');
+        const textSection = this.container.querySelector<HTMLElement>('[data-ref="section-text-options"]');
+        const imgSection = this.container.querySelector<HTMLElement>('[data-ref="section-image-options"]');
         if (this.activeTab === 'text') {
           showElement(textSection);
           hideElement(imgSection);
         } else {
           hideElement(textSection);
           showElement(imgSection);
+          this.fontDrawer?.close();
         }
       }, { signal });
     });
@@ -145,7 +196,7 @@ class WatermarkPdfController implements ViewController {
       }, { signal });
     });
 
-    const posGrid = this.container.querySelector<HTMLElement>('[data-ref="wm-position-box"], [data-ref="grid-wm-position"]');
+    const posGrid = this.container.querySelector<HTMLElement>('[data-ref="wm-position-box"]');
     const posCells = posGrid?.querySelectorAll<HTMLButtonElement>('.wm-position-cell');
     posCells?.forEach((cell) => {
       cell.addEventListener('click', () => {
@@ -175,44 +226,41 @@ class WatermarkPdfController implements ViewController {
       }
     }, { signal });
 
-    this.setupDropdowns(signal);
+    bindInlineControls(this.container, signal);
+    this.setupDropdowns();
   }
 
-  private setupDropdowns(signal: AbortSignal): void {
-    const rotWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-rotation"], [data-ref="dropdown-wrapper-wm-rotation"]');
+  private setupDropdowns(): void {
+    const rotWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-rotation"]');
     if (rotWrap) {
       const ctrl = setupDropdown(rotWrap, {
         isSelect: true,
-        onSelect: (val) => {
+        onSelect: (val: string, item?: HTMLElement) => {
           this.rotation = Number(val) || 0;
-          const text = rotWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-rotation-selected-text"]');
-          if (text) text.textContent = val === '0' ? 'No rotar' : `${val}°`;
+          const text = rotWrap.querySelector<HTMLElement>('[data-ref="wm-rotation-selected-text"]');
+          if (text) {
+            text.textContent = val === '0' ? t('tools.watermark_rotation_none') : `${val}°`;
+          }
+          rotWrap.querySelectorAll<HTMLElement>('[data-ref^="check-rot-"]').forEach((c) => c.classList.add('is-hidden'));
+          item?.querySelector<HTMLElement>('[data-ref^="check-rot-"]')?.classList.remove('is-hidden');
           this.updateIndicators();
         },
       });
       this.dropdownControllers.push(ctrl);
     }
 
-    const transWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-transparency"], [data-ref="dropdown-wrapper-wm-transparency"]');
+    const transWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-transparency"]');
     if (transWrap) {
       const ctrl = setupDropdown(transWrap, {
         isSelect: true,
-        onSelect: (val) => {
+        onSelect: (val: string, item?: HTMLElement) => {
           this.transparency = Number(val) || 0;
-          const text = transWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-transparency-selected-text"]');
-          if (text) text.textContent = val === '0' ? 'Sin transparencia' : `${val}%`;
-          this.updateIndicators();
-        },
-      });
-      this.dropdownControllers.push(ctrl);
-    }
-
-    const fontWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-wm-font"]');
-    if (fontWrap) {
-      const ctrl = setupDropdown(fontWrap, {
-        isSelect: true,
-        onSelect: (val) => {
-          this.fontFamily = val as any;
+          const text = transWrap.querySelector<HTMLElement>('[data-ref="wm-transparency-selected-text"]');
+          if (text) {
+            text.textContent = val === '0' ? t('tools.watermark_transparency_none') : `${val}%`;
+          }
+          transWrap.querySelectorAll<HTMLElement>('[data-ref^="check-trans-"]').forEach((c) => c.classList.add('is-hidden'));
+          item?.querySelector<HTMLElement>('[data-ref^="check-trans-"]')?.classList.remove('is-hidden');
           this.updateIndicators();
         },
       });
@@ -223,22 +271,16 @@ class WatermarkPdfController implements ViewController {
     if (sizeWrap) {
       const ctrl = setupDropdown(sizeWrap, {
         isSelect: true,
-        onSelect: (val) => {
-          this.fontSize = Number(val) || 36;
+        onSelect: (val: string, item?: HTMLElement) => {
+          const parsed = Number(val) || 36;
+          this.fontSize = parsed;
+          const text = sizeWrap.querySelector<HTMLElement>('[data-ref="wm-size-selected-text"]');
+          if (text) {
+            text.textContent = `${parsed} pt`;
+          }
+          sizeWrap.querySelectorAll<HTMLElement>('[data-ref^="check-wm-size-"]').forEach((c) => c.classList.add('is-hidden'));
+          item?.querySelector<HTMLElement>('[data-ref^="check-wm-size-"]')?.classList.remove('is-hidden');
           this.updateIndicators();
-        },
-      });
-      this.dropdownControllers.push(ctrl);
-    }
-
-    const layerWrap = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-layer"], [data-ref="dropdown-wrapper-wm-layer"]');
-    if (layerWrap) {
-      const ctrl = setupDropdown(layerWrap, {
-        isSelect: true,
-        onSelect: (val) => {
-          this.layer = val as 'over' | 'under';
-          const text = layerWrap.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref="wm-layer-selected-text"]');
-          if (text) text.textContent = val === 'over' ? 'Sobre el contenido del PDF' : 'Debajo del contenido del PDF';
         },
       });
       this.dropdownControllers.push(ctrl);
@@ -247,11 +289,12 @@ class WatermarkPdfController implements ViewController {
 
   private async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
+    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast(t('ui.selecciona_unicamente_un_archivo_pdf_val'), 'danger');
+      this.showError(t('ui.selecciona_unicamente_un_archivo_pdf_val'));
       return;
     }
 
@@ -261,7 +304,7 @@ class WatermarkPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'watermark-pdf',
-        toolName: 'Marca de agua',
+        toolName: t('tools.watermark_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -280,7 +323,7 @@ class WatermarkPdfController implements ViewController {
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      filenameInput.value = `${base}_marca_de_agua.pdf`;
+      filenameInput.value = `${base}_${t('tools.watermark_filename_suffix')}.pdf`;
     }
 
     try {
@@ -295,12 +338,19 @@ class WatermarkPdfController implements ViewController {
       }));
 
       const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
-      if (toPageInput) toPageInput.value = numPages.toString();
+      if (toPageInput) {
+        toPageInput.max = numPages.toString();
+        toPageInput.value = numPages.toString();
+      }
+      const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
+      if (fromPageInput) {
+        fromPageInput.max = numPages.toString();
+      }
 
       if (executeBtn) executeBtn.disabled = false;
       this.renderPagesGrid();
     } catch {
-      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
+      this.showError(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'));
       this.resetToInitial();
     }
   }
@@ -321,6 +371,9 @@ class WatermarkPdfController implements ViewController {
             }
             <canvas class="pdf-card__canvas" data-ref="canvas-${p.id}"></canvas>
           </div>
+        </div>
+        <div class="pdf-card__footer">
+          <span class="pdf-card__title">${t('tools.rotate_page_label', { num: p.pageNum })}</span>
         </div>
       </div>
     `).join('');
@@ -353,9 +406,11 @@ class WatermarkPdfController implements ViewController {
 
   private async handleExecuteWatermark(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
 
     if (this.activeTab === 'image' && !this.watermarkImageFile) {
-      showToast(t('toasts.select_watermark_image'), 'warning');
+      const msg = t('toasts.select_watermark_image');
+      this.showError(msg);
       return;
     }
 
@@ -363,15 +418,19 @@ class WatermarkPdfController implements ViewController {
     const fromPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-from-page"]');
     const toPageInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-to-page"]');
 
-    let optionsPayload: any = {
+    let optionsPayload: Record<string, unknown> = {
       fontFamily: this.fontFamily,
       fontSize: this.fontSize,
+      fontStyle: this.fontStyle,
+      fontWeight: this.fontWeight,
       fromPage: Math.max(1, Number(fromPageInput?.value) || 1),
+      isBold: this.fontWeight >= 600,
+      isItalic: this.fontStyle === 'italic',
       layer: this.layer,
       mosaic: this.isMosaic,
       position: this.position,
       rotation: this.rotation,
-      text: textInput?.value || 'CONFIDENCIAL',
+      text: textInput?.value?.trim() || t('tools.watermark_default_text'),
       toPage: Math.max(1, Number(toPageInput?.value) || this.pages.length),
       transparency: this.transparency,
       type: this.activeTab,
@@ -391,7 +450,7 @@ class WatermarkPdfController implements ViewController {
           formData.append('watermarkImage', this.watermarkImageFile, this.watermarkImageFile.name);
         }
         if (customFilename) {
-          optionsPayload = { ...optionsPayload, filename: customFilename } as any;
+          optionsPayload = { ...optionsPayload, filename: customFilename };
         }
         formData.append('options', JSON.stringify(optionsPayload));
 
@@ -423,7 +482,7 @@ class WatermarkPdfController implements ViewController {
           returnText: t('ui.insertar_otra_marca_de_agua'),
           returnUrl: '/watermark-pdf',
           subtitle: t('tools.watermark_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡Marca de agua insertada!',
+          title: t('tools.watermark_success_title'),
           token,
         });
       } catch (err: unknown) {
@@ -431,7 +490,7 @@ class WatermarkPdfController implements ViewController {
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
-        showToast(errorMessage, 'danger');
+        this.showError(errorMessage);
       } finally {
         this.isProcessing = false;
       }
@@ -447,9 +506,11 @@ class WatermarkPdfController implements ViewController {
 
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-watermark"]');
     const txtImgEl = this.container.querySelector<HTMLElement>('[data-ref="txt-picked-image"]');
+    const textInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-wm-text"]');
 
     if (executeBtn) executeBtn.disabled = true;
-    if (txtImgEl) txtImgEl.textContent = 'Añadir Imagen (PNG/JPG)';
+    if (txtImgEl) txtImgEl.textContent = t('tools.watermark_pick_image');
+    if (textInput) textInput.value = t('tools.watermark_default_text');
 
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="watermark-pdf-workspace"]');
@@ -457,10 +518,39 @@ class WatermarkPdfController implements ViewController {
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_marca_de_agua.pdf';
+    if (outputNameInput) outputNameInput.value = '';
     if (this.sidebarModal) this.sidebarModal.close();
+    this.fontDrawer?.close();
 
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(message: string): void {
+    const sidebarBanner = this.container.querySelector<HTMLElement>('[data-ref="wm-error-banner"]');
+    const globalBanner = this.container.querySelector<HTMLElement>('[data-ref="wm-global-error"]');
+    if (sidebarBanner) {
+      sidebarBanner.textContent = message;
+      showElement(sidebarBanner);
+    }
+    if (globalBanner) {
+      globalBanner.textContent = message;
+      showElement(globalBanner);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const sidebarBanner = this.container.querySelector<HTMLElement>('[data-ref="wm-error-banner"]');
+    const globalBanner = this.container.querySelector<HTMLElement>('[data-ref="wm-global-error"]');
+    if (sidebarBanner) {
+      sidebarBanner.textContent = '';
+      hideElement(sidebarBanner);
+    }
+    if (globalBanner) {
+      globalBanner.textContent = '';
+      hideElement(globalBanner);
+    }
   }
 }
 

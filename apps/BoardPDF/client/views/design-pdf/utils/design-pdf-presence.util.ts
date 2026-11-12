@@ -1,4 +1,5 @@
 import { currentUser, escapeHtml } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { getUserAvatarUrl } from '../../../utils/avatar.util.js';
 import { applyAvatarTier } from '../../../utils/tier.util.js';
 import { RemotePeer } from '../types/design-pdf.types.js';
@@ -13,7 +14,7 @@ function addPeerPresenceBubble(container: HTMLElement, peer: RemotePeer): void {
     bubble.className = 'collab-presence-bubble collab-presence-bubble--enter';
     bubble.setAttribute('data-client-id', peer.clientId);
     applyAvatarTier(bubble, (peer as any).subscription_tier || (peer as any).subscriptionTier || 'free');
-    const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
+    const peerLabel = `${peer.username}${peer.isGuest ? ` (${t('collaborative.guest_label')})` : ''}`;
     bubble.setAttribute('data-tooltip', peerLabel);
     bubble.setAttribute('aria-label', peerLabel);
     const peerAvatar = getUserAvatarUrl({ avatar_url: peer.avatarUrl, subscription_tier: (peer as any).subscription_tier || (peer as any).subscriptionTier, username: peer.username }, 80);
@@ -47,15 +48,15 @@ function renderPresenceList(
 
   presenceContainer.innerHTML = '';
 
-  const myName = currentUser?.username || guestIdentity?.username || 'Tú';
-  const myAvatar = getUserAvatarUrl(currentUser || { avatar_url: guestIdentity?.avatarUrl, username: guestIdentity?.username || 'Tú' }, 80);
+  const myName = currentUser?.username || guestIdentity?.username || t('collaborative.you');
+  const myAvatar = getUserAvatarUrl(currentUser || { avatar_url: guestIdentity?.avatarUrl, username: guestIdentity?.username || t('collaborative.you') }, 80);
   const myBubble = document.createElement('div');
   myBubble.className = 'collab-presence-bubble';
   myBubble.setAttribute('data-client-id', 'me');
   applyAvatarTier(myBubble, currentUser?.subscription_tier || 'free');
-  const fullSuffix = isCollabRoomFull ? ' (Sala llena)' : '';
-  myBubble.setAttribute('data-tooltip', `${myName} (Tú)${fullSuffix}`);
-  myBubble.setAttribute('aria-label', `${myName} (Tú)${fullSuffix}`);
+  const fullSuffix = isCollabRoomFull ? ` (${t('collaborative.room_full')})` : '';
+  myBubble.setAttribute('data-tooltip', `${myName} (${t('collaborative.you')})${fullSuffix}`);
+  myBubble.setAttribute('aria-label', `${myName} (${t('collaborative.you')})${fullSuffix}`);
   myBubble.innerHTML = `<img src="${myAvatar}" alt="${myName}" />`;
   presenceContainer.appendChild(myBubble);
 
@@ -64,7 +65,7 @@ function renderPresenceList(
     peerBubble.className = 'collab-presence-bubble';
     peerBubble.setAttribute('data-client-id', peer.clientId);
     applyAvatarTier(peerBubble, (peer as any).subscription_tier || (peer as any).subscriptionTier || 'free');
-    const peerLabel = `${peer.username}${peer.isGuest ? ' (Invitado)' : ''}`;
+    const peerLabel = `${peer.username}${peer.isGuest ? ` (${t('collaborative.guest_label')})` : ''}`;
     peerBubble.setAttribute('data-tooltip', peerLabel);
     peerBubble.setAttribute('aria-label', peerLabel);
     const peerAvatar = getUserAvatarUrl({ avatar_url: peer.avatarUrl, subscription_tier: (peer as any).subscription_tier || (peer as any).subscriptionTier, username: peer.username }, 80);
@@ -92,11 +93,12 @@ function renderRemoteCursor(
     cursorEl.setAttribute('data-ref', `collab-cursor-${msg.clientId}`);
     const peer = remotePeers.get(msg.clientId);
     const peerAvatar = peer?.avatarUrl || msg.avatarUrl || null;
+    const colorClass = msg.color ? ` collab-cursor-badge--${String(msg.color).replace('#', '').toLowerCase()}` : '';
     cursorEl.innerHTML = `
       <svg class="collab-cursor-pointer" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z" fill="${msg.color}" stroke="#ffffff" stroke-width="1.5"/>
       </svg>
-      <div class="collab-cursor-badge" style="background-color: ${msg.color};">
+      <div class="collab-cursor-badge${colorClass}">
         ${peerAvatar ? `<img class="collab-cursor-avatar" src="${peerAvatar}" alt="" />` : ''}
         <span>${escapeHtml(msg.username)}</span>
       </div>

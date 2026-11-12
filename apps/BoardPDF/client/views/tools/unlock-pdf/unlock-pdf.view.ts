@@ -11,7 +11,7 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ModalInstance, ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { hideElement, showElement } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { UnlockPdfResponseData } from './unlock-pdf.types.js';
 
@@ -23,7 +23,6 @@ class UnlockPdfController implements ViewController {
   private isProcessing = false;
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
-  private sidebarModal: ToolSidebarModalController | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -35,16 +34,16 @@ class UnlockPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf'),
         desc: t('ui.elimina_la_contrasena_de_seguridad_de_tu'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files) => {
           if (files.length > 0) {
             void this.handleFileSelected(files[0]);
           }
         },
-        title: 'Desbloquear PDF',
+        title: t('tools.unlock_pdf.title'),
       },
       onRetry: () => {
         if (this.currentFile) {
@@ -54,7 +53,7 @@ class UnlockPdfController implements ViewController {
         }
       },
       toolId: 'unlock-pdf',
-      toolName: 'Desbloquear PDF',
+      toolName: t('tools.unlock_pdf.title'),
     });
 
     await this.phaseManager.init();
@@ -68,10 +67,6 @@ class UnlockPdfController implements ViewController {
   }
 
   public destroy(): void {
-    if (this.sidebarModal) {
-      this.sidebarModal.destroy();
-      this.sidebarModal = null;
-    }
     if (this.phaseManager) {
       this.phaseManager.destroy();
       this.phaseManager = null;
@@ -93,16 +88,6 @@ class UnlockPdfController implements ViewController {
     if (!this.abortController) return;
     const { signal } = this.abortController;
 
-    const sidebar = this.container.querySelector<HTMLElement>('[data-ref="unlock-pdf-sidebar"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="tool-sidebar-backdrop"]');
-    const dragZone = this.container.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-    const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
-    const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-settings"]');
-
-    if (sidebar && backdrop && settingsBtn) {
-      this.sidebarModal = setupToolSidebarModal({ backdrop, closeBtn, dragZone, settingsBtn, sidebar, signal });
-    }
-
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-unlock"]');
 
@@ -112,6 +97,7 @@ class UnlockPdfController implements ViewController {
     }, { signal });
 
     executeBtn?.addEventListener('click', () => {
+      if (this.isProcessing) return;
       if (this.isPasswordRequired) {
         this.promptPasswordAndUnlock(executeBtn);
       } else {
@@ -128,7 +114,7 @@ class UnlockPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'unlock-pdf',
-        toolName: 'Desbloquear PDF',
+        toolName: t('tools.unlock_pdf.title'),
         type: 'file_size',
       });
       return;
@@ -149,7 +135,7 @@ class UnlockPdfController implements ViewController {
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_desbloqueado.pdf`;
+      outputNameInput.value = `${base}${t('tools.unlock_pdf.default_suffix')}.pdf`;
     }
 
     await this.inspectAndRenderPdf(file);
@@ -198,8 +184,6 @@ class UnlockPdfController implements ViewController {
 
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -228,6 +212,9 @@ class UnlockPdfController implements ViewController {
   private async processUnlock(password: string, button: HTMLButtonElement, modal?: ModalInstance): Promise<void> {
     if (!this.currentFile) return;
 
+    const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+    const customFilename = outputNameInput?.value.trim() || undefined;
+
     if (modal) {
       modal.setConfirmLoading(true);
       modal.clearError();
@@ -239,7 +226,7 @@ class UnlockPdfController implements ViewController {
     try {
       const formData = new FormData();
       formData.append('file', this.currentFile as Blob, this.currentFile?.name);
-      formData.append('options', JSON.stringify({ password }));
+      formData.append('options', JSON.stringify({ filename: customFilename, password }));
 
       const response = await postFormWithProgress(
         API_ROUTES.tools.unlockPdf.process,
@@ -283,10 +270,10 @@ class UnlockPdfController implements ViewController {
         downloadUrl: `/api/download/${token}`,
         fileSize: result.data.fileSize,
         filename: result.data.filename,
-        returnText: 'Desbloquear otro documento PDF',
+        returnText: t('tools.unlock_pdf.return_btn'),
         returnUrl: '/unlock-pdf',
-        subtitle: t('tools.unlock_success_prefix') + `"${this.currentFile?.name}".`,
-        title: '¡PDF desbloqueado con éxito!',
+        subtitle: `${t('tools.unlock_success_prefix')}"${this.currentFile?.name}".`,
+        title: t('tools.unlock_pdf.success_title'),
         token,
       });
     } catch {
@@ -298,8 +285,8 @@ class UnlockPdfController implements ViewController {
           boxText: t('ui.comprueba_que_la_contrasena_ingresada_se'),
           boxTitle: t('ui.error_al_desbloquear_el_documento'),
           desc: t('ui.no_se_pudo_eliminar_la_proteccion_del_ar'),
-          retryText: 'Reintentar Desbloqueo',
-          title: '¡Oh no! No hemos podido desbloquear tu archivo.',
+          retryText: t('tools.unlock_pdf.retry_btn'),
+          title: t('tools.unlock_pdf.error_title'),
         });
       }
     } finally {
@@ -324,7 +311,6 @@ class UnlockPdfController implements ViewController {
       canvas.height = 0;
     }
 
-    this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
     this.hideError();
   }

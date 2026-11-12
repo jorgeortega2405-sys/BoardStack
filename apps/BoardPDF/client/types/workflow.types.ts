@@ -16,11 +16,11 @@ interface UserWorkflow {
 
 interface ToolDefinition {
   category: 'pdf' | 'image';
-  group: string;
+  groupKey: string;
   icon: string;
   id: string;
   isTerminal?: boolean;
-  name: string;
+  nameKey: string;
   targetType?: string;
 }
 

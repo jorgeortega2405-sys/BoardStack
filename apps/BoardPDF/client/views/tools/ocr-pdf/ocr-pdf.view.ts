@@ -3,16 +3,16 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { escapeHtml, postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
-import { saveDownloadPayloadAndNavigate } from '../../../services/tool-flow.service.js';
+import { consumeTransferFile } from '../../../services/transfer.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { OCR_LANGUAGES, OcrResultData } from './ocr-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
 
 class OcrPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -33,18 +33,25 @@ class OcrPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.convierte_pdfs_escaneados_o_basados_en_i'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) this.handleFileSelected(files[0]);
         },
-        title: 'Reconocer texto OCR',
+        title: t('tools.ocr_pdf_title'),
+      },
+      onRetry: () => {
+        if (this.currentFile) {
+          this.phaseManager?.setPhase('workspace');
+        } else {
+          this.resetSelectedFile();
+        }
       },
       sidebarRef: 'ocr-pdf-sidebar',
       toolId: 'ocr-pdf',
-      toolName: 'Reconocer texto OCR',
+      toolName: t('tools.ocr_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'ocr-workspace-card',
     });
@@ -52,6 +59,11 @@ class OcrPdfController implements ViewController {
     renderIcons(this.container);
     this.bindEvents();
     this.updateTriggerLabel();
+
+    const transferred = consumeTransferFile();
+    if (transferred) {
+      this.handleFileSelected(transferred);
+    }
   }
 
   public destroy(): void {
@@ -167,20 +179,27 @@ class OcrPdfController implements ViewController {
     }, { signal });
   }
 
+  private getLanguageName(rawName: string): string {
+    return rawName.startsWith('ui.') ? t(rawName) : rawName;
+  }
+
   private updateTriggerLabel(): void {
     const triggerTextEl = this.container.querySelector<HTMLElement>('[data-ref="ocr-language-selected-text"]');
     if (!triggerTextEl) return;
-    const names = this.selectedLanguages
-      .map((code) => OCR_LANGUAGES.find((item) => item.code === code)?.name || code);
-    triggerTextEl.textContent = names.join(', ') || 'Español';
+    const names = this.selectedLanguages.map((code) => {
+      const found = OCR_LANGUAGES.find((item) => item.code === code);
+      return found ? this.getLanguageName(found.name) : code;
+    });
+    triggerTextEl.textContent = names.join(', ') || t('tools.ocr_default_language');
   }
 
   private renderLanguagesList(container: HTMLElement): void {
     container.innerHTML = OCR_LANGUAGES.map((l) => {
       const isActive = this.selectedLanguages.includes(l.code);
+      const label = this.getLanguageName(l.name);
       return `<button type="button" class="menu-item${isActive ? ' is-active' : ''}" data-ref="option-ocr-lang-${l.code}" data-lang="${l.code}">
-        <span class="menu-item__text">${escapeHtml(l.name)}</span>
-        <svg class="component-icon menu-item__icon${isActive ? '' : ' is-hidden'}" data-ref="icon-check-${l.code}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+        <span class="menu-item__text">${escapeHtml(label)}</span>
+        <svg class="component-icon menu-item__check${isActive ? '' : ' is-hidden'}" data-ref="icon-check-${l.code}" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
       </button>`;
     }).join('');
     renderIcons(container);
@@ -203,6 +222,7 @@ class OcrPdfController implements ViewController {
   }
 
   private handleFileSelected(file: File): void {
+    this.hideError();
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       showToast(t('ui.solo_se_permiten_archivos_en_formato_pdf'), 'danger');
       return;
@@ -214,7 +234,7 @@ class OcrPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'ocr-pdf',
-        toolName: 'OCR PDF',
+        toolName: t('tools.ocr_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -302,15 +322,17 @@ class OcrPdfController implements ViewController {
     }
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    if (outputNameInput) outputNameInput.value = 'documento_ocr.pdf';
+    if (outputNameInput) outputNameInput.value = '';
 
     this.selectedLanguages = ['spa'];
     this.updateTriggerLabel();
     this.phaseManager?.setPhase('dropzone');
+    this.hideError();
   }
 
   private async handleOcr(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
 
     this.isProcessing = true;
     this.phaseManager?.showUploading(1, 1);
@@ -333,11 +355,12 @@ class OcrPdfController implements ViewController {
           formData,
           (progress) => {
             this.phaseManager?.updateUploadProgress(progress);
-          }
+          },
+          this.abortController?.signal
         );
         const result = (await response.json()) as { data?: OcrResultData; error?: string; success: boolean };
 
-        this.phaseManager?.showProcessing('Reconociendo texto óptico (OCR)...', t('ui.escaneando_paginas_y_generando_capa_de_t'));
+        this.phaseManager?.showProcessing(t('tools.ocr_processing_title'), t('ui.escaneando_paginas_y_generando_capa_de_t'));
 
         if (!response.ok || !result.success || !result.data) {
           throw new Error(result.error || t('ui.error_al_procesar_el_reconocimiento_opti'));
@@ -351,20 +374,41 @@ class OcrPdfController implements ViewController {
           filename: customFilename || result.data.filename,
           returnText: t('ui.reconocer_texto_en_otro_pdf'),
           returnUrl: '/ocr-pdf',
-          subtitle: t('tools.ocr_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡Texto reconocido con éxito!',
+          subtitle: `${t('tools.ocr_success_prefix')}"${this.currentFile?.name || ''}".`,
+          title: t('tools.ocr_completed_title'),
           token,
         });
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Error inesperado al aplicar OCR.';
-        this.phaseManager?.showError(errorMessage, () => {
-          this.phaseManager?.setPhase('workspace');
+        const errorMessage = err instanceof Error ? err.message : t('tools.ocr_unexpected_error');
+        this.showError(errorMessage);
+        this.phaseManager?.showError({
+          boxText: t('tools.ocr_error_box_text'),
+          boxTitle: t('tools.ocr_error_box_title'),
+          desc: errorMessage,
+          retryText: t('tools.ocr_retry_btn'),
+          title: t('tools.ocr_error_title'),
         });
-        showToast(errorMessage, 'danger');
       } finally {
         this.isProcessing = false;
       }
     });
+  }
+
+  private showError(msg: string): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="ocr-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = msg;
+      showElement(errorEl);
+    }
+    showToast(msg, 'danger');
+  }
+
+  private hideError(): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="ocr-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = '';
+      hideElement(errorEl);
+    }
   }
 }
 

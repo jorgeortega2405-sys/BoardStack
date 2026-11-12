@@ -20,7 +20,7 @@ import { applyAvatarTier } from '../../utils/tier.util.js';
 import { bindChartInspectorEvents, renderChartSpreadsheet, switchChartAxisTab, switchChartInspectorTab, syncChartInspector } from './components/design-pdf-chart-inspector.component.js';
 import { alignElementToPage, moveElementLayer, reorderElementLayer } from './components/design-pdf-context-menu.component.js';
 import { renderLayersList } from './components/design-pdf-layers-panel.component.js';
-import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABELS } from './config/design-pdf-fonts.config.js';
+import { GOOGLE_FONTS_CATALOG, GoogleFontItem, loadGoogleFont, loadGoogleFontPreview, WEIGHT_LABEL_KEYS } from './config/design-pdf-fonts.config.js';
 import { SHAPES_CATALOG } from './config/design-pdf-shapes.config.js';
 import { DesignPdfCanvasManager } from './managers/design-pdf-canvas.manager.js';
 import { DesignPdfHistoryManager } from './managers/design-pdf-history.manager.js';
@@ -70,7 +70,7 @@ class DesignPdfEditorController implements ViewController {
   private isLoadingDocument = false;
   private docId = '';
   private docMembers: DocMember[] = [];
-  private docTitle = 'Documento sin título';
+  private docTitle = '';
   private pageSizes: PageDimension[] = [];
   private drawColor = '#000000';
   private drawMode: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
@@ -291,14 +291,14 @@ class DesignPdfEditorController implements ViewController {
         }
       } catch {}
     }
+
+    if (urlParams.get('share') === '1') {
+      this.openShareModal('main');
+    }
   }
 
   destroy(): void {
     this.isDestroyed = true;
-    const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
-    const layoutContent = document.querySelector<HTMLElement>('.layout-content');
-    if (layoutNav) layoutNav.style.display = '';
-    if (layoutContent) layoutContent.style.paddingLeft = '';
     document.body.classList.remove('is-dragging-element');
     if (this.unsubAuth) {
       this.unsubAuth();
@@ -553,9 +553,10 @@ class DesignPdfEditorController implements ViewController {
         const catData = SHAPES_CATALOG[catKey];
         if (!catData) return;
 
-        if (shapesCatTitle) shapesCatTitle.textContent = catData.title;
+        if (shapesCatTitle) shapesCatTitle.textContent = t(catData.titleKey);
         if (shapesCatGrid) {
           shapesCatGrid.innerHTML = catData.shapes.map((s) => s.cardHtml).join('');
+          translateElement(shapesCatGrid);
           const catShapeButtons = shapesCatGrid.querySelectorAll<HTMLButtonElement>('[data-shape]');
           catShapeButtons.forEach((sBtn) => {
             sBtn.addEventListener('click', () => {
@@ -755,18 +756,11 @@ class DesignPdfEditorController implements ViewController {
     const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
-    if (railTop) {
-      railTop.style.display = 'none';
-    }
-    if (railDivider) {
-      railDivider.style.display = 'none';
-    }
-    if (defaultCenter) {
-      defaultCenter.style.display = 'none';
-    }
+    if (railTop) railTop.classList.add('is-hidden');
+    if (railDivider) railDivider.classList.add('is-hidden');
+    if (defaultCenter) defaultCenter.classList.add('is-hidden');
     if (collabCenter) {
-      collabCenter.style.display = 'flex';
-      collabCenter.style.flexDirection = 'column';
+      collabCenter.classList.remove('is-hidden');
       renderIcons(collabCenter);
     }
   }
@@ -777,17 +771,11 @@ class DesignPdfEditorController implements ViewController {
     const defaultCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-default"]');
     const collabCenter = document.querySelector<HTMLElement>('[data-ref="rail-center-collaborative"]');
 
-    if (railTop) {
-      railTop.style.display = '';
-    }
-    if (railDivider) {
-      railDivider.style.display = '';
-    }
-    if (defaultCenter) {
-      defaultCenter.style.display = '';
-    }
+    if (railTop) railTop.classList.remove('is-hidden');
+    if (railDivider) railDivider.classList.remove('is-hidden');
+    if (defaultCenter) defaultCenter.classList.remove('is-hidden');
     if (collabCenter) {
-      collabCenter.style.display = 'none';
+      collabCenter.classList.add('is-hidden');
       const btns = collabCenter.querySelectorAll('.rail-btn');
       btns.forEach((b) => b.classList.remove('is-active'));
     }
@@ -2758,7 +2746,7 @@ class DesignPdfEditorController implements ViewController {
     if (iconEl) {
       const useEl = iconEl.querySelector('use');
       if (useEl) {
-        useEl.setAttribute('href', '/icons.svg#category');
+        useEl.setAttribute('href', '/icons.svg#apps');
       }
     }
 
@@ -4929,7 +4917,7 @@ class DesignPdfEditorController implements ViewController {
           <div class="collaborative-font-weights-menu">
             ${f.weights.map((w) => {
               const isAct = w === curWeight;
-              const label = WEIGHT_LABELS[w] || `${w}`;
+              const label = WEIGHT_LABEL_KEYS[w] ? t(WEIGHT_LABEL_KEYS[w]) : `${w}`;
               return `<button type="button" class="menu-item collaborative-weight-pill${isAct ? ' is-active' : ''}" data-font-family="${f.family}" data-weight="${w}">
                 <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-weight: ${w};">${label}</span>
                 ${isAct ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
@@ -4937,7 +4925,7 @@ class DesignPdfEditorController implements ViewController {
             }).join('')}
             ${f.hasItalic ? `
               <button type="button" class="menu-item collaborative-weight-pill${isItalic ? ' is-active' : ''}" data-font-family="${f.family}" data-action="toggle-italic">
-                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-style: italic;">Cursiva</span>
+                <span class="menu-item__text" style="font-family: '${f.family}', sans-serif; font-style: italic;">${t('collaborative.font_italic')}</span>
                 ${isItalic ? '<svg class="component-icon menu-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>' : ''}
               </button>
             ` : ''}
@@ -8483,11 +8471,7 @@ class DesignPdfEditorController implements ViewController {
 
     if (mode === 'view') {
       this.container.classList.add('collaborative-mode-view');
-      const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
-      const layoutContent = document.querySelector<HTMLElement>('.layout-content');
-      if (layoutNav) layoutNav.style.display = 'none';
-      if (layoutContent) layoutContent.style.paddingLeft = '6px';
-      if (txtTopEdit) txtTopEdit.textContent = 'Ver';
+      if (txtTopEdit) txtTopEdit.textContent = t('common.view');
       iconTopEdit?.setAttribute('href', '/icons.svg#visibility');
       checkEdit?.classList.add('is-hidden');
       checkView?.classList.remove('is-hidden');
@@ -8504,11 +8488,7 @@ class DesignPdfEditorController implements ViewController {
       showToast(t('toasts.read_only_mode_enabled'), 'info');
     } else {
       this.container.classList.remove('collaborative-mode-view');
-      const layoutNav = document.querySelector<HTMLElement>('.layout-nav');
-      const layoutContent = document.querySelector<HTMLElement>('.layout-content');
-      if (layoutNav) layoutNav.style.display = '';
-      if (layoutContent) layoutContent.style.paddingLeft = '';
-      if (txtTopEdit) txtTopEdit.textContent = 'Editar';
+      if (txtTopEdit) txtTopEdit.textContent = t('common.edit');
       iconTopEdit?.setAttribute('href', '/icons.svg#edit');
       checkEdit?.classList.remove('is-hidden');
       checkView?.classList.add('is-hidden');

@@ -1,57 +1,119 @@
 <div class="component-wrapper component-wrapper--full view-wrapper tool-layout-wrapper" data-ref="summarize-pdf-wrapper">
-<header class="component-top tool-top-bar is-hidden" data-ref="component-top">
-<div class="tool-top-bar__left" data-ref="tool-top-left"></div>
-<div class="tool-top-bar__right" data-ref="tool-top-right">
-<input class="collaborative-title-input" data-ref="input-doc-title" type="text" data-i18n-placeholder="common.document_name_placeholder" placeholder=" " value="" autocomplete="off" />
-<button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-tooltip="Ver resumen IA" aria-label="Ver resumen IA">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-<span class="component-button__text" >Resumen IA</span>
-</button>
-<button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-<span class="component-button__text" >Resumir PDF</span>
-</button>
+  <header class="component-top tool-top-bar is-hidden" data-ref="component-top">
+    <div class="tool-top-bar__left" data-ref="tool-top-left"></div>
+    <div class="tool-top-bar__right" data-ref="tool-top-right">
+      <input class="collaborative-title-input" data-ref="input-doc-title" data-i18n-placeholder="common.document_name_placeholder" type="text" placeholder=" " value="" autocomplete="off" />
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-view-summary" data-i18n-tooltip="tools.view_summary_tooltip" data-i18n-aria="tools.view_summary_tooltip">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+        <span class="component-button__text" data-i18n="tools.view_summary_btn"></span>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-top-btn" data-ref="btn-toggle-options" data-i18n-tooltip="common.options" data-i18n-aria="common.options">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        <span class="component-button__text" data-i18n="common.options"></span>
+      </button>
+      <button type="button" class="component-button component-button--h40 tool-action-btn" data-ref="btn-main-action" disabled>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+        <span class="component-button__text" data-i18n="tools.summarize_pdf_action"></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="summarize-pdf-layout">
+    <aside class="layout-drawer summarize-drawer" data-ref="summarize-drawer">
+      <div class="layout-drawer__collapse-wrapper">
+        <button type="button" class="layout-drawer__collapse-pill" data-ref="btn-summary-drawer-collapse" data-i18n-aria="common.close">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+        </button>
+      </div>
+      <div class="layout-drawer__header collaborative-drawer-header" data-ref="summarize-drawer-header">
+        <div class="collaborative-drawer-header__left" data-ref="summarize-drawer-header-left">
+          <div class="component-title-badge" data-ref="summarize-drawer-title-badge">
+            <h1 class="component-title-badge__text" data-ref="summarize-drawer-title" data-i18n="tools.summarize_drawer_title"></h1>
+          </div>
+        </div>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h32 tool-drawer__mobile-close" data-ref="btn-summary-drawer-mobile-close" data-i18n-aria="common.close">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="layout-drawer__body summarize-drawer__body" data-ref="summarize-drawer-body">
+        <div class="summarize-drawer__empty" data-ref="summary-empty-state">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          <p data-i18n="tools.summarize_drawer_empty"></p>
+        </div>
+        <div class="ai-summary-result-panel is-hidden" data-ref="section-summary-result">
+          <div class="ai-summary-content" data-ref="summary-rendered-text"></div>
+          <div class="summarize-drawer__actions">
+            <button type="button" class="component-button component-button--secondary component-button--h36" data-ref="btn-copy-summary">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              <span data-i18n="common.copy"></span>
+            </button>
+            <button type="button" class="component-button component-button--secondary component-button--danger component-button--h36" data-ref="btn-clear-summary">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              <span data-i18n="common.clear"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="summarize-pdf-workspace">
+      <div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
+        <div class="pdf-viewer-main-layout">
+          <div class="pdf-viewer-canvas-container" data-ref="viewer-scroll-container">
+            <div class="pdf-viewer-pages-wrapper" data-ref="pages-wrapper"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
+    <div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
+      <aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="summarize-pdf-sidebar">
+        <div class="menu-panel__drag-zone" data-ref="summarize-sidebar-drag-zone" aria-hidden="true">
+          <div class="menu-panel__drag-handle"></div>
+        </div>
+        <div class="tool-sidebar__header">
+          <div class="component-title-badge" data-ref="summarize-sidebar-title-badge">
+            <h1 class="component-title-badge__text" data-ref="summarize-sidebar-title" data-i18n="tools.summarize_pdf_options"></h1>
+          </div>
+          <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+
+        <div class="tool-sidebar__body">
+          <div class="tool-sidebar__section">
+            <span class="tool-sidebar__section-title" data-i18n="tools.summarize_mode_title"></span>
+            <div class="component-tabs" data-ref="toggle-summary-mode" data-active="0">
+              <button type="button" class="component-tab is-active" data-ref="btn-summary-mode-standard" data-i18n="tools.summarize_mode_standard" data-mode="standard"></button>
+              <button type="button" class="component-tab" data-ref="btn-summary-mode-advanced" data-mode="advanced" disabled>
+                <span data-i18n="tools.summarize_mode_advanced"></span>
+                <span class="component-tab__lock-badge" aria-hidden="true">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="component-button component-button--black component-button--h44 component-button--w-full tool-sidebar__action-btn" data-ref="btn-summarize-action" disabled>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <span data-i18n="tools.summarize_pdf_action"></span>
+          </button>
+
+          <div class="banner banner--danger is-hidden" data-ref="summarize-error-banner" role="alert"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
+    <div class="collaborative-footer__right" data-ref="footer-right">
+      <span class="collaborative-footer__page-text" data-ref="txt-footer-page-info"></span>
+      <div class="collaborative-footer__divider"></div>
+      <input class="collaborative-zoom-slider" data-ref="slider-zoom" data-i18n-aria="aria.zoom_level" type="range" min="10" max="300" step="1" value="100" />
+      <button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-i18n-tooltip="common.reset_zoom" data-i18n-aria="common.reset_zoom">
+        <span data-ref="txt-zoom-level"></span>
+      </button>
+    </div>
+  </footer>
 </div>
-</header>
-<div class="component-bottom tool-bottom tool-bottom--viewer tool-layout tool-layout--viewer" data-ref="summarize-pdf-layout">
-<main class="tool-layout__workspace tool-layout__workspace--viewer" data-ref="summarize-pdf-workspace">
-<div class="pdf-viewer-workspace is-hidden" data-ref="summarize-viewer-card">
-<div class="pdf-viewer-main-layout" >
-<div class="pdf-viewer-canvas-container" data-ref="viewer-scroll-container">
-<div class="pdf-viewer-pages-wrapper" data-ref="pages-wrapper"></div>
-</div>
-</div>
-</div>
-</main>
-<div class="tool-sidebar-backdrop is-hidden" data-ref="tool-sidebar-backdrop"></div>
-<div class="tool-sidebar-container is-hidden" data-ref="tool-sidebar-container">
-<aside class="tool-layout__sidebar tool-layout__sidebar--absolute is-hidden" data-ref="summarize-pdf-sidebar">
-<div class="tool-sidebar__header">
-  <h2 class="tool-sidebar__title" data-i18n="tools.summarize_pdf_options"></h2>
-  <button type="button" class="tool-sidebar__close-btn" data-ref="btn-sidebar-close" data-i18n-aria="common.close" aria-label="Cerrar">
-<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-</button>
-</div>
-<div class="tool-sidebar__body" >
-<div class="tool-sidebar__section" >
-<div class="ai-summary-result-panel ai-summary-result-panel--full" data-ref="section-summary-result">
-<div class="ai-summary-content" data-ref="summary-rendered-text">
-<p class="tool-sidebar__hint-text" >Sube un documento PDF para generar y leer el resumen con IA.</p>
-</div>
-</div>
-</div>
-</div>
-</aside>
-</div>
-</div>
-<footer class="tool-footer collaborative-footer is-hidden" data-ref="tool-footer">
-<div class="collaborative-footer__right" data-ref="footer-right">
-<span class="collaborative-footer__page-text" data-ref="txt-footer-page-info">1 de 1</span>
-<div class="collaborative-footer__divider" ></div>
-<input class="collaborative-zoom-slider" data-ref="slider-zoom" type="range" min="10" max="300" step="1" value="100" aria-label="Nivel de zoom" />
-<button type="button" class="collaborative-zoom-level-btn" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom" aria-label="Restablecer zoom">
-<span data-ref="txt-zoom-level">100%</span>
-</button>
-</div>
-</footer>
-</div> 

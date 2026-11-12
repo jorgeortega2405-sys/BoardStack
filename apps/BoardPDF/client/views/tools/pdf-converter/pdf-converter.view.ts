@@ -3,6 +3,7 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
@@ -11,18 +12,6 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { CONVERSION_CONFIGS, ConversionRouteConfig, ExcelSheetsOption, JpgConversionMode, JpgQuality, OcrOption, PdfALevel } from './pdf-converter.types.js';
-import { t } from '../../../services/i18n.service.js';
-
-const PDFA_LEGENDS: Record<PdfALevel, string> = {
-  '1a': '<p>Basado en un PDF 1.4. Nivel A (accesible) conforme con requisitos estándar adicionales:</p><ul><li>Especificación de idioma</li><li>Estructura jerárquica del documento</li><li>Separaciones de texto etiquetado y texto descriptivo para imágenes y símbolos</li><li>Mapeado de caracteres a Unicode</li></ul><p>También lista de <a class="link" href="https://en.wikipedia.org/wiki/PDF/A#Description" target="_blank" rel="noopener">elementos prohibidos</a>.</p>',
-  '1b': '<p>Basado en un PDF 1.4. Nivel B (básico) de conformidad con los requisitos obligatorios:</p><ul><li>Incrustar fuentes</li><li>Incluir guías de gestión del color</li><li>Incluir metadatos</li></ul><p>También lista de <a class="link" href="https://en.wikipedia.org/wiki/PDF/A#Description" target="_blank" rel="noopener">elementos prohibidos</a>.</p>',
-  '2a': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel A (accesible) completo:</p><ul><li>Todos los requisitos del nivel PDF/A-2b y PDF/A-2u</li><li>Estructura lógica y lectura accesible para lectores de pantalla</li><li>Metadatos semánticos y orden de lectura</li></ul>',
-  '2b': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel B (básico) para preservación visual:</p><ul><li>Soporte de compresión JPEG2000</li><li>Compatibilidad con capas y transparencias</li><li>Incrustación de fuentes OpenType</li><li>Incrustación de adjuntos conformes con PDF/A</li></ul>',
-  '2u': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel U (Unicode) para búsqueda y extracción:</p><ul><li>Todos los requisitos del nivel PDF/A-2b</li><li>Mapeado garantizado de texto a Unicode</li><li>Garantía de búsqueda y copiado de texto fiel</li></ul>',
-  '3a': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel A (accesible) avanzado:</p><ul><li>Máximo nivel de accesibilidad, estructura y preservación</li><li>Permite adjuntar cualquier formato de archivo</li><li>Estructura lógica etiquetada completa</li></ul>',
-  '3b': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel B (básico) con adjuntos de cualquier formato:</p><ul><li>Requisitos de preservación visual de PDF/A-2b</li><li>Permite incrustar archivos en formatos no PDF (XML, CSV, CAD, etc.)</li><li>Idóneo para facturación electrónica (Factur-X / ZUGFeRD)</li></ul>',
-  '3u': '<p>Basado en ISO 32000-1 (PDF 1.7). Nivel U (Unicode):</p><ul><li>Todos los requisitos de PDF/A-3b</li><li>Mapeado garantizado de texto a Unicode</li><li>Soporte para adjuntos de cualquier formato con búsqueda de texto</li></ul>',
-};
 
 class PdfConverterController implements ViewController {
   private abortController: AbortController | null = null;
@@ -55,18 +44,18 @@ class PdfConverterController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
-        desc: this.config.subtitle,
-        hint: 'o arrastra y suelta el PDF aquí',
+        buttonText: t('tools.pdf_converter_btn_select'),
+        desc: t(this.config.subtitleKey),
+        hint: t('common.drop_file_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) this.handleFileSelected(files[0]);
         },
-        title: this.config.title,
+        title: t(this.config.titleKey),
       },
       sidebarRef: 'pdf-converter-sidebar',
       toolId: this.config.targetType,
-      toolName: this.config.title,
+      toolName: t(this.config.titleKey),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'converter-selected-card',
     });
@@ -96,9 +85,33 @@ class PdfConverterController implements ViewController {
     this.currentFile = null;
   }
 
+  private renderPdfaLegend(container: HTMLElement | null, level: PdfALevel): void {
+    if (!container) return;
+    container.innerHTML = '';
+
+    const titleKey = `tools.pdfa_legend_${level}_title`;
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = t(titleKey);
+    container.appendChild(titleEl);
+
+    const listEl = document.createElement('ul');
+    for (let i = 1; i <= 3; i++) {
+      const itemKey = `tools.pdfa_legend_${level}_item_${i}`;
+      const itemText = t(itemKey);
+      if (itemText && itemText !== itemKey) {
+        const li = document.createElement('li');
+        li.textContent = itemText;
+        listEl.appendChild(li);
+      }
+    }
+    if (listEl.childElementCount > 0) {
+      container.appendChild(listEl);
+    }
+  }
+
   private applyConfiguration(): void {
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-title"]');
-    if (titleEl) titleEl.textContent = this.config.title;
+    if (titleEl) titleEl.textContent = t(this.config.titleKey);
 
     const sections = this.container.querySelectorAll<HTMLElement>('[data-ref^="section-"]');
     sections.forEach((sec) => hideElement(sec));
@@ -107,7 +120,27 @@ class PdfConverterController implements ViewController {
     if (activeSec) showElement(activeSec);
 
     const actionText = this.container.querySelector<HTMLElement>('[data-ref="txt-convert-action"]');
-    if (actionText) actionText.textContent = this.config.actionText;
+    if (actionText) actionText.textContent = t(this.config.actionTextKey);
+
+    if (this.config.targetType === 'pdf-to-jpg') {
+      const jpgModeDesc = this.container.querySelector<HTMLElement>('[data-ref="jpg-mode-desc-text"]');
+      if (jpgModeDesc) {
+        jpgModeDesc.textContent = this.jpgMode === 'pages'
+          ? t('ui.cada_pagina_del_pdf_se_convertira_en_una')
+          : t('tools.pdf_to_jpg_mode_extract_desc');
+      }
+      const jpgQualityDesc = this.container.querySelector<HTMLElement>('[data-ref="jpg-quality-desc-text"]');
+      if (jpgQualityDesc) {
+        jpgQualityDesc.textContent = this.jpgQuality === 'high'
+          ? t('tools.pdf_to_jpg_quality_high_desc')
+          : t('tools.pdf_to_jpg_quality_normal_desc');
+      }
+    }
+
+    if (this.config.targetType === 'pdf-to-pdfa') {
+      const pdfaLegend = this.container.querySelector<HTMLElement>('[data-ref="pdfa-legend-content"]');
+      this.renderPdfaLegend(pdfaLegend, this.pdfaLevel);
+    }
   }
 
   private bindEvents(): void {
@@ -151,11 +184,12 @@ class PdfConverterController implements ViewController {
       if (jpgModeDesc) {
         jpgModeDesc.textContent = val === 'pages'
           ? t('ui.cada_pagina_del_pdf_se_convertira_en_una')
-          : 'Todas las imágenes dentro del archivo PDF se extraerán y se convertirán a JPG.';
+          : t('tools.pdf_to_jpg_mode_extract_desc');
       }
     }, { signal });
 
     const jpgQualityToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-jpg-quality"]');
+    const jpgQualityDesc = this.container.querySelector<HTMLElement>('[data-ref="jpg-quality-desc-text"]');
     jpgQualityToggle?.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-val]');
       if (!btn) return;
@@ -166,6 +200,11 @@ class PdfConverterController implements ViewController {
       jpgQualityToggle.querySelectorAll<HTMLButtonElement>('button').forEach((b) => {
         b.classList.toggle('is-active', b === btn);
       });
+      if (jpgQualityDesc) {
+        jpgQualityDesc.textContent = val === 'high'
+          ? t('tools.pdf_to_jpg_quality_high_desc')
+          : t('tools.pdf_to_jpg_quality_normal_desc');
+      }
     }, { signal });
 
     const wordOcrToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-word-ocr"]');
@@ -241,8 +280,8 @@ class PdfConverterController implements ViewController {
           checkIcons.forEach((icon) => icon.classList.add('is-hidden'));
           const activeCheck = item?.querySelector<HTMLElement>('[data-ref^="check-pdfa-"]');
           if (activeCheck) activeCheck.classList.remove('is-hidden');
-          if (pdfaLegend && PDFA_LEGENDS[this.pdfaLevel]) {
-            pdfaLegend.innerHTML = PDFA_LEGENDS[this.pdfaLevel];
+          if (pdfaLegend) {
+            this.renderPdfaLegend(pdfaLegend, this.pdfaLevel);
           }
         },
       });
@@ -255,13 +294,22 @@ class PdfConverterController implements ViewController {
   }
 
   private handleFileSelected(file: File): void {
+    this.hideError();
+
+    const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
+    const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
+    if (!isPdfExt && !isPdfMime) {
+      this.showError(t('ui.selecciona_unicamente_un_documento_en_fo'));
+      return;
+    }
+
     const limits = getCurrentUserToolLimits(this.config.targetType);
     if (file.size > limits.maxFileSizeMB * 1024 * 1024) {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: this.config.targetType,
-        toolName: this.config.title,
+        toolName: t(this.config.titleKey),
         type: 'file_size',
       });
       return;
@@ -305,8 +353,6 @@ class PdfConverterController implements ViewController {
 
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -334,13 +380,34 @@ class PdfConverterController implements ViewController {
 
     if (convertBtn) convertBtn.disabled = true;
 
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+    if (docTitleInput) docTitleInput.value = '';
+
     const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
     if (canvas) {
       canvas.width = 0;
       canvas.height = 0;
     }
 
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(msg: string): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
+    if (banner) {
+      banner.textContent = msg;
+      showElement(banner);
+    }
+    showToast(msg, 'danger');
+  }
+
+  private hideError(): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="converter-global-error"]');
+    if (banner) {
+      banner.textContent = '';
+      hideElement(banner);
+    }
   }
 
   private async handleConvert(button: HTMLButtonElement): Promise<void> {
@@ -380,7 +447,7 @@ class PdfConverterController implements ViewController {
         );
         const result = (await response.json()) as { data?: { downloadToken: string }; error?: string; success: boolean };
 
-        this.phaseManager?.showProcessing('Convirtiendo documento...', t('ui.por_favor_espera_mientras_finaliza_la_co'));
+        this.phaseManager?.showProcessing(t('tools.converting_document'), t('ui.por_favor_espera_mientras_finaliza_la_co'));
 
         if (!response.ok || !result.success || !result.data?.downloadToken) {
           throw new Error(result.error || t('ui.error_procesando_la_conversion'));
@@ -390,17 +457,17 @@ class PdfConverterController implements ViewController {
         showToast(t('toasts.documento_convertido_exitosamente'), 'success');
         const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
         const customTitle = docTitleInput?.value.trim();
-        const baseName = customTitle || (this.currentFile?.name || 'documento').replace(/\.[^/.]+$/, '');
+        const baseName = customTitle || (this.currentFile?.name || t('common.default_document_base')).replace(/\.[^/.]+$/, '');
         const finalFilename = `${baseName}${this.config.targetExtension}`;
 
         this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: this.currentFile?.size || 0,
           filename: finalFilename,
-          returnText: this.config.title,
+          returnText: t(this.config.titleKey),
           returnUrl: window.location.pathname,
           subtitle: t('ui.tu_documento_pdf_ha_sido_convertido_a_fo'),
-          title: `¡${this.config.title} completada con éxito!`,
+          title: t('tools.conversion_completed_title', { title: t(this.config.titleKey) }),
           token,
         });
       } catch {

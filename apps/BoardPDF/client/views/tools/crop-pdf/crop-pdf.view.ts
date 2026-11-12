@@ -3,6 +3,7 @@ import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.c
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
 import { postFormWithProgress } from '../../../services/api.service.js';
+import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
@@ -11,7 +12,8 @@ import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
 import { CropBoxPercent, CropPdfResponseData } from './crop-pdf.types.js';
-import { t } from '../../../services/i18n.service.js';
+
+type CropDragMode = 'draw' | 'e' | 'move' | 'n' | 'ne' | 'nw' | 's' | 'se' | 'sw' | 'w';
 
 class CropPdfController implements ViewController {
   private abortController: AbortController | null = null;
@@ -39,18 +41,18 @@ class CropPdfController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.select_pdf_btn'),
         desc: t('ui.recorta_las_paginas_de_tu_documento_pdf_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('tools.dropzone_hint_pdf'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Recortar PDF',
+        title: t('tools.crop_pdf_title'),
       },
       sidebarRef: 'crop-pdf-sidebar',
       toolId: 'crop-pdf',
-      toolName: 'Recortar PDF',
+      toolName: t('tools.crop_pdf_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'crop-workspace-card',
     });
@@ -108,54 +110,23 @@ class CropPdfController implements ViewController {
       void this.handleExecuteCrop(executeBtn);
     }, { signal });
 
-    const radioAll = this.container.querySelector<HTMLInputElement>('[data-ref="radio-crop-all"]');
-    const radioCurrent = this.container.querySelector<HTMLInputElement>('[data-ref="radio-crop-current"]');
-    radioAll?.addEventListener('change', () => {
-      this.cropAllPages = true;
-    }, { signal });
-    radioCurrent?.addEventListener('change', () => {
-      this.cropAllPages = false;
-    }, { signal });
-
     const btnCropAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-all"]');
     const btnCropCurrent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-current"]');
     const cropModeToggle = this.container.querySelector<HTMLElement>('[data-ref="toggle-crop-mode"]');
+
     btnCropAll?.addEventListener('click', () => {
       this.cropAllPages = true;
       btnCropAll.classList.add('is-active', 'active');
       btnCropCurrent?.classList.remove('is-active', 'active');
       cropModeToggle?.setAttribute('data-active', '0');
     }, { signal });
+
     btnCropCurrent?.addEventListener('click', () => {
       this.cropAllPages = false;
       btnCropCurrent.classList.add('is-active', 'active');
       btnCropAll?.classList.remove('is-active', 'active');
       cropModeToggle?.setAttribute('data-active', '1');
     }, { signal });
-
-    const inputMarginTop = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-top"]');
-    const inputMarginBottom = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-bottom"]');
-    const inputMarginLeft = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-left"]');
-    const inputMarginRight = this.container.querySelector<HTMLInputElement>('[data-ref="input-margin-right"]');
-
-    const handleMarginChange = () => {
-      const top = Math.max(0, Math.min(45, parseInt(inputMarginTop?.value || '5', 10)));
-      const bottom = Math.max(0, Math.min(45, parseInt(inputMarginBottom?.value || '5', 10)));
-      const left = Math.max(0, Math.min(45, parseInt(inputMarginLeft?.value || '5', 10)));
-      const right = Math.max(0, Math.min(45, parseInt(inputMarginRight?.value || '5', 10)));
-
-      this.cropPercent = {
-        height: 100 - top - bottom,
-        width: 100 - left - right,
-        x: left,
-        y: top,
-      };
-      this.updateCropDisplay();
-    };
-
-    [inputMarginTop, inputMarginBottom, inputMarginLeft, inputMarginRight].forEach((input) => {
-      input?.addEventListener('input', handleMarginChange, { signal });
-    });
 
     this.zoomController = new ToolZoomController({
       container: this.container,
@@ -181,90 +152,156 @@ class CropPdfController implements ViewController {
 
   private bindCropHandles(signal: AbortSignal): void {
     const overlay = this.container.querySelector<HTMLElement>('[data-ref="crop-overlay"]');
+    const cropBox = this.container.querySelector<HTMLElement>('[data-ref="crop-box"]');
     const wrap = this.container.querySelector<HTMLElement>('[data-ref="crop-preview-wrap"]');
-    if (!overlay || !wrap) return;
+    if (!overlay || !cropBox || !wrap) return;
 
     let isDragging = false;
-    let dragMode: 'move' | 'se' | 'sw' | 'ne' | 'nw' = 'move';
+    let dragMode: CropDragMode = 'move';
+    let captureEl: HTMLElement | null = null;
     let startX = 0;
     let startY = 0;
-    let startCrop = { ...this.cropPercent };
+    let startAnchorX = 0;
+    let startAnchorY = 0;
+    let startCrop: CropBoxPercent = { ...this.cropPercent };
+
+    const getPointerPercent = (e: PointerEvent) => {
+      const rect = wrap.getBoundingClientRect();
+      const px = Math.max(0, Math.min(100, ((e.clientX - rect.left) / Math.max(1, rect.width)) * 100));
+      const py = Math.max(0, Math.min(100, ((e.clientY - rect.top) / Math.max(1, rect.height)) * 100));
+      return { px, py, rect };
+    };
+
+    cropBox.addEventListener('pointerdown', (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.target as HTMLElement | null;
+      const handleEl = target?.closest<HTMLElement>('.crop-handle[data-handle]');
+      const handle = handleEl?.getAttribute('data-handle') as CropDragMode | null;
+
+      dragMode = handle || 'move';
+      isDragging = true;
+      captureEl = cropBox;
+      startX = e.clientX;
+      startY = e.clientY;
+      startCrop = { ...this.cropPercent };
+      try {
+        cropBox.setPointerCapture(e.pointerId);
+      } catch {}
+    }, { signal });
 
     overlay.addEventListener('pointerdown', (e: PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      const { px, py } = getPointerPercent(e);
+      dragMode = 'draw';
       isDragging = true;
+      captureEl = overlay;
       startX = e.clientX;
       startY = e.clientY;
+      startAnchorX = px;
+      startAnchorY = py;
       startCrop = { ...this.cropPercent };
-
-      const rect = overlay.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-      const handleZone = 24;
-
-      if (clickX < handleZone && clickY < handleZone) dragMode = 'nw';
-      else if (clickX > rect.width - handleZone && clickY < handleZone) dragMode = 'ne';
-      else if (clickX < handleZone && clickY > rect.height - handleZone) dragMode = 'sw';
-      else if (clickX > rect.width - handleZone && clickY > rect.height - handleZone) dragMode = 'se';
-      else dragMode = 'move';
-
-      overlay.setPointerCapture(e.pointerId);
+      try {
+        overlay.setPointerCapture(e.pointerId);
+      } catch {}
     }, { signal });
 
-    overlay.addEventListener('pointermove', (e: PointerEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (!isDragging) return;
-      const wrapRect = wrap.getBoundingClientRect();
-      const deltaXPercent = ((e.clientX - startX) / wrapRect.width) * 100;
-      const deltaYPercent = ((e.clientY - startY) / wrapRect.height) * 100;
+      const { px, py, rect } = getPointerPercent(e);
+      const dx = ((e.clientX - startX) / Math.max(1, rect.width)) * 100;
+      const dy = ((e.clientY - startY) / Math.max(1, rect.height)) * 100;
+      const minSize = 10;
 
-      if (dragMode === 'move') {
-        let newX = startCrop.x + deltaXPercent;
-        let newY = startCrop.y + deltaYPercent;
-        newX = Math.max(0, Math.min(100 - startCrop.width, newX));
-        newY = Math.max(0, Math.min(100 - startCrop.height, newY));
-        this.cropPercent.x = Math.round(newX);
-        this.cropPercent.y = Math.round(newY);
-      } else if (dragMode === 'se') {
-        let newW = startCrop.width + deltaXPercent;
-        let newH = startCrop.height + deltaYPercent;
-        newW = Math.max(10, Math.min(100 - startCrop.x, newW));
-        newH = Math.max(10, Math.min(100 - startCrop.y, newH));
-        this.cropPercent.width = Math.round(newW);
-        this.cropPercent.height = Math.round(newH);
+      if (dragMode === 'draw') {
+        const left = Math.min(startAnchorX, px);
+        const top = Math.min(startAnchorY, py);
+        const right = Math.max(startAnchorX, px);
+        const bottom = Math.max(startAnchorY, py);
+        const width = Math.max(minSize, right - left);
+        const height = Math.max(minSize, bottom - top);
+        this.cropPercent = {
+          height: Math.round(Math.min(100 - top, height)),
+          width: Math.round(Math.min(100 - left, width)),
+          x: Math.round(Math.min(100 - minSize, left)),
+          y: Math.round(Math.min(100 - minSize, top)),
+        };
+        this.updateCropDisplay();
+        return;
       }
 
+      if (dragMode === 'move') {
+        const newX = Math.max(0, Math.min(100 - startCrop.width, startCrop.x + dx));
+        const newY = Math.max(0, Math.min(100 - startCrop.height, startCrop.y + dy));
+        this.cropPercent = {
+          height: startCrop.height,
+          width: startCrop.width,
+          x: Math.round(newX),
+          y: Math.round(newY),
+        };
+        this.updateCropDisplay();
+        return;
+      }
+
+      let left = startCrop.x;
+      let top = startCrop.y;
+      let right = startCrop.x + startCrop.width;
+      let bottom = startCrop.y + startCrop.height;
+
+      if (dragMode.includes('w')) {
+        left = Math.max(0, Math.min(right - minSize, startCrop.x + dx));
+      }
+      if (dragMode.includes('e')) {
+        right = Math.min(100, Math.max(left + minSize, startCrop.x + startCrop.width + dx));
+      }
+      if (dragMode.includes('n')) {
+        top = Math.max(0, Math.min(bottom - minSize, startCrop.y + dy));
+      }
+      if (dragMode.includes('s')) {
+        bottom = Math.min(100, Math.max(top + minSize, startCrop.y + startCrop.height + dy));
+      }
+
+      this.cropPercent = {
+        height: Math.round(bottom - top),
+        width: Math.round(right - left),
+        x: Math.round(left),
+        y: Math.round(top),
+      };
       this.updateCropDisplay();
-    }, { signal });
+    };
 
     const handlePointerUp = (e: PointerEvent) => {
-      if (isDragging) {
-        isDragging = false;
+      if (!isDragging) return;
+      isDragging = false;
+      if (captureEl) {
         try {
-          overlay.releasePointerCapture(e.pointerId);
+          captureEl.releasePointerCapture(e.pointerId);
         } catch {}
+        captureEl = null;
       }
     };
 
-    overlay.addEventListener('pointerup', handlePointerUp, { signal });
-    overlay.addEventListener('pointercancel', handlePointerUp, { signal });
+    window.addEventListener('pointermove', handlePointerMove, { signal });
+    window.addEventListener('pointerup', handlePointerUp, { signal });
+    window.addEventListener('pointercancel', handlePointerUp, { signal });
   }
 
   private updateCropDisplay(): void {
-    const overlay = this.container.querySelector<HTMLElement>('[data-ref="crop-overlay"]');
+    const cropBox = this.container.querySelector<HTMLElement>('[data-ref="crop-box"]');
     const maskTop = this.container.querySelector<HTMLElement>('[data-ref="mask-top"]');
     const maskBottom = this.container.querySelector<HTMLElement>('[data-ref="mask-bottom"]');
     const maskLeft = this.container.querySelector<HTMLElement>('[data-ref="mask-left"]');
     const maskRight = this.container.querySelector<HTMLElement>('[data-ref="mask-right"]');
 
-    if (!overlay || !maskTop || !maskBottom || !maskLeft || !maskRight) return;
+    if (!cropBox || !maskTop || !maskBottom || !maskLeft || !maskRight) return;
 
     const { height, width, x, y } = this.cropPercent;
 
-    overlay.style.top = `${y}%`;
-    overlay.style.left = `${x}%`;
-    overlay.style.width = `${width}%`;
-    overlay.style.height = `${height}%`;
+    cropBox.style.top = `${y}%`;
+    cropBox.style.left = `${x}%`;
+    cropBox.style.width = `${width}%`;
+    cropBox.style.height = `${height}%`;
 
     maskTop.style.top = '0';
     maskTop.style.height = `${y}%`;
@@ -289,6 +326,7 @@ class CropPdfController implements ViewController {
 
   private async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
+    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
@@ -303,7 +341,7 @@ class CropPdfController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: 'crop-pdf',
-        toolName: 'Recortar PDF',
+        toolName: t('tools.crop_pdf_title'),
         type: 'file_size',
       });
       return;
@@ -324,7 +362,7 @@ class CropPdfController implements ViewController {
     if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
     if (filenameInput) {
       const base = file.name.replace(/\.[^/.]+$/, '');
-      filenameInput.value = `${base}_recortado.pdf`;
+      filenameInput.value = `${base}${t('tools.crop_default_suffix')}.pdf`;
     }
 
     try {
@@ -376,11 +414,11 @@ class CropPdfController implements ViewController {
       thumbItem.addEventListener('click', () => {
         if (this.currentPage === pageNum) return;
         this.currentPage = pageNum;
-        this.container.querySelectorAll('.pdf-editor-thumbnail').forEach((t) => t.classList.remove('is-active'));
+        this.container.querySelectorAll('.pdf-editor-thumbnail').forEach((el) => el.classList.remove('is-active'));
         thumbItem.classList.add('is-active');
         this.zoomController?.updatePageInfo(this.currentPage, this.totalPages);
         void this.renderCurrentPage();
-      });
+      }, { signal: this.abortController?.signal });
 
       try {
         const page = await this.pdfDocument.getPage(i);
@@ -407,8 +445,8 @@ class CropPdfController implements ViewController {
     if (!this.pdfDocument) return;
 
     const thumbs = this.container.querySelectorAll<HTMLElement>('.pdf-editor-thumbnail');
-    thumbs.forEach((t, idx) => {
-      t.classList.toggle('is-active', idx + 1 === this.currentPage);
+    thumbs.forEach((thumb, idx) => {
+      thumb.classList.toggle('is-active', idx + 1 === this.currentPage);
     });
 
     try {
@@ -445,10 +483,15 @@ class CropPdfController implements ViewController {
 
   private async handleExecuteCrop(button: HTMLButtonElement): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
+
+    const filenameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+    const customName = filenameInput?.value.trim() || undefined;
 
     const optionsPayload = {
       applyToAll: this.cropAllPages,
       cropBox: this.cropPercent,
+      filename: customName,
       targetPageIndex: this.currentPage - 1,
     };
 
@@ -474,7 +517,10 @@ class CropPdfController implements ViewController {
           success: boolean;
         };
 
-        this.phaseManager?.showProcessing('Recortando páginas del documento PDF...', 'Ajustando los márgenes visuales y vectoriales del documento');
+        this.phaseManager?.showProcessing(
+          t('tools.crop_processing_title'),
+          t('tools.crop_processing_subtitle')
+        );
 
         if (!response.ok || !result.success || !result.data?.downloadUrl) {
           throw new Error(result.error || t('ui.ocurrio_un_error_al_recortar_el_document'));
@@ -482,22 +528,22 @@ class CropPdfController implements ViewController {
 
         const token = result.data.fileId;
         showToast(t('toasts.pdf_cropped_success'), 'success');
-        this.phaseManager?.navigateToDownload({
+        await this.phaseManager?.navigateToDownload({
           downloadUrl: `/api/download/${token}`,
           fileSize: result.data.fileSize,
           filename: result.data.filename,
-          returnText: 'Recortar otro documento PDF',
+          returnText: t('tools.crop_return_btn'),
           returnUrl: '/crop-pdf',
-          subtitle: t('tools.crop_success_prefix') + `"${this.currentFile?.name}".`,
-          title: '¡PDF recortado con éxito!',
+          subtitle: `${t('tools.crop_success_prefix')}"${this.currentFile?.name}".`,
+          title: t('tools.crop_success_title'),
           token,
         });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : t('ui.error_inesperado_al_recortar_el_document');
+        this.showError(errorMessage);
         this.phaseManager?.showError(errorMessage, () => {
           this.phaseManager?.setPhase('workspace');
         });
-        showToast(errorMessage, 'danger');
       } finally {
         this.isProcessing = false;
       }
@@ -513,6 +559,7 @@ class CropPdfController implements ViewController {
     this.currentPage = 1;
     this.totalPages = 1;
     this.cropPercent = { height: 90, width: 90, x: 5, y: 5 };
+    this.hideError();
 
     const executeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-execute-crop"]');
     if (executeBtn) executeBtn.disabled = true;
@@ -523,10 +570,27 @@ class CropPdfController implements ViewController {
 
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
-    if (filenameInput) filenameInput.value = 'documento_recortado.pdf';
+    if (filenameInput) filenameInput.value = '';
     if (this.sidebarModal) this.sidebarModal.close();
 
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(message: string): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="crop-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = message;
+      showElement(errorEl);
+    }
+    showToast(message, 'danger');
+  }
+
+  private hideError(): void {
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="crop-global-error"]');
+    if (errorEl) {
+      errorEl.textContent = '';
+      hideElement(errorEl);
+    }
   }
 }
 

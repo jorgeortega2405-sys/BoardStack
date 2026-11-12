@@ -1,4 +1,3 @@
-import { t } from '../../../services/i18n.service.js';
 type ConversionType =
   | 'pdf-to-jpg'
   | 'pdf-to-word'
@@ -13,72 +12,72 @@ type ExcelSheetsOption = 'single' | 'multiple';
 type PdfALevel = '1b' | '1a' | '2b' | '2u' | '2a' | '3b' | '3u' | '3a';
 
 interface ConversionRouteConfig {
-  actionText: string;
-  convertingText: string;
+  actionTextKey: string;
+  convertingTextKey: string;
   icon: string;
   path: string;
-  subtitle: string;
+  subtitleKey: string;
   targetBadge: string;
   targetExtension: string;
   targetType: ConversionType;
-  title: string;
+  titleKey: string;
 }
 
 const CONVERSION_CONFIGS: Record<string, ConversionRouteConfig> = {
   '/pdf-to-excel': {
-    actionText: 'Convertir a Excel',
-    convertingText: 'Extrayendo tablas a Excel...',
+    actionTextKey: 'tools.pdf_to_excel_btn_action',
+    convertingTextKey: 'tools.pdf_to_excel_converting',
     icon: 'table_chart',
     path: '/pdf-to-excel',
-    subtitle: t('ui.extrae_tablas_y_datos_estructurados_de_t'),
+    subtitleKey: 'ui.extrae_tablas_y_datos_estructurados_de_t',
     targetBadge: 'XLSX',
     targetExtension: '.xlsx',
     targetType: 'pdf-to-excel',
-    title: 'PDF a Excel',
+    titleKey: 'tools.pdf_to_excel_title',
   },
   '/pdf-to-jpg': {
-    actionText: 'Convertir a JPG',
-    convertingText: 'Convirtiendo páginas a JPG...',
+    actionTextKey: 'tools.pdf_to_jpg_btn_action',
+    convertingTextKey: 'tools.pdf_to_jpg_converting',
     icon: 'photo_library',
     path: '/pdf-to-jpg',
-    subtitle: t('ui.convierte_cada_pagina_de_tu_archivo_pdf_'),
+    subtitleKey: 'ui.convierte_cada_pagina_de_tu_archivo_pdf_',
     targetBadge: 'JPG',
     targetExtension: '.jpg',
     targetType: 'pdf-to-jpg',
-    title: 'PDF a JPG',
+    titleKey: 'tools.pdf_to_jpg_title',
   },
   '/pdf-to-pdfa': {
-    actionText: 'Convertir a PDF/A',
-    convertingText: 'Estandarizando documento a PDF/A...',
+    actionTextKey: 'tools.pdf_to_pdfa_btn_action',
+    convertingTextKey: 'tools.pdf_to_pdfa_converting',
     icon: 'verified',
     path: '/pdf-to-pdfa',
-    subtitle: 'Convierte tu documento PDF al estándar ISO PDF/A para archivado a largo plazo y preservación digital.',
+    subtitleKey: 'tools.pdf_to_pdfa_subtitle',
     targetBadge: 'PDF/A',
     targetExtension: '_pdfa.pdf',
     targetType: 'pdf-to-pdfa',
-    title: 'PDF a PDF/A',
+    titleKey: 'tools.pdf_to_pdfa_title',
   },
   '/pdf-to-powerpoint': {
-    actionText: 'Convertir a PowerPoint',
-    convertingText: 'Generando presentación PPTX...',
+    actionTextKey: 'tools.pdf_to_powerpoint_btn_action',
+    convertingTextKey: 'tools.pdf_to_powerpoint_converting',
     icon: 'slideshow',
     path: '/pdf-to-powerpoint',
-    subtitle: t('ui.transforma_tus_presentaciones_pdf_en_dia'),
+    subtitleKey: 'ui.transforma_tus_presentaciones_pdf_en_dia',
     targetBadge: 'PPTX',
     targetExtension: '.pptx',
     targetType: 'pdf-to-powerpoint',
-    title: 'PDF a PowerPoint',
+    titleKey: 'tools.pdf_to_powerpoint_title',
   },
   '/pdf-to-word': {
-    actionText: 'Convertir a Word',
-    convertingText: 'Convirtiendo documento a Word...',
+    actionTextKey: 'tools.pdf_to_word_btn_action',
+    convertingTextKey: 'tools.pdf_to_word_converting',
     icon: 'description',
     path: '/pdf-to-word',
-    subtitle: 'Convierte documentos PDF a archivos Word DOCX completamente editables manteniendo texto y formato.',
+    subtitleKey: 'tools.pdf_to_word_subtitle',
     targetBadge: 'DOCX',
     targetExtension: '.docx',
     targetType: 'pdf-to-word',
-    title: 'PDF a Word',
+    titleKey: 'tools.pdf_to_word_title',
   },
 };
 

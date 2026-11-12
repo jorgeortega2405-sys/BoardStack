@@ -3,7 +3,7 @@ import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { escapeHtml, postApi, postFormWithProgress } from '../../../services/api.service.js';
+import { postApi, postFormWithProgress } from '../../../services/api.service.js';
 import { pickDropboxFiles } from '../../../services/dropbox.service.js';
 import { pickGoogleDriveFiles } from '../../../services/google-drive.service.js';
 import { t } from '../../../services/i18n.service.js';
@@ -11,7 +11,7 @@ import { renderIcons } from '../../../services/icon.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
-import { ToolSidebarModalController, bindFileDropzone, hideElement, setupDropdown, setupToolSidebarModal, showElement, toggleElement, withButtonLoading } from '../../../utils/dom.util.js';
+import { ToolSidebarModalController, hideElement, setupDropdown, setupToolSidebarModal, showElement, withButtonLoading } from '../../../utils/dom.util.js';
 import { formatBytes } from '../../../utils/format.util.js';
 import { HtmlMargin, HtmlOrientation, HtmlScreenSize, JpgOrientation, JpgPageMargin, JpgPageSize, TO_PDF_CONFIGS, ToPdfRouteConfig, ToPdfSourceType } from './to-pdf-converter.types.js';
 
@@ -52,14 +52,15 @@ class ToPdfConverterController implements ViewController {
 
   public async init(): Promise<void> {
     this.abortController = new AbortController();
+    const title = t(this.config.titleKey);
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
         accept: this.config.accept,
-        buttonText: this.config.browseText || (this.config.isUrlMode ? 'Añadir URL' : 'Seleccionar archivos'),
-        desc: this.config.subtitle,
+        buttonText: t(this.config.browseTextKey),
+        desc: t(this.config.subtitleKey),
         hideCloudButtons: this.config.isUrlMode,
-        hint: this.config.isUrlMode ? '' : 'o arrastra y suelta tus archivos aquí',
+        hint: this.config.isUrlMode ? '' : t(this.config.hintTextKey),
         multiselect: this.config.sourceType === 'jpg-to-pdf',
         onBrowseClick: this.config.isUrlMode ? () => this.openUrlModal() : undefined,
         onFilesSelected: (files: File[]) => {
@@ -67,7 +68,7 @@ class ToPdfConverterController implements ViewController {
             this.handleFilesReceived(files);
           }
         },
-        title: this.config.title,
+        title,
       },
       onRetry: () => {
         const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
@@ -75,7 +76,7 @@ class ToPdfConverterController implements ViewController {
       },
       sidebarRef: (this.config.sourceType === 'jpg-to-pdf' || this.config.sourceType === 'html-to-pdf') ? 'to-pdf-converter-sidebar' : undefined,
       toolId: this.config.sourceType,
-      toolName: this.config.title,
+      toolName: title,
       topHeaderRef: 'component-top',
       workspaceCardRef: 'converter-selected-card',
     });
@@ -86,6 +87,10 @@ class ToPdfConverterController implements ViewController {
   }
 
   public destroy(): void {
+    if (this.dropdownAddFilesCtrl) {
+      this.dropdownAddFilesCtrl.destroy();
+      this.dropdownAddFilesCtrl = null;
+    }
     if (this.dropdownJpgSizeCtrl) {
       this.dropdownJpgSizeCtrl.destroy();
       this.dropdownJpgSizeCtrl = null;
@@ -117,42 +122,29 @@ class ToPdfConverterController implements ViewController {
   }
 
   private applyConfiguration(): void {
-    const heroTitleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-title"]');
-    if (heroTitleEl) heroTitleEl.textContent = this.config.title;
+    const topAddBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-add-files"]');
+    const menuAddDeviceText = this.container.querySelector<HTMLElement>('[data-ref="txt-menu-add-device"]');
+    const menuAddDeviceIconUse = this.container.querySelector<SVGElement>('[data-ref="btn-menu-add-device"] use');
+    const menuAddDrive = this.container.querySelector<HTMLElement>('[data-ref="btn-menu-add-drive"]');
+    const menuAddDropbox = this.container.querySelector<HTMLElement>('[data-ref="btn-menu-add-dropbox"]');
 
-    const heroDescEl = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-desc"]');
-    if (heroDescEl) heroDescEl.textContent = this.config.subtitle;
-
-    const browseTextEl = this.container.querySelector<HTMLElement>('[data-ref="txt-browse-file"]');
-    if (browseTextEl) browseTextEl.textContent = this.config.browseText || 'Seleccionar Archivo';
-
-    const hintEl = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone-hint"]');
-    if (hintEl) hintEl.textContent = this.config.hintText || 'o arrastra y suelta tu archivo aquí';
-
-    const cloudBtns = this.container.querySelector<HTMLElement>('[data-ref="hero-cloud-btns"]');
-    if (cloudBtns) {
-      toggleElement(cloudBtns, !this.config.isUrlMode);
-    }
-
-    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
-    if (fabAddMoreBtn && this.config.isUrlMode) {
-      fabAddMoreBtn.setAttribute('data-tooltip', 'Cambiar URL');
-      fabAddMoreBtn.setAttribute('aria-label', 'Cambiar URL');
-    }
-
-    const fabOptions = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-options"]');
-    if (fabOptions && this.config.isUrlMode) {
-      hideElement(fabOptions);
+    if (this.config.isUrlMode) {
+      const changeUrlLabel = t('tools.html_change_url');
+      if (topAddBtn) {
+        topAddBtn.setAttribute('data-tooltip', changeUrlLabel);
+        topAddBtn.setAttribute('aria-label', changeUrlLabel);
+      }
+      if (menuAddDeviceText) menuAddDeviceText.textContent = changeUrlLabel;
+      if (menuAddDeviceIconUse) menuAddDeviceIconUse.setAttribute('href', '/icons.svg#language');
+      hideElement(menuAddDrive);
+      hideElement(menuAddDropbox);
     }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-title"]');
-    if (titleEl) titleEl.textContent = this.config.title;
-
-    const subtitleEl = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-subtitle"]');
-    if (subtitleEl) subtitleEl.textContent = this.config.subtitle;
+    if (titleEl) titleEl.textContent = t(this.config.titleKey);
 
     const actionTextEl = this.container.querySelector<HTMLElement>('[data-ref="txt-convert-action"]');
-    if (actionTextEl) actionTextEl.textContent = this.config.actionText;
+    if (actionTextEl) actionTextEl.textContent = t(this.config.actionTextKey);
 
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-source-file"]');
     if (fileInput) {
@@ -173,25 +165,23 @@ class ToPdfConverterController implements ViewController {
       sidebarBackdrop?.remove();
       const sidebar = this.container.querySelector<HTMLElement>('[data-ref="to-pdf-converter-sidebar"]');
       sidebar?.remove();
-      const fabOptions = this.container.querySelector<HTMLElement>('[data-ref="tool-fab-options"]');
-      fabOptions?.remove();
     }
 
     const jpgSection = this.container.querySelector<HTMLElement>('[data-ref="section-jpg-options"]');
     const htmlSection = this.container.querySelector<HTMLElement>('[data-ref="section-html-options"]');
-    const sidebarNotice = this.container.querySelector<HTMLElement>('[data-ref="converter-sidebar-notice"]');
 
     if (this.config.sourceType === 'jpg-to-pdf') {
       showElement(jpgSection);
       hideElement(htmlSection);
-      showElement(sidebarNotice);
     } else if (this.config.sourceType === 'html-to-pdf') {
       hideElement(jpgSection);
       showElement(htmlSection);
-      hideElement(sidebarNotice);
 
       const userScreenOpt = this.container.querySelector<HTMLElement>('[data-ref="txt-option-screen-user"]');
-      const userScreenText = `Tu pantalla (${window.screen.width}x${window.screen.height})`;
+      const userScreenText = t('tools.html_screen_user_size', {
+        height: window.screen.height,
+        width: window.screen.width,
+      });
       if (userScreenOpt) userScreenOpt.textContent = userScreenText;
 
       const screenSelectedText = this.container.querySelector<HTMLElement>('[data-ref="html-screen-selected-text"]');
@@ -202,7 +192,6 @@ class ToPdfConverterController implements ViewController {
     } else {
       hideElement(jpgSection);
       hideElement(htmlSection);
-      showElement(sidebarNotice);
     }
   }
 
@@ -221,13 +210,6 @@ class ToPdfConverterController implements ViewController {
     }
 
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-source-file"]');
-    const dropzone = this.container.querySelector<HTMLElement>('[data-ref="converter-dropzone"]');
-    const browseBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-file"]');
-    const heroDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-drive"]');
-    const heroDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hero-dropbox"]');
-    const fabAddMoreBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-add-more"]');
-    const fabDriveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-drive"]');
-    const fabDropboxBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fab-dropbox"]');
     const removeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
     const convertBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-convert-action"]');
 
@@ -245,6 +227,7 @@ class ToPdfConverterController implements ViewController {
 
     menuAddDevice?.addEventListener('click', (e) => {
       e.stopPropagation();
+      this.dropdownAddFilesCtrl?.close();
       if (this.config.isUrlMode) {
         this.openUrlModal();
       } else {
@@ -255,6 +238,8 @@ class ToPdfConverterController implements ViewController {
     menuAddDrive?.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      this.dropdownAddFilesCtrl?.close();
+      if (this.config.isUrlMode) return;
       const files = await pickGoogleDriveFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
       if (files && files.length > 0) {
         this.handleFilesReceived(files);
@@ -264,56 +249,8 @@ class ToPdfConverterController implements ViewController {
     menuAddDropbox?.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
-      if (files && files.length > 0) {
-        this.handleFilesReceived(files);
-      }
-    }, { signal });
-
-    browseBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (this.config.isUrlMode) {
-        this.openUrlModal();
-      } else {
-        fileInput?.click();
-      }
-    }, { signal });
-
-    fabAddMoreBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (this.config.isUrlMode) {
-        this.openUrlModal();
-      } else {
-        fileInput?.click();
-      }
-    }, { signal });
-
-    heroDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
-      if (files && files.length > 0) {
-        this.handleFilesReceived(files);
-      }
-    }, { signal });
-
-    fabDriveBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickGoogleDriveFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
-      if (files && files.length > 0) {
-        this.handleFilesReceived(files);
-      }
-    }, { signal });
-
-    heroDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const files = await pickDropboxFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
-      if (files && files.length > 0) {
-        this.handleFilesReceived(files);
-      }
-    }, { signal });
-
-    fabDropboxBtn?.addEventListener('click', async (e) => {
-      e.stopPropagation();
+      this.dropdownAddFilesCtrl?.close();
+      if (this.config.isUrlMode) return;
       const files = await pickDropboxFiles({ multiselect: this.config.sourceType === 'jpg-to-pdf' });
       if (files && files.length > 0) {
         this.handleFilesReceived(files);
@@ -330,20 +267,8 @@ class ToPdfConverterController implements ViewController {
       if (files && files.length > 0) {
         this.handleFilesReceived(Array.from(files));
       }
+      fileInput.value = '';
     }, { signal });
-
-    if (dropzone && !this.config.isUrlMode) {
-      bindFileDropzone({
-        dropTarget: dropzone,
-        onFiles: (files) => {
-          if (files.length > 0) {
-            this.handleFilesReceived(Array.from(files));
-          }
-        },
-        signal,
-        visualTarget: dropzone,
-      });
-    }
 
     this.bindJpgOptions(signal);
     this.bindHtmlOptions(signal);
@@ -351,6 +276,11 @@ class ToPdfConverterController implements ViewController {
     convertBtn?.addEventListener('click', () => {
       void this.handleConvert(convertBtn);
     }, { signal });
+  }
+
+  public handleFilesAdded(files: File[]): void {
+    if (this.config.isUrlMode || files.length === 0) return;
+    this.handleFilesReceived(files);
   }
 
   private bindJpgOptions(signal: AbortSignal): void {
@@ -382,9 +312,9 @@ class ToPdfConverterController implements ViewController {
           if (!val) return;
           this.jpgPageSize = val as JpgPageSize;
           const labels: Record<JpgPageSize, string> = {
-            a4: 'A4 297x210 mm',
+            a4: t('tools.page_size_a4'),
             fit: t('ui.ajustado_mismo_tamano_de_pagina_de_la_im'),
-            letter: 'US Letter 215x279.4mm',
+            letter: t('tools.page_size_letter'),
           };
           if (jpgSizeText) {
             jpgSizeText.textContent = labels[this.jpgPageSize] || val;
@@ -455,12 +385,15 @@ class ToPdfConverterController implements ViewController {
         onSelect: (val: string, item?: HTMLElement) => {
           if (!val) return;
           this.htmlScreen = val as HtmlScreenSize;
-          const userScreenLabel = `Tu pantalla (${window.screen.width}x${window.screen.height})`;
+          const userScreenLabel = t('tools.html_screen_user_size', {
+            height: window.screen.height,
+            width: window.screen.width,
+          });
           const labels: Record<HtmlScreenSize, string> = {
-            '1440': 'Escritorio (1440px)',
-            '1920': 'Escritorio HD (1920px)',
-            '320': 'Móvil (320px)',
-            '768': 'Tableta (768px)',
+            '1440': t('tools.html_screen_1440'),
+            '1920': t('tools.html_screen_1920'),
+            '320': t('tools.html_screen_320'),
+            '768': t('tools.html_screen_768'),
             screen: userScreenLabel,
           };
           const selectedLabel = labels[this.htmlScreen] || val;
@@ -601,7 +534,7 @@ class ToPdfConverterController implements ViewController {
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
         toolId: this.config.sourceType,
-        toolName: this.config.title,
+        toolName: t(this.config.titleKey),
         type: 'file_size',
       });
       return;
@@ -623,7 +556,9 @@ class ToPdfConverterController implements ViewController {
     if (fabBadge) fabBadge.textContent = String(count);
 
     if (fileNameEl) {
-      fileNameEl.textContent = count > 1 ? `${count} imágenes seleccionadas` : file.name;
+      fileNameEl.textContent = count > 1
+        ? t('tools.images_selected_count', { count })
+        : file.name;
     }
     if (fileSizeEl) {
       const totalSize = this.config.sourceType === 'jpg-to-pdf' && this.imageFiles.length > 0
@@ -666,6 +601,8 @@ class ToPdfConverterController implements ViewController {
 
     const fileInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-source-file"]');
     if (fileInput) fileInput.value = '';
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
+    if (docTitleInput) docTitleInput.value = '';
 
     if (this.previewImageUrl) {
       URL.revokeObjectURL(this.previewImageUrl);
@@ -718,8 +655,11 @@ class ToPdfConverterController implements ViewController {
         formData.append('sourceType', this.config.sourceType);
 
         if (this.config.sourceType === 'html-to-pdf') {
-          const finalUrl = this.htmlUrl || this.currentUrl;
-          if (!finalUrl) throw new Error('Debes ingresar una dirección URL válida.');
+          let finalUrl = (this.htmlUrl || this.currentUrl || '').trim();
+          if (!finalUrl) throw new Error(t('tools.html_to_pdf.url_required'));
+          if (!/^https?:\/\//i.test(finalUrl)) {
+            finalUrl = `https://${finalUrl}`;
+          }
           formData.append('url', finalUrl);
           formData.append('screen', this.htmlScreen);
           formData.append('singlePage', this.htmlSinglePage ? 'true' : 'false');
@@ -775,12 +715,12 @@ class ToPdfConverterController implements ViewController {
           downloadUrl: data.downloadUrl,
           fileSize: data.fileSize,
           filename: customFilename || data.filename,
-          returnText: this.config.title,
+          returnText: t(this.config.titleKey),
           returnUrl: window.location.pathname,
           subtitle: this.currentUrl || this.config.sourceType === 'html-to-pdf'
             ? t('ui.la_pagina_web_ha_sido_transformada_en_un')
             : t('ui.tu_archivo_ha_sido_transformado_en_pdf_c'),
-          title: `¡${this.config.title} completada con éxito!`,
+          title: t('tools.conversion_completed_title', { title: t(this.config.titleKey) }),
           token: data.downloadToken,
         });
       } catch (err: unknown) {
@@ -789,10 +729,10 @@ class ToPdfConverterController implements ViewController {
           boxText: errorDetail || (this.currentUrl
             ? t('ui.comprueba_que_la_direccion_url_sea_acces')
             : t('ui.comprueba_el_formato_del_documento_selec')),
-          boxTitle: 'Error en la conversión a PDF',
+          boxTitle: t('tools.to_pdf_error_box_title'),
           desc: t('ui.ha_ocurrido_un_error_inesperado_al_proce'),
-          retryText: 'Reintentar Conversión',
-          title: '¡Oh no! No hemos podido convertir tu archivo.',
+          retryText: t('tools.retry_conversion'),
+          title: t('tools.conversion_error_title'),
         });
       } finally {
         this.isConverting = false;
@@ -828,6 +768,7 @@ class ToPdfConverterController implements ViewController {
     const img = this.container.querySelector<HTMLImageElement>('[data-ref="html-preview-img"]');
     const browserFrame = this.container.querySelector<HTMLElement>('[data-ref="html-browser-frame"]');
 
+    this.hideError();
     if (browserFrame && screen) {
       browserFrame.setAttribute('data-screen', screen);
     }
@@ -854,7 +795,11 @@ class ToPdfConverterController implements ViewController {
         showElement(img);
       }
     } catch {
-      showToast(t('toasts.no_se_pudo_generar_la_vista_previa_de_la'), 'warning');
+      if (img) {
+        img.removeAttribute('src');
+        hideElement(img);
+      }
+      this.showError(t('toasts.no_se_pudo_generar_la_vista_previa_de_la'));
     } finally {
       hideElement(loader);
     }

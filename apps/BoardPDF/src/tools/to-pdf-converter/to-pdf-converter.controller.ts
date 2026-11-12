@@ -1,9 +1,9 @@
 import { getToolLimits } from '../../config/tools-limits.config.js';
 import { logger } from '../../services/logger.service.js';
-import { validatePdfUpload } from '../../utils/tool-handler.util.js';
 import { captureUrlScreenshot, convertToPdf, convertUrlToPdf, isValidPublicUrl } from './to-pdf-converter.service.js';
 import { ToPdfSourceType } from './to-pdf-converter.types.js';
 import { Request, Response } from 'express';
+import fs from 'fs';
 
 const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
   'excel-to-pdf',
@@ -14,6 +14,12 @@ const ALLOWED_SOURCE_TYPES: Set<string> = new Set([
 ]);
 
 async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
+  const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
+    ? (req.files as Express.Multer.File[])
+    : req.file
+    ? [req.file]
+    : [];
+
   try {
     const sourceType = (req.body?.sourceType || req.query?.sourceType) as ToPdfSourceType;
     if (!sourceType || !ALLOWED_SOURCE_TYPES.has(sourceType)) {
@@ -22,12 +28,6 @@ async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
     }
 
     const rawUrl = req.body?.url ? String(req.body.url).trim() : '';
-
-    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
-      ? (req.files as Express.Multer.File[])
-      : req.file
-      ? [req.file]
-      : [];
 
     if (uploadedFiles.length === 0 && (!rawUrl || sourceType !== 'html-to-pdf')) {
       res.status(400).json({ error: 'Debes seleccionar un archivo o ingresar una URL para convertir.', success: false });
@@ -89,6 +89,12 @@ async function convertToPdfHandler(req: Request, res: Response): Promise<void> {
       error: 'Ha ocurrido un error inesperado al procesar la conversión del archivo. Por favor intenta más tarde.',
       success: false,
     });
+  } finally {
+    for (const item of uploadedFiles) {
+      if (item.path) {
+        await fs.promises.unlink(item.path).catch(() => {});
+      }
+    }
   }
 }
 

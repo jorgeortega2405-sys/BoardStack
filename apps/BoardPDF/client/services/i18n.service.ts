@@ -214,6 +214,22 @@ function translateElement<T extends HTMLElement>(element: T): T {
     }
   });
 
+  const titles = element.querySelectorAll<HTMLElement>('[data-i18n-title]');
+  titles.forEach((node) => {
+    const key = node.getAttribute('data-i18n-title');
+    if (key) {
+      node.setAttribute('title', t(key));
+    }
+  });
+
+  const alts = element.querySelectorAll<HTMLElement>('[data-i18n-alt]');
+  alts.forEach((node) => {
+    const key = node.getAttribute('data-i18n-alt');
+    if (key) {
+      node.setAttribute('alt', t(key));
+    }
+  });
+
   if (element.hasAttribute('data-i18n')) {
     const key = element.getAttribute('data-i18n');
     if (key) {

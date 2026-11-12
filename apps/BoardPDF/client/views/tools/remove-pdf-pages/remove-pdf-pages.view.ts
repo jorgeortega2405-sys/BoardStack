@@ -1,8 +1,9 @@
+import { PageSelectorGridComponent } from '../../../components/page-selector-grid.component.js';
 import { ToolPhaseManager } from '../../../components/tool-phase-manager.js';
 import { showUpgradeLimitModal } from '../../../components/upgrade-limit-modal.component.js';
 import { API_ROUTES } from '../../../config/api-routes.js';
 import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js';
-import { postFormWithProgress } from '../../../services/api.service.js';
+import { escapeHtml, postFormWithProgress } from '../../../services/api.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
 import { loadPdfJs } from '../../../services/pdf-loader.service.js';
@@ -10,7 +11,6 @@ import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
-import { formatBytes, formatPageNumbers, parsePageNumbers } from '../../../utils/format.util.js';
 import { RemovePageItem, RemovePdfResponseData } from './remove-pdf-pages.types.js';
 
 class RemovePdfPagesController implements ViewController {
@@ -20,6 +20,7 @@ class RemovePdfPagesController implements ViewController {
   private currentResult: RemovePdfResponseData | null = null;
   private isProcessing = false;
   private lastClickedPageIndex: number | null = null;
+  private pageSelector: PageSelectorGridComponent | null = null;
   private pages: RemovePageItem[] = [];
   private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
@@ -35,18 +36,18 @@ class RemovePdfPagesController implements ViewController {
     this.phaseManager = new ToolPhaseManager({
       container: this.container,
       dropzone: {
-        buttonText: 'Seleccionar PDF',
+        buttonText: t('tools.remove_pdf_pages_btn_select'),
         desc: t('ui.selecciona_y_elimina_las_paginas_que_no_'),
-        hint: 'o arrastra y suelta el PDF aquí',
+        hint: t('common.drop_file_hint'),
         multiselect: false,
         onFilesSelected: (files: File[]) => {
           if (files.length > 0) void this.handleFileSelected(files[0]);
         },
-        title: 'Eliminar páginas',
+        title: t('tools.remove_pdf_pages_title'),
       },
       sidebarRef: 'remove-pages-sidebar',
       toolId: 'remove-pdf-pages',
-      toolName: 'Eliminar páginas',
+      toolName: t('tools.remove_pdf_pages_title'),
       topHeaderRef: 'component-top',
       workspaceCardRef: 'pdf-items-card',
     });
@@ -59,6 +60,10 @@ class RemovePdfPagesController implements ViewController {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+    if (this.pageSelector) {
+      this.pageSelector.destroy();
+      this.pageSelector = null;
     }
     if (this.phaseManager) {
       this.phaseManager.destroy();
@@ -85,9 +90,9 @@ class RemovePdfPagesController implements ViewController {
     const dragZone = this.container.querySelector<HTMLElement>('[data-ref="remove-sidebar-drag-zone"]');
     const closeBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sidebar-close"]');
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const inputPagesToRemove = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-to-remove"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
     const pagesGrid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
+    const selectorContainer = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-selector"]');
 
     this.sidebarModal = setupToolSidebarModal({
       backdrop,
@@ -98,17 +103,22 @@ class RemovePdfPagesController implements ViewController {
       signal,
     });
 
-    inputPagesToRemove?.addEventListener('input', () => {
-      if (this.pages.length === 0) return;
-      const parsed = parsePageNumbers(inputPagesToRemove.value, this.pages.length);
-      this.removedPages = new Set(parsed);
-      this.updateCardsState();
-      this.updateSummary();
-    }, { signal });
+    if (selectorContainer) {
+      this.pageSelector = new PageSelectorGridComponent({
+        container: selectorContainer,
+        onChange: (selected) => {
+          this.hideError();
+          this.removedPages = new Set(selected);
+          this.updateCardsState();
+          this.updateSummary();
+        },
+      });
+    }
 
     pagesGrid?.addEventListener('click', (e) => {
       const card = (e.target as HTMLElement).closest<HTMLElement>('[data-page-index]');
       if (!card) return;
+      this.hideError();
       const index = parseInt(card.getAttribute('data-page-index') || '0', 10);
       const pageNum = index + 1;
 
@@ -134,9 +144,7 @@ class RemovePdfPagesController implements ViewController {
         this.lastClickedPageIndex = index;
       }
 
-      if (inputPagesToRemove) {
-        inputPagesToRemove.value = formatPageNumbers(Array.from(this.removedPages));
-      }
+      this.pageSelector?.setSelected(this.removedPages);
       this.updateCardsState();
       this.updateSummary();
     }, { signal });
@@ -150,11 +158,12 @@ class RemovePdfPagesController implements ViewController {
 
   public async handleFileSelected(file: File): Promise<void> {
     if (this.isProcessing) return;
+    this.hideError();
 
     const isPdfExt = file.name.toLowerCase().endsWith('.pdf');
     const isPdfMime = file.type === 'application/pdf' || file.type === 'application/x-pdf';
     if (!isPdfExt && !isPdfMime) {
-      showToast(t('ui.selecciona_unicamente_un_documento_en_fo'), 'danger');
+      this.showError(t('ui.selecciona_unicamente_un_documento_en_fo'));
       return;
     }
 
@@ -164,22 +173,25 @@ class RemovePdfPagesController implements ViewController {
       showUpgradeLimitModal({
         currentLimit: limits.maxFileSizeMB,
         fileName: file.name,
-        toolName: 'Eliminar páginas PDF',
+        toolId: 'remove-pdf-pages',
+        toolName: t('tools.remove_pdf_pages_title'),
         type: 'file_size',
       });
       return;
     }
 
     this.currentFile = file;
+    this.removedPages.clear();
+    this.lastClickedPageIndex = null;
 
     try {
       const pdfjsLib = await loadPdfJs();
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({
         cMapPacked: true,
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+        cMapUrl: '/vendor/pdfjs/cmaps/',
         data: new Uint8Array(arrayBuffer),
-        standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/',
+        standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
       });
 
       this.pdfDocument = await loadingTask.promise;
@@ -194,13 +206,14 @@ class RemovePdfPagesController implements ViewController {
         });
       }
 
+      this.pageSelector?.setPageCount(numPages, [], true);
       this.renderFilesView();
 
       for (const item of this.pages) {
         void this.generatePageThumbnail(item);
       }
     } catch {
-      showToast(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'), 'danger');
+      this.showError(t('ui.no_se_pudo_cargar_el_documento_pdf_compr'));
       this.resetToInitial();
     }
   }
@@ -226,10 +239,11 @@ class RemovePdfPagesController implements ViewController {
         }).promise;
 
         item.thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        this.pageSelector?.setThumbnail(item.num, item.thumbnailDataUrl);
 
         const sheet = this.container.querySelector<HTMLElement>(`[data-ref="sheet-page-${item.num}"]`);
         if (sheet) {
-          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-page-${item.num}" src="${item.thumbnailDataUrl}" alt="Página ${item.num}" />`;
+          sheet.innerHTML = `<img class="pdf-card__canvas" data-ref="img-page-${item.num}" src="${item.thumbnailDataUrl}" alt="${escapeHtml(t('tools.page_label', { num: item.num }))}" />`;
         }
       }
     } catch {}
@@ -247,12 +261,12 @@ class RemovePdfPagesController implements ViewController {
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
     if (outputNameInput && this.currentFile) {
       const base = this.currentFile.name.replace(/\.[^/.]+$/, '');
-      outputNameInput.value = `${base}_sin_paginas.pdf`;
+      outputNameInput.value = `${base}${t('tools.remove_pdf_pages_default_suffix')}`;
     }
 
     const countBadge = this.container.querySelector<HTMLElement>('[data-ref="pdf-count-badge"]');
     if (countBadge) {
-      countBadge.textContent = `${this.pages.length} págs.`;
+      countBadge.textContent = t('tools.page_short_plural', { count: this.pages.length });
     }
 
     this.renderPagesGrid();
@@ -263,12 +277,14 @@ class RemovePdfPagesController implements ViewController {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
     if (!grid) return;
 
+    const removePageLabel = escapeHtml(t('tools.remove_pdf_pages_remove_page_label'));
     grid.innerHTML = this.pages.map((p, index) => {
       const isRemoved = this.removedPages.has(p.num);
+      const pageTitle = escapeHtml(t('tools.page_label', { num: p.num }));
       return `
         <div class="pdf-card remove-page-card ${isRemoved ? 'is-marked-remove' : ''}" data-ref="page-card-${p.num}" data-page-index="${index}" data-page-num="${p.num}">
           <div class="pdf-card__actions">
-            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-toggle-${p.num}" title="Eliminar página" aria-label="Eliminar página">
+            <button type="button" class="component-button pdf-card__btn-remove" data-ref="btn-toggle-${p.num}" title="${removePageLabel}" aria-label="${removePageLabel}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -281,13 +297,13 @@ class RemovePdfPagesController implements ViewController {
             <div class="pdf-card__sheet" data-ref="sheet-page-${p.num}">
               ${
                 p.thumbnailDataUrl
-                  ? `<img class="pdf-card__canvas" data-ref="img-page-${p.num}" src="${p.thumbnailDataUrl}" alt="Página ${p.num}" />`
+                  ? `<img class="pdf-card__canvas" data-ref="img-page-${p.num}" src="${p.thumbnailDataUrl}" alt="${pageTitle}" />`
                   : `<div class="pdf-card__spinner"></div>`
               }
             </div>
           </div>
           <div class="pdf-card__footer">
-            <span class="pdf-card__title">${t('tools.remove_pdf_pages_page') || 'Página'} ${p.num}</span>
+            <span class="pdf-card__title">${pageTitle}</span>
           </div>
         </div>
       `;
@@ -322,10 +338,10 @@ class RemovePdfPagesController implements ViewController {
 
     if (mainActionBtn && txtMainAction) {
       if (!this.currentFile) {
-        txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select') || 'Seleccionar PDF';
+        txtMainAction.textContent = t('tools.remove_pdf_pages_btn_select');
         mainActionBtn.disabled = true;
       } else {
-        txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action') || 'Eliminar páginas';
+        txtMainAction.textContent = t('tools.remove_pdf_pages_btn_action');
         mainActionBtn.disabled = this.isProcessing;
       }
     }
@@ -333,22 +349,23 @@ class RemovePdfPagesController implements ViewController {
 
   private async executeRemovePages(): Promise<void> {
     if (!this.currentFile || this.isProcessing) return;
+    this.hideError();
 
     const total = this.pages.length;
     const removedCount = this.removedPages.size;
 
     if (removedCount === 0) {
-      showToast(t('toasts.debes_seleccionar_al_menos_una_pagina_pa'), 'warning');
+      this.showError(t('toasts.debes_seleccionar_al_menos_una_pagina_pa'));
       return;
     }
 
     if (removedCount >= total) {
-      showToast(t('tools.remove_pages_at_least_one'), 'danger');
+      this.showError(t('tools.remove_pages_at_least_one'));
       return;
     }
 
     const outputNameInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"], [data-ref="input-output-name"]');
-    const customFilename = outputNameInput?.value.trim() || `${this.currentFile.name.replace(/\.pdf$/i, '')}_sin_paginas.pdf`;
+    const customFilename = outputNameInput?.value.trim() || `${this.currentFile.name.replace(/\.pdf$/i, '')}${t('tools.remove_pdf_pages_default_suffix')}`;
 
     const formData = new FormData();
     formData.append('pdf', this.currentFile);
@@ -368,7 +385,7 @@ class RemovePdfPagesController implements ViewController {
       );
       const json = await response.json();
 
-      this.phaseManager?.showProcessing('Eliminando páginas del PDF...', t('ui.generando_nuevo_documento_sin_las_pagina'));
+      this.phaseManager?.showProcessing(t('tools.remove_pdf_pages_processing'), t('ui.generando_nuevo_documento_sin_las_pagina'));
 
       if (!response.ok || !json.success || !json.data) {
         throw new Error(json.error || t('ui.error_al_procesar_la_solicitud'));
@@ -381,10 +398,10 @@ class RemovePdfPagesController implements ViewController {
         downloadUrl: `/api/download/${token}`,
         fileSize: this.currentResult.fileSize,
         filename: this.currentResult.filename,
-        returnText: 'Eliminar más páginas',
+        returnText: t('tools.remove_pdf_pages_btn_another'),
         returnUrl: '/remove-pdf-pages',
-        subtitle: `Se han eliminado exitosamente ${this.currentResult.removedPages} páginas de "${this.currentFile?.name}".`,
-        title: '¡Páginas eliminadas con éxito!',
+        subtitle: t('tools.remove_pdf_pages_success_desc', { count: this.currentResult.removedPages, name: this.currentFile?.name || '' }),
+        title: t('tools.remove_pdf_pages_completed_title'),
         token,
       });
     } catch {
@@ -404,9 +421,7 @@ class RemovePdfPagesController implements ViewController {
     this.lastClickedPageIndex = null;
     this.pdfDocument = null;
     this.isProcessing = false;
-
-    const inputPagesToRemove = this.container.querySelector<HTMLInputElement>('[data-ref="input-pages-to-remove"]');
-    if (inputPagesToRemove) inputPagesToRemove.value = '';
+    this.pageSelector?.setPageCount(0, [], true);
 
     const settingsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-workspace"]');
@@ -421,7 +436,25 @@ class RemovePdfPagesController implements ViewController {
     const grid = this.container.querySelector<HTMLElement>('[data-ref="remove-pages-grid"]');
     if (grid) grid.innerHTML = '';
 
+    this.hideError();
     this.phaseManager?.setPhase('dropzone');
+  }
+
+  private showError(msg: string): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-global-error"]');
+    if (banner) {
+      banner.textContent = msg;
+      showElement(banner);
+    }
+    showToast(msg, 'danger');
+  }
+
+  private hideError(): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="remove-global-error"]');
+    if (banner) {
+      banner.textContent = '';
+      hideElement(banner);
+    }
   }
 }
 
