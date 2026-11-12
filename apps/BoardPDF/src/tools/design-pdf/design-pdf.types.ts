@@ -38,6 +38,7 @@ interface CollaborativeElementShape {
   flipVertical?: boolean;
   height: number;
   id: string;
+  isRedaction?: boolean;
   opacity?: number;
   pageIndex: number;
   rotation?: number;
@@ -193,6 +194,7 @@ interface CollaborativeManualGuide {
 }
 
 interface CollaborativePdfPageSource {
+  cropTransform?: { cropH: number; cropW: number; cropX: number; cropY: number };
   pageNumber: number;
   pdfUrl: string;
 }

@@ -198,12 +198,26 @@ async function renderCollaborativePdf(
           const sourcePageIdx = Math.max(0, (pageSource.pageNumber || 1) - 1);
           if (sourcePageIdx < sourceDoc.getPageCount()) {
             const [embeddedPage] = await pdfDoc.embedPdf(sourceDoc, [sourcePageIdx]);
-            page.drawPage(embeddedPage, {
-              height: targetHeight,
-              width: targetWidth,
-              x: 0,
-              y: 0,
-            });
+            const crop = pageSource.cropTransform;
+            if (crop && crop.cropW > 0 && crop.cropH > 0) {
+              const origW = (embeddedPage as any).width || targetWidth;
+              const origH = (embeddedPage as any).height || targetHeight;
+              const scaleX = targetWidth / (crop.cropW * scale);
+              const scaleY = targetHeight / (crop.cropH * scale);
+              page.drawPage(embeddedPage, {
+                height: origH * scaleY,
+                width: origW * scaleX,
+                x: -crop.cropX * scale * scaleX,
+                y: targetHeight - origH * scaleY + (crop.cropY * scale * scaleY),
+              });
+            } else {
+              page.drawPage(embeddedPage, {
+                height: targetHeight,
+                width: targetWidth,
+                x: 0,
+                y: 0,
+              });
+            }
           }
         }
       } catch (pageErr) {
@@ -292,13 +306,15 @@ async function renderCollaborativePdf(
       const scaledW = Math.max(2, (el.width || 50) * scale);
       const scaledH = Math.max(2, (el.height || 50) * scale);
 
-      if (el.shapeType === 'rect') {
+      if (el.shapeType === 'rect' || el.shapeType === 'redaction' || el.isRedaction) {
+        const isRedaction = Boolean(el.isRedaction || el.shapeType === 'redaction');
         const pdfY = targetHeight - scaledY - scaledH;
         page.drawRectangle({
-          borderColor: el.strokeWidth ? strokeRgb : undefined,
-          borderWidth,
-          color: fillRgb,
+          borderColor: isRedaction ? undefined : (el.strokeWidth ? strokeRgb : undefined),
+          borderWidth: isRedaction ? 0 : borderWidth,
+          color: isRedaction ? rgb(0, 0, 0) : fillRgb,
           height: scaledH,
+          opacity: 1,
           width: scaledW,
           x: scaledX,
           y: pdfY,

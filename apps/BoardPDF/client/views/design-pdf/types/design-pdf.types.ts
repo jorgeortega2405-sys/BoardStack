@@ -29,6 +29,12 @@ interface ElementText {
   y: number;
 }
 
+interface RedactionMetadata {
+  blackout?: boolean;
+  pageIndex: number;
+  text?: string;
+}
+
 interface ElementShape {
   borderRadius?: number;
   fillColor?: string;
@@ -36,8 +42,10 @@ interface ElementShape {
   flipVertical?: boolean;
   height: number;
   id: string;
+  isRedaction?: boolean;
   opacity?: number;
   pageIndex: number;
+  redactionMetadata?: RedactionMetadata;
   rotation?: number;
   shapeType: string;
   sides?: number;
@@ -179,6 +187,7 @@ interface ElementChart {
 type EditorElement = ElementChart | ElementDrawing | ElementImage | ElementShape | ElementTable | ElementText;
 
 interface PagePdfSource {
+  cropTransform?: { cropH: number; cropW: number; cropX: number; cropY: number };
   pageNumber: number;
   pdfUrl: string;
 }
@@ -244,4 +253,4 @@ const PAGE_WIDTH = 794;
 const PAGE_HEIGHT = 1123;
 
 export { CHART_PALETTES, PAGE_HEIGHT, PAGE_WIDTH, applyListFormatting };
-export type { ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, ManualGuide, PagePdfSource, RemotePeer, UploadedAsset };
+export type { ChartType, DocMember, EditorElement, ElementChart, ElementChartDataSeries, ElementChartOptions, ElementDrawing, ElementImage, ElementShape, ElementTable, ElementTableCell, ElementText, ManualGuide, PagePdfSource, RedactionMetadata, RemotePeer, UploadedAsset };

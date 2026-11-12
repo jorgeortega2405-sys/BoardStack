@@ -124,7 +124,7 @@ const APP_ROUTES: RouteDefinition[] = [
       return await createCropPdfView();
     },
     id: 'crop-pdf',
-    match: (path) => path === '/crop-pdf' || path.startsWith('/crop-pdf'),
+    match: (path) => path === '/crop-pdf' || path.startsWith('/crop-pdf') || path === '/tools/crop-pdf' || path.startsWith('/tools/crop-pdf'),
   },
   {
     handler: async (ctx) => {
@@ -160,7 +160,7 @@ const APP_ROUTES: RouteDefinition[] = [
       return await createRedactPdfView();
     },
     id: 'redact-pdf',
-    match: (path) => path === '/redact-pdf' || path.startsWith('/redact-pdf'),
+    match: (path) => path === '/redact-pdf' || path.startsWith('/redact-pdf') || path === '/tools/redact-pdf' || path.startsWith('/tools/redact-pdf'),
   },
   {
     handler: async (ctx) => {
@@ -268,7 +268,7 @@ const APP_ROUTES: RouteDefinition[] = [
       return await createComparePdfView();
     },
     id: 'compare-pdf',
-    match: (path) => path === '/compare-pdf' || path.startsWith('/compare-pdf'),
+    match: (path) => path === '/compare-pdf' || path.startsWith('/compare-pdf') || path === '/tools/compare-pdf' || path.startsWith('/tools/compare-pdf'),
   },
   {
     handler: async (ctx) => {

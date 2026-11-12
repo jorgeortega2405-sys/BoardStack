@@ -6,12 +6,12 @@ import { getCurrentUserToolLimits } from '../../../config/tools-limits.config.js
 import { currentUser, postFormWithProgress, updateUserAiTokens } from '../../../services/api.service.js';
 import { t } from '../../../services/i18n.service.js';
 import { renderIcons } from '../../../services/icon.service.js';
-import { loadPdfDocument } from '../../../services/pdf-loader.service.js';
+import { loadPdfJs } from '../../../services/pdf-loader.service.js';
 import { loadTemplate } from '../../../services/template.service.js';
 import { showToast } from '../../../services/toast.service.js';
 import { ViewController } from '../../../types/common.types.js';
 import { ToolSidebarModalController, animateTypewriter, hideElement, setupToolSidebarModal, showElement } from '../../../utils/dom.util.js';
-import { ToolZoomController, applyPageScaler } from '../../../utils/tool-zoom.util.js';
+import { formatBytes } from '../../../utils/format.util.js';
 import { SummarizePdfResultData } from './summarize-pdf.types.js';
 
 function formatInlineMarkdown(text: string): string {
@@ -94,15 +94,9 @@ class SummarizePdfController implements ViewController {
   private currentFile: File | null = null;
   private currentResult: SummarizePdfResultData | null = null;
   private isProcessing = false;
-  private isRenderingPages = false;
-  private pageDimensions: Array<{ height: number; width: number }> = [];
-  private pageObserver: IntersectionObserver | null = null;
-  private pdfDocument: any = null;
   private phaseManager: ToolPhaseManager | null = null;
   private selectedMode: 'standard' = 'standard';
   private sidebarModal: ToolSidebarModalController | null = null;
-  private zoomController: ToolZoomController | null = null;
-  private zoomScale = 1.0;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -126,7 +120,7 @@ class SummarizePdfController implements ViewController {
       toolId: 'summarize-pdf',
       toolName: t('tools.summarize_pdf_title'),
       topHeaderRef: 'component-top',
-      workspaceCardRef: 'summarize-viewer-card',
+      workspaceCardRef: 'summarize-selected-card',
     });
     await this.phaseManager.init();
     renderIcons(this.container);
@@ -134,14 +128,6 @@ class SummarizePdfController implements ViewController {
   }
 
   public destroy(): void {
-    if (this.pageObserver) {
-      this.pageObserver.disconnect();
-      this.pageObserver = null;
-    }
-    if (this.zoomController) {
-      this.zoomController.destroy();
-      this.zoomController = null;
-    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -153,12 +139,6 @@ class SummarizePdfController implements ViewController {
     if (this.phaseManager) {
       this.phaseManager.destroy();
       this.phaseManager = null;
-    }
-    if (this.pdfDocument) {
-      try {
-        void this.pdfDocument.destroy();
-      } catch {}
-      this.pdfDocument = null;
     }
   }
 
@@ -219,29 +199,10 @@ class SummarizePdfController implements ViewController {
       this.handleClearSummary();
     }, { signal });
 
-    this.zoomController = new ToolZoomController({
-      container: this.container,
-      initialZoom: 1.0,
-      maxZoom: 3.0,
-      minZoom: 0.1,
-      onZoomChange: (level) => this.applyZoom(level),
-      scrollContainer: this.container.querySelector<HTMLElement>('[data-ref="viewer-scroll-container"]'),
-      signal,
-    });
-  }
-
-  private applyZoom(level: number): void {
-    this.zoomScale = level;
-    const scalers = this.container.querySelectorAll<HTMLElement>('.tool-viewport-scaler');
-    scalers.forEach((scaler) => {
-      const pageIndex = parseInt(scaler.getAttribute('data-page-index') || '0', 10);
-      const dims = this.pageDimensions[pageIndex];
-      if (!dims) return;
-      const baseWidth = 760;
-      const baseHeight = Math.floor((dims.height / dims.width) * baseWidth);
-      const sheet = scaler.querySelector<HTMLElement>('.pdf-viewer-page-card');
-      if (sheet) applyPageScaler(scaler, sheet, baseWidth, baseHeight, level);
-    });
+    const removeFileBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-file"]');
+    removeFileBtn?.addEventListener('click', () => {
+      this.resetSelectedFile();
+    }, { signal });
   }
 
   public async handleFileSelected(file: File): Promise<void> {
@@ -274,27 +235,61 @@ class SummarizePdfController implements ViewController {
     this.handleClearSummary();
     this.closeSummaryDrawer();
 
-    try {
-      const buffer = await file.arrayBuffer();
-      this.pdfDocument = await loadPdfDocument(buffer);
+    this.renderGridState();
 
-      this.renderViewerState();
-      this.zoomController?.showFooter();
-      this.zoomController?.updatePageInfo(1, this.pdfDocument.numPages);
-      void this.renderAllPages();
-    } catch {
-      showToast(t('ui.no_se_pudo_leer_el_archivo_pdf_seleccion'), 'danger');
-      this.resetSelectedFile();
+    const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
+    if (canvas) {
+      void this.renderThumbnail(file, canvas);
     }
   }
 
-  private renderViewerState(): void {
+  private async renderThumbnail(file: File, canvas: HTMLCanvasElement): Promise<void> {
+    let pdf: any = null;
+    try {
+      const pdfjs = await loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      const page = await pdf.getPage(1);
+      const targetWidth = 180;
+      const origViewport = page.getViewport({ scale: 1 });
+      const scale = targetWidth / origViewport.width;
+      const viewport = page.getViewport({ scale });
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(dpr, dpr);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      }
+    } catch {
+    } finally {
+      try {
+        if (pdf) await pdf.destroy();
+      } catch {}
+    }
+  }
+
+  private renderGridState(): void {
     this.phaseManager?.setPhase('workspace');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
     const sidebarActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
+    const nameEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-name"]');
+    const sizeEl = this.container.querySelector<HTMLElement>('[data-ref="selected-file-size"]');
+    const docTitleInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-title"]');
+
+    if (this.currentFile) {
+      if (nameEl) nameEl.textContent = this.currentFile.name;
+      if (sizeEl) sizeEl.textContent = formatBytes(this.currentFile.size);
+      if (docTitleInput && !docTitleInput.value) {
+        docTitleInput.value = this.currentFile.name.replace(/\.[^/.]+$/, '');
+      }
+    }
 
     if (settingsBtn) settingsBtn.classList.add('is-visible');
     if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
@@ -303,120 +298,22 @@ class SummarizePdfController implements ViewController {
     if (sidebarActionBtn) sidebarActionBtn.disabled = false;
   }
 
-  private async renderAllPages(): Promise<void> {
-    if (!this.pdfDocument || this.isRenderingPages) return;
-    this.isRenderingPages = true;
-
-    if (this.pageObserver) {
-      this.pageObserver.disconnect();
-      this.pageObserver = null;
-    }
-
-    const scrollContainer = this.container.querySelector<HTMLElement>('[data-ref="viewer-scroll-container"]');
-    const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]') || scrollContainer;
-    if (!pagesWrapper) {
-      this.isRenderingPages = false;
-      return;
-    }
-
-    pagesWrapper.innerHTML = '';
-    const numPages = this.pdfDocument.numPages;
-    this.pageDimensions = [];
-
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const pageIndex = pageNum - 1;
-      const page = await this.pdfDocument.getPage(pageNum);
-      const origViewport = page.getViewport({ scale: 1 });
-      this.pageDimensions.push({ height: origViewport.height, width: origViewport.width });
-
-      const baseWidth = 760;
-      const displayScale = baseWidth / origViewport.width;
-      const baseHeight = Math.floor(origViewport.height * displayScale);
-      const viewport = page.getViewport({ scale: displayScale });
-      const dpr = Math.max(window.devicePixelRatio || 1, 2);
-
-      const scaler = document.createElement('div');
-      scaler.className = 'tool-viewport-scaler';
-      scaler.setAttribute('data-page-index', `${pageIndex}`);
-      scaler.style.width = `${Math.floor(baseWidth * this.zoomScale)}px`;
-      scaler.style.height = `${Math.floor(baseHeight * this.zoomScale)}px`;
-
-      const pageCard = document.createElement('div');
-      pageCard.className = 'pdf-viewer-page-card tool-viewport-sheet';
-      pageCard.setAttribute('data-ref', `page-card-${pageNum}`);
-      pageCard.setAttribute('data-page-index', `${pageIndex}`);
-      pageCard.style.width = `${baseWidth}px`;
-      pageCard.style.height = `${baseHeight}px`;
-      pageCard.style.transform = `scale(${this.zoomScale})`;
-
-      const canvas = document.createElement('canvas');
-      canvas.className = 'pdf-viewer-page-canvas';
-      canvas.setAttribute('data-ref', `page-canvas-${pageNum}`);
-      canvas.width = Math.floor(baseWidth * dpr);
-      canvas.height = Math.floor(baseHeight * dpr);
-      canvas.style.width = `${baseWidth}px`;
-      canvas.style.height = `${baseHeight}px`;
-
-      pageCard.appendChild(canvas);
-      scaler.appendChild(pageCard);
-      pagesWrapper.appendChild(scaler);
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.scale(dpr, dpr);
-        try {
-          await page.render({ canvasContext: ctx, viewport }).promise;
-        } catch {}
-      }
-    }
-
-    this.setupPageScrollObserver();
-    this.isRenderingPages = false;
-  }
-
-  private setupPageScrollObserver(): void {
-    const scrollContainer = this.container.querySelector<HTMLElement>('[data-ref="viewer-scroll-container"]');
-    if (!scrollContainer || !this.abortController) return;
-
-    this.pageObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const pageIndex = parseInt(entry.target.getAttribute('data-page-index') || '0', 10);
-          this.zoomController?.updatePageInfo(pageIndex + 1, this.pdfDocument?.numPages || 1);
-        }
-      });
-    }, {
-      root: scrollContainer,
-      threshold: 0.5,
-    });
-
-    const scalers = this.container.querySelectorAll<HTMLElement>('.tool-viewport-scaler');
-    scalers.forEach((scaler) => this.pageObserver?.observe(scaler));
-  }
-
   private resetSelectedFile(): void {
-    if (this.pageObserver) {
-      this.pageObserver.disconnect();
-      this.pageObserver = null;
-    }
-    this.zoomController?.hideFooter();
-    this.zoomController?.setZoom(1.0);
     this.currentFile = null;
     this.currentResult = null;
-    this.pdfDocument = null;
-    this.zoomScale = 1.0;
     this.hideError();
 
-    const pagesWrapper = this.container.querySelector<HTMLElement>('[data-ref="pages-wrapper"]');
-    if (pagesWrapper) pagesWrapper.innerHTML = '';
-
-    const resultSection = this.container.querySelector<HTMLElement>('[data-ref="section-summary-result"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="summary-empty-state"]');
     const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
     const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
     const mainActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-main-action"]');
     const sidebarActionBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-summarize-action"]');
+    const canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="doc-preview-canvas"]');
+
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
 
     if (settingsBtn) settingsBtn.classList.remove('is-visible');
     if (viewSummaryBtn) viewSummaryBtn.classList.remove('is-visible', 'is-active');
@@ -424,8 +321,7 @@ class SummarizePdfController implements ViewController {
     if (mainActionBtn) mainActionBtn.disabled = true;
     if (sidebarActionBtn) sidebarActionBtn.disabled = true;
 
-    hideElement(resultSection);
-    showElement(emptyState);
+    this.handleClearSummary();
     this.closeSummaryDrawer();
     this.sidebarModal?.close();
     this.phaseManager?.setPhase('dropzone');
@@ -440,13 +336,6 @@ class SummarizePdfController implements ViewController {
 
     this.hideError();
     this.isProcessing = true;
-    const settingsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-options"], [data-ref="btn-tool-settings"]');
-    const viewSummaryBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-view-summary"]');
-    const workspace = this.container.querySelector<HTMLElement>('[data-ref="summarize-pdf-workspace"]');
-
-    if (settingsBtn) settingsBtn.classList.remove('is-visible');
-    if (viewSummaryBtn) viewSummaryBtn.classList.remove('is-visible');
-    if (workspace) workspace.classList.remove('tool-layout__workspace--top-aligned');
     this.sidebarModal?.close();
 
     this.phaseManager?.showUploading(1, 1);
@@ -479,9 +368,6 @@ class SummarizePdfController implements ViewController {
         updateUserAiTokens((result as any).aiTokens.balance);
       }
       this.phaseManager?.setPhase('workspace');
-      if (settingsBtn) settingsBtn.classList.add('is-visible');
-      if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
-      if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       showToast(t('toasts.summary_generated_success'), 'success');
       this.openSummaryDrawer();
       this.renderSummaryResult(result.data);
@@ -490,9 +376,6 @@ class SummarizePdfController implements ViewController {
       this.showError(errorMessage);
       this.phaseManager?.showError(errorMessage, () => {
         this.phaseManager?.setPhase('workspace');
-        if (settingsBtn) settingsBtn.classList.add('is-visible');
-        if (viewSummaryBtn) viewSummaryBtn.classList.add('is-visible');
-        if (workspace) workspace.classList.add('tool-layout__workspace--top-aligned');
       });
     } finally {
       this.isProcessing = false;
@@ -564,7 +447,7 @@ class SummarizePdfController implements ViewController {
   }
 
   private showError(message: string): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-error-banner"]');
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"], [data-ref="summarize-error-banner"]');
     if (errorEl) {
       errorEl.textContent = message;
       showElement(errorEl);
@@ -573,7 +456,7 @@ class SummarizePdfController implements ViewController {
   }
 
   private hideError(): void {
-    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-error-banner"]');
+    const errorEl = this.container.querySelector<HTMLElement>('[data-ref="summarize-global-error"], [data-ref="summarize-error-banner"]');
     if (errorEl) {
       errorEl.textContent = '';
       hideElement(errorEl);

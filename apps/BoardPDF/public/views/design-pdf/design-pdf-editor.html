@@ -23,6 +23,18 @@
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
 <span class="menu-item__text" >Crear una copia</span>
 </button>
+<button type="button" class="menu-item" data-ref="btn-menu-file-crop">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+<span class="menu-item__text" data-i18n="collaborative.tool_crop"></span>
+</button>
+<button type="button" class="menu-item" data-ref="btn-menu-file-redact">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility_off"></use></svg>
+<span class="menu-item__text" data-i18n="collaborative.tool_redact"></span>
+</button>
+<button type="button" class="menu-item" data-ref="btn-menu-file-compare">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
+<span class="menu-item__text" data-i18n="collaborative.tool_compare"></span>
+</button>
 <div class="menu-item-submenu-wrapper" data-ref="item-menu-file-rulers-parent">
 <button type="button" class="menu-item menu-item--has-submenu" data-ref="btn-menu-file-rulers">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
@@ -105,6 +117,15 @@
 <button type="button" class="component-button component-button--icon-only component-button--h40 collaborative-cloud-btn collaborative-top-icon-btn" data-ref="btn-cloud-status" data-tooltip="Guardado en el servidor" data-i18n-aria="common.save_changes" aria-label="Guardar cambios">
 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
 </button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-crop" data-i18n-tooltip="collaborative.tool_crop_tooltip" data-i18n-aria="collaborative.tool_crop_tooltip">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+</button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-redact" data-i18n-tooltip="collaborative.tool_redact_tooltip" data-i18n-aria="collaborative.tool_redact_tooltip">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility_off"></use></svg>
+</button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-top-icon-btn" data-ref="btn-top-compare" data-i18n-tooltip="collaborative.tool_compare_tooltip" data-i18n-aria="collaborative.tool_compare_tooltip">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
+</button>
 </div>
 <div class="collaborative-top-bar__right" >
 <div class="collab-presence-container" data-ref="collab-presence-container"></div>
@@ -119,7 +140,7 @@
 </div>
 </header>
 <div class="collaborative-main-body" data-ref="collaborative-main-body">
-<div class="collaborative-tools-toolbar is-hidden" data-ref="collaborative-tools-toolbar">
+<div class="collaborative-tools-toolbar" data-ref="collaborative-tools-toolbar">
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn is-active" data-ref="btn-tool-select" data-tool="select" data-tooltip="Seleccionar" aria-label="Seleccionar">
 <svg class="component-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 3.5l14 8.5-7 1.5-3.5 6.5z"/></svg>
 </button>
@@ -137,6 +158,15 @@
 </button>
 <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-text" data-tool="text" data-tooltip="Texto" aria-label="Texto">
 <svg class="component-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 4h14v3h-2v-1H13v13h2v1H9v-1h2V6H7v1H5V4z"/></svg>
+</button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-redact" data-tool="redact" data-i18n-tooltip="collaborative.tool_redact_tooltip" data-i18n-aria="collaborative.tool_redact_tooltip">
+<svg class="component-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+</button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-crop" data-tool="crop" data-i18n-tooltip="collaborative.tool_crop_tooltip" data-i18n-aria="collaborative.tool_crop_tooltip">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+</button>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h40 collaborative-toolbar-btn" data-ref="btn-tool-compare" data-tool="compare" data-i18n-tooltip="collaborative.tool_compare_tooltip" data-i18n-aria="collaborative.tool_compare_tooltip">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#compare_arrows"></use></svg>
 </button>
 <div class="collaborative-subtoolbar-flyout is-hidden" data-ref="collaborative-subtoolbar-flyout">
 <div class="collaborative-subtoolbar is-hidden" data-ref="subtoolbar-draw">
@@ -268,6 +298,32 @@
 </div>
 </div>
 <div class="collaborative-context-toolbar is-hidden" data-ref="collaborative-context-toolbar">
+<div class="collaborative-context-group is-hidden" data-ref="context-group-compare">
+<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-upload-second">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_load_second"></span>
+</button>
+<input class="is-hidden" data-ref="input-compare-file-second" type="file" accept="application/pdf" />
+<span class="collaborative-subtoolbar__filename" data-ref="compare-filename-second"></span>
+<div class="collaborative-subtoolbar__divider"></div>
+<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn is-active" data-ref="btn-compare-mode-side" data-i18n-tooltip="collaborative.compare_side_by_side" data-i18n-aria="collaborative.compare_side_by_side">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#view_column"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_side_by_side"></span>
+</button>
+<button type="button" class="component-button component-button--ghost component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-mode-overlay" data-i18n-tooltip="collaborative.compare_overlay" data-i18n-aria="collaborative.compare_overlay">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+<span class="component-button__text" data-i18n="collaborative.compare_overlay"></span>
+</button>
+<div class="collaborative-compare-slider-wrap is-hidden" data-ref="compare-slider-wrap">
+<span class="collaborative-subtoolbar__label" data-i18n="collaborative.compare_opacity"></span>
+<input class="collab-popover-range" data-ref="slider-compare-opacity" data-i18n-aria="collaborative.compare_opacity" type="range" min="10" max="90" value="50" step="5" />
+<span class="collaborative-subtoolbar__label" data-ref="txt-compare-opacity">50%</span>
+</div>
+<div class="collaborative-subtoolbar__divider"></div>
+<button type="button" class="component-button component-button--icon-only component-button--ghost component-button--danger component-button--h36 collaborative-toolbar-btn" data-ref="btn-compare-exit" data-i18n-tooltip="collaborative.compare_exit" data-i18n-aria="collaborative.compare_exit">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+</button>
+</div>
 <div class="collaborative-context-group is-hidden" data-ref="context-group-text">
 <button type="button" class="component-button component-button--ghost component-button--h36 collaborative-font-btn" data-ref="btn-font-family" data-tooltip="Cambiar fuente" aria-label="Cambiar fuente">
 <span class="collaborative-font-btn__name" data-ref="txt-font-family">Helvetica</span>
@@ -899,6 +955,24 @@
 </div>
 <div class="collaborative-pages-filmstrip is-hidden" data-ref="pages-filmstrip">
 <div class="collaborative-pages-filmstrip__track" data-ref="filmstrip-track"></div>
+</div>
+<div class="crop-floating-bar is-hidden" data-ref="crop-floating-bar">
+<span class="collaborative-footer__page-text" data-i18n="collaborative.crop_bounding_box_hint"></span>
+<button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-crop-apply" disabled>
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+<span data-i18n="collaborative.crop_apply"></span>
+</button>
+<button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-crop-cancel">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+<span data-i18n="collaborative.crop_cancel"></span>
+</button>
+</div>
+<div class="crop-floating-bar is-hidden" data-ref="redact-floating-bar">
+<span class="crop-floating-bar__title" data-i18n="collaborative.redact_mode_active"></span>
+<button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-redact-done">
+<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+<span data-i18n="collaborative.redact_done"></span>
+</button>
 </div>
 <footer class="collaborative-footer" data-ref="collaborative-footer">
 <div class="collaborative-footer__right" data-ref="footer-right">

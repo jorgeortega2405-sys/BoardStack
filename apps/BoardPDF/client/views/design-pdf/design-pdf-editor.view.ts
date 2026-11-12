@@ -7,6 +7,7 @@ import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { navigate } from '../../services/navigation.service.js';
 import { checkPdfPagesEditableStatus, extractEditablePdfPage } from '../../services/pdf-editable-extractor.service.js';
+import { loadPdfJs } from '../../services/pdf-loader.service.js';
 import { renderPdfThumbnail } from '../../services/pdf-preview.service.js';
 import { loadTemplate } from '../../services/template.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -55,11 +56,15 @@ class DesignPdfEditorController implements ViewController {
   private autoSaveMaxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private currentColorTarget: 'draw-color' | 'page-bg' | 'shape-fill' | 'shape-stroke' | 'sticky-bg' | 'table-bg' | 'table-border' | 'table-header' | 'text-color' | null = null;
-  private activeTool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text' = 'select';
+  private activeTool: 'compare' | 'crop' | 'draw' | 'lines' | 'redact' | 'select' | 'shapes' | 'stickynotes' | 'text' = 'select';
   private activeUploadFilter: 'all' | 'images' | 'pdfs' = 'all';
   private canEditDoc = true;
   private collabCleanup: (() => void) | null = null;
+  private compareOverlayOpacity = 0.5;
+  private compareViewMode: 'overlay' | 'side-by-side' = 'side-by-side';
   private container: HTMLElement;
+  private cropBox: { height: number; width: number; x: number; y: number } | null = null;
+  private cropPageIndex = 0;
   private dispatcher!: CollabActionDispatcher;
   private docAccessLevel: 'anyone_with_link' | 'restricted' = 'restricted';
   private docCustomSlug: string | null = null;
@@ -67,7 +72,11 @@ class DesignPdfEditorController implements ViewController {
   private docTeamId: number | null = null;
   private docDefaultPageSize: PageDimension = { height: 1123, width: 794 };
   private initialUrlDimensions: PageDimension | null = null;
+  private isCompareMode = false;
+  private isCropMode = false;
   private isLoadingDocument = false;
+  private secondPdfDoc: any = null;
+  private secondPdfFile: File | null = null;
   private docId = '';
   private docMembers: DocMember[] = [];
   private docTitle = '';
@@ -287,9 +296,18 @@ class DesignPdfEditorController implements ViewController {
             this.uploadedAssets.unshift(autoAsset);
             this.renderUploadsGrid();
           }
-          void this.handleApplyAllPdfPages(autoAsset);
+          await this.handleApplyAllPdfPages(autoAsset);
         }
       } catch {}
+    }
+
+    const toolMode = urlParams.get('mode');
+    if (toolMode === 'crop') {
+      setTimeout(() => this.startCropMode(), 300);
+    } else if (toolMode === 'redact') {
+      setTimeout(() => this.activateTool('redact'), 300);
+    } else if (toolMode === 'compare') {
+      setTimeout(() => this.startCompareMode(), 300);
     }
 
     if (urlParams.get('share') === '1') {
@@ -950,19 +968,78 @@ class DesignPdfEditorController implements ViewController {
     }
   }
 
-  private activateTool(tool: 'draw' | 'lines' | 'select' | 'shapes' | 'stickynotes' | 'text'): void {
+  private activateTool(tool: 'compare' | 'crop' | 'draw' | 'lines' | 'redact' | 'select' | 'shapes' | 'stickynotes' | 'text'): void {
+    if (tool === 'crop') {
+      this.isCropMode ? this.endCropMode() : this.startCropMode();
+      return;
+    }
+    if (tool === 'compare') {
+      this.isCompareMode ? this.endCompareMode() : this.startCompareMode();
+      return;
+    }
+
+    if (tool === 'redact' && this.activeTool === 'redact') {
+      this.activateTool('select');
+      return;
+    }
+
+    if (this.isCropMode) {
+      this.endCropMode();
+    }
+    if (this.isCompareMode) {
+      this.endCompareMode();
+    }
+
     const toolbarButtons = this.container.querySelectorAll<HTMLButtonElement>('.collaborative-toolbar-btn');
     toolbarButtons.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-tool') === tool));
     this.activeTool = tool;
     this.rulerGuidesCtrl?.setPassthrough(tool !== 'select');
-    if (tool === 'select') {
+
+    const redactFloatingBar = this.container.querySelector<HTMLElement>('[data-ref="redact-floating-bar"]');
+    if (tool === 'redact') {
       this.closeSubtoolbars();
-    } else if (tool === 'text') {
-      this.closeSubtoolbars();
-      this.addTextElement('body');
+      if (redactFloatingBar) showElement(redactFloatingBar);
+      showToast(t('collaborative.redact_mode_active'), 'info');
     } else {
-      this.openSubtoolbar(tool);
+      if (redactFloatingBar) hideElement(redactFloatingBar);
+      if (tool === 'select') {
+        this.closeSubtoolbars();
+      } else if (tool === 'text') {
+        this.closeSubtoolbars();
+        this.addTextElement('body');
+      } else {
+        this.openSubtoolbar(tool);
+      }
     }
+    this.updateRedactTextLayersPointerEvents();
+    this.updateModeButtonsState();
+  }
+
+  private updateRedactTextLayersPointerEvents(): void {
+    const isRedact = this.activeTool === 'redact';
+    const layers = this.container.querySelectorAll<HTMLElement>('.pdf-redact-text-layer');
+    layers.forEach((layer) => {
+      layer.style.pointerEvents = isRedact ? 'auto' : 'none';
+    });
+  }
+
+  private updateModeButtonsState(): void {
+    const btnTopCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-crop"]');
+    const btnTopRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redact"]');
+    const btnTopCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-compare"]');
+    const btnToolCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-crop"]');
+    const btnToolRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-redact"]');
+    const btnToolCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-compare"]');
+
+    btnTopCrop?.classList.toggle('is-active', this.isCropMode);
+    btnToolCrop?.classList.toggle('is-active', this.isCropMode);
+
+    const isRedact = this.activeTool === 'redact';
+    btnTopRedact?.classList.toggle('is-active', isRedact);
+    btnToolRedact?.classList.toggle('is-active', isRedact);
+
+    btnTopCompare?.classList.toggle('is-active', this.isCompareMode);
+    btnToolCompare?.classList.toggle('is-active', this.isCompareMode);
   }
 
   private activateSelectTool(): void {
@@ -2051,6 +2128,9 @@ class DesignPdfEditorController implements ViewController {
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn${isDocAiLocked ? ' is-disabled' : ''}" data-ref="btn-page-resize-${p}" data-page-action="resize" data-page-index="${p}" data-tooltip="Tamaño de página" aria-label="Tamaño de página"${isDocAiLocked ? ' disabled' : ''}>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
         </button>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn${isDocAiLocked ? ' is-disabled' : ''}" data-ref="btn-page-crop-${p}" data-page-action="crop" data-page-index="${p}" data-tooltip="${t('collaborative.crop_page')}" aria-label="${t('collaborative.crop_page')}"${isDocAiLocked ? ' disabled' : ''}>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop"></use></svg>
+        </button>
         <button type="button" class="component-button component-button--icon-only component-button--ghost component-button--h28 collaborative-page-action-btn${isDocAiLocked ? ' is-disabled' : ''}" data-ref="btn-page-add-${p}" data-page-action="add" data-page-index="${p}" data-tooltip="Añadir página" aria-label="Añadir página"${isDocAiLocked ? ' disabled' : ''}>
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#note_add"></use></svg>
         </button>
@@ -2087,6 +2167,14 @@ class DesignPdfEditorController implements ViewController {
           pageNum: this.pagePdfSources[p]!.pageNumber,
           targetWidth: curPageW,
         });
+
+        const textLayer = document.createElement('div');
+        textLayer.className = 'pdf-redact-text-layer';
+        textLayer.setAttribute('data-ref', `page-text-layer-${p}`);
+        textLayer.setAttribute('data-page-index', p.toString());
+        textLayer.style.pointerEvents = this.activeTool === 'redact' ? 'auto' : 'none';
+        sheet.appendChild(textLayer);
+        void this.renderPdfTextLayer(this.pagePdfSources[p]!.pdfUrl, this.pagePdfSources[p]!.pageNumber, textLayer, curPageW, curPageH);
       }
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -2152,6 +2240,10 @@ class DesignPdfEditorController implements ViewController {
       }
       sheet.appendChild(elementsContainer);
 
+      if (this.isCropMode && p === this.cropPageIndex) {
+        sheet.appendChild(this.createCropOverlayElement(curPageW, curPageH, p));
+      }
+
       const scaler = document.createElement('div');
       scaler.className = 'collaborative-page-sheet-scaler';
       scaler.setAttribute('data-ref', `page-sheet-scaler-${p}`);
@@ -2172,7 +2264,60 @@ class DesignPdfEditorController implements ViewController {
       header.style.width = `${Math.max(340, scaledW)}px`;
 
       wrapper.appendChild(header);
-      wrapper.appendChild(scaler);
+
+      if (this.isCompareMode && this.secondPdfDoc) {
+        if (this.compareViewMode === 'side-by-side') {
+          const compContainer = document.createElement('div');
+          compContainer.className = 'collaborative-compare-container';
+
+          const leftPane = document.createElement('div');
+          leftPane.className = 'collaborative-compare-pane';
+          leftPane.appendChild(scaler);
+
+          const rightPane = document.createElement('div');
+          rightPane.className = 'collaborative-compare-pane';
+
+          const rightScaler = document.createElement('div');
+          rightScaler.className = 'collaborative-page-sheet-scaler';
+          rightScaler.style.width = `${scaledW}px`;
+          rightScaler.style.height = `${scaledH}px`;
+
+          const rightSheet = document.createElement('div');
+          rightSheet.className = 'collaborative-page-sheet';
+          rightSheet.style.width = `${curPageW}px`;
+          rightSheet.style.height = `${curPageH}px`;
+          rightSheet.style.transform = `scale(${this.zoomLevel})`;
+          rightSheet.style.transformOrigin = 'top left';
+
+          const rightCanvas = document.createElement('canvas');
+          rightCanvas.className = 'collaborative-page-pdf-bg';
+          rightCanvas.width = curPageW;
+          rightCanvas.height = curPageH;
+          rightSheet.appendChild(rightCanvas);
+          rightScaler.appendChild(rightSheet);
+          rightPane.appendChild(rightScaler);
+
+          compContainer.appendChild(leftPane);
+          compContainer.appendChild(rightPane);
+          wrapper.appendChild(compContainer);
+
+          void this.renderSecondPdfPageToCanvas(p + 1, rightCanvas, curPageW);
+        } else {
+          sheet.classList.add('collaborative-page-sheet--compare-overlay');
+          const overlayCanvas = document.createElement('canvas');
+          overlayCanvas.className = 'collaborative-compare-overlay-canvas';
+          overlayCanvas.width = curPageW;
+          overlayCanvas.height = curPageH;
+          overlayCanvas.style.opacity = `${this.compareOverlayOpacity}`;
+          sheet.appendChild(overlayCanvas);
+          wrapper.appendChild(scaler);
+
+          void this.renderSecondPdfPageToCanvas(p + 1, overlayCanvas, curPageW);
+        }
+      } else {
+        wrapper.appendChild(scaler);
+      }
+
       pagesContainer.appendChild(wrapper);
 
       this.drawFreehandOnCanvas(canvas, p);
@@ -2181,11 +2326,92 @@ class DesignPdfEditorController implements ViewController {
       sheet.addEventListener('pointerdown', (e: PointerEvent) => {
         if (this.isAiLocked || this.editorMode === 'view') return;
         if (e.button !== 0) return;
-        if (this.activeTool !== 'select') return;
+        if (this.activeTool !== 'select' && this.activeTool !== 'redact') return;
         const clickedItem = (e.target as HTMLElement)?.closest(
           '[data-element-id], .collaborative-transform-box, .collaborative-transform-handle, .collaborative-page-header, .collaborative-page-controls, button, input'
         );
         if (clickedItem) return;
+
+        if (this.activeTool === 'redact') {
+          const isTextItem = !!(e.target as HTMLElement)?.closest('.pdf-redact-text-item, .collaborative-text-box');
+          if (isTextItem) {
+            return;
+          }
+          e.preventDefault();
+          const sheetRect = sheet.getBoundingClientRect();
+          const zoom = this.zoomLevel || 1.0;
+          const startX = (e.clientX - sheetRect.left) / zoom;
+          const startY = (e.clientY - sheetRect.top) / zoom;
+          const redactBox = document.createElement('div');
+          redactBox.className = 'collaborative-element--redaction';
+          redactBox.style.left = `${startX}px`;
+          redactBox.style.top = `${startY}px`;
+          redactBox.style.width = '0px';
+          redactBox.style.height = '0px';
+          sheet.appendChild(redactBox);
+
+          const onPointerMove = (moveEvt: PointerEvent) => {
+            const curX = (moveEvt.clientX - sheetRect.left) / zoom;
+            const curY = (moveEvt.clientY - sheetRect.top) / zoom;
+            const left = Math.min(startX, curX);
+            const top = Math.min(startY, curY);
+            const width = Math.abs(curX - startX);
+            const height = Math.abs(curY - startY);
+            redactBox.style.left = `${left}px`;
+            redactBox.style.top = `${top}px`;
+            redactBox.style.width = `${width}px`;
+            redactBox.style.height = `${height}px`;
+          };
+
+          const onPointerUp = (upEvt: PointerEvent) => {
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+            redactBox.remove();
+
+            const endX = (upEvt.clientX - sheetRect.left) / zoom;
+            const endY = (upEvt.clientY - sheetRect.top) / zoom;
+            const finalLeft = Math.min(startX, endX);
+            const finalTop = Math.min(startY, endY);
+            const finalWidth = Math.abs(endX - startX);
+            const finalHeight = Math.abs(endY - startY);
+
+            if (finalWidth < 6 || finalHeight < 6) {
+              return;
+            }
+
+            const redactionEl: ElementShape = {
+              fillColor: '#000000',
+              height: Math.round(finalHeight),
+              id: 'redact-' + Math.random().toString(36).substring(2, 9),
+              isRedaction: true,
+              opacity: 1,
+              pageIndex: p,
+              redactionMetadata: {
+                blackout: true,
+                pageIndex: p,
+              },
+              rotation: 0,
+              shapeType: 'rect',
+              strokeColor: '#000000',
+              strokeStyle: 'solid',
+              strokeWidth: 0,
+              type: 'shape',
+              width: Math.round(finalWidth),
+              x: Math.round(finalLeft),
+              y: Math.round(finalTop),
+            };
+
+            this.pushElement(redactionEl);
+            this.recordHistory();
+            this.setModified(true);
+            this.renderPages();
+            showToast(t('toasts.redaction_added'), 'success');
+          };
+
+          window.addEventListener('pointermove', onPointerMove);
+          window.addEventListener('pointerup', onPointerUp);
+          return;
+        }
 
         e.preventDefault();
         window.getSelection()?.removeAllRanges();
@@ -2354,8 +2580,487 @@ class DesignPdfEditorController implements ViewController {
         else if (action === 'add') this.addPage(p);
         else if (action === 'rotate') this.rotatePage(p);
         else if (action === 'resize') this.openResizePageModal(p);
+        else if (action === 'crop') this.startCropMode(p);
       });
     });
+  }
+
+  private startCropMode(pageIndex?: number): void {
+    if (this.isCropMode) {
+      this.endCropMode();
+      return;
+    }
+    if (this.isCompareMode) {
+      this.endCompareMode();
+    }
+    if (this.activeTool === 'redact') {
+      this.activateTool('select');
+    }
+    const p = pageIndex !== undefined ? pageIndex : (this.selectedPageIndex !== null ? this.selectedPageIndex : (this.activePageIndex ?? 0));
+    this.cropPageIndex = Math.max(0, Math.min(this.pageCount - 1, p));
+    this.cropBox = null;
+    this.isCropMode = true;
+    const floatingBar = this.container.querySelector<HTMLElement>('[data-ref="crop-floating-bar"]');
+    if (floatingBar) showElement(floatingBar);
+    const btnCropApply = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-apply"]');
+    if (btnCropApply) btnCropApply.disabled = true;
+    this.updateModeButtonsState();
+    this.renderPages();
+    showToast(t('collaborative.crop_bounding_box_hint'), 'info');
+  }
+
+  private endCropMode(): void {
+    this.isCropMode = false;
+    this.cropBox = null;
+    const floatingBar = this.container.querySelector<HTMLElement>('[data-ref="crop-floating-bar"]');
+    if (floatingBar) hideElement(floatingBar);
+    this.updateModeButtonsState();
+    this.renderPages();
+  }
+
+  private applyCrop(): void {
+    if (!this.isCropMode || !this.cropBox) return;
+    const p = this.cropPageIndex;
+    const { height, width, x, y } = this.cropBox;
+    const cropX = Math.round(x);
+    const cropY = Math.round(y);
+    const cropW = Math.max(40, Math.round(width));
+    const cropH = Math.max(40, Math.round(height));
+
+    this.pageSizes[p] = { height: cropH, width: cropW };
+
+    for (const el of this.elements) {
+      if ((el.pageIndex ?? 0) === p && el.type !== 'drawing') {
+        el.x -= cropX;
+        el.y -= cropY;
+      }
+    }
+
+    const pdfSource = this.pagePdfSources[p];
+    if (pdfSource) {
+      const prevCropX = pdfSource.cropTransform?.cropX || 0;
+      const prevCropY = pdfSource.cropTransform?.cropY || 0;
+      pdfSource.cropTransform = {
+        cropH,
+        cropW,
+        cropX: prevCropX + cropX,
+        cropY: prevCropY + cropY,
+      };
+    }
+
+    this.recordHistory();
+    this.setModified(true);
+    this.endCropMode();
+    showToast(t('toasts.crop_applied'), 'success');
+  }
+
+  private createCropOverlayElement(pageW: number, pageH: number, pageIndex: number): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'crop-overlay';
+    container.setAttribute('data-ref', 'crop-overlay');
+
+    const preview = document.createElement('div');
+    preview.className = 'crop-drag-preview is-hidden';
+    preview.setAttribute('data-ref', 'crop-drag-preview');
+
+    const maskTop = document.createElement('div');
+    maskTop.className = 'crop-mask crop-mask--top';
+    const maskBottom = document.createElement('div');
+    maskBottom.className = 'crop-mask crop-mask--bottom';
+    const maskLeft = document.createElement('div');
+    maskLeft.className = 'crop-mask crop-mask--left';
+    const maskRight = document.createElement('div');
+    maskRight.className = 'crop-mask crop-mask--right';
+
+    const box = document.createElement('div');
+    box.className = 'crop-bounding-box collaborative-transform-box';
+    box.setAttribute('data-ref', 'crop-bounding-box');
+
+    box.innerHTML = `
+      <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--nw" data-handle="nw"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--ne" data-handle="ne"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--se" data-handle="se"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--corner collaborative-transform-handle--sw" data-handle="sw"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--pill collaborative-transform-handle--n" data-handle="n"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--pill collaborative-transform-handle--s" data-handle="s"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--pill collaborative-transform-handle--w" data-handle="w"></div>
+      <div class="collaborative-transform-handle collaborative-transform-handle--pill collaborative-transform-handle--e" data-handle="e"></div>
+    `;
+
+    container.appendChild(preview);
+    container.appendChild(maskTop);
+    container.appendChild(maskBottom);
+    container.appendChild(maskLeft);
+    container.appendChild(maskRight);
+    container.appendChild(box);
+
+    const btnCropApply = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-apply"]');
+
+    const updateCropDom = () => {
+      if (!this.cropBox) {
+        box.classList.add('is-hidden');
+        maskTop.classList.add('is-hidden');
+        maskBottom.classList.add('is-hidden');
+        maskLeft.classList.add('is-hidden');
+        maskRight.classList.add('is-hidden');
+        if (btnCropApply) btnCropApply.disabled = true;
+        return;
+      }
+
+      box.classList.remove('is-hidden');
+      maskTop.classList.remove('is-hidden');
+      maskBottom.classList.remove('is-hidden');
+      maskLeft.classList.remove('is-hidden');
+      maskRight.classList.remove('is-hidden');
+      if (btnCropApply) btnCropApply.disabled = false;
+
+      const { height, width, x, y } = this.cropBox;
+      box.style.left = `${x}px`;
+      box.style.top = `${y}px`;
+      box.style.width = `${width}px`;
+      box.style.height = `${height}px`;
+
+      maskTop.style.top = '0px';
+      maskTop.style.left = '0px';
+      maskTop.style.width = `${pageW}px`;
+      maskTop.style.height = `${Math.max(0, y)}px`;
+
+      maskBottom.style.top = `${y + height}px`;
+      maskBottom.style.left = '0px';
+      maskBottom.style.width = `${pageW}px`;
+      maskBottom.style.height = `${Math.max(0, pageH - (y + height))}px`;
+
+      maskLeft.style.top = `${y}px`;
+      maskLeft.style.left = '0px';
+      maskLeft.style.width = `${Math.max(0, x)}px`;
+      maskLeft.style.height = `${height}px`;
+
+      maskRight.style.top = `${y}px`;
+      maskRight.style.left = `${x + width}px`;
+      maskRight.style.width = `${Math.max(0, pageW - (x + width))}px`;
+      maskRight.style.height = `${height}px`;
+    };
+
+    updateCropDom();
+
+    let isDrawingNew = false;
+    let startX = 0;
+    let startY = 0;
+
+    container.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('.crop-bounding-box')) return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      const sheet = container.closest('.collaborative-page-sheet');
+      if (!sheet) return;
+      const sheetRect = sheet.getBoundingClientRect();
+      const zoom = this.zoomLevel || 1.0;
+
+      isDrawingNew = true;
+      startX = Math.max(0, Math.min(pageW, (e.clientX - sheetRect.left) / zoom));
+      startY = Math.max(0, Math.min(pageH, (e.clientY - sheetRect.top) / zoom));
+
+      preview.classList.remove('is-hidden');
+      preview.style.left = `${startX}px`;
+      preview.style.top = `${startY}px`;
+      preview.style.width = '0px';
+      preview.style.height = '0px';
+
+      const onPointerMove = (moveEvt: PointerEvent) => {
+        if (!isDrawingNew) return;
+        const curX = Math.max(0, Math.min(pageW, (moveEvt.clientX - sheetRect.left) / zoom));
+        const curY = Math.max(0, Math.min(pageH, (moveEvt.clientY - sheetRect.top) / zoom));
+        const left = Math.min(startX, curX);
+        const top = Math.min(startY, curY);
+        const width = Math.abs(curX - startX);
+        const height = Math.abs(curY - startY);
+        preview.style.left = `${left}px`;
+        preview.style.top = `${top}px`;
+        preview.style.width = `${width}px`;
+        preview.style.height = `${height}px`;
+      };
+
+      const onPointerUp = (upEvt: PointerEvent) => {
+        if (!isDrawingNew) return;
+        isDrawingNew = false;
+        preview.classList.add('is-hidden');
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+
+        const curX = Math.max(0, Math.min(pageW, (upEvt.clientX - sheetRect.left) / zoom));
+        const curY = Math.max(0, Math.min(pageH, (upEvt.clientY - sheetRect.top) / zoom));
+        const left = Math.min(startX, curX);
+        const top = Math.min(startY, curY);
+        const width = Math.abs(curX - startX);
+        const height = Math.abs(curY - startY);
+
+        if (width >= 25 && height >= 25) {
+          this.cropBox = {
+            height: Math.round(height),
+            width: Math.round(width),
+            x: Math.round(left),
+            y: Math.round(top),
+          };
+          this.cropPageIndex = pageIndex;
+          updateCropDom();
+        }
+      };
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    });
+
+    box.addEventListener('pointerdown', (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      if (!this.cropBox) return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      const handleEl = (e.target as HTMLElement).closest<HTMLElement>('.collaborative-transform-handle');
+      const handleType = handleEl?.getAttribute('data-handle');
+      const startClientX = e.clientX;
+      const startClientY = e.clientY;
+      const zoom = this.zoomLevel || 1.0;
+      const initialBox = { ...this.cropBox };
+      const minDim = 30;
+
+      const onPointerMove = (moveEvt: PointerEvent) => {
+        const deltaX = (moveEvt.clientX - startClientX) / zoom;
+        const deltaY = (moveEvt.clientY - startClientY) / zoom;
+
+        if (!handleType) {
+          const newX = Math.max(0, Math.min(pageW - initialBox.width, initialBox.x + deltaX));
+          const newY = Math.max(0, Math.min(pageH - initialBox.height, initialBox.y + deltaY));
+          this.cropBox = {
+            height: initialBox.height,
+            width: initialBox.width,
+            x: Math.round(newX),
+            y: Math.round(newY),
+          };
+        } else {
+          let newX = initialBox.x;
+          let newY = initialBox.y;
+          let newW = initialBox.width;
+          let newH = initialBox.height;
+
+          if (handleType.includes('w')) {
+            const right = initialBox.x + initialBox.width;
+            newX = Math.max(0, Math.min(right - minDim, initialBox.x + deltaX));
+            newW = right - newX;
+          }
+          if (handleType.includes('e')) {
+            newW = Math.max(minDim, Math.min(pageW - initialBox.x, initialBox.width + deltaX));
+          }
+          if (handleType.includes('n')) {
+            const bottom = initialBox.y + initialBox.height;
+            newY = Math.max(0, Math.min(bottom - minDim, initialBox.y + deltaY));
+            newH = bottom - newY;
+          }
+          if (handleType.includes('s')) {
+            newH = Math.max(minDim, Math.min(pageH - initialBox.y, initialBox.height + deltaY));
+          }
+
+          this.cropBox = {
+            height: Math.round(newH),
+            width: Math.round(newW),
+            x: Math.round(newX),
+            y: Math.round(newY),
+          };
+        }
+        updateCropDom();
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+      };
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    });
+
+    return container;
+  }
+
+  private startCompareMode(): void {
+    if (this.isCompareMode) {
+      this.endCompareMode();
+      return;
+    }
+    if (this.isCropMode) {
+      this.endCropMode();
+    }
+    if (this.activeTool === 'redact') {
+      this.activateTool('select');
+    }
+    this.isCompareMode = true;
+    this.updateModeButtonsState();
+    this.updateContextToolbar();
+    if (!this.secondPdfDoc) {
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-compare-file-second"]');
+      input?.click();
+      showToast(t('collaborative.compare_choose_second'), 'info');
+    }
+    this.renderPages();
+  }
+
+  private endCompareMode(): void {
+    this.isCompareMode = false;
+    this.secondPdfDoc = null;
+    this.secondPdfFile = null;
+    this.updateModeButtonsState();
+    this.updateContextToolbar();
+    const filenameSpan = this.container.querySelector<HTMLElement>('[data-ref="compare-filename-second"]');
+    if (filenameSpan) filenameSpan.textContent = '';
+    this.renderPages();
+  }
+
+  private async renderPdfTextLayer(pdfUrl: string, pageNum: number, textLayer: HTMLElement, pageW: number, pageH: number): Promise<void> {
+    try {
+      const pdfjs = await loadPdfJs();
+      const doc = await pdfjs.getDocument(pdfUrl).promise;
+      const page = await doc.getPage(pageNum);
+      const viewport1 = page.getViewport({ scale: 1 });
+      const scale = pageW / viewport1.width;
+      const viewport = page.getViewport({ scale });
+      const textContent = await page.getTextContent();
+      const dimsH = pageH;
+
+      for (const item of textContent.items || []) {
+        if (!item || typeof item.str !== 'string' || !item.str.trim() || !Array.isArray(item.transform) || item.transform.length < 6) continue;
+
+        const tx = pdfjs.Util?.transform
+          ? pdfjs.Util.transform(viewport.transform, item.transform)
+          : [scale, 0, 0, scale, item.transform[4] * scale, (dimsH - item.transform[5]) * scale];
+
+        const itemH = (item.height || 14) * scale;
+        const itemX = tx[4];
+        const itemY = tx[5] - itemH;
+        const itemW = item.width * scale;
+        const fontSize = Math.max(10, Math.round(itemH));
+
+        const span = document.createElement('span');
+        span.className = 'pdf-redact-text-item';
+        span.style.left = `${Math.round(itemX)}px`;
+        span.style.top = `${Math.round(itemY)}px`;
+        span.style.width = `${Math.max(Math.round(itemW), 8)}px`;
+        span.style.height = `${Math.round(itemH)}px`;
+        span.style.fontSize = `${fontSize}px`;
+        span.textContent = item.str;
+        textLayer.appendChild(span);
+      }
+    } catch {}
+  }
+
+  private handleRedactTextSelection(): void {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+
+    const range = selection.getRangeAt(0);
+    const clientRects = range.getClientRects();
+    if (clientRects.length === 0) return;
+
+    let addedCount = 0;
+    const sheets = this.container.querySelectorAll<HTMLElement>('.collaborative-page-sheet');
+
+    for (let i = 0; i < clientRects.length; i++) {
+      const rect = clientRects[i];
+      if (rect.width < 2 || rect.height < 2) continue;
+
+      let targetSheet: HTMLElement | null = null;
+      let targetPageIndex = 0;
+
+      for (const sheet of sheets) {
+        const sheetRect = sheet.getBoundingClientRect();
+        if (
+          rect.left >= sheetRect.left - 5 &&
+          rect.right <= sheetRect.right + 5 &&
+          rect.top >= sheetRect.top - 5 &&
+          rect.bottom <= sheetRect.bottom + 5
+        ) {
+          targetSheet = sheet;
+          targetPageIndex = parseInt(sheet.getAttribute('data-page-index') || '0', 10);
+          break;
+        }
+      }
+
+      if (!targetSheet) {
+        for (const sheet of sheets) {
+          const sheetRect = sheet.getBoundingClientRect();
+          if (rect.top >= sheetRect.top && rect.top <= sheetRect.bottom) {
+            targetSheet = sheet;
+            targetPageIndex = parseInt(sheet.getAttribute('data-page-index') || '0', 10);
+            break;
+          }
+        }
+      }
+
+      if (!targetSheet) continue;
+
+      const sheetRect = targetSheet.getBoundingClientRect();
+      const zoom = this.zoomLevel || 1.0;
+      const relX = Math.round((rect.left - sheetRect.left) / zoom);
+      const relY = Math.round((rect.top - sheetRect.top) / zoom);
+      const relW = Math.max(6, Math.round(rect.width / zoom));
+      const relH = Math.max(8, Math.round(rect.height / zoom));
+
+      const redactionEl: ElementShape = {
+        fillColor: '#000000',
+        height: relH,
+        id: 'redact-' + Math.random().toString(36).substring(2, 9),
+        isRedaction: true,
+        opacity: 1,
+        pageIndex: targetPageIndex,
+        redactionMetadata: {
+          blackout: true,
+          pageIndex: targetPageIndex,
+          text: selectedText,
+        },
+        rotation: 0,
+        shapeType: 'rect',
+        strokeColor: '#000000',
+        strokeStyle: 'solid',
+        strokeWidth: 0,
+        type: 'shape',
+        width: relW,
+        x: relX,
+        y: relY,
+      };
+
+      this.pushElement(redactionEl);
+      addedCount++;
+    }
+
+    selection.removeAllRanges();
+
+    if (addedCount > 0) {
+      this.renderPages();
+      this.recordHistory();
+      this.setModified(true);
+      showToast(t('toasts.texto_censurado_correctamente'), 'success');
+    }
+  }
+
+  private async renderSecondPdfPageToCanvas(pageNum: number, canvas: HTMLCanvasElement, targetWidth: number): Promise<void> {
+    if (!this.secondPdfDoc || pageNum > this.secondPdfDoc.numPages) return;
+    try {
+      const page = await this.secondPdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = targetWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale });
+      canvas.width = scaledViewport.width;
+      canvas.height = scaledViewport.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+      }
+    } catch {}
   }
 
   private bindCanvasDrawing(canvas: HTMLCanvasElement, pageIndex: number): void {
@@ -2840,6 +3545,14 @@ class DesignPdfEditorController implements ViewController {
     }
 
     div.innerHTML = `<svg viewBox="0 0 ${el.width} ${el.height}" width="100%" height="100%" style="overflow: visible; display: block;">${this.renderShapeInner(el)}</svg>`;
+
+    if (el.isRedaction) {
+      div.classList.add('collaborative-element--redaction');
+      const badge = document.createElement('span');
+      badge.className = 'collaborative-element--redaction__label';
+      badge.textContent = t('collaborative.redaction_label');
+      div.appendChild(badge);
+    }
 
     div.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -4188,6 +4901,7 @@ class DesignPdfEditorController implements ViewController {
     const toolbar = this.container.querySelector<HTMLElement>('[data-ref="collaborative-context-toolbar"]');
     if (!toolbar) return;
 
+    const compareGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-compare"]');
     const textGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-text"]');
     const shapeGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-shape"]');
     const imageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-image"]');
@@ -4195,6 +4909,20 @@ class DesignPdfEditorController implements ViewController {
     const chartGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-chart"]');
     const pageGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-page"]');
     const actionGroup = toolbar.querySelector<HTMLElement>('[data-ref="context-group-actions"]');
+
+    if (this.isCompareMode) {
+      showElement(toolbar);
+      if (compareGroup) showElement(compareGroup);
+      if (textGroup) hideElement(textGroup);
+      if (shapeGroup) hideElement(shapeGroup);
+      if (imageGroup) hideElement(imageGroup);
+      if (tableGroup) hideElement(tableGroup);
+      if (chartGroup) hideElement(chartGroup);
+      if (pageGroup) hideElement(pageGroup);
+      if (actionGroup) hideElement(actionGroup);
+      return;
+    }
+    if (compareGroup) hideElement(compareGroup);
 
     if (this.selectedElementId) {
       showElement(toolbar);
@@ -4453,7 +5181,9 @@ class DesignPdfEditorController implements ViewController {
       if (tableGroup) hideElement(tableGroup);
       if (chartGroup) hideElement(chartGroup);
       if (imageGroup) hideElement(imageGroup);
-      hideElement(toolbar);
+      if (!this.isCompareMode) {
+        hideElement(toolbar);
+      }
     }
 
     if (this.activePanelTab === 'colors') {
@@ -5662,6 +6392,45 @@ class DesignPdfEditorController implements ViewController {
       this.confirmDeleteDocument();
     }, { signal });
 
+    const btnMenuFileCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-crop"]');
+    btnMenuFileCrop?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.activateTool('crop');
+    }, { signal });
+
+    const btnMenuFileCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-compare"]');
+    btnMenuFileCompare?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.activateTool('compare');
+    }, { signal });
+
+    const btnMenuFileRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-menu-file-redact"]');
+    btnMenuFileRedact?.addEventListener('click', () => {
+      this.fileDropdownCtrl?.close();
+      this.activateTool('redact');
+    }, { signal });
+
+    const btnTopCrop = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-crop"]');
+    btnTopCrop?.addEventListener('click', () => {
+      this.activateTool('crop');
+    }, { signal });
+
+    const btnTopRedact = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-redact"]');
+    btnTopRedact?.addEventListener('click', () => {
+      this.activateTool('redact');
+    }, { signal });
+
+    const btnTopCompare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-compare"]');
+    btnTopCompare?.addEventListener('click', () => {
+      this.activateTool('compare');
+    }, { signal });
+
+    window.addEventListener('mouseup', () => {
+      if (this.activeTool === 'redact') {
+        this.handleRedactTextSelection();
+      }
+    }, { signal });
+
     this.rulerGuidesCtrl?.destroy();
     this.rulerGuidesCtrl = initRulerGuidesInteraction({
       canEdit: () => !this.isAiLocked && this.editorMode !== 'view' && this.canEditDoc,
@@ -5873,17 +6642,8 @@ class DesignPdfEditorController implements ViewController {
           return;
         }
         const tool = btn.getAttribute('data-tool') as any;
-        toolbarButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-        this.activeTool = tool;
-        this.rulerGuidesCtrl?.setPassthrough(tool !== 'select');
-
-        if (tool === 'select') {
-          this.closeSubtoolbars();
-        } else if (tool === 'text') {
-          this.closeSubtoolbars();
-          this.addTextElement('body');
-        } else {
-          this.openSubtoolbar(tool);
+        if (tool) {
+          this.activateTool(tool);
         }
       }, { signal });
     });
@@ -6953,6 +7713,15 @@ class DesignPdfEditorController implements ViewController {
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.closeContextMenu();
+        if (this.isCropMode) {
+          this.endCropMode();
+        }
+        if (this.isCompareMode) {
+          this.endCompareMode();
+        }
+        if (this.activeTool === 'redact') {
+          this.activateTool('select');
+        }
       }
 
       const activeTag = document.activeElement?.tagName.toLowerCase();
@@ -7358,6 +8127,83 @@ class DesignPdfEditorController implements ViewController {
     const btnLayersClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-layers-close"]');
     btnLayersClose?.addEventListener('click', () => {
       this.closeLayersPanel();
+    }, { signal });
+
+    const btnCropApply = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-apply"]');
+    btnCropApply?.addEventListener('click', () => {
+      this.applyCrop();
+    }, { signal });
+
+    const btnCropCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-crop-cancel"]');
+    btnCropCancel?.addEventListener('click', () => {
+      this.endCropMode();
+    }, { signal });
+
+    const btnRedactDone = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redact-done"]');
+    btnRedactDone?.addEventListener('click', () => {
+      this.activateTool('select');
+    }, { signal });
+
+    const btnCompareUploadSecond = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compare-upload-second"]');
+    const inputCompareFileSecond = this.container.querySelector<HTMLInputElement>('[data-ref="input-compare-file-second"]');
+    btnCompareUploadSecond?.addEventListener('click', () => {
+      inputCompareFileSecond?.click();
+    }, { signal });
+
+    inputCompareFileSecond?.addEventListener('change', async () => {
+      const file = inputCompareFileSecond.files?.[0];
+      if (!file) return;
+      try {
+        const pdfjs = await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        this.secondPdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        this.secondPdfFile = file;
+        const filenameSpan = this.container.querySelector<HTMLElement>('[data-ref="compare-filename-second"]');
+        if (filenameSpan) {
+          filenameSpan.textContent = file.name;
+        }
+        showToast(t('toasts.compare_loaded'), 'success');
+        this.renderPages();
+      } catch {
+        showToast(t('errors.unexpected'), 'danger');
+      }
+    }, { signal });
+
+    const btnCompareModeSide = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compare-mode-side"]');
+    const btnCompareModeOverlay = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compare-mode-overlay"]');
+    const compareSliderWrap = this.container.querySelector<HTMLElement>('[data-ref="compare-slider-wrap"]');
+
+    btnCompareModeSide?.addEventListener('click', () => {
+      this.compareViewMode = 'side-by-side';
+      btnCompareModeSide.classList.add('is-active');
+      btnCompareModeOverlay?.classList.remove('is-active');
+      if (compareSliderWrap) hideElement(compareSliderWrap);
+      this.renderPages();
+    }, { signal });
+
+    btnCompareModeOverlay?.addEventListener('click', () => {
+      this.compareViewMode = 'overlay';
+      btnCompareModeOverlay.classList.add('is-active');
+      btnCompareModeSide?.classList.remove('is-active');
+      if (compareSliderWrap) showElement(compareSliderWrap);
+      this.renderPages();
+    }, { signal });
+
+    const sliderCompareOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="slider-compare-opacity"]');
+    sliderCompareOpacity?.addEventListener('input', () => {
+      const val = parseInt(sliderCompareOpacity.value, 10);
+      this.compareOverlayOpacity = val / 100;
+      const txtCompareOpacity = this.container.querySelector<HTMLElement>('[data-ref="txt-compare-opacity"]');
+      if (txtCompareOpacity) txtCompareOpacity.textContent = `${val}%`;
+      const overlays = this.container.querySelectorAll<HTMLCanvasElement>('.collaborative-compare-overlay-canvas');
+      overlays.forEach((c) => {
+        c.style.opacity = `${this.compareOverlayOpacity}`;
+      });
+    }, { signal });
+
+    const btnCompareExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-compare-exit"]');
+    btnCompareExit?.addEventListener('click', () => {
+      this.endCompareMode();
     }, { signal });
   }
 
