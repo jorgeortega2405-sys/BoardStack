@@ -1,5 +1,5 @@
-import { logger } from '../services/logger.service.js';
 import fontkit from '@pdf-lib/fontkit';
+import { logger } from '../services/logger.service.js';
 import { PDFDocument, PDFFont, StandardFonts } from 'pdf-lib';
 
 interface ResolvedPdfFont {
