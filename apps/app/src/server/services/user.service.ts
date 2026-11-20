@@ -272,6 +272,11 @@ async function deleteUserPermanently(userId: number): Promise<boolean> {
 }
 
 async function getUserPreferences(userId: number): Promise<UserPreferences> {
+  const user = await findUserById(userId);
+  if (!user) {
+    return { ...DEFAULT_PREFERENCES };
+  }
+
   const [rows] = await pool.execute<RowDataPacket[]>(
     'SELECT theme, language, reduce_motion, high_contrast, extended_alerts FROM user_preferences WHERE user_id = ? LIMIT 1',
     [userId]
@@ -306,6 +311,11 @@ async function updateUserPreferences(
   userId: number,
   updates: Partial<UserPreferences>
 ): Promise<UserPreferences> {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found.');
+  }
+
   const current = await getUserPreferences(userId);
   const next: UserPreferences = {
     extended_alerts: updates.extended_alerts !== undefined ? Boolean(updates.extended_alerts) : current.extended_alerts,

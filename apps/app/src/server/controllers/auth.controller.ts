@@ -542,7 +542,7 @@ async function resetPassword(req: Request, res: Response): Promise<void> {
 async function me(req: Request, res: Response): Promise<void> {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    const user = getCurrentUser(req);
+    let user = getCurrentUser(req);
     const accounts = getLinkedAccounts(req);
 
     if (user && typeof user.id === 'number') {
@@ -614,12 +614,15 @@ async function me(req: Request, res: Response): Promise<void> {
             subscription_tier: user.subscription_tier,
             username: user.username,
           });
+        } else {
+          clearSessionCookie(res);
+          user = null;
         }
       }
     }
 
     res.status(200).json({
-      accounts: accounts.map(sanitizeUser),
+      accounts: user ? accounts.map(sanitizeUser) : [],
       user: user ? sanitizeUser(user) : null,
     });
   } catch (error) {

@@ -83,6 +83,10 @@ async function getOrCreateStripeCustomer(userId: number, email: string): Promise
     [userId]
   );
 
+  if (!rows || rows.length === 0) {
+    throw new Error('User not found.');
+  }
+
   const existingId = rows[0]?.stripe_customer_id;
   if (existingId) {
     try {
@@ -113,6 +117,14 @@ async function createSubscriptionPaymentIntent(
   email: string,
   params: CreatePaymentIntentParams
 ): Promise<PaymentIntentResult> {
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, email FROM users WHERE id = ?',
+    [userId]
+  );
+  if (!userRows || userRows.length === 0) {
+    throw new Error('User not found.');
+  }
+
   const customerId = await getOrCreateStripeCustomer(userId, email);
   const amount = getPriceAmount(params.billingType, params.billingPeriod);
   const amountInCents = Math.round(amount * 100);

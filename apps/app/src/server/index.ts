@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { errorHandlerMiddleware, httpLoggerMiddleware } from './middlewares/logger.middleware.js';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
-import { getCurrentUser, getLinkedAccounts } from './middlewares/auth.middleware.js';
+import { getLinkedAccounts, getValidatedCurrentUser } from './middlewares/auth.middleware.js';
 import http from 'http';
 import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
@@ -271,7 +271,7 @@ function getIndexTemplate(): { content: string; path: string } | null {
   return { content: cachedIndexHtml, path: resolvedPath };
 }
 
-app.get('*', (req: Request, res: Response) => {
+app.get('*', async (req: Request, res: Response) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API endpoint not found.', ok: false });
   }
@@ -306,8 +306,8 @@ app.get('*', (req: Request, res: Response) => {
     const appBaseUrl = config.appUrl.replace(/\/+$/, '');
     const localizedUrl = `${appBaseUrl}/${lang}${normRoute === '/' ? '' : normRoute}`;
 
-    const user = getCurrentUser(req);
-    const accounts = getLinkedAccounts(req);
+    const user = await getValidatedCurrentUser(req, res);
+    const accounts = user ? getLinkedAccounts(req) : [];
     const isAuth = ['/login', '/register', '/forgot-password', '/reset-password'].includes(normRoute);
 
     const htmlClasses: string[] = [];

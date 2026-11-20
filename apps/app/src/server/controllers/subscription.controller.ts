@@ -85,8 +85,16 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
     });
   } catch (error: any) {
     logger.app.error('[Subscription] Error creating payment intent:', error);
+    if (error?.message === 'User not found.') {
+      res.status(401).json({
+        error: 'User not found or session expired. Please log in again.',
+        ok: false,
+        success: false,
+      });
+      return;
+    }
     res.status(500).json({
-      error: error?.message || 'Error initiating payment gateway.',
+      error: 'Failed to initialize payment gateway. Please try again later.',
       ok: false,
       success: false,
     });
@@ -125,7 +133,7 @@ async function confirmPaymentHandler(req: Request, res: Response): Promise<void>
   } catch (error: any) {
     logger.app.error('[Subscription] Error confirming payment:', error);
     res.status(500).json({
-      error: error?.message || 'Error confirming subscription.',
+      error: 'Failed to confirm subscription payment. Please try again later.',
       ok: false,
       success: false,
     });

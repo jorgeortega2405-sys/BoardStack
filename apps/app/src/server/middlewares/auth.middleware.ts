@@ -1,4 +1,5 @@
-import { getMultiAccountSession } from '../services/auth.service.js';
+import { clearSessionCookie, getMultiAccountSession } from '../services/auth.service.js';
+import { findUserById } from '../services/user.service.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { SessionAccount } from '../types/auth.types.js';
 
@@ -19,8 +20,23 @@ function getLinkedAccounts(req: Request): SessionAccount[] {
   return session.accounts;
 }
 
-function requireAuth(req: Request, res: Response, next: NextFunction): void {
+async function getValidatedCurrentUser(req: Request, res?: Response): Promise<SessionAccount | null> {
   const user = getCurrentUser(req);
+  if (!user || typeof user.id !== 'number') {
+    return null;
+  }
+  const dbUser = await findUserById(user.id);
+  if (!dbUser) {
+    if (res) {
+      clearSessionCookie(res);
+    }
+    return null;
+  }
+  return user;
+}
+
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const user = await getValidatedCurrentUser(req, res);
   if (!user) {
     res.status(401).json({ error: 'Authentication required.', ok: false });
     return;
@@ -29,8 +45,8 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
 }
 
 function requirePermission(permissionName: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = getCurrentUser(req);
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = await getValidatedCurrentUser(req, res);
     if (!user) {
       res.status(401).json({ error: 'Authentication required.', ok: false });
       return;
@@ -45,8 +61,8 @@ function requirePermission(permissionName: string) {
 }
 
 function requireRole(roleName: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = getCurrentUser(req);
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = await getValidatedCurrentUser(req, res);
     if (!user) {
       res.status(401).json({ error: 'Authentication required.', ok: false });
       return;
@@ -68,6 +84,7 @@ function requireRole(roleName: string) {
 export {
   getCurrentUser,
   getLinkedAccounts,
+  getValidatedCurrentUser,
   requireAuth,
   requirePermission,
   requireRole
