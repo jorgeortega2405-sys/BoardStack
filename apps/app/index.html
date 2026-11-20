@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/">
+  <meta name="referrer" content="no-referrer">
+  <title>BoardStack - Plataforma Creativa Modular</title>
+  <meta name="description" content="BoardStack - Plataforma creativa modular con arquitectura basada en componentes y diseño avanzado.">
+  <meta name="robots" content="index, follow">
+
+  <link rel="canonical" href="http://localhost:3000/es">
+  <link rel="alternate" hreflang="es" href="http://localhost:3000/es">
+  <link rel="alternate" hreflang="x-default" href="http://localhost:3000/es">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://localhost:3000/es">
+  <meta property="og:title" content="BoardStack - Plataforma Creativa Modular">
+  <meta property="og:description" content="BoardStack ofrece una interfaz modular de alta precisión con arquitectura basada en componentes.">
+  <meta property="og:site_name" content="BoardStack">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="/logo.svg">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="http://localhost:3000/es">
+  <meta name="twitter:title" content="BoardStack - Plataforma Creativa Modular">
+  <meta name="twitter:description" content="BoardStack ofrece una interfaz modular de alta precisión con arquitectura basada en componentes.">
+  <meta name="twitter:image" content="/logo.svg">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('theme');
+        var isDark = savedTheme === 'dark' || (savedTheme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        if (isDark) document.documentElement.classList.add('dark');
+
+        var pathSegments = window.location.pathname.replace(/^\/+/, '').split('/');
+        var lang = (pathSegments[0] && pathSegments[0].length === 2) ? pathSegments[0].toLowerCase() : (localStorage.getItem('app_language') || 'es');
+        document.documentElement.setAttribute('lang', lang);
+
+        var cleanPath = window.location.pathname.replace(/^\/[a-z]{2}(\/|$)/i, '/').replace(/\/+$/, '') || '/';
+        var isAuth = cleanPath === '/login' || cleanPath === '/register' || cleanPath === '/forgot-password' || cleanPath === '/reset-password';
+        if (isAuth) {
+          document.documentElement.classList.add('is-auth-view');
+        }
+
+        var cached = localStorage.getItem('boardstack_cached_session');
+        if (cached) {
+          try {
+            var parsed = JSON.parse(cached);
+            if (parsed && parsed.user) {
+              document.documentElement.classList.add('has-user-session');
+            } else {
+              document.documentElement.classList.add('no-user-session');
+            }
+          } catch (e) {
+            document.documentElement.classList.add('no-user-session');
+          }
+        } else {
+          document.documentElement.classList.add('no-user-session');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap">
+  <link rel="stylesheet" href="/css/root.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/overlays.css">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  <script type="module" src="/client/main.ts"></script>
+</head>
+<body>
+  <div class="component-page" data-ref="page-root">
+    <div class="component-app" data-ref="app">
+      <div class="component-layout" data-ref="app-layout">
+        <div class="component-nav" data-ref="sidebar" aria-label="Navegación principal">
+          <div class="component-rail" data-ref="layout-rail">
+            <div class="component-rail__top" data-ref="rail-top">
+              <div class="component-rail__section" data-ref="rail-top-default">
+                <div class="component-rail__item" data-ref="rail-item-drawer">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn component-rail__btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" data-i18n-tooltip="nav.toggle_drawer" aria-label="Alternar menú lateral">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
+                  </button>
+                  <span class="component-rail__label" data-ref="rail-label-menu" data-i18n="nav.menu">Menú</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="component-divider" data-ref="rail-divider" />
+
+            <div class="component-rail__center" data-ref="rail-center">
+              <div class="component-rail__section" data-ref="rail-center-default">
+                <div class="component-rail__item is-active" data-ref="rail-item-home" data-rail-id="home">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn" data-ref="btn-rail-home" data-tooltip="Inicio" data-i18n-tooltip="nav.home" aria-label="Inicio">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+                  </button>
+                  <span class="component-rail__label" data-ref="rail-label-home" data-i18n="nav.home">Inicio</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-rail__bottom" data-ref="rail-bottom">
+              <div class="component-rail__item" data-ref="rail-item-help" data-rail-id="help">
+                <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn" data-ref="btn-rail-help" data-tooltip="Ayuda" data-i18n-tooltip="nav.help" aria-label="Ayuda">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+                </button>
+                <span class="component-rail__label" data-ref="rail-label-help" data-i18n="nav.help">Ayuda</span>
+              </div>
+
+              <div class="component-rail__item" data-ref="rail-item-settings" data-rail-id="settings">
+                <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn" data-ref="btn-rail-settings" data-tooltip="Configuración" data-i18n-tooltip="nav.settings" aria-label="Configuración">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                </button>
+                <span class="component-rail__label" data-ref="rail-label-settings" data-i18n="nav.settings">Ajustes</span>
+              </div>
+
+              <div class="component-rail__item" data-ref="rail-item-login" data-rail-id="login">
+                <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn" data-ref="btn-rail-login" data-tooltip="Cuenta" data-i18n-tooltip="nav.login" aria-label="Cuenta">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#login"></use></svg>
+                </button>
+                <span class="component-rail__label" data-ref="rail-label-login" data-i18n="nav.login">Cuenta</span>
+              </div>
+
+              <div class="component-rail__user-box is-hidden" data-ref="avatar-container">
+                <button type="button" class="component-button component-button--avatar" data-ref="btn-avatar" data-tooltip="Perfil" data-i18n-tooltip="nav.profile" aria-label="Perfil">
+                  <img class="component-avatar__img" data-ref="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="" referrerpolicy="no-referrer" />
+                </button>
+                <div class="component-menu-backdrop dropdown-backdrop" data-ref="avatar-menu-backdrop">
+                  <div class="component-menu component-menu--dropdown component-menu--floating component-menu--w-325 component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-325 menu-panel--h-auto component-rail__floating-panel" data-ref="avatar-menu">
+                    <div class="component-menu__drag-zone modal-card__drag-zone" data-ref="avatar-menu-drag-zone" aria-hidden="true">
+                      <div class="component-menu__drag-handle modal-card__drag-handle"></div>
+                    </div>
+                    <div class="component-menu__list menu-panel__list" data-ref="panel-main-options">
+                      <div class="component-menu__header menu-panel__header" data-ref="section-header-accounts">
+                        <span class="drawer-section__title" data-i18n="nav.accounts">Cuentas</span>
+                      </div>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
+                        <div class="component-avatar component-avatar--sm" data-ref="active-account-avatar-box">
+                          <img class="component-avatar__img" data-ref="active-account-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="" referrerpolicy="no-referrer" />
+                        </div>
+                        <div class="account-item__info" data-ref="active-account-info">
+                          <span class="account-item__name" data-ref="active-account-name"></span>
+                          <span class="account-item__email" data-ref="active-account-email"></span>
+                        </div>
+                        <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="active-account-divider"></div>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-menu-settings">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.settings">Configuración</span>
+                      </button>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-menu-pricing">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.pricing">Planes y precios</span>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="settings-divider"></div>
+                      <button type="button" class="component-menu__item component-menu__item--danger menu-item menu-item--danger" data-ref="btn-logout">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.logout">Cerrar sesión</span>
+                      </button>
+                    </div>
+                    <div class="component-menu__list menu-panel__list is-hidden" data-ref="panel-account-switcher">
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="common.back">Volver</span>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="switcher-divider"></div>
+                      <div class="account-switcher__list" data-ref="account-switcher-list"></div>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-add-account">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.add_account">Agregar cuenta</span>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="switcher-divider-bottom"></div>
+                      <button type="button" class="component-menu__item component-menu__item--danger menu-item menu-item--danger" data-ref="btn-logout-all">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.logout_all">Cerrar todas las sesiones</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="component-menu-backdrop component-menu-backdrop--drawer dropdown-backdrop drawer-backdrop" data-ref="drawer-backdrop">
+            <div class="component-menu component-menu--drawer menu-panel component-drawer" data-ref="layout-drawer">
+              <div class="component-menu__drag-zone modal-card__drag-zone" data-ref="drawer-drag-zone" aria-hidden="true">
+                <div class="component-menu__drag-handle modal-card__drag-handle"></div>
+              </div>
+
+              <div class="component-drawer__collapse-box" data-ref="drawer-collapse-wrapper">
+                <button type="button" class="component-drawer__collapse-btn" data-ref="btn-drawer-collapse" data-tooltip="Cerrar menú lateral" data-i18n-tooltip="nav.close_drawer" aria-label="Cerrar menú lateral">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+
+              <div class="component-menu__list component-drawer__body" data-ref="drawer-body"></div>
+
+              <div class="component-menu__list component-drawer__footer" data-ref="drawer-footer"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-wrapper component-wrapper--full" data-ref="main-wrapper">
+          <div class="component-backdrop component-backdrop--dots" data-ref="view-backdrop-dots"></div>
+
+          <div class="component-body component-body--scrollable" data-ref="scrollable-body">
+            <div class="component-container" data-ref="view-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

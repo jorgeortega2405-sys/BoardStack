@@ -1,0 +1,18 @@
+{
+  "name": "boardstack-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=app",
+    "build:client": "npm run build:client --workspace=app",
+    "build:server": "npm run build:server --workspace=app",
+    "dev": "npm run dev --workspace=app",
+    "dev:server": "npm run dev:server --workspace=app",
+    "start": "npm run start --workspace=app",
+    "typecheck": "npm run typecheck --workspace=app"
+  }
+}

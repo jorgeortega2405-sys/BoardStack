@@ -1,0 +1,716 @@
+import {
+  addAccountToSession,
+  clearSessionCookie,
+  hashPassword,
+  removeAccountFromSession,
+  switchAccountInSession,
+  updateActiveAccountInSession,
+  verifyPassword,
+} from '../services/auth.service.js';
+import { config } from '../config/env.config.js';
+import {
+  create2FALoginTicket,
+  verify2FALoginTicket,
+  verifyTotpCode,
+} from '../services/two-factor.service.js';
+import {
+  createPasswordResetToken,
+  getPendingRegistration,
+  savePendingRegistration,
+  verifyAndConsumePasswordResetToken,
+  verifyAndConsumeRegistrationCode,
+} from '../services/verification.service.js';
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  findUserDuplicates,
+  getUser2FASecret,
+  updateUserLastLogin,
+  updateUserPassword,
+  verifyAndConsumeBackupCode,
+} from '../services/user.service.js';
+import { getClientIp } from '../utils/ip.util.js';
+import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
+import { getRedisClient } from '../config/redis.config.js';
+import { getUserPermissions, getUserRoles } from '../services/role.service.js';
+import { logger } from '../utils/logger.js';
+import type { Request, Response } from 'express';
+import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
+import type { UserPayload } from '../types/auth.types.js';
+
+function sanitizeUser(user: any): UserPayload {
+  return {
+    ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
+    avatar_url: user.avatar_url ?? null,
+    created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
+    email: user.email,
+    google_connected: Boolean(user.google_id || user.google_connected),
+    google_email: user.google_email || null,
+    has_password: Boolean(user.password_hash || user.has_password),
+    id: user.id,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    roles: Array.isArray(user.roles) ? user.roles : [],
+    storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
+    storage_used_bytes: Number(user.storage_used_bytes) || 0,
+    subscription_status: user.subscription_status || 'inactive',
+    subscription_tier: user.subscription_tier || 'free',
+    two_factor_enabled: Boolean(user.two_factor_enabled),
+    username: user.username,
+  };
+}
+
+async function validateStage1(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || typeof email !== 'string' || email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      res.status(400).json({ error: 'Valid email address required.' });
+      return;
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      res.status(400).json({ error: 'Password must be between 8 and 128 characters long.' });
+      return;
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const existing = await findUserByEmail(trimmedEmail);
+
+    if (existing) {
+      logger.auth.warn(`[ValidateStage1] Email already exists: ${trimmedEmail} (IP: ${clientIp})`);
+      res.status(409).json({ error: 'Email address is already registered.' });
+      return;
+    }
+
+    logger.auth.info(`[ValidateStage1] Valid credentials format for registration: ${trimmedEmail} (IP: ${clientIp})`);
+    res.status(200).json({ message: 'Valid credentials to proceed.', ok: true });
+  } catch (error) {
+    logger.auth.error('[ValidateStage1] Unexpected error:', error);
+    res.status(500).json({ error: 'Error processing request. Please try again later.' });
+  }
+}
+
+async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { email, password, username } = req.body || {};
+
+    if (!email || typeof email !== 'string' || email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      res.status(400).json({ error: 'Valid email address required.' });
+      return;
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 8 || password.length > 128) {
+      res.status(400).json({ error: 'Password must be between 8 and 128 characters long.' });
+      return;
+    }
+
+    if (!username || typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 30) {
+      res.status(400).json({ error: 'Username must be between 3 and 30 characters.' });
+      return;
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedUsername = username.trim();
+
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+      res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores.' });
+      return;
+    }
+
+    const { emailExists, usernameExists } = await findUserDuplicates(trimmedEmail, trimmedUsername);
+
+    if (usernameExists) {
+      logger.auth.warn(`[Register] Username already in use: ${trimmedUsername} (IP: ${clientIp})`);
+      res.status(409).json({ error: 'Username is already taken.' });
+      return;
+    }
+
+    if (emailExists) {
+      logger.auth.warn(`[Register] Email already in use: ${trimmedEmail} (IP: ${clientIp})`);
+      res.status(409).json({ error: 'Email address is already registered.' });
+      return;
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    const { code: activeCode, reused } = await savePendingRegistration(
+      trimmedEmail,
+      {
+        passwordHash,
+        username: trimmedUsername,
+      },
+      600
+    );
+
+    if (!reused) {
+      try {
+        await sendVerificationCodeEmail(trimmedEmail, trimmedUsername, activeCode);
+        logger.auth.info(`[Register] Verification email sent to ${trimmedEmail} (IP: ${clientIp})`);
+      } catch (mailError) {
+        logger.auth.error('[Register] Failed to send email via SMTP:', mailError);
+      }
+    }
+
+    res.status(200).json({
+      message: reused
+        ? `Active verification code is still valid for ${trimmedEmail}.`
+        : `Verification code sent successfully to ${trimmedEmail}.`,
+      ok: true,
+      reused,
+    });
+  } catch (error) {
+    logger.auth.error('[Register] Error in sendRegistrationCode:', error);
+    res.status(500).json({ error: 'Failed to send registration code. Please try again later.' });
+  }
+}
+
+async function resendRegistrationCode(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { email } = req.body || {};
+
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ error: 'Valid email address required.' });
+      return;
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const pending = await getPendingRegistration(trimmedEmail);
+
+    if (!pending) {
+      res.status(400).json({ error: 'No pending registration found for this email address.' });
+      return;
+    }
+
+    const { code: activeCode, reused } = await savePendingRegistration(
+      trimmedEmail,
+      {
+        passwordHash: pending.passwordHash,
+        username: pending.username,
+      },
+      600
+    );
+
+    if (!reused) {
+      try {
+        await sendVerificationCodeEmail(trimmedEmail, pending.username, activeCode);
+        logger.auth.info(`[ResendCode] Verification email resent to ${trimmedEmail} (IP: ${clientIp})`);
+      } catch (mailError) {
+        logger.auth.error('[ResendCode] Failed to resend email via SMTP:', mailError);
+      }
+    }
+
+    res.status(200).json({
+      message: reused
+        ? 'Active verification code is still valid. Please check your email.'
+        : 'New verification code sent successfully.',
+      ok: true,
+      reused,
+    });
+  } catch (error) {
+    logger.auth.error('[ResendCode] Error in resendRegistrationCode:', error);
+    res.status(500).json({ error: 'Failed to resend code. Please try again later.' });
+  }
+}
+
+async function verifyRegistrationCode(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { code, email } = req.body || {};
+
+    if (!email || !code) {
+      res.status(400).json({ error: 'Code and email are required.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const cleanCode = String(code).trim();
+
+    const verificationResult = await verifyAndConsumeRegistrationCode(trimmedEmail, cleanCode);
+
+    if (!verificationResult.success || !verificationResult.data) {
+      logger.auth.warn(`[VerifyCode] Invalid or expired code for ${trimmedEmail} (IP: ${clientIp})`);
+      res.status(400).json({ error: verificationResult.error || 'Invalid or expired code.' });
+      return;
+    }
+
+    const pending = verificationResult.data;
+
+    const newUser = await createUser({
+      email: pending.email,
+      passwordHash: pending.passwordHash,
+      registrationIp: clientIp,
+      username: pending.username,
+    });
+
+    const [roles, permissions] = await Promise.all([
+      getUserRoles(newUser.id),
+      getUserPermissions(newUser.id),
+    ]);
+
+    const userWithRoles = {
+      ...newUser,
+      permissions,
+      roles,
+    };
+
+    logger.auth.info(`[UserCreated] User registered successfully: ID ${newUser.id} (${newUser.email}) from IP ${clientIp}`);
+
+    const sanitized = sanitizeUser(userWithRoles);
+    const session = await addAccountToSession(res, req, sanitized);
+
+    res.status(201).json({
+      accounts: session.accounts.map(sanitizeUser),
+      message: 'Account created and verified successfully.',
+      ok: true,
+      user: sanitized,
+    });
+  } catch (error) {
+    logger.auth.error('[VerifyCode] Error in verifyRegistrationCode:', error);
+    res.status(500).json({ error: 'Failed to verify code. Please try again later.' });
+  }
+}
+
+async function login(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { email, password, tempToken, twoFactorCode } = req.body || {};
+
+    if (tempToken && twoFactorCode) {
+      const userId = verify2FALoginTicket(String(tempToken));
+      if (!userId) {
+        logger.auth.warn(`[Login2FA] Invalid or expired 2FA login ticket from IP ${clientIp}`);
+        res.status(401).json({ error: 'Two-factor session expired. Please log in again.' });
+        return;
+      }
+
+      const userRow = await findUserById(userId);
+      if (!userRow) {
+        res.status(404).json({ error: 'User not found.' });
+        return;
+      }
+
+      const twoFactorData = await getUser2FASecret(userRow.id);
+      const cleanCode = String(twoFactorCode).trim();
+      let is2faValid = false;
+
+      if (/^\d{6}$/.test(cleanCode) && twoFactorData?.two_factor_secret) {
+        if (verifyTotpCode(cleanCode, twoFactorData.two_factor_secret, 2)) {
+          is2faValid = true;
+        }
+      }
+
+      if (!is2faValid) {
+        const backupConsumed = await verifyAndConsumeBackupCode(userRow.id, cleanCode);
+        if (backupConsumed) {
+          is2faValid = true;
+        }
+      }
+
+      if (!is2faValid) {
+        logger.auth.warn(`[Login2FA] Invalid 2FA code for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
+        res.status(401).json({ error: 'Invalid two-factor authentication code or backup code.' });
+        return;
+      }
+
+      void updateUserLastLogin(userRow.id, clientIp);
+      logger.auth.info(`[Login2FA] Successful 2FA login for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
+
+      const [roles, permissions] = await Promise.all([
+        getUserRoles(userRow.id),
+        getUserPermissions(userRow.id),
+      ]);
+
+      const userRowWithRoles = {
+        ...userRow,
+        permissions,
+        roles,
+      };
+
+      const user = sanitizeUser(userRowWithRoles);
+      const session = await addAccountToSession(res, req, user);
+
+      try {
+        const redis = getRedisClient();
+        await redis.set(
+          `user:cache:${user.id}`,
+          JSON.stringify({
+            avatar_url: user.avatar_url,
+            email: user.email,
+            google_connected: user.google_connected,
+            google_email: user.google_email,
+            has_password: user.has_password,
+            permissions: user.permissions,
+            roles: user.roles,
+            subscription_tier: user.subscription_tier,
+            username: user.username,
+          }),
+          'EX',
+          120
+        );
+      } catch {}
+
+      res.status(200).json({
+        accounts: session.accounts.map(sanitizeUser),
+        message: 'Login successful.',
+        ok: true,
+        user,
+      });
+      return;
+    }
+
+    if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+      res.status(400).json({ error: 'Email and password are required.' });
+      return;
+    }
+
+    if (email.trim().length > 254 || password.length > 128) {
+      res.status(401).json({ error: 'Invalid credentials.' });
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const userRow = await findUserByEmail(trimmedEmail);
+
+    if (!userRow || !userRow.password_hash) {
+      logger.auth.warn(`[Login] Failed login attempt for ${trimmedEmail} (user not found or no password) from IP ${clientIp}`);
+      res.status(401).json({ error: 'Invalid credentials.' });
+      return;
+    }
+
+    const isMatch = await verifyPassword(String(password), userRow.password_hash);
+    if (!isMatch) {
+      logger.auth.warn(`[Login] Invalid password for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
+      res.status(401).json({ error: 'Invalid credentials.' });
+      return;
+    }
+
+    if (userRow.two_factor_enabled) {
+      const ticket = create2FALoginTicket(userRow.id);
+      logger.auth.info(`[Login] 2FA required for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
+      res.status(200).json({
+        message: 'Two-factor authentication code required.',
+        ok: true,
+        requires2FA: true,
+        tempToken: ticket,
+      });
+      return;
+    }
+
+    void updateUserLastLogin(userRow.id, clientIp);
+    logger.auth.info(`[Login] Successful login for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
+
+    const [roles, permissions] = await Promise.all([
+      getUserRoles(userRow.id),
+      getUserPermissions(userRow.id),
+    ]);
+
+    const userRowWithRoles = {
+      ...userRow,
+      permissions,
+      roles,
+    };
+
+    const user = sanitizeUser(userRowWithRoles);
+    const session = await addAccountToSession(res, req, user);
+
+    try {
+      const redis = getRedisClient();
+      await redis.set(
+        `user:cache:${user.id}`,
+        JSON.stringify({
+          avatar_url: user.avatar_url,
+          email: user.email,
+          google_connected: user.google_connected,
+          google_email: user.google_email,
+          has_password: user.has_password,
+          permissions: user.permissions,
+          roles: user.roles,
+          subscription_tier: user.subscription_tier,
+          username: user.username,
+        }),
+        'EX',
+        120
+      );
+    } catch {}
+
+    res.status(200).json({
+      accounts: session.accounts.map(sanitizeUser),
+      message: 'Login successful.',
+      ok: true,
+      user,
+    });
+  } catch (error) {
+    logger.auth.error('[Login] Error in login:', error);
+    res.status(500).json({ error: 'Error logging in. Please try again later.' });
+  }
+}
+
+async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { email } = req.body || {};
+
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ error: 'Email address is required.' });
+      return;
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const user = await findUserByEmail(trimmedEmail);
+
+    if (user) {
+      const { reused, token } = await createPasswordResetToken(trimmedEmail, 600);
+      if (!reused) {
+        const resetUrl = `${config.appUrl}/reset-password?email=${encodeURIComponent(trimmedEmail)}&token=${encodeURIComponent(token)}`;
+
+        try {
+          await sendPasswordResetEmail(trimmedEmail, resetUrl);
+          logger.auth.info(`[ForgotPassword] Password reset email sent to ${trimmedEmail} (IP: ${clientIp})`);
+        } catch (mailError) {
+          logger.auth.error('[ForgotPassword] Failed to send password reset email via SMTP:', mailError);
+        }
+      }
+    } else {
+      logger.auth.info(`[ForgotPassword] Request for non-existent email: ${trimmedEmail} (IP: ${clientIp})`);
+    }
+
+    res.status(200).json({
+      message: 'If the email is registered, you will receive a password reset link.',
+      ok: true,
+    });
+  } catch (error) {
+    logger.auth.error('[ForgotPassword] Error in forgotPassword:', error);
+    res.status(500).json({ error: 'Error processing password reset.' });
+  }
+}
+
+async function resetPassword(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { confirmPassword, email, newPassword, token } = req.body || {};
+
+    if (!email || !token || !newPassword) {
+      res.status(400).json({ error: 'Missing required parameters.' });
+      return;
+    }
+
+    if (confirmPassword && newPassword !== confirmPassword) {
+      res.status(400).json({ error: 'Passwords do not match.' });
+      return;
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      res.status(400).json({ error: 'New password must be at least 8 characters long.' });
+      return;
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanToken = String(token).trim();
+
+    const verification = await verifyAndConsumePasswordResetToken(cleanEmail, cleanToken);
+    if (!verification.success) {
+      logger.auth.warn(`[ResetPassword] Invalid or expired token for ${cleanEmail} (IP: ${clientIp})`);
+      res.status(400).json({ error: verification.error || 'Invalid or expired link.' });
+      return;
+    }
+
+    const user = await findUserByEmail(cleanEmail);
+    if (!user) {
+      res.status(400).json({ error: 'User not found.' });
+      return;
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await updateUserPassword(user.id, newHash);
+
+    logger.auth.info(`[ResetPassword] Password reset successfully for user ID ${user.id} (${cleanEmail}) from IP ${clientIp}`);
+
+    res.status(200).json({
+      message: 'Password updated successfully. You can now log in.',
+      ok: true,
+    });
+  } catch (error) {
+    logger.auth.error('[ResetPassword] Error in resetPassword:', error);
+    res.status(500).json({ error: 'Error resetting password. Please try again later.' });
+  }
+}
+
+async function me(req: Request, res: Response): Promise<void> {
+  try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const user = getCurrentUser(req);
+    const accounts = getLinkedAccounts(req);
+
+    if (user && typeof user.id === 'number') {
+      let cachedData: any = null;
+      try {
+        const redis = getRedisClient();
+        const cachedRaw = await redis.get(`user:cache:${user.id}`);
+        if (cachedRaw) {
+          cachedData = JSON.parse(cachedRaw);
+        }
+      } catch {}
+
+      if (cachedData) {
+        user.avatar_url = cachedData.avatar_url ?? null;
+        user.email = cachedData.email;
+        user.google_connected = Boolean(cachedData.google_connected);
+        user.google_email = cachedData.google_email || null;
+        user.has_password = Boolean(cachedData.has_password);
+        user.subscription_tier = cachedData.subscription_tier || 'free';
+        user.username = cachedData.username;
+        user.roles = cachedData.roles || [];
+        user.permissions = cachedData.permissions || [];
+      } else {
+        const [dbUser, roles, permissions] = await Promise.all([
+          findUserById(user.id),
+          getUserRoles(user.id),
+          getUserPermissions(user.id),
+        ]);
+
+        if (dbUser) {
+          user.avatar_url = dbUser.avatar_url ?? null;
+          user.email = dbUser.email;
+          user.google_connected = Boolean(dbUser.google_id);
+          user.google_email = dbUser.google_email || null;
+          user.has_password = Boolean(dbUser.password_hash);
+          user.subscription_tier = dbUser.subscription_tier || 'free';
+          user.username = dbUser.username;
+          user.roles = roles;
+          user.permissions = permissions;
+
+          try {
+            const redis = getRedisClient();
+            await redis.set(
+              `user:cache:${user.id}`,
+              JSON.stringify({
+                avatar_url: user.avatar_url,
+                email: user.email,
+                google_connected: user.google_connected,
+                google_email: user.google_email,
+                has_password: user.has_password,
+                permissions: user.permissions,
+                roles: user.roles,
+                subscription_tier: user.subscription_tier,
+                username: user.username,
+              }),
+              'EX',
+              120
+            );
+          } catch {}
+
+          updateActiveAccountInSession(res, req, {
+            avatar_url: user.avatar_url,
+            email: user.email,
+            google_connected: user.google_connected,
+            google_email: user.google_email,
+            has_password: user.has_password,
+            permissions: user.permissions,
+            roles: user.roles,
+            subscription_tier: user.subscription_tier,
+            username: user.username,
+          });
+        }
+      }
+    }
+
+    res.status(200).json({
+      accounts: accounts.map(sanitizeUser),
+      user: user ? sanitizeUser(user) : null,
+    });
+  } catch (error) {
+    logger.auth.error('[Me] Error in me:', error);
+    res.status(500).json({ error: 'Error retrieving current session.' });
+  }
+}
+
+async function switchAccount(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { userId } = req.body || {};
+    const targetUserId = Number(userId);
+
+    if (!targetUserId || isNaN(targetUserId)) {
+      res.status(400).json({ error: 'Invalid user identifier.' });
+      return;
+    }
+
+    const result = await switchAccountInSession(res, req, targetUserId);
+
+    if (!result.success || !result.activeUser) {
+      res.status(400).json({ error: 'Failed to switch to the specified account.' });
+      return;
+    }
+
+    logger.auth.info(`[SwitchAccount] Switched to account ID ${targetUserId} from IP ${clientIp}`);
+
+    res.status(200).json({
+      accounts: result.accounts.map(sanitizeUser),
+      message: 'Account switched successfully.',
+      ok: true,
+      user: sanitizeUser(result.activeUser),
+    });
+  } catch (error) {
+    logger.auth.error('[SwitchAccount] Error in switchAccount:', error);
+    res.status(500).json({ error: 'Error switching account.' });
+  }
+}
+
+async function logout(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const { userId } = req.body || {};
+    const targetUserId = userId ? Number(userId) : undefined;
+
+    const result = await removeAccountFromSession(res, req, targetUserId);
+
+    logger.auth.info(`[Logout] User ${targetUserId || 'active'} logged out from IP ${clientIp}`);
+
+    res.status(200).json({
+      accounts: result.accounts.map(sanitizeUser),
+      ok: true,
+      remainingCount: result.remainingCount,
+      switched: result.remainingCount > 0,
+      user: result.activeUser ? sanitizeUser(result.activeUser) : null,
+    });
+  } catch (error) {
+    logger.auth.error('[Logout] Error in logout:', error);
+    res.status(500).json({ error: 'Error logging out.' });
+  }
+}
+
+async function logoutAll(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    clearSessionCookie(res);
+    logger.auth.info(`[LogoutAll] Cleared all sessions from IP ${clientIp}`);
+    res.status(200).json({
+      accounts: [],
+      message: 'All sessions have been terminated.',
+      ok: true,
+      user: null,
+    });
+  } catch (error) {
+    logger.auth.error('[LogoutAll] Error in logoutAll:', error);
+    res.status(500).json({ error: 'Error terminating all sessions.' });
+  }
+}
+
+export {
+  forgotPassword,
+  login,
+  logout,
+  logoutAll,
+  me,
+  resendRegistrationCode,
+  resetPassword,
+  sanitizeUser,
+  sendRegistrationCode,
+  switchAccount,
+  validateStage1,
+  verifyRegistrationCode
+};
