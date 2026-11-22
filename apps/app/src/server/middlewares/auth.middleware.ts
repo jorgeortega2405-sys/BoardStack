@@ -1,5 +1,6 @@
 import { clearSessionCookie, getMultiAccountSession } from '../services/auth.service.js';
 import { findUserById } from '../services/user.service.js';
+import { getRedisClient } from '../config/redis.config.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { SessionAccount } from '../types/auth.types.js';
 
@@ -32,6 +33,21 @@ async function getValidatedCurrentUser(req: Request, res?: Response): Promise<Se
     }
     return null;
   }
+
+  const session = getMultiAccountSession(req);
+  if (session && session.iat) {
+    try {
+      const redis = getRedisClient();
+      const revokedAt = await redis.get(`user:session_revoked:${user.id}`);
+      if (revokedAt && session.iat < Number(revokedAt)) {
+        if (res) {
+          clearSessionCookie(res);
+        }
+        return null;
+      }
+    } catch {}
+  }
+
   return user;
 }
 

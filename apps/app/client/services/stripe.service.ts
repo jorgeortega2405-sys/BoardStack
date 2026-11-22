@@ -9,7 +9,7 @@ function loadStripeSdk(publishableKey: string): Promise<any> {
   if (!stripePromise) {
     stripePromise = new Promise((resolve, reject) => {
       if (!publishableKey) {
-        reject(new Error('Stripe publishable key missing.'));
+        reject(new Error('Payment gateway configuration missing.'));
         return;
       }
 
@@ -23,7 +23,7 @@ function loadStripeSdk(publishableKey: string): Promise<any> {
           });
           existingScript.addEventListener('error', () => {
             stripePromise = null;
-            reject(new Error('Failed to load Stripe.js.'));
+            reject(new Error('Failed to initialize payment gateway.'));
           });
         }
         return;
@@ -37,7 +37,7 @@ function loadStripeSdk(publishableKey: string): Promise<any> {
       };
       script.onerror = () => {
         stripePromise = null;
-        reject(new Error('Could not load Stripe.js.'));
+        reject(new Error('Could not load payment gateway.'));
       };
       document.head.appendChild(script);
     });

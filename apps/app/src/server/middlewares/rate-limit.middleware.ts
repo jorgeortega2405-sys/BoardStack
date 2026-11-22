@@ -206,6 +206,14 @@ const settingsGeneralRateLimiter = createRateLimiter({
   windowSeconds: 60,
 });
 
+const subscriptionRateLimiter = createRateLimiter({
+  keyGenerator: getUserOrIpKey,
+  keyPrefix: 'rl:sub:actions',
+  maxRequests: 10,
+  message: 'Too many subscription requests. Please wait a few minutes before trying again.',
+  windowSeconds: 600,
+});
+
 export {
   authForgotPasswordRateLimiter,
   authLoginRateLimiter,
@@ -220,5 +228,6 @@ export {
   settingsGeneralRateLimiter,
   settingsPasswordVerifyRateLimiter,
   settingsPreferencesRateLimiter,
-  settingsSecurityRateLimiter
+  settingsSecurityRateLimiter,
+  subscriptionRateLimiter
 };

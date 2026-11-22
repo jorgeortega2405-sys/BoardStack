@@ -31,6 +31,7 @@ import {
   verifyAndConsumeBackupCode,
   verifyCurrentPassword,
 } from '../services/user.service.js';
+import { FileSanitizationError } from '../utils/sanitizer.util.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import {
   hashPassword,
@@ -288,10 +289,12 @@ async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
       ok: true,
     });
   } catch (error: any) {
-    logger.app.error('[Settings] Error updating avatar in AWS S3:', error);
-    const message = error?.message || 'Error processing and uploading image to AWS S3.';
-    const code = error?.code || 'AVATAR_UPLOAD_FAILED';
-    res.status(400).json({ code, error: message, ok: false });
+    logger.app.error('[Settings] Error updating profile avatar:', error);
+    const isSanitizationError = error instanceof FileSanitizationError;
+    const message = isSanitizationError ? error.message : 'Failed to process and upload profile avatar.';
+    const code = isSanitizationError ? error.code : 'AVATAR_UPLOAD_FAILED';
+    const statusCode = isSanitizationError ? 400 : 500;
+    res.status(statusCode).json({ code, error: message, ok: false });
   }
 }
 
@@ -317,8 +320,8 @@ async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
       ok: true,
     });
   } catch (error) {
-    logger.app.error('[Settings] Error deleting avatar from AWS S3:', error);
-    res.status(500).json({ error: 'Error deleting profile avatar.', ok: false });
+    logger.app.error('[Settings] Error deleting profile avatar:', error);
+    res.status(500).json({ error: 'Failed to delete profile avatar.', ok: false });
   }
 }
 

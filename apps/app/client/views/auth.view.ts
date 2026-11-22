@@ -270,6 +270,7 @@ class RegisterViewController {
   private currentEmail = '';
   private currentPassword = '';
   private currentUsername = '';
+  private registrationTicket = '';
 
   constructor(container: HTMLElement, onNavigate: (path: string) => void) {
     this.container = container;
@@ -338,6 +339,7 @@ class RegisterViewController {
         if (res.ok) {
           this.currentEmail = email;
           this.currentPassword = password;
+          this.registrationTicket = res.registrationTicket || '';
           step1?.classList.add('is-hidden');
           step2?.classList.remove('is-hidden');
           if (!usernameInput?.value) {
@@ -406,6 +408,7 @@ class RegisterViewController {
         const res = await postApi('/api/auth/register-send-code', {
           email: this.currentEmail,
           password: this.currentPassword,
+          registrationTicket: this.registrationTicket,
           username: this.currentUsername,
         });
 
@@ -439,7 +442,10 @@ class RegisterViewController {
 
       setButtonLoading(resendBtn, true);
       try {
-        const res = await postApi('/api/auth/resend-code', { email: this.currentEmail });
+        const res = await postApi('/api/auth/resend-code', {
+          email: this.currentEmail,
+          registrationTicket: this.registrationTicket,
+        });
         if (res.ok) {
           if (successStage3) {
             successStage3.textContent = i18n.t('auth.new_code_sent');

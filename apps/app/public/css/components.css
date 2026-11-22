@@ -2274,8 +2274,8 @@ html.no-user-session [data-ref="rail-item-login"] {
 .tooltip {
   position: absolute;
   z-index: 10000;
-  background-color: var(--text-primary, #111827);
-  color: var(--bg-surface, #ffffff);
+  background-color: #111827;
+  color: #ffffff;
   padding: 4px 8px;
   border-radius: 8px;
   font-family: var(--sl-font-sans);
@@ -2310,7 +2310,7 @@ html.no-user-session [data-ref="rail-item-login"] {
 }
 
 .tooltip__arrow::before {
-  background-color: var(--text-primary, #111827);
+  background-color: #111827;
   content: '';
   height: 6px;
   position: absolute;
@@ -2336,13 +2336,14 @@ html.no-user-session [data-ref="rail-item-login"] {
 }
 
 [data-theme="dark"] .tooltip {
-  background-color: #1f2937;
-  color: #f9fafb;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: #ffffff;
+  color: #09090b;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .tooltip__arrow::before {
-  background-color: #1f2937;
+  background-color: #ffffff;
 }
 
 @media (max-width: 768px) {

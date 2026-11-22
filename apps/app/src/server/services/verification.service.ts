@@ -395,10 +395,41 @@ function verifySecurityActionTicket(ticket: string, userId: number): boolean {
   }
 }
 
+function createRegistrationTicket(email: string, ttlSeconds = 600): string {
+  const payload = {
+    email: email.toLowerCase().trim(),
+    exp: Date.now() + ttlSeconds * 1000,
+    type: 'registration_step1',
+  };
+  const str = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', config.sessionSecret).update(str).digest('base64url');
+  return `${str}.${sig}`;
+}
+
+function verifyRegistrationTicket(ticket: string, email: string): boolean {
+  try {
+    const parts = ticket.split('.');
+    if (parts.length !== 2) return false;
+    const [str, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', config.sessionSecret).update(str).digest('base64url');
+    if (sig.length !== expectedSig.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) {
+      return false;
+    }
+    const payload = JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
+    if (payload.type !== 'registration_step1' || payload.email !== email.toLowerCase().trim() || Date.now() > payload.exp) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export {
   createEmailChangeCode,
   createEmailChangeTicket,
   createPasswordResetToken,
+  createRegistrationTicket,
   createSecurityActionTicket,
   generateSixDigitCode,
   getPendingRegistration,
@@ -407,6 +438,7 @@ export {
   verifyAndConsumePasswordResetToken,
   verifyAndConsumeRegistrationCode,
   verifyEmailChangeTicket,
+  verifyRegistrationTicket,
   verifySecurityActionTicket
 };
 

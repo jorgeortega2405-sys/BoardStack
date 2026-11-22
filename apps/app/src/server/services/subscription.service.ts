@@ -144,7 +144,7 @@ async function createSubscriptionPaymentIntent(
   });
 
   if (!paymentIntent.client_secret) {
-    throw new Error('Unable to initialize payment intent with Stripe Elements.');
+    throw new Error('Unable to initialize payment intent.');
   }
 
   const now = new Date();

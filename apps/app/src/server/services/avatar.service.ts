@@ -1,3 +1,5 @@
+import { escapeXml } from '../utils/html.util.js';
+
 const GRADIENT_PALETTES = [
   ['#1e293b', '#0f172a'],
   ['#3b82f6', '#1d4ed8'],
@@ -18,15 +20,6 @@ function hashString(str: string): number {
     hash |= 0;
   }
   return Math.abs(hash);
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }
 
 function getInitial(name: string): string {

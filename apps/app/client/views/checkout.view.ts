@@ -125,7 +125,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
                           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
                           <span>${i18n.t('checkout.loading_gateway')}</span>
                         </div>
-                        <div data-ref="stripe-payment-mount-point"></div>
+                        <div data-ref="checkout-payment-mount-point"></div>
                       </div>
                       <div class="component-badge--secure" data-ref="checkout-secure-badge">
                         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
@@ -195,7 +195,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   const summaryPlanCycle = container.querySelector<HTMLElement>('[data-ref="summary-plan-cycle"]');
   const summaryPlanEndDate = container.querySelector<HTMLElement>('[data-ref="summary-plan-end-date"]');
   const errorBanner = container.querySelector<HTMLElement>('[data-ref="checkout-error-banner"]');
-  const mountPoint = container.querySelector<HTMLElement>('[data-ref="stripe-payment-mount-point"]');
+  const mountPoint = container.querySelector<HTMLElement>('[data-ref="checkout-payment-mount-point"]');
   const loadingEl = container.querySelector<HTMLElement>('[data-ref="checkout-elements-loading"]');
 
   const btnGotoPricing = container.querySelector<HTMLButtonElement>('[data-ref="btn-goto-pricing"]');

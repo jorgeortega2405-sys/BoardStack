@@ -1,15 +1,6 @@
 import { config } from '../config/env.config.js';
 import { transporter } from '../config/mail.config.js';
-
-function escapeHtml(str: string): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import { escapeHtml } from '../utils/html.util.js';
 
 async function sendVerificationCodeEmail(
   toEmail: string,

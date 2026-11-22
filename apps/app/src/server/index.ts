@@ -2,7 +2,9 @@
 import compression from 'compression';
 import { config } from './config/env.config.js';
 import cookieParser from 'cookie-parser';
+import { csrfProtectionMiddleware } from './middlewares/csrf.middleware.js';
 import { errorHandlerMiddleware, httpLoggerMiddleware } from './middlewares/logger.middleware.js';
+import { escapeHtml } from './utils/html.util.js';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import { getLinkedAccounts, getValidatedCurrentUser } from './middlewares/auth.middleware.js';
@@ -30,56 +32,6 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
-
-function csrfProtectionMiddleware(req: Request, res: Response, next: () => void): void {
-  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    next();
-    return;
-  }
-
-  if (req.path === '/api/subscription/webhook') {
-    next();
-    return;
-  }
-
-  const origin = req.headers.origin;
-  const referer = req.headers.referer;
-  const host = req.headers.host;
-  const secFetchSite = req.headers['sec-fetch-site'];
-
-  if (secFetchSite === 'cross-site') {
-    res.status(403).json({ error: 'Cross-origin request blocked.', ok: false });
-    return;
-  }
-
-  if (origin) {
-    try {
-      const originHost = new URL(origin).host;
-      if (originHost !== host) {
-        res.status(403).json({ error: 'Cross-origin request blocked.', ok: false });
-        return;
-      }
-    } catch {
-      res.status(403).json({ error: 'Invalid origin header.', ok: false });
-      return;
-    }
-  }
-
-  if (referer) {
-    try {
-      const refererHost = new URL(referer).host;
-      if (refererHost !== host) {
-        res.status(403).json({ error: 'Cross-origin referer blocked.', ok: false });
-        return;
-      }
-    } catch {
-      res.status(403).json({ error: 'Invalid referer header.', ok: false });
-      return;
-    }
-  }
-
-  next();
-}
 
 app.use(httpLoggerMiddleware);
 app.use(csrfProtectionMiddleware);
@@ -139,7 +91,7 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
     title: 'BoardStack - Plataforma Creativa Modular',
   },
   '/checkout': {
-    description: 'Finaliza tu suscripción en BoardStack con procesamiento seguro mediante Stripe.',
+    description: 'Finaliza tu suscripción en BoardStack con procesamiento seguro.',
     title: 'Completar Suscripción - BoardStack',
   },
   '/forgot-password': {
@@ -239,15 +191,6 @@ function detectLanguage(req: Request): string {
   }
 
   return DEFAULT_LANG;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 let cachedIndexHtml: string | null = null;

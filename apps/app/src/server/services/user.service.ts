@@ -172,6 +172,10 @@ async function updateUserPassword(
     'UPDATE users SET password_hash = ? WHERE id = ?',
     [passwordHash, userId]
   );
+  try {
+    const redis = getRedisClient();
+    await redis.set(`user:session_revoked:${userId}`, Date.now(), 'EX', 7 * 24 * 3600);
+  } catch {}
   await invalidateUserCache(userId);
 }
 

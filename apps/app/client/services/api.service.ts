@@ -83,6 +83,36 @@ function setAuthState(user: UserPayload | null, accounts: SessionAccount[]): voi
   }
 }
 
+async function parseApiResponse<T = any>(res: globalThis.Response): Promise<T> {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      const data = await res.json();
+      if (!res.ok && typeof data === 'object' && data !== null) {
+        if (data.ok === undefined && data.success === undefined) {
+          data.ok = false;
+        }
+      }
+      return data;
+    } catch {
+      return {
+        error: 'Failed to parse response.',
+        ok: false,
+        status: res.status,
+        success: false,
+      } as T;
+    }
+  }
+
+  const text = await res.text();
+  return {
+    error: res.status >= 400 ? (text.slice(0, 150) || `Request failed (${res.status})`) : undefined,
+    ok: res.ok,
+    status: res.status,
+    success: res.ok,
+  } as T;
+}
+
 async function postApi<T = any>(url: string, body?: any): Promise<T> {
   const res = await fetch(url, {
     body: body ? JSON.stringify(body) : undefined,
@@ -91,7 +121,7 @@ async function postApi<T = any>(url: string, body?: any): Promise<T> {
     },
     method: 'POST',
   });
-  return res.json();
+  return parseApiResponse<T>(res);
 }
 
 async function getApi<T = any>(url: string): Promise<T> {
@@ -101,7 +131,7 @@ async function getApi<T = any>(url: string): Promise<T> {
     },
     method: 'GET',
   });
-  return res.json();
+  return parseApiResponse<T>(res);
 }
 
 async function postFormApi<T = any>(url: string, formData: FormData): Promise<T> {
@@ -109,7 +139,7 @@ async function postFormApi<T = any>(url: string, formData: FormData): Promise<T>
     body: formData,
     method: 'POST',
   });
-  return res.json();
+  return parseApiResponse<T>(res);
 }
 
 async function deleteApi<T = any>(url: string, body?: any): Promise<T> {
@@ -120,7 +150,7 @@ async function deleteApi<T = any>(url: string, body?: any): Promise<T> {
     },
     method: 'DELETE',
   });
-  return res.json();
+  return parseApiResponse<T>(res);
 }
 
 async function fetchCurrentUser(): Promise<AuthStateResponse> {

@@ -12,12 +12,13 @@ import {
   updateUserLastLogin,
 } from '../services/user.service.js';
 import crypto from 'crypto';
+import { escapeHtml } from '../utils/html.util.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { getUserPermissions, getUserRoles } from '../services/role.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
-import { sanitizeUser } from './auth.controller.js';
+import { sanitizeUser } from '../utils/user.util.js';
 
 interface GoogleAuthStatePayload {
   mode?: 'login' | 'verify';
@@ -29,15 +30,6 @@ interface GoogleAuthStatePayload {
 
 function isValidRedirect(url: unknown): url is string {
   return typeof url === 'string' && url.startsWith('/') && !url.startsWith('//') && !url.includes('\\');
-}
-
-function escapePopupHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function sendGoogleVerifyPopupResponse(
@@ -65,7 +57,7 @@ function sendGoogleVerifyPopupResponse(
 <body>
   <div class="component-container component-container--auth" data-ref="google-verify-popup">
     <div class="component-card component-card--status" data-ref="google-verify-card">
-      <p class="component-subtitle" data-ref="google-verify-status">${escapePopupHtml(message)}</p>
+      <p class="component-subtitle" data-ref="google-verify-status">${escapeHtml(message)}</p>
     </div>
   </div>
   <script>

@@ -1,3 +1,4 @@
+import { asyncHandler } from '../middlewares/async.middleware.js';
 import {
   confirmPaymentHandler,
   createPaymentIntentHandler,
@@ -9,17 +10,18 @@ import {
   updateRenewalHandler,
 } from '../controllers/subscription.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
+import { subscriptionRateLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
 
 const router = Router();
 
-router.get('/subscription/config', getSubscriptionConfig);
-router.get('/subscription/status', getSubscriptionStatus);
-router.get('/subscription/billing', requireAuth, getBillingDetailsHandler);
-router.get('/subscription/purchases', requireAuth, getPurchasesHandler);
-router.get('/subscription/invoice/:id', requireAuth, getPurchaseInvoiceHandler);
-router.post('/subscription/renewal', requireAuth, updateRenewalHandler);
-router.post('/subscription/create-intent', requireAuth, createPaymentIntentHandler);
-router.post('/subscription/confirm', requireAuth, confirmPaymentHandler);
+router.get('/subscription/config', asyncHandler(getSubscriptionConfig));
+router.get('/subscription/status', asyncHandler(getSubscriptionStatus));
+router.get('/subscription/billing', requireAuth, asyncHandler(getBillingDetailsHandler));
+router.get('/subscription/purchases', requireAuth, asyncHandler(getPurchasesHandler));
+router.get('/subscription/invoice/:id', requireAuth, asyncHandler(getPurchaseInvoiceHandler));
+router.post('/subscription/renewal', requireAuth, subscriptionRateLimiter, asyncHandler(updateRenewalHandler));
+router.post('/subscription/create-intent', requireAuth, subscriptionRateLimiter, asyncHandler(createPaymentIntentHandler));
+router.post('/subscription/confirm', requireAuth, subscriptionRateLimiter, asyncHandler(confirmPaymentHandler));
 
 export default router;

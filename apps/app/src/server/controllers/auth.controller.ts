@@ -15,10 +15,12 @@ import {
 } from '../services/two-factor.service.js';
 import {
   createPasswordResetToken,
+  createRegistrationTicket,
   getPendingRegistration,
   savePendingRegistration,
   verifyAndConsumePasswordResetToken,
   verifyAndConsumeRegistrationCode,
+  verifyRegistrationTicket,
 } from '../services/verification.service.js';
 import {
   createUser,
@@ -30,35 +32,16 @@ import {
   updateUserPassword,
   verifyAndConsumeBackupCode,
 } from '../services/user.service.js';
+import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles } from '../services/role.service.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getRedisClient } from '../config/redis.config.js';
-import { getUserPermissions, getUserRoles } from '../services/role.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
+import { sanitizeUser } from '../utils/user.util.js';
+import { sendError, sendSuccess } from '../utils/response.util.js';
 import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
 import type { UserPayload } from '../types/auth.types.js';
-
-function sanitizeUser(user: any): UserPayload {
-  return {
-    ai_tokens_balance: user.ai_tokens_balance !== undefined ? Number(user.ai_tokens_balance) : 100,
-    avatar_url: user.avatar_url ?? null,
-    created_at: user.created_at ? new Date(user.created_at).toISOString() : undefined,
-    email: user.email,
-    google_connected: Boolean(user.google_id || user.google_connected),
-    google_email: user.google_email || null,
-    has_password: Boolean(user.password_hash || user.has_password),
-    id: user.id,
-    permissions: Array.isArray(user.permissions) ? user.permissions : [],
-    roles: Array.isArray(user.roles) ? user.roles : [],
-    storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
-    storage_used_bytes: Number(user.storage_used_bytes) || 0,
-    subscription_status: user.subscription_status || 'inactive',
-    subscription_tier: user.subscription_tier || 'free',
-    two_factor_enabled: Boolean(user.two_factor_enabled),
-    username: user.username,
-  };
-}
 
 async function validateStage1(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
@@ -84,8 +67,9 @@ async function validateStage1(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const registrationTicket = createRegistrationTicket(trimmedEmail, 600);
     logger.auth.info(`[ValidateStage1] Valid credentials format for registration: ${trimmedEmail} (IP: ${clientIp})`);
-    res.status(200).json({ message: 'Valid credentials to proceed.', ok: true });
+    res.status(200).json({ message: 'Valid credentials to proceed.', ok: true, registrationTicket });
   } catch (error) {
     logger.auth.error('[ValidateStage1] Unexpected error:', error);
     res.status(500).json({ error: 'Error processing request. Please try again later.' });
@@ -95,11 +79,20 @@ async function validateStage1(req: Request, res: Response): Promise<void> {
 async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
   try {
-    const { email, password, username } = req.body || {};
+    const { email, password, registrationTicket, turnstileToken, username } = req.body || {};
 
     if (!email || typeof email !== 'string' || email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       res.status(400).json({ error: 'Valid email address required.' });
       return;
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const hasValidTicket = typeof registrationTicket === 'string' && verifyRegistrationTicket(registrationTicket, trimmedEmail);
+    if (!hasValidTicket && config.turnstile.enabled) {
+      if (!turnstileToken || typeof turnstileToken !== 'string') {
+        res.status(403).json({ error: 'Security verification required. Please complete step 1 first.' });
+        return;
+      }
     }
 
     if (!password || typeof password !== 'string' || password.length < 8 || password.length > 128) {
@@ -112,7 +105,6 @@ async function sendRegistrationCode(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
     const trimmedUsername = username.trim();
 
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
@@ -170,7 +162,7 @@ async function sendRegistrationCode(req: Request, res: Response): Promise<void> 
 async function resendRegistrationCode(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
   try {
-    const { email } = req.body || {};
+    const { email, registrationTicket, turnstileToken } = req.body || {};
 
     if (!email || typeof email !== 'string') {
       res.status(400).json({ error: 'Valid email address required.' });
@@ -178,6 +170,14 @@ async function resendRegistrationCode(req: Request, res: Response): Promise<void
     }
 
     const trimmedEmail = email.trim().toLowerCase();
+    const hasValidTicket = typeof registrationTicket === 'string' && verifyRegistrationTicket(registrationTicket, trimmedEmail);
+    if (!hasValidTicket && config.turnstile.enabled) {
+      if (!turnstileToken || typeof turnstileToken !== 'string') {
+        res.status(403).json({ error: 'Security verification required. Please restart registration.' });
+        return;
+      }
+    }
+
     const pending = await getPendingRegistration(trimmedEmail);
 
     if (!pending) {
@@ -689,6 +689,13 @@ async function logout(req: Request, res: Response): Promise<void> {
 async function logoutAll(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
   try {
+    const user = getCurrentUser(req);
+    if (user && user.id) {
+      try {
+        const redis = getRedisClient();
+        await redis.set(`user:session_revoked:${user.id}`, Date.now(), 'EX', 7 * 24 * 3600);
+      } catch {}
+    }
     clearSessionCookie(res);
     logger.auth.info(`[LogoutAll] Cleared all sessions from IP ${clientIp}`);
     res.status(200).json({
@@ -703,8 +710,30 @@ async function logoutAll(req: Request, res: Response): Promise<void> {
   }
 }
 
+async function getRolesHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const roles = await getAllRoles();
+    sendSuccess(res, { roles });
+  } catch (error) {
+    logger.auth.error('[GetRoles] Error fetching roles:', error);
+    sendError(res, 'Failed to retrieve roles.', 500);
+  }
+}
+
+async function getPermissionsHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const permissions = await getAllPermissions();
+    sendSuccess(res, { permissions });
+  } catch (error) {
+    logger.auth.error('[GetPermissions] Error fetching permissions:', error);
+    sendError(res, 'Failed to retrieve permissions.', 500);
+  }
+}
+
 export {
   forgotPassword,
+  getPermissionsHandler,
+  getRolesHandler,
   login,
   logout,
   logoutAll,

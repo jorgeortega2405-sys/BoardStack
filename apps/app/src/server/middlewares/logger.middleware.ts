@@ -49,7 +49,16 @@ function errorHandlerMiddleware(
   next: NextFunction
 ): void {
   const ip = getClientIp(req);
-  const statusCode = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500;
+  let statusCode = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500;
+  let clientMessage = statusCode === 404 ? 'Resource not found.' : 'An unexpected error occurred while processing the request. Please try again later.';
+
+  if (err.name === 'MulterError' || err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    clientMessage = err.code === 'LIMIT_FILE_SIZE' ? 'File size exceeds the allowed 2MB limit.' : (err.message || 'Invalid file upload.');
+  } else if (err.name === 'FileSanitizationError') {
+    statusCode = 400;
+    clientMessage = err.message || 'File validation failed.';
+  }
 
   logger.error(`[UnhandledError] ${req.method} ${req.originalUrl} (${statusCode}) - IP: ${ip}`, {
     error: err.message,
@@ -67,8 +76,11 @@ function errorHandlerMiddleware(
   }
 
   res.status(statusCode).json({
-    error: statusCode === 404 ? 'Resource not found.' : 'An unexpected error occurred while processing the request. Please try again later.',
+    code: err.code || (statusCode >= 500 ? 'INTERNAL_SERVER_ERROR' : 'BAD_REQUEST'),
+    error: clientMessage,
+    message: clientMessage,
     ok: false,
+    success: false,
   });
 }
 
