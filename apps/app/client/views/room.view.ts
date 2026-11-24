@@ -1,11 +1,12 @@
-import { openModal } from '../components/modal.component.js';
-import { i18n } from '../i18n/i18n.service.js';
+import { arrayBufferToBase64, base64ToUint8Array, formatBytes, getFileIcon } from '../utils/format.util.js';
+import { copyToClipboard, escapeHtml } from '../utils/dom.util.js';
 import { currentUser, deleteApi, getApi } from '../services/api.service.js';
+import { getGuestPersona } from '../utils/guest-personas.util.js';
+import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { i18n } from '../i18n/i18n.service.js';
+import { openModal } from '../components/modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
 import { toast } from '../services/toast.service.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
-import { escapeHtml } from '../utils/dom.util.js';
-import { getGuestPersona } from '../utils/guest-personas.util.js';
 
 interface RoomParticipant {
   avatar_url?: string | null;
@@ -106,42 +107,6 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: 'stun:stun2.l.google.com:19302' },
   ],
 };
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function base64ToUint8Array(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-function getFileIcon(name: string): string {
-  const ext = name.split('.').pop()?.toLowerCase() || '';
-  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'compress';
-  if (['ts', 'js', 'json', 'html', 'css', 'rs', 'py', 'sql', 'sh'].includes(ext)) return 'code';
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'psd', 'ai', 'fig'].includes(ext)) return 'brush';
-  return 'description';
-}
 
 const scanEntry = async (entry: any, path = ''): Promise<File[]> => {
   if (entry.isFile) {
@@ -515,24 +480,14 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
   btnCopyCode?.addEventListener('click', async () => {
     if (!currentCode) return;
-    try {
-      await navigator.clipboard.writeText(currentCode);
-      toast.success(i18n.t('room.code_copied'));
-    } catch {
-      toast.error(i18n.t('common.error'));
-    }
+    await copyToClipboard(currentCode, i18n.t('room.code_copied'));
   });
 
   btnCopyLink?.addEventListener('click', async () => {
-    try {
-      const shareUrl = currentSlug
-        ? `${window.location.origin}/r/${currentSlug}`
-        : window.location.href;
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success(i18n.t('room.link_copied'));
-    } catch {
-      toast.error(i18n.t('common.error'));
-    }
+    const shareUrl = currentSlug
+      ? `${window.location.origin}/r/${currentSlug}`
+      : window.location.href;
+    await copyToClipboard(shareUrl, i18n.t('room.link_copied'));
   });
 
   const handleExit = () => {

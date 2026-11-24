@@ -1,9 +1,11 @@
 import crypto from 'crypto';
-import { ensureDefaultUserRole } from './role.service.js';
+import { ensureDefaultUserRole, getUserRolesAndPermissions } from './role.service.js';
 import { getRedisClient } from '../config/redis.config.js';
 import { hashBackupCode } from './two-factor.service.js';
 import { pool } from '../config/database.config.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { sanitizeUser } from '../utils/user.util.js';
+import type { UserPayload } from '../types/auth.types.js';
 import { verifyPassword } from './auth.service.js';
 
 interface UserRow extends RowDataPacket {
@@ -49,6 +51,55 @@ async function invalidateUserCache(userId: number): Promise<void> {
     const redis = getRedisClient();
     await redis.del(`user:cache:${userId}`);
   } catch {}
+}
+
+async function revokeUserSessions(userId: number): Promise<void> {
+  try {
+    const redis = getRedisClient();
+    await redis.set(`user:session_revoked:${userId}`, Date.now(), 'EX', 7 * 24 * 3600);
+  } catch {}
+}
+
+async function cacheUserData(user: UserPayload): Promise<void> {
+  try {
+    const redis = getRedisClient();
+    await redis.set(
+      `user:cache:${user.id}`,
+      JSON.stringify({
+        avatar_url: user.avatar_url,
+        email: user.email,
+        google_connected: user.google_connected,
+        google_email: user.google_email,
+        has_password: user.has_password,
+        permissions: user.permissions,
+        roles: user.roles,
+        subscription_tier: user.subscription_tier,
+        username: user.username,
+      }),
+      'EX',
+      120
+    );
+  } catch {}
+}
+
+async function getCachedUserData(userId: number): Promise<any | null> {
+  try {
+    const redis = getRedisClient();
+    const raw = await redis.get(`user:cache:${userId}`);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return null;
+}
+
+async function assembleSanitizedUser(userRow: any): Promise<UserPayload> {
+  const { permissions, roles } = await getUserRolesAndPermissions(userRow.id);
+  return sanitizeUser({
+    ...userRow,
+    permissions,
+    roles,
+  });
 }
 
 async function findUserByEmail(email: string): Promise<UserRow | null> {
@@ -172,10 +223,7 @@ async function updateUserPassword(
     'UPDATE users SET password_hash = ? WHERE id = ?',
     [passwordHash, userId]
   );
-  try {
-    const redis = getRedisClient();
-    await redis.set(`user:session_revoked:${userId}`, Date.now(), 'EX', 7 * 24 * 3600);
-  } catch {}
+  await revokeUserSessions(userId);
   await invalidateUserCache(userId);
 }
 
@@ -454,6 +502,8 @@ async function verifyCurrentPassword(
 
 export {
   DEFAULT_PREFERENCES,
+  assembleSanitizedUser,
+  cacheUserData,
   createUser,
   deleteUserPermanently,
   disableUser2FA,
@@ -463,10 +513,12 @@ export {
   findUserById,
   findUserDuplicates,
   generateUniqueUsername,
+  getCachedUserData,
   getUser2FASecret,
   getUserPreferences,
   invalidateUserCache,
   linkGoogleAccount,
+  revokeUserSessions,
   unlinkGoogleAccount,
   updateUserAvatar,
   updateUserEmail,

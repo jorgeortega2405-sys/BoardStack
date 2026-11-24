@@ -1,4 +1,3 @@
-import { addAccountToSession } from '../services/auth.service.js';
 import {
   addOrganizationMember,
   getOrCreateUserOrganization,
@@ -9,19 +8,14 @@ import {
   resolveOrganizationByIssuer,
   updateOrganization,
 } from '../services/organization.service.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { getUserPermissions, getUserRoles } from '../services/role.service.js';
+import { completeUserLogin } from '../services/auth.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
-import { sanitizeUser } from '../utils/user.util.js';
-import { sendError, sendSuccess } from '../utils/response.util.js';
+import { requireAuthenticatedUser, sendError, sendSuccess } from '../utils/response.util.js';
 
 async function getMyOrganizationHandler(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    sendError(res, 'Authentication required.', 401);
-    return;
-  }
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
 
   try {
     const { membersCount, org } = await getOrCreateUserOrganization(user.id, user.username, user.email);
@@ -43,11 +37,8 @@ async function getMyOrganizationHandler(req: Request, res: Response): Promise<vo
 }
 
 async function updateMyOrganizationHandler(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    sendError(res, 'Authentication required.', 401);
-    return;
-  }
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
 
   try {
     const updated = await updateOrganization(user.id, req.body || {});
@@ -59,11 +50,8 @@ async function updateMyOrganizationHandler(req: Request, res: Response): Promise
 }
 
 async function getMembersHandler(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    sendError(res, 'Authentication required.', 401);
-    return;
-  }
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
 
   try {
     const { org } = await getOrCreateUserOrganization(user.id, user.username, user.email);
@@ -80,11 +68,8 @@ async function getMembersHandler(req: Request, res: Response): Promise<void> {
 }
 
 async function addMemberHandler(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    sendError(res, 'Authentication required.', 401);
-    return;
-  }
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
 
   const { email, role } = req.body || {};
   if (!email || typeof email !== 'string') {
@@ -108,11 +93,8 @@ async function addMemberHandler(req: Request, res: Response): Promise<void> {
 }
 
 async function removeMemberHandler(req: Request, res: Response): Promise<void> {
-  const user = getCurrentUser(req);
-  if (!user) {
-    sendError(res, 'Authentication required.', 401);
-    return;
-  }
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
 
   const memberId = Number(req.params.id);
   if (!memberId || isNaN(memberId)) {
@@ -210,19 +192,7 @@ async function samlAcsHandler(req: Request, res: Response): Promise<void> {
     }
 
     const userRow = await processSsoLogin(email, org.slug);
-    const [roles, permissions] = await Promise.all([
-      getUserRoles(userRow.id),
-      getUserPermissions(userRow.id),
-    ]);
-
-    const userRowWithRoles = {
-      ...userRow,
-      permissions,
-      roles,
-    };
-
-    const sanitized = sanitizeUser(userRowWithRoles);
-    const session = await addAccountToSession(res, req, sanitized);
+    const { accounts, user } = await completeUserLogin(res, req, userRow);
 
     if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
       res.redirect('/');
@@ -230,9 +200,9 @@ async function samlAcsHandler(req: Request, res: Response): Promise<void> {
     }
 
     sendSuccess(res, {
-      accounts: session.accounts.map(sanitizeUser),
+      accounts,
       message: 'SSO login successful.',
-      user: sanitized,
+      user,
     });
   } catch (err: any) {
     logger.auth.error('[SSO] ACS processing failed:', err);

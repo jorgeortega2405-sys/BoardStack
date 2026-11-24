@@ -10,6 +10,7 @@ import {
   renderVerifyEmailCodeModalBody,
   renderVerifyPasswordModalBody,
 } from './modal-templates.js';
+import { setupPasswordToggle } from '../utils/dom.util.js';
 
 interface IdentityVerificationPayload {
   password?: string;
@@ -23,19 +24,6 @@ interface GoogleVerifyMessage {
   securityTicket?: string;
   ts?: number;
   type?: string;
-}
-
-function setupPasswordToggle(btn: HTMLElement | null, input: HTMLInputElement | null): void {
-  if (!btn || !input) return;
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const isPass = input.type === 'password';
-    input.type = isPass ? 'text' : 'password';
-    const icon = btn.querySelector<SVGUseElement>('use');
-    if (icon) {
-      icon.setAttribute('href', isPass ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-    }
-  });
 }
 
 function openAlertModal(options: {

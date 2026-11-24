@@ -1,3 +1,4 @@
+import { STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 import type { UserPayload } from '../types/auth.types.js';
 
 function sanitizeUser(user: any): UserPayload {
@@ -12,7 +13,7 @@ function sanitizeUser(user: any): UserPayload {
     id: user.id,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
     roles: Array.isArray(user.roles) ? user.roles : [],
-    storage_limit_bytes: Number(user.storage_limit_bytes) || 5368709120,
+    storage_limit_bytes: Number(user.storage_limit_bytes) || STORAGE_TIER_LIMITS.free,
     storage_used_bytes: Number(user.storage_used_bytes) || 0,
     subscription_status: user.subscription_status || 'inactive',
     subscription_tier: user.subscription_tier || 'free',

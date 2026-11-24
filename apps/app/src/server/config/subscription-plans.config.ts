@@ -161,11 +161,32 @@ function calculatePeriodEnd(startDate: Date, billingType: 'one_time' | 'recurrin
   return end;
 }
 
+const STORAGE_TIER_LIMITS = {
+  enterprise: 10995116277760,
+  free: 5368709120,
+  pro: 107374182400,
+} as const;
+
+function getStorageTierLimitBytes(tier: string | null | undefined): number {
+  if (tier === 'enterprise') return STORAGE_TIER_LIMITS.enterprise;
+  if (tier === 'pro') return STORAGE_TIER_LIMITS.pro;
+  return STORAGE_TIER_LIMITS.free;
+}
+
+function getStorageTierLabel(tier: string | null | undefined): string {
+  if (tier === 'enterprise') return '10 TB';
+  if (tier === 'pro') return '100 GB';
+  return '5 GB';
+}
+
 export {
   ENTERPRISE_PLAN,
   PRO_PLAN,
+  STORAGE_TIER_LIMITS,
   calculatePeriodEnd,
-  getPriceAmount
+  getPriceAmount,
+  getStorageTierLabel,
+  getStorageTierLimitBytes
 };
 
 export type {

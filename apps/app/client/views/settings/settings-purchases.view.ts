@@ -1,4 +1,5 @@
-import { escapeHtml, removeEmptyState, renderEmptyState } from '../../utils/dom.util.js';
+import { copyToClipboard, escapeHtml, removeEmptyState, renderEmptyState } from '../../utils/dom.util.js';
+import { formatDate } from '../../utils/format.util.js';
 import { getApi } from '../../services/api.service.js';
 import { i18n } from '../../i18n/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -35,17 +36,7 @@ interface PurchaseRecord {
 }
 
 function formatInvoiceDate(isoDate?: string): string {
-  if (!isoDate) return '—';
-  try {
-    const d = new Date(isoDate);
-    return d.toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return isoDate;
-  }
+  return formatDate(isoDate) || '—';
 }
 
 function getPeriodLabel(period?: string | null): string {
@@ -399,12 +390,7 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
     );
 
     if (refId) {
-      try {
-        await navigator.clipboard.writeText(refId);
-        toast.success(i18n.t('common.copied'));
-      } catch {
-        toast.error(i18n.t('common.error'));
-      }
+      void copyToClipboard(refId);
     }
   });
 

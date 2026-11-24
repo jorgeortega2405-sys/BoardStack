@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import fs from 'fs';
 import { getS3Object, sanitizeAndUploadToS3 } from '../services/s3.service.js';
+import { getStorageTierLabel, getStorageTierLimitBytes } from '../config/subscription-plans.config.js';
 import { getValidatedCurrentUser, requireAuth } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
 import multer from 'multer';
@@ -310,13 +311,11 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
     );
     const ownerUser = ownerRows[0];
     const ownerTier = ownerUser?.subscription_tier || 'free';
-    const tierStorageLimitBytes = ownerTier === 'enterprise'
-      ? 10995116277760
-      : (ownerTier === 'pro' ? 107374182400 : 5368709120);
+    const tierStorageLimitBytes = getStorageTierLimitBytes(ownerTier);
 
     const currentStorage = Number(ownerUser?.storage_used_bytes || 0);
     if (currentStorage + req.file.size > tierStorageLimitBytes) {
-      const quotaLabel = ownerTier === 'enterprise' ? '10 TB' : (ownerTier === 'pro' ? '100 GB' : '5 GB');
+      const quotaLabel = getStorageTierLabel(ownerTier);
       if (req.file?.path) {
         await fs.promises.unlink(req.file.path).catch(() => {});
       }

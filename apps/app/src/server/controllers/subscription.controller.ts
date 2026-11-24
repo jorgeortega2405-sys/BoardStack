@@ -13,7 +13,7 @@ import { ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.j
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
-import { sendError, sendSuccess } from '../utils/response.util.js';
+import { requireAuthenticatedUser, sendError, sendSuccess } from '../utils/response.util.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
 
 async function getSubscriptionConfig(_req: Request, res: Response): Promise<void> {
@@ -46,11 +46,8 @@ async function getSubscriptionStatus(req: Request, res: Response): Promise<void>
 
 async function createPaymentIntentHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'You must be logged in to make a purchase.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res, 'You must be logged in to make a purchase.');
+    if (!user) return;
 
     const { billingPeriod, billingType, planId } = req.body || {};
 
@@ -89,11 +86,8 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
 
 async function confirmPaymentHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'You must be logged in to confirm payment.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res, 'You must be logged in to confirm payment.');
+    if (!user) return;
 
     const { paymentIntentId } = req.body || {};
     if (!paymentIntentId || typeof paymentIntentId !== 'string') {
@@ -122,11 +116,8 @@ async function confirmPaymentHandler(req: Request, res: Response): Promise<void>
 
 async function getBillingDetailsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'Invalid or expired session.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const details = await getBillingDetails(user.id);
     res.status(200).json(details);
@@ -138,11 +129,8 @@ async function getBillingDetailsHandler(req: Request, res: Response): Promise<vo
 
 async function getPurchasesHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'Invalid or expired session.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const purchases = await getUserPurchases(user.id);
     sendSuccess(res, { purchases });
@@ -154,11 +142,8 @@ async function getPurchasesHandler(req: Request, res: Response): Promise<void> {
 
 async function updateRenewalHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'Invalid or expired session.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { cancelAtPeriodEnd } = req.body || {};
     if (typeof cancelAtPeriodEnd !== 'boolean') {
@@ -182,11 +167,8 @@ async function updateRenewalHandler(req: Request, res: Response): Promise<void> 
 
 async function getPurchaseInvoiceHandler(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      sendError(res, 'Invalid or expired session.', 401);
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { id } = req.params;
     if (!id) {

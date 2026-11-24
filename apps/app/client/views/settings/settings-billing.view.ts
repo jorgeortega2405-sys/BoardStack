@@ -1,4 +1,5 @@
 import { currentUser, getApi, postApi } from '../../services/api.service.js';
+import { formatBytes, formatDate } from '../../utils/format.util.js';
 import { i18n } from '../../i18n/i18n.service.js';
 import { openCancelSubscriptionModal } from '../../components/modal-dialogs.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -63,17 +64,7 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
     billingInfo.billing_period?.includes('12_months')
   );
 
-  let dateFormatted = '';
-  if (billingInfo.current_period_end) {
-    try {
-      const d = new Date(billingInfo.current_period_end);
-      dateFormatted = d.toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
-    } catch {}
-  }
+  const dateFormatted = formatDate(billingInfo.current_period_end);
 
   let periodLabel = i18n.t('settings.billing.period_monthly');
   if (billingInfo.billing_period === 'yearly') {
@@ -95,14 +86,7 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
     ? Number(billingInfo.storage_limit_bytes)
     : (isEnterprise ? 10 * 1024 * 1024 * 1024 * 1024 : (isPro ? 100 * 1024 * 1024 * 1024 : 0));
 
-  const formatStorageSize = (bytes: number): string => {
-    if (bytes <= 0) return '0 MB';
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
-
-  const formattedUsed = formatStorageSize(usedBytes);
+  const formattedUsed = formatBytes(usedBytes);
   const formattedLimit = isEnterprise ? '10 TB' : (isPro ? '100 GB' : '0 GB');
   const usagePercent = totalLimitBytes > 0 ? Math.min(100, Math.round((usedBytes / totalLimitBytes) * 100)) : 0;
   const storageText = hasPaidPlan ? `${formattedUsed} / ${formattedLimit}` : i18n.t('settings.billing.storage_badge_free');

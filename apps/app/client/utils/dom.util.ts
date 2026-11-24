@@ -1,3 +1,6 @@
+import { i18n } from '../i18n/i18n.service.js';
+import { toast } from '../services/toast.service.js';
+
 function showElement(el: HTMLElement | null): void {
   if (el) {
     el.classList.remove('is-hidden');
@@ -516,12 +519,77 @@ function setupSliderPill(
   };
 }
 
+async function copyToClipboard(text: string, successMessage?: string): Promise<boolean> {
+  if (!text) return false;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      toast.success(successMessage || i18n.t('common.copied'));
+      return true;
+    }
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    if (successful) {
+      toast.success(successMessage || i18n.t('common.copied'));
+      return true;
+    }
+    toast.error(i18n.t('common.error'));
+    return false;
+  } catch {
+    toast.error(i18n.t('common.error'));
+    return false;
+  }
+}
+
+function setButtonLoading(btn: HTMLElement | null, isLoading: boolean): void {
+  if (!btn) return;
+  const buttonEl = btn as HTMLButtonElement;
+  if (isLoading) {
+    if (!btn.hasAttribute('data-original-html')) {
+      btn.setAttribute('data-original-html', btn.innerHTML);
+    }
+    btn.classList.add('is-loading');
+    buttonEl.disabled = true;
+    btn.innerHTML = `<span class="component-spinner" data-ref="btn-spinner" aria-hidden="true"></span>`;
+  } else {
+    const orig = btn.getAttribute('data-original-html');
+    if (orig !== null) {
+      btn.innerHTML = orig;
+      btn.removeAttribute('data-original-html');
+    }
+    btn.classList.remove('is-loading');
+    buttonEl.disabled = false;
+  }
+}
+
+function setupPasswordToggle(toggleBtn: HTMLElement | null, input: HTMLInputElement | null): void {
+  if (!toggleBtn || !input) return;
+  toggleBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    const icon = toggleBtn.querySelector<SVGUseElement>('use');
+    if (icon) {
+      icon.setAttribute('href', isPass ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
+    }
+  });
+}
+
 export {
+  copyToClipboard,
   escapeHtml,
   hideElement,
   removeEmptyState,
   renderEmptyState,
+  setButtonLoading,
   setupDropdown,
+  setupPasswordToggle,
   setupSheetDragToDismiss,
   setupSliderPill,
   showElement,

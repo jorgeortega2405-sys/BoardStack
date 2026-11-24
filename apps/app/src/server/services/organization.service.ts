@@ -3,6 +3,7 @@ import { generateUniqueUsername } from './user.service.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.config.js';
 import { RowDataPacket } from 'mysql2';
+import { STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 
 interface OrganizationRecord {
   created_at: string;
@@ -224,9 +225,9 @@ async function addOrganizationMember(
   if (matchedUser) {
     await pool.query(
       `UPDATE users 
-       SET subscription_tier = 'enterprise', storage_limit_bytes = 10995116277760
+       SET subscription_tier = 'enterprise', storage_limit_bytes = ?
        WHERE id = ? AND subscription_tier != 'enterprise'`,
-      [matchedUser.id]
+      [STORAGE_TIER_LIMITS.enterprise, matchedUser.id]
     );
   }
 
@@ -361,8 +362,8 @@ async function processSsoLogin(
 
     const [insertResult] = await pool.query<any>(
       `INSERT INTO users (uuid, username, email, subscription_tier, subscription_status, storage_limit_bytes)
-       VALUES (?, ?, ?, 'enterprise', 'active', 10995116277760)`,
-      [userUuid, uniqueUsername, cleanEmail]
+       VALUES (?, ?, ?, 'enterprise', 'active', ?)`,
+      [userUuid, uniqueUsername, cleanEmail, STORAGE_TIER_LIMITS.enterprise]
     );
 
     const newUserId = insertResult.insertId;
@@ -390,9 +391,9 @@ async function processSsoLogin(
     if (userRow.subscription_tier !== 'enterprise') {
       await pool.query(
         `UPDATE users 
-         SET subscription_tier = 'enterprise', storage_limit_bytes = 10995116277760
+         SET subscription_tier = 'enterprise', storage_limit_bytes = ?
          WHERE id = ?`,
-        [userRow.id]
+        [STORAGE_TIER_LIMITS.enterprise, userRow.id]
       );
       userRow.subscription_tier = 'enterprise';
     }

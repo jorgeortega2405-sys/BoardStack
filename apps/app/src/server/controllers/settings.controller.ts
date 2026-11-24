@@ -32,7 +32,6 @@ import {
   verifyCurrentPassword,
 } from '../services/user.service.js';
 import { FileSanitizationError } from '../utils/sanitizer.util.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import {
   hashPassword,
   removeAccountFromSession,
@@ -41,15 +40,13 @@ import {
 } from '../services/auth.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
+import { requireAuthenticatedUser } from '../utils/response.util.js';
 import { sendEmailChangeCodeEmail } from '../services/mail.service.js';
 
 async function handleGetPreferences(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
     const preferences = await getUserPreferences(user.id);
     res.json({ ok: true, preferences });
   } catch (error) {
@@ -60,11 +57,8 @@ async function handleGetPreferences(req: Request, res: Response): Promise<void> 
 
 async function handleUpdatePreferences(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
     const preferences = await updateUserPreferences(user.id, req.body || {});
     res.json({
       message: 'Preferences updated successfully.',
@@ -79,11 +73,8 @@ async function handleUpdatePreferences(req: Request, res: Response): Promise<voi
 
 async function handleUpdateUsername(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { username } = req.body || {};
     if (!username || typeof username !== 'string') {
@@ -125,11 +116,8 @@ async function handleUpdateUsername(req: Request, res: Response): Promise<void> 
 
 async function handleRequestEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (!fullUser) {
@@ -157,11 +145,8 @@ async function handleRequestEmailChangeCode(req: Request, res: Response): Promis
 
 async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (!fullUser) {
@@ -196,11 +181,8 @@ async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise
 
 async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { email, ticket } = req.body || {};
     if (!ticket || typeof ticket !== 'string') {
@@ -254,11 +236,8 @@ async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
 
 async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     if (!req.file || !req.file.buffer) {
       res.status(400).json({ error: 'A valid image file is required.', ok: false });
@@ -300,11 +279,8 @@ async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
 
 async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (fullUser?.avatar_url) {
@@ -327,11 +303,8 @@ async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
 
 async function handleUpdatePassword(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (!fullUser) {
@@ -392,11 +365,8 @@ async function handleUpdatePassword(req: Request, res: Response): Promise<void> 
 
 async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (!fullUser) {
@@ -452,11 +422,8 @@ async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
 
 async function handleGetAccountStatus(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     if (!fullUser) {
@@ -481,11 +448,8 @@ async function handleGetAccountStatus(req: Request, res: Response): Promise<void
 
 async function handleGetPasswordStatus(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
     const fullUser = await findUserById(user.id);
     res.json({
       hasPassword: Boolean(fullUser?.password_hash),
@@ -500,11 +464,8 @@ async function handleGetPasswordStatus(req: Request, res: Response): Promise<voi
 
 async function handleVerifyCurrentPassword(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { currentPassword } = req.body || {};
     if (!currentPassword || typeof currentPassword !== 'string') {
@@ -534,11 +495,8 @@ async function handleVerifyCurrentPassword(req: Request, res: Response): Promise
 
 async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const fullUser = await findUserById(user.id);
     res.json({
@@ -553,11 +511,8 @@ async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
 
 async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const forceNew = req.query.force === 'true';
     let pending = forceNew ? null : await getPending2FASetup(user.id);
@@ -585,11 +540,8 @@ async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
 
 async function handleEnable2FA(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { code } = req.body || {};
     if (!code || typeof code !== 'string') {
@@ -627,11 +579,8 @@ async function handleEnable2FA(req: Request, res: Response): Promise<void> {
 
 async function handleDisable2FA(req: Request, res: Response): Promise<void> {
   try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid or expired session.', ok: false });
-      return;
-    }
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
 
     const { code, password } = req.body || {};
     const fullUser = await findUserById(user.id);

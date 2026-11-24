@@ -2,40 +2,8 @@ import { getTurnstileToken, resetTurnstile } from '../services/turnstile.service
 import { i18n } from '../i18n/i18n.service.js';
 import { postApi, setAuthState } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { setButtonLoading, setupPasswordToggle } from '../utils/dom.util.js';
 import { toast } from '../services/toast.service.js';
-
-function setupPasswordToggle(toggleBtn: HTMLElement | null, input: HTMLInputElement | null): void {
-  if (!toggleBtn || !input) return;
-  toggleBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (input.type === 'password') {
-      input.type = 'text';
-    } else {
-      input.type = 'password';
-    }
-  });
-}
-
-function setButtonLoading(btn: HTMLElement | null, isLoading: boolean): void {
-  if (!btn) return;
-  const buttonEl = btn as HTMLButtonElement;
-  if (isLoading) {
-    if (!btn.hasAttribute('data-original-html')) {
-      btn.setAttribute('data-original-html', btn.innerHTML);
-    }
-    btn.classList.add('is-loading');
-    buttonEl.disabled = true;
-    btn.innerHTML = `<span class="component-spinner" data-ref="btn-spinner" aria-hidden="true"></span>`;
-  } else {
-    const orig = btn.getAttribute('data-original-html');
-    if (orig !== null) {
-      btn.innerHTML = orig;
-      btn.removeAttribute('data-original-html');
-    }
-    btn.classList.remove('is-loading');
-    buttonEl.disabled = false;
-  }
-}
 
 function generateRandomUsername(): string {
   const adjectives = ['creative', 'bright', 'swift', 'zen', 'cosmic', 'smart', 'amber', 'silver', 'nova', 'solar'];

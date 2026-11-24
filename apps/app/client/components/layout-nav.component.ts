@@ -21,6 +21,7 @@ import {
 import { currentUser, deleteApi, fetchCurrentUser, getApi, postApi } from '../services/api.service.js';
 import { escapeHtml, setupDropdown, setupSheetDragToDismiss } from '../utils/dom.util.js';
 import { finishNavigationProgress, startNavigationProgress } from '../services/navigation-progress.service.js';
+import { formatBytes } from '../utils/format.util.js';
 import { i18n, t } from '../i18n/i18n.service.js';
 import { openCustomModal, openModal } from './modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -68,14 +69,6 @@ const ROUTES: Record<string, RouteConfig> = {
   '/settings/purchases': { path: '/settings/purchases', railId: 'login', title: 'Historial de compras' },
   '/settings/security': { path: '/settings/security', railId: 'login', title: 'Seguridad' },
 };
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
 
 class LayoutNavController {
   private activeAuthViewEl: HTMLElement | null = null;

@@ -43,6 +43,14 @@ async function getUserPermissions(userId: number): Promise<string[]> {
   return rows.map((row) => String(row.name));
 }
 
+async function getUserRolesAndPermissions(userId: number): Promise<{ permissions: string[]; roles: string[] }> {
+  const [roles, permissions] = await Promise.all([
+    getUserRoles(userId),
+    getUserPermissions(userId),
+  ]);
+  return { permissions, roles };
+}
+
 async function assignUserRole(
   userId: number,
   roleName: string,
@@ -124,6 +132,7 @@ export {
   getAllRoles,
   getUserPermissions,
   getUserRoles,
+  getUserRolesAndPermissions,
   hasPermission,
   hasRole,
   removeUserRole

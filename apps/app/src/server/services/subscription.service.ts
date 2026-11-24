@@ -1,4 +1,10 @@
-import { calculatePeriodEnd, ENTERPRISE_PLAN, getPriceAmount, PRO_PLAN } from '../config/subscription-plans.config.js';
+import {
+  calculatePeriodEnd,
+  ENTERPRISE_PLAN,
+  getPriceAmount,
+  getStorageTierLimitBytes,
+  PRO_PLAN,
+} from '../config/subscription-plans.config.js';
 import { config } from '../config/env.config.js';
 import crypto from 'crypto';
 import { invalidateUserCache } from './user.service.js';
@@ -219,7 +225,7 @@ async function confirmSubscriptionPayment(
   try {
     await conn.beginTransaction();
 
-    const storageLimitBytes = planId === 'enterprise' ? 10995116277760 : 107374182400;
+    const storageLimitBytes = getStorageTierLimitBytes(planId);
 
     await conn.query(
       `UPDATE users 
@@ -329,7 +335,7 @@ async function getBillingDetails(userId: number): Promise<any> {
   const cancelAtPeriodEnd = Boolean(user.cancel_at_period_end || latestSub?.cancel_at_period_end);
 
   const defaultAmount = isEnterprise ? 99.00 : (isPro ? 9.99 : 0);
-  const storageLimit = isEnterprise ? 10995116277760 : (isPro ? 107374182400 : 5368709120);
+  const storageLimit = getStorageTierLimitBytes(user.subscription_tier);
 
   return {
     amount: latestSub ? Number(latestSub.amount) : defaultAmount,

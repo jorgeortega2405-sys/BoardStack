@@ -1,4 +1,4 @@
-import { addAccountToSession } from '../services/auth.service.js';
+import { completeUserLogin } from '../services/auth.service.js';
 import { config } from '../config/env.config.js';
 import { create2FALoginTicket } from '../services/two-factor.service.js';
 import { createSecurityActionTicket } from '../services/verification.service.js';
@@ -9,16 +9,13 @@ import {
   findUserById,
   generateUniqueUsername,
   linkGoogleAccount,
-  updateUserLastLogin,
 } from '../services/user.service.js';
 import crypto from 'crypto';
 import { escapeHtml } from '../utils/html.util.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { getUserPermissions, getUserRoles } from '../services/role.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
-import { sanitizeUser } from '../utils/user.util.js';
 
 interface GoogleAuthStatePayload {
   mode?: 'login' | 'verify';
@@ -363,15 +360,7 @@ async function handleGoogleCallback(req: Request, res: Response): Promise<void> 
         return;
       }
 
-      const userRowWithRoles = {
-        ...userRow,
-        permissions: await getUserPermissions(userRow.id),
-        roles: await getUserRoles(userRow.id),
-      };
-
-      const user = sanitizeUser(userRowWithRoles);
-      void updateUserLastLogin(user.id, clientIp);
-      await addAccountToSession(res, req, user);
+      await completeUserLogin(res, req, userRow, clientIp);
 
       const target = isValidRedirect(statePayload.redirect) ? statePayload.redirect : '/';
       res.redirect(target);

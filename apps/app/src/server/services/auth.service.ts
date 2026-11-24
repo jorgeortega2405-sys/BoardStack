@@ -1,8 +1,11 @@
+import { assembleSanitizedUser, cacheUserData, updateUserLastLogin } from './user.service.js';
 import bcrypt from 'bcryptjs';
 import { config } from '../config/env.config.js';
 import crypto from 'crypto';
 import type { MultiAccountSessionPayload, SessionAccount, UserPayload } from '../types/auth.types.js';
 import type { Request, Response } from 'express';
+import { sanitizeUser } from '../utils/user.util.js';
+import { STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 
 const COOKIE_NAME = 'boardstack_session';
 const MAX_CONCURRENT_ACCOUNTS = 3;
@@ -118,7 +121,7 @@ async function addAccountToSession(
     last_accessed: now,
     permissions: Array.isArray(user.permissions) ? user.permissions : [],
     roles: Array.isArray(user.roles) ? user.roles : [],
-    storage_limit_bytes: user.storage_limit_bytes || 5368709120,
+    storage_limit_bytes: user.storage_limit_bytes || STORAGE_TIER_LIMITS.free,
     storage_used_bytes: user.storage_used_bytes || 0,
     subscription_tier: user.subscription_tier || 'free',
     username: user.username,
@@ -239,11 +242,40 @@ async function removeAccountFromSession(
   return { accounts: session.accounts, activeUser, remainingCount: session.accounts.length };
 }
 
+async function completeUserLogin(
+  res: Response,
+  req: Request,
+  userRowOrSanitized: any,
+  clientIp?: string
+): Promise<{
+  accounts: UserPayload[];
+  session: MultiAccountSessionPayload;
+  user: UserPayload;
+}> {
+  const user = userRowOrSanitized.roles && userRowOrSanitized.permissions
+    ? sanitizeUser(userRowOrSanitized)
+    : await assembleSanitizedUser(userRowOrSanitized);
+
+  if (clientIp) {
+    void updateUserLastLogin(user.id, clientIp);
+  }
+
+  const session = await addAccountToSession(res, req, user);
+  await cacheUserData(user);
+
+  return {
+    accounts: session.accounts.map(sanitizeUser),
+    session,
+    user,
+  };
+}
+
 export {
   COOKIE_NAME,
   MAX_CONCURRENT_ACCOUNTS,
   addAccountToSession,
   clearSessionCookie,
+  completeUserLogin,
   createMultiAccountToken,
   getMultiAccountSession,
   hashPassword,

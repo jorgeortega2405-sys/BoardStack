@@ -1,6 +1,19 @@
 import {
-  addAccountToSession,
+  cacheUserData,
+  createUser,
+  findUserByEmail,
+  findUserById,
+  findUserDuplicates,
+  getCachedUserData,
+  getUser2FASecret,
+  revokeUserSessions,
+  updateUserLastLogin,
+  updateUserPassword,
+  verifyAndConsumeBackupCode,
+} from '../services/user.service.js';
+import {
   clearSessionCookie,
+  completeUserLogin,
   hashPassword,
   removeAccountFromSession,
   switchAccountInSession,
@@ -23,20 +36,9 @@ import {
   verifyAndConsumeRegistrationCode,
   verifyRegistrationTicket,
 } from '../services/verification.service.js';
-import {
-  createUser,
-  findUserByEmail,
-  findUserById,
-  findUserDuplicates,
-  getUser2FASecret,
-  updateUserLastLogin,
-  updateUserPassword,
-  verifyAndConsumeBackupCode,
-} from '../services/user.service.js';
 import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles } from '../services/role.service.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
-import { getRedisClient } from '../config/redis.config.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
 import { sanitizeUser } from '../utils/user.util.js';
@@ -245,27 +247,15 @@ async function verifyRegistrationCode(req: Request, res: Response): Promise<void
       username: pending.username,
     });
 
-    const [roles, permissions] = await Promise.all([
-      getUserRoles(newUser.id),
-      getUserPermissions(newUser.id),
-    ]);
-
-    const userWithRoles = {
-      ...newUser,
-      permissions,
-      roles,
-    };
-
     logger.auth.info(`[UserCreated] User registered successfully: ID ${newUser.id} (${newUser.email}) from IP ${clientIp}`);
 
-    const sanitized = sanitizeUser(userWithRoles);
-    const session = await addAccountToSession(res, req, sanitized);
+    const { accounts, user } = await completeUserLogin(res, req, newUser, clientIp);
 
     res.status(201).json({
-      accounts: session.accounts.map(sanitizeUser),
+      accounts,
       message: 'Account created and verified successfully.',
       ok: true,
-      user: sanitized,
+      user,
     });
   } catch (error) {
     logger.auth.error('[VerifyCode] Error in verifyRegistrationCode:', error);
@@ -316,45 +306,12 @@ async function login(req: Request, res: Response): Promise<void> {
       }
 
       consume2FALoginTicket(String(tempToken));
-      void updateUserLastLogin(userRow.id, clientIp);
       logger.auth.info(`[Login2FA] Successful 2FA login for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
 
-      const [roles, permissions] = await Promise.all([
-        getUserRoles(userRow.id),
-        getUserPermissions(userRow.id),
-      ]);
-
-      const userRowWithRoles = {
-        ...userRow,
-        permissions,
-        roles,
-      };
-
-      const user = sanitizeUser(userRowWithRoles);
-      const session = await addAccountToSession(res, req, user);
-
-      try {
-        const redis = getRedisClient();
-        await redis.set(
-          `user:cache:${user.id}`,
-          JSON.stringify({
-            avatar_url: user.avatar_url,
-            email: user.email,
-            google_connected: user.google_connected,
-            google_email: user.google_email,
-            has_password: user.has_password,
-            permissions: user.permissions,
-            roles: user.roles,
-            subscription_tier: user.subscription_tier,
-            username: user.username,
-          }),
-          'EX',
-          120
-        );
-      } catch {}
+      const { accounts, user } = await completeUserLogin(res, req, userRow, clientIp);
 
       res.status(200).json({
-        accounts: session.accounts.map(sanitizeUser),
+        accounts,
         message: 'Login successful.',
         ok: true,
         user,
@@ -400,45 +357,12 @@ async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    void updateUserLastLogin(userRow.id, clientIp);
     logger.auth.info(`[Login] Successful login for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
 
-    const [roles, permissions] = await Promise.all([
-      getUserRoles(userRow.id),
-      getUserPermissions(userRow.id),
-    ]);
-
-    const userRowWithRoles = {
-      ...userRow,
-      permissions,
-      roles,
-    };
-
-    const user = sanitizeUser(userRowWithRoles);
-    const session = await addAccountToSession(res, req, user);
-
-    try {
-      const redis = getRedisClient();
-      await redis.set(
-        `user:cache:${user.id}`,
-        JSON.stringify({
-          avatar_url: user.avatar_url,
-          email: user.email,
-          google_connected: user.google_connected,
-          google_email: user.google_email,
-          has_password: user.has_password,
-          permissions: user.permissions,
-          roles: user.roles,
-          subscription_tier: user.subscription_tier,
-          username: user.username,
-        }),
-        'EX',
-        120
-      );
-    } catch {}
+    const { accounts, user } = await completeUserLogin(res, req, userRow, clientIp);
 
     res.status(200).json({
-      accounts: session.accounts.map(sanitizeUser),
+      accounts,
       message: 'Login successful.',
       ok: true,
       user,
@@ -546,14 +470,7 @@ async function me(req: Request, res: Response): Promise<void> {
     const accounts = getLinkedAccounts(req);
 
     if (user && typeof user.id === 'number') {
-      let cachedData: any = null;
-      try {
-        const redis = getRedisClient();
-        const cachedRaw = await redis.get(`user:cache:${user.id}`);
-        if (cachedRaw) {
-          cachedData = JSON.parse(cachedRaw);
-        }
-      } catch {}
+      const cachedData = await getCachedUserData(user.id);
 
       if (cachedData) {
         user.avatar_url = cachedData.avatar_url ?? null;
@@ -583,25 +500,7 @@ async function me(req: Request, res: Response): Promise<void> {
           user.roles = roles;
           user.permissions = permissions;
 
-          try {
-            const redis = getRedisClient();
-            await redis.set(
-              `user:cache:${user.id}`,
-              JSON.stringify({
-                avatar_url: user.avatar_url,
-                email: user.email,
-                google_connected: user.google_connected,
-                google_email: user.google_email,
-                has_password: user.has_password,
-                permissions: user.permissions,
-                roles: user.roles,
-                subscription_tier: user.subscription_tier,
-                username: user.username,
-              }),
-              'EX',
-              120
-            );
-          } catch {}
+          await cacheUserData(user);
 
           updateActiveAccountInSession(res, req, {
             avatar_url: user.avatar_url,
@@ -672,10 +571,7 @@ async function logout(req: Request, res: Response): Promise<void> {
     const idToRevoke = targetUserId || currentUser?.id;
 
     if (idToRevoke) {
-      try {
-        const redis = getRedisClient();
-        await redis.set(`user:session_revoked:${idToRevoke}`, Date.now(), 'EX', 7 * 24 * 3600);
-      } catch {}
+      await revokeUserSessions(idToRevoke);
     }
 
     const result = await removeAccountFromSession(res, req, targetUserId);
@@ -700,10 +596,7 @@ async function logoutAll(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (user && user.id) {
-      try {
-        const redis = getRedisClient();
-        await redis.set(`user:session_revoked:${user.id}`, Date.now(), 'EX', 7 * 24 * 3600);
-      } catch {}
+      await revokeUserSessions(user.id);
     }
     clearSessionCookie(res);
     logger.auth.info(`[LogoutAll] Cleared all sessions from IP ${clientIp}`);

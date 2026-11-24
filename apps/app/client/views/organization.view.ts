@@ -1,4 +1,6 @@
+import { copyToClipboard } from '../utils/dom.util.js';
 import { currentUser, deleteApi, getApi, postApi, putApi } from '../services/api.service.js';
+import { formatDate } from '../utils/format.util.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { openModal } from '../components/modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -37,16 +39,6 @@ interface OrgApiResponse {
   org: OrgData;
   spAcsUrl: string;
   spEntityId: string;
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-  } catch {
-    return iso;
-  }
 }
 
 function renderOverviewHtml(org: OrgData, membersCount: number): string {
@@ -509,8 +501,7 @@ async function createOrganizationView(
       btn.addEventListener('click', () => {
         const text = btn.getAttribute('data-copy') || '';
         if (text) {
-          void navigator.clipboard.writeText(text);
-          toast.success(i18n.t('room.link_copied'));
+          void copyToClipboard(text, i18n.t('room.link_copied'));
         }
       });
     });

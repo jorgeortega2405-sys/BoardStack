@@ -109,55 +109,34 @@ async function parseApiResponse<T = any>(res: globalThis.Response): Promise<T> {
   } as T;
 }
 
-async function postApi<T = any>(url: string, body?: any): Promise<T> {
+async function requestApi<T = any>(url: string, method: string, body?: any): Promise<T> {
+  const isJson = body !== undefined && !(body instanceof FormData);
   const res = await fetch(url, {
-    body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
+    body: isJson ? JSON.stringify(body) : body,
+    headers: isJson ? { 'Content-Type': 'application/json' } : undefined,
+    method,
   });
   return parseApiResponse<T>(res);
+}
+
+async function postApi<T = any>(url: string, body?: any): Promise<T> {
+  return requestApi<T>(url, 'POST', body);
 }
 
 async function getApi<T = any>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'GET',
-  });
-  return parseApiResponse<T>(res);
+  return requestApi<T>(url, 'GET');
 }
 
 async function postFormApi<T = any>(url: string, formData: FormData): Promise<T> {
-  const res = await fetch(url, {
-    body: formData,
-    method: 'POST',
-  });
-  return parseApiResponse<T>(res);
+  return requestApi<T>(url, 'POST', formData);
 }
 
 async function putApi<T = any>(url: string, body?: any): Promise<T> {
-  const res = await fetch(url, {
-    body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'PUT',
-  });
-  return parseApiResponse<T>(res);
+  return requestApi<T>(url, 'PUT', body);
 }
 
 async function deleteApi<T = any>(url: string, body?: any): Promise<T> {
-  const res = await fetch(url, {
-    body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'DELETE',
-  });
-  return parseApiResponse<T>(res);
+  return requestApi<T>(url, 'DELETE', body);
 }
 
 async function fetchCurrentUser(): Promise<AuthStateResponse> {
