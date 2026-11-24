@@ -29,6 +29,10 @@ interface AppConfig {
     password?: string;
     port: number;
   };
+  roomServer: {
+    host: string;
+    port: number;
+  };
   sessionSecret: string;
   smtp: {
     from: string;
@@ -79,6 +83,10 @@ const config: AppConfig = {
     host: process.env.REDIS_HOST || '',
     password: process.env.REDIS_PASSWORD || undefined,
     port: Number(process.env.REDIS_PORT) || 6379,
+  },
+  roomServer: {
+    host: process.env.ROOM_SERVER_HOST || (process.env.DB_HOST === 'mysql' ? 'room-server' : '127.0.0.1'),
+    port: Number(process.env.ROOM_SERVER_PORT) || 3001,
   },
   sessionSecret: process.env.SESSION_SECRET || '',
   smtp: {

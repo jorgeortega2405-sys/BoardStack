@@ -17,6 +17,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   }
 
   const urlParams = new URLSearchParams(window.location.search);
+  const planParam: 'pro' | 'enterprise' = urlParams.get('plan') === 'enterprise' ? 'enterprise' : 'pro';
   const initialCycle = urlParams.get('cycle') === 'yearly' ? 'yearly' : 'monthly';
   const initialMode = urlParams.get('mode') === 'one_time' ? 'one_time' : 'recurring';
 
@@ -32,7 +33,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   let isInitializing = false;
   let isSubmitting = false;
 
-  const isAlreadyPro = currentUser.subscription_tier === 'pro';
+  const isAlreadyActive = currentUser.subscription_tier === planParam;
 
   container.innerHTML = `
     <div class="component-backdrop component-backdrop--dots" data-ref="checkout-backdrop"></div>
@@ -42,7 +43,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
           
           <div class="component-main" data-ref="checkout-main">
             
-            <div class="component-empty-state ${isAlreadyPro ? '' : 'is-hidden'}" data-ref="checkout-already-active">
+            <div class="component-empty-state ${isAlreadyActive ? '' : 'is-hidden'}" data-ref="checkout-already-active">
               <div class="component-card component-card--status" data-ref="checkout-active-card">
                 <div class="component-avatar component-avatar--status" data-ref="checkout-active-icon">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
@@ -60,7 +61,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               </div>
             </div>
 
-            <div class="component-step ${isAlreadyPro ? 'is-hidden' : ''}" data-ref="checkout-step-1">
+            <div class="component-step ${isAlreadyActive ? 'is-hidden' : ''}" data-ref="checkout-step-1">
               <h1 class="component-title component-title--lg" data-ref="checkout-step1-title">${i18n.t('checkout.step1_title')}</h1>
               
               <div class="component-toggle-pill component-toggle-pill--slider" data-ref="checkout-mode-toggle" data-cycle="${currentMode}" data-tabs="2" data-active-index="${currentMode === 'one_time' ? '1' : '0'}" style="--slider-tab-count: 2; --slider-active-index: ${currentMode === 'one_time' ? '1' : '0'};">
@@ -144,7 +145,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               <h3 class="component-card__title" data-ref="summary-info-title">${i18n.t('checkout.plan_info_title')}</h3>
               <div class="component-list component-list--summary" data-ref="summary-plan-details">
                 <div class="component-summary-row" data-ref="summary-row-plan">
-                  <span class="component-summary-row__title" data-ref="summary-plan-name">${i18n.t('checkout.plan_pro')}</span>
+                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'enterprise' ? i18n.t('checkout.plan_enterprise') : i18n.t('checkout.plan_pro')}</span>
                   <span class="component-summary-row__price" data-ref="summary-plan-price">USD $9.99</span>
                 </div>
                 <div class="component-summary-row__meta" data-ref="summary-plan-cycle">${i18n.t('pricing.billing_monthly')}</div>
@@ -152,7 +153,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               </div>
             </div>
 
-            <div class="component-card component-card--summary ${isAlreadyPro ? 'is-hidden' : ''}" data-ref="summary-price-card">
+            <div class="component-card component-card--summary ${isAlreadyActive ? 'is-hidden' : ''}" data-ref="summary-price-card">
               <div class="component-price-row" data-ref="summary-price-row">
                 <span class="component-price-row__label">${i18n.t('checkout.total_due')}</span>
                 <span class="component-price-row__val" data-ref="summary-price-val">USD $9.99</span>
@@ -204,11 +205,19 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   btnGotoPricing?.addEventListener('click', () => navigate('/pricing'));
   btnGotoHome?.addEventListener('click', () => navigate('/'));
 
-  if (isAlreadyPro) {
+  if (isAlreadyActive) {
     return container;
   }
 
   const getSelectedPrice = (): number => {
+    if (planParam === 'enterprise') {
+      if (currentMode === 'recurring') {
+        return recurringPeriod === 'yearly' ? 948.00 : 99.00;
+      }
+      if (oneTimePeriod === '6_months') return 499.00;
+      if (oneTimePeriod === '12_months') return 899.00;
+      return 99.00;
+    }
     if (currentMode === 'recurring') {
       return recurringPeriod === 'yearly' ? 95.88 : 9.99;
     }
@@ -239,6 +248,12 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     if (!optionsContainer) return;
     optionsContainer.innerHTML = '';
 
+    const priceMonthlyText = planParam === 'enterprise' ? 'USD $99.00' : 'USD $9.99';
+    const priceYearlyText = planParam === 'enterprise' ? 'USD $948.00' : 'USD $95.88';
+    const price1MText = planParam === 'enterprise' ? 'USD $99.00' : 'USD $9.99';
+    const price6MText = planParam === 'enterprise' ? 'USD $499.00' : 'USD $49.99';
+    const price12MText = planParam === 'enterprise' ? 'USD $899.00' : 'USD $89.99';
+
     if (currentMode === 'recurring') {
       const cardMonthly = document.createElement('div');
       cardMonthly.className = `component-card component-card--selectable ${recurringPeriod === 'monthly' ? 'is-selected' : ''}`;
@@ -253,7 +268,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <p class="component-card__desc">${i18n.t('pricing.billing_monthly')}</p>
           </div>
         </div>
-        <div class="component-card__price">USD $9.99 ${i18n.t('pricing.price_month')}</div>
+        <div class="component-card__price">${priceMonthlyText} ${i18n.t('pricing.price_month')}</div>
       `;
       cardMonthly.addEventListener('click', () => {
         if (recurringPeriod === 'monthly') return;
@@ -277,7 +292,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <p class="component-card__desc">${i18n.t('pricing.billing_yearly')}</p>
           </div>
         </div>
-        <div class="component-card__price">USD $95.88</div>
+        <div class="component-card__price">${priceYearlyText}</div>
       `;
       cardYearly.addEventListener('click', () => {
         if (recurringPeriod === 'yearly') return;
@@ -303,7 +318,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <p class="component-card__desc">${i18n.t('checkout.mode_one_time_benefit')}</p>
           </div>
         </div>
-        <div class="component-card__price">USD $9.99</div>
+        <div class="component-card__price">${price1MText}</div>
       `;
       card1M.addEventListener('click', () => {
         if (oneTimePeriod === '1_month') return;
@@ -326,7 +341,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <p class="component-card__desc">${i18n.t('checkout.mode_one_time_benefit')}</p>
           </div>
         </div>
-        <div class="component-card__price">USD $49.99</div>
+        <div class="component-card__price">${price6MText}</div>
       `;
       card6M.addEventListener('click', () => {
         if (oneTimePeriod === '6_months') return;
@@ -349,7 +364,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <p class="component-card__desc">${i18n.t('checkout.mode_one_time_benefit')}</p>
           </div>
         </div>
-        <div class="component-card__price">USD $89.99</div>
+        <div class="component-card__price">${price12MText}</div>
       `;
       card12M.addEventListener('click', () => {
         if (oneTimePeriod === '12_months') return;
@@ -454,7 +469,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
 
     try {
       const period = getSelectedPeriod();
-      const res = await createSubscriptionIntentApi(currentMode, period, 'pro');
+      const res = await createSubscriptionIntentApi(currentMode, period, planParam);
 
       if (!res.success || !res.clientSecret || !res.publishableKey) {
         if (errorBanner) {
@@ -568,19 +583,23 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
         }
 
         if (currentUser) {
-          currentUser.subscription_tier = 'pro';
-          setAuthState({ ...currentUser, subscription_tier: 'pro' }, linkedAccounts);
+          currentUser.subscription_tier = planParam;
+          setAuthState({ ...currentUser, subscription_tier: planParam }, linkedAccounts);
         }
 
         const avatarBtn = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
         if (avatarBtn) {
-          avatarBtn.setAttribute('data-tier', 'pro');
+          avatarBtn.setAttribute('data-tier', planParam);
         }
 
         showToast(i18n.t('checkout.payment_success'), 'success');
 
         setTimeout(() => {
-          navigate('/');
+          if (planParam === 'enterprise') {
+            navigate('/settings/organization');
+          } else {
+            navigate('/');
+          }
         }, 1200);
       } else {
         showToast(i18n.t('common.loading'), 'info');

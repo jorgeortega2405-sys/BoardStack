@@ -10,13 +10,14 @@ import {
 } from '../services/subscription.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
-import { PRO_PLAN } from '../config/subscription-plans.config.js';
+import { ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
 import type { Request, Response } from 'express';
 import { sendError, sendSuccess } from '../utils/response.util.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
 
 async function getSubscriptionConfig(_req: Request, res: Response): Promise<void> {
   sendSuccess(res, {
+    enterprisePlan: ENTERPRISE_PLAN,
     plan: PRO_PLAN,
     publishableKey: config.stripe.publishableKey,
   });
@@ -52,7 +53,7 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
 
     const { billingPeriod, billingType, planId } = req.body || {};
 
-    if (planId !== 'pro') {
+    if (planId !== 'pro' && planId !== 'enterprise') {
       sendError(res, 'Invalid subscription plan.', 400);
       return;
     }
@@ -71,7 +72,7 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
     const result = await createSubscriptionPaymentIntent(user.id, user.email, {
       billingPeriod,
       billingType,
-      planId: 'pro',
+      planId,
     });
 
     sendSuccess(res, result);
@@ -103,11 +104,11 @@ async function confirmPaymentHandler(req: Request, res: Response): Promise<void>
 
     updateActiveAccountInSession(res, req, {
       subscription_status: 'active',
-      subscription_tier: 'pro',
+      subscription_tier: result.tier,
     });
 
     sendSuccess(res, {
-      message: 'Pro subscription activated successfully.',
+      message: `${result.tier === 'enterprise' ? 'Enterprise' : 'Pro'} subscription activated successfully.`,
       periodEnd: result.periodEnd,
       status: result.status,
       tier: result.tier,

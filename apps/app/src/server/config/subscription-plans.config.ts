@@ -8,7 +8,7 @@ interface PlanConfig {
   buttonText: string;
   description: string;
   features: PlanFeature[];
-  id: 'pro';
+  id: 'pro' | 'enterprise';
   isPopular: boolean;
   name: string;
   prices: {
@@ -70,13 +70,75 @@ const PRO_PLAN: PlanConfig = {
   tagline: 'Maximum speed, advanced tools, and expanded limits for your daily productivity.',
 };
 
-function getPriceAmount(billingType: 'one_time' | 'recurring', period: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly'): number {
-  if (billingType === 'recurring') {
-    return period === 'yearly' ? PRO_PLAN.prices.recurring.yearly * 12 : PRO_PLAN.prices.recurring.monthly;
+const ENTERPRISE_PLAN: PlanConfig = {
+  badge: 'Enterprise',
+  buttonText: 'Get BoardStack Enterprise',
+  description: 'Advanced capacity, dedicated team management, SAML 2.0 and Single Sign-On for organizations.',
+  features: [
+    {
+      description: 'Persistent cloud storage up to 10 TB for enterprise transfers.',
+      title: '10 TB Cloud Storage',
+    },
+    {
+      description: 'Enterprise Single Sign-On with SAML 2.0 (Okta, Azure AD, Google).',
+      title: 'SAML 2.0 & SSO',
+    },
+    {
+      description: 'Centralized organization dashboard with 25 team member seats.',
+      title: 'Organization & Seats',
+    },
+    {
+      description: 'Branded links, 24/7 persistent rooms and customizable passwords.',
+      title: 'Custom URLs & Persistence',
+    },
+    {
+      description: 'Granular download restrictions and programmable room expiration.',
+      title: 'Advanced Access Controls',
+    },
+  ],
+  id: 'enterprise',
+  isPopular: false,
+  name: 'BoardStack Enterprise',
+  prices: {
+    oneTime: {
+      '1_month': 99.00,
+      '6_months': 499.00,
+      '12_months': 899.00,
+    },
+    recurring: {
+      monthly: 99.00,
+      yearly: 79.00,
+    },
+  },
+  storageLabel: '10 TB cloud storage',
+  tagline: 'High-volume infrastructure, custom identity management, and team collaboration.',
+};
+
+function getPriceAmount(
+  arg1: 'pro' | 'enterprise' | 'one_time' | 'recurring',
+  arg2: 'one_time' | 'recurring' | '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly',
+  arg3?: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly'
+): number {
+  let planId: 'pro' | 'enterprise' = 'pro';
+  let billingType: 'one_time' | 'recurring' = 'recurring';
+  let period: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly' = 'monthly';
+
+  if (arg1 === 'pro' || arg1 === 'enterprise') {
+    planId = arg1;
+    billingType = arg2 as 'one_time' | 'recurring';
+    period = (arg3 || 'monthly') as any;
+  } else {
+    billingType = arg1 as 'one_time' | 'recurring';
+    period = arg2 as any;
   }
-  if (period === '6_months') return PRO_PLAN.prices.oneTime['6_months'];
-  if (period === '12_months') return PRO_PLAN.prices.oneTime['12_months'];
-  return PRO_PLAN.prices.oneTime['1_month'];
+
+  const plan = planId === 'enterprise' ? ENTERPRISE_PLAN : PRO_PLAN;
+  if (billingType === 'recurring') {
+    return period === 'yearly' ? plan.prices.recurring.yearly * 12 : plan.prices.recurring.monthly;
+  }
+  if (period === '6_months') return plan.prices.oneTime['6_months'];
+  if (period === '12_months') return plan.prices.oneTime['12_months'];
+  return plan.prices.oneTime['1_month'];
 }
 
 function calculatePeriodEnd(startDate: Date, billingType: 'one_time' | 'recurring', period: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly'): Date {
@@ -100,6 +162,7 @@ function calculatePeriodEnd(startDate: Date, billingType: 'one_time' | 'recurrin
 }
 
 export {
+  ENTERPRISE_PLAN,
   PRO_PLAN,
   calculatePeriodEnd,
   getPriceAmount

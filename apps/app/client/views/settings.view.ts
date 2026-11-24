@@ -2,6 +2,7 @@ import { createSettingsAccessibilityView } from './settings/settings-accessibili
 import { createSettingsAccountView } from './settings/settings-account.view.js';
 import { createSettingsBillingView } from './settings/settings-billing.view.js';
 import { createSettingsGuestView } from './settings/settings-guest.view.js';
+import { createSettingsOrganizationView } from './settings/settings-organization.view.js';
 import { createSettingsPurchasesView } from './settings/settings-purchases.view.js';
 import { createSettingsSecurityView } from './settings/settings-security.view.js';
 
@@ -10,6 +11,7 @@ export {
   createSettingsAccountView,
   createSettingsBillingView,
   createSettingsGuestView,
+  createSettingsOrganizationView,
   createSettingsPurchasesView,
   createSettingsSecurityView
 };

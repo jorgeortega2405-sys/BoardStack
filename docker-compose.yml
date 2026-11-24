@@ -62,11 +62,29 @@ services:
       retries: 5
       start_period: 5s
 
+  room-server:
+    image: boardstack-room-server:latest
+    build:
+      context: ./apps/room-server
+      dockerfile: Dockerfile
+    container_name: boardstack-room-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   web:
-    image: boardstack-web:latest
+    image: boardstack-web:dev
     build:
       context: ./apps/app
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: boardstack-web
     restart: unless-stopped
     ports:
@@ -78,8 +96,16 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      room-server:
+        condition: service_healthy
     volumes:
+      - ./apps/app:/app
+      - /app/node_modules
       - ./logs:/app/logs
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      ROOM_SERVER_HOST: room-server
+      ROOM_SERVER_PORT: 3001
     env_file:
       - .env
     healthcheck:
@@ -87,7 +113,7 @@ services:
       interval: 15s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      start_period: 10s
 
 volumes:
   boardstack_mysql_data:

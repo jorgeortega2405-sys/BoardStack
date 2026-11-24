@@ -1,23 +1,29 @@
 import { createCheckoutView } from '../views/checkout.view.js';
+import { createContactSalesView } from '../views/contact-sales.view.js';
 import { createForgotPasswordView, createLoginView, createRegisterView, createResetPasswordView } from '../views/auth.view.js';
 import { createHelpView, HelpSection } from '../views/help.view.js';
 import { createHomeView } from '../views/home.view.js';
+import { createOrganizationView } from '../views/organization.view.js';
 import { createPricingView } from '../views/pricing.view.js';
+import { createRoomView } from '../views/room.view.js';
 import {
   createSettingsAccessibilityView,
   createSettingsAccountView,
   createSettingsBillingView,
   createSettingsGuestView,
+  createSettingsOrganizationView,
   createSettingsPurchasesView,
   createSettingsSecurityView,
 } from '../views/settings.view.js';
-import { currentUser, fetchCurrentUser, getApi } from '../services/api.service.js';
+import { currentUser, deleteApi, fetchCurrentUser, getApi, postApi } from '../services/api.service.js';
+import { escapeHtml, setupDropdown, setupSheetDragToDismiss } from '../utils/dom.util.js';
 import { finishNavigationProgress, startNavigationProgress } from '../services/navigation-progress.service.js';
 import { i18n, t } from '../i18n/i18n.service.js';
+import { openCustomModal, openModal } from './modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
-import { setupSheetDragToDismiss } from '../utils/dom.util.js';
 import { setupUserMenu } from './layout-user-menu.component.js';
 import { themeService } from '../services/theme.service.js';
+import { toast } from '../services/toast.service.js';
 
 interface RouteConfig {
   path: string;
@@ -29,6 +35,7 @@ const ROUTES: Record<string, RouteConfig> = {
   '/': { path: '/', railId: 'home', title: 'Inicio' },
   '/account': { path: '/account', railId: 'login', title: 'Cuenta' },
   '/checkout': { path: '/checkout', railId: 'home', title: 'Checkout' },
+  '/contact-sales': { path: '/contact-sales', railId: 'home', title: 'Hablar con ventas' },
   '/forgot-password': { path: '/forgot-password', railId: 'login', title: 'Recuperar contraseña' },
   '/help': { path: '/help', railId: 'help', title: 'Términos y condiciones' },
   '/help/cookies': { path: '/help/cookies', railId: 'help', title: 'Política de cookies' },
@@ -36,6 +43,10 @@ const ROUTES: Record<string, RouteConfig> = {
   '/help/security': { path: '/help/security', railId: 'help', title: 'Política de seguridad' },
   '/help/terms': { path: '/help/terms', railId: 'help', title: 'Términos y condiciones' },
   '/login': { path: '/login', railId: 'login', title: 'Iniciar sesión' },
+  '/organization': { path: '/organization', railId: 'login', title: 'Organización' },
+  '/organization/details': { path: '/organization/details', railId: 'login', title: 'Detalles de la organización' },
+  '/organization/members': { path: '/organization/members', railId: 'login', title: 'Gestionar asientos' },
+  '/organization/saml': { path: '/organization/saml', railId: 'login', title: 'Configuración SAML 2.0 y SSO' },
   '/pricing': { path: '/pricing', railId: 'home', title: 'Planes y Precios' },
   '/register': { path: '/register', railId: 'login', title: 'Crear una cuenta' },
   '/reset-password': { path: '/reset-password', railId: 'login', title: 'Restablecer contraseña' },
@@ -44,9 +55,21 @@ const ROUTES: Record<string, RouteConfig> = {
   '/settings/account': { path: '/settings/account', railId: 'login', title: 'Tu cuenta' },
   '/settings/billing': { path: '/settings/billing', railId: 'login', title: 'Facturación' },
   '/settings/guest': { path: '/settings/guest', railId: 'settings', title: 'Configuración' },
+  '/settings/organization': { path: '/settings/organization', railId: 'login', title: 'Organización' },
+  '/settings/organization/details': { path: '/settings/organization/details', railId: 'login', title: 'Detalles de la organización' },
+  '/settings/organization/members': { path: '/settings/organization/members', railId: 'login', title: 'Gestionar asientos' },
+  '/settings/organization/saml': { path: '/settings/organization/saml', railId: 'login', title: 'Configuración SAML 2.0 y SSO' },
   '/settings/purchases': { path: '/settings/purchases', railId: 'login', title: 'Historial de compras' },
   '/settings/security': { path: '/settings/security', railId: 'login', title: 'Seguridad' },
 };
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
 
 class LayoutNavController {
   private activeAuthViewEl: HTMLElement | null = null;
@@ -84,8 +107,6 @@ class LayoutNavController {
     setupUserMenu((path) => this.navigate(path));
     this.bindEvents();
 
-    void this.navigate(window.location.pathname, false);
-
     try {
       await fetchCurrentUser();
       if (currentUser) {
@@ -101,6 +122,8 @@ class LayoutNavController {
       }
     } catch {}
 
+    void this.navigate(window.location.pathname, false);
+
     i18n.onLanguageChange(() => {
       this.renderDrawerContent();
       const currentRoute = this.resolveRoute(this.currentPath);
@@ -114,6 +137,9 @@ class LayoutNavController {
   private resolveRoute(rawPath: string): RouteConfig {
     const { cleanPath } = i18n.stripLanguage(rawPath);
     const clean = (cleanPath || '/').replace(/\/+$/, '') || '/';
+    if (clean.startsWith('/room/') || clean.startsWith('/r/')) {
+      return { path: clean, railId: 'home', title: i18n.t('room.title') };
+    }
     return ROUTES[clean] || ROUTES['/'];
   }
 
@@ -186,6 +212,7 @@ class LayoutNavController {
     }
 
     const railHome = document.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
+    const railCreateRoom = document.querySelector<HTMLElement>('[data-ref="rail-item-create-room"]');
     const railHelp = document.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
     const railSettings = document.querySelector<HTMLElement>('[data-ref="rail-item-settings"]');
     const railLogin = document.querySelector<HTMLElement>('[data-ref="rail-item-login"]');
@@ -195,6 +222,608 @@ class LayoutNavController {
       this.currentDrawerMode = 'general';
       this.setDrawerOpen(false);
       void this.navigate('/');
+    });
+
+    railCreateRoom?.addEventListener('click', (e: MouseEvent) => {
+      e.preventDefault();
+      if (!currentUser) {
+        if (window.innerWidth <= 768 && this.isDrawerOpen) {
+          this.setDrawerOpen(false);
+        }
+        void this.navigate('/login');
+        return;
+      }
+
+      const isPro = currentUser?.subscription_tier === 'pro' || currentUser?.subscription_tier === 'enterprise';
+
+      const modalInstance = openCustomModal({
+        contentHtml: `
+          <div class="modal-container" data-ref="modal-container">
+            <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="${i18n.t('common.close')}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+            <div class="modal-card modal-card--split-config" data-ref="modal-card">
+              <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+                <div class="modal-card__drag-handle"></div>
+              </div>
+
+              <div class="component-sidebar" data-ref="modal-sidebar">
+                <div class="component-sidebar__top">
+                  <div class="component-header">
+                    <h2 class="component-title" style="font-size: 18px; font-weight: 600; line-height: 1.3;">${i18n.t('room.create_modal_title')}</h2>
+                    <p class="component-subtitle" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">${i18n.t('room.create_modal_desc')}</p>
+                  </div>
+                  <div class="component-menu component-menu--padded" data-ref="modal-categories-menu">
+                    <button type="button" class="component-menu__item is-active" data-ref="tab-general" data-tab="general">
+                      <span class="component-menu__item-icon">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+                      </span>
+                      <span class="component-menu__item-text">${i18n.t('room.cat_general')}</span>
+                    </button>
+                    <button type="button" class="component-menu__item" data-ref="tab-security" data-tab="security">
+                      <span class="component-menu__item-icon">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                      </span>
+                      <span class="component-menu__item-text">${i18n.t('room.cat_security')}</span>
+                    </button>
+                    <button type="button" class="component-menu__item" data-ref="tab-storage" data-tab="storage">
+                      <span class="component-menu__item-icon">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                      </span>
+                      <span class="component-menu__item-text">${i18n.t('room.cat_storage')}</span>
+                    </button>
+                    <button type="button" class="component-menu__item" data-ref="tab-limits" data-tab="limits">
+                      <span class="component-menu__item-icon">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
+                      </span>
+                      <span class="component-menu__item-text">${i18n.t('room.cat_limits')}</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="component-sidebar__bottom">
+                  <button type="button" class="component-button component-button--black" style="width: 100%; height: 38px; font-weight: 500;" data-ref="btn-confirm-create-room">
+                    ${i18n.t('room.btn_create_room')}
+                  </button>
+                  <button type="button" class="component-button component-button--outline" style="width: 100%; height: 38px; font-weight: 500;" data-ref="btn-cancel-create-room">
+                    ${i18n.t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+
+              <div class="component-container--content" data-ref="modal-panes-container">
+                <div class="component-pane" data-ref="pane-general" data-pane="general">
+                  <div class="component-header">
+                    <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_general')}</h3>
+                    <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_general_desc')}</p>
+                  </div>
+                  <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="component-item" data-ref="item-custom-slug-toggle">
+                      <div class="component-item__text">
+                        <p class="component-item__title">
+                          ${i18n.t('room.slug_toggle_title')}
+                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        </p>
+                        <p class="component-item__desc">${i18n.t('room.slug_toggle_desc')}</p>
+                      </div>
+                      <div class="component-item__actions">
+                        <label class="component-switch" data-ref="switch-custom-slug-label">
+                          <input type="checkbox" data-ref="switch-custom-slug" ${!isPro ? 'disabled' : ''} />
+                          <span class="component-switch__slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="component-item component-item--stacked is-hidden" data-ref="item-custom-slug">
+                      <div class="component-item__text">
+                        <label class="component-item__title" for="field-custom-slug-input">${i18n.t('room.slug_label')}</label>
+                        <p class="component-item__desc">${i18n.t('room.slug_desc')}</p>
+                      </div>
+                      <input
+                        type="text"
+                        id="field-custom-slug-input"
+                        class="field__input--simple"
+                        style="width: 100%; height: 38px; font-size: 13.5px;"
+                        data-ref="input-custom-slug"
+                        placeholder="${!isPro ? i18n.t('room.pro_feature_notice') : i18n.t('room.slug_placeholder')}"
+                        autocomplete="off"
+                        spellcheck="false"
+                        maxlength="40"
+                        ${!isPro ? 'disabled' : ''}
+                      />
+                    </div>
+
+                    <hr class="component-divider" />
+
+                    <div class="component-item" data-ref="item-persistent-room">
+                      <div class="component-item__text">
+                        <p class="component-item__title">
+                          ${i18n.t('room.persistent_title')}
+                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        </p>
+                        <p class="component-item__desc">${i18n.t('room.persistent_desc')}</p>
+                      </div>
+                      <div class="component-item__actions">
+                        <label class="component-switch" data-ref="switch-persistent-label">
+                          <input type="checkbox" data-ref="switch-persistent" ${!isPro ? 'disabled' : ''} />
+                          <span class="component-switch__slider"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="component-pane is-hidden" data-ref="pane-security" data-pane="security">
+                  <div class="component-header">
+                    <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_security')}</h3>
+                    <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_security_desc')}</p>
+                  </div>
+                  <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="component-item" data-ref="item-password-protect">
+                      <div class="component-item__text">
+                        <p class="component-item__title">${i18n.t('room.password_protect_title')}</p>
+                        <p class="component-item__desc">${i18n.t('room.password_protect_desc')}</p>
+                      </div>
+                      <div class="component-item__actions">
+                        <label class="component-switch" data-ref="switch-password-label">
+                          <input type="checkbox" data-ref="switch-password" />
+                          <span class="component-switch__slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="component-item component-item--stacked is-hidden" data-ref="item-room-password">
+                      <div class="component-item__text">
+                        <label class="component-item__title" for="field-room-password-input">${i18n.t('room.password_label')}</label>
+                      </div>
+                      <input
+                        type="password"
+                        id="field-room-password-input"
+                        class="field__input--simple"
+                        style="width: 100%; height: 38px; font-size: 13.5px;"
+                        data-ref="input-room-password"
+                        placeholder="${i18n.t('room.password_placeholder')}"
+                        autocomplete="new-password"
+                        maxlength="50"
+                      />
+                    </div>
+
+                    <hr class="component-divider" />
+
+                    <div class="component-item component-item--stacked" data-ref="item-upload-permissions">
+                      <div class="component-item__text">
+                        <h4 class="component-item__title">${i18n.t('room.upload_perm_title')}</h4>
+                        <p class="component-item__desc">${i18n.t('room.upload_perm_desc')}</p>
+                      </div>
+                      <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-upload-perm">
+                        <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-upload-perm" aria-label="${i18n.t('room.upload_perm_title')}">
+                          <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                            <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                            <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="upload-perm-selected-text">${i18n.t('room.upload_perm_all')}</span>
+                          </div>
+                          <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                        </button>
+                        <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-upload-perm">
+                          <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-upload-perm">
+                            <div class="component-menu__list menu-panel__list">
+                              <button type="button" class="component-menu__item menu-item is-active" data-ref="option-perm-all" data-value="all">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_all')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-perm-owner" data-value="owner_only">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_owner_only')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-perm-specific" data-value="specific">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_specific')}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="component-pane is-hidden" data-ref="pane-storage" data-pane="storage">
+                  <div class="component-header">
+                    <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_storage')}</h3>
+                    <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_storage_desc')}</p>
+                  </div>
+                  <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="component-item" data-ref="item-cloud-storage">
+                      <div class="component-item__text">
+                        <p class="component-item__title">
+                          ${i18n.t('room.cloud_storage_title')}
+                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        </p>
+                        <p class="component-item__desc">${i18n.t('room.cloud_storage_desc')}</p>
+                      </div>
+                      <div class="component-item__actions">
+                        <label class="component-switch" data-ref="switch-cloud-label">
+                          <input type="checkbox" data-ref="switch-cloud" ${!isPro ? 'disabled' : ''} />
+                          <span class="component-switch__slider"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="component-banner" data-ref="banner-cloud-info" style="margin-top: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+                    <p class="component-item__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin: 0;">${i18n.t('room.cloud_offline_ready')}</p>
+                    <p class="component-item__desc" style="font-size: 12.5px; line-height: 1.45; margin: 0; color: var(--text-secondary);">${i18n.t('room.cloud_storage_desc')}</p>
+                  </div>
+                </div>
+
+                <div class="component-pane is-hidden" data-ref="pane-limits" data-pane="limits">
+                  <div class="component-header">
+                    <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_limits')}</h3>
+                    <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_limits_desc')}</p>
+                  </div>
+                  <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="component-item component-item--stacked" data-ref="item-expiration">
+                      <div class="component-item__text">
+                        <h4 class="component-item__title">${i18n.t('room.expiration_title')}</h4>
+                        <p class="component-item__desc">${i18n.t('room.expiration_desc')}</p>
+                      </div>
+                      <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-expiration">
+                        <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-expiration" aria-label="${i18n.t('room.expiration_title')}">
+                          <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                            <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                            <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="expiration-selected-text">${isPro ? i18n.t('room.expiration_24h') : i18n.t('room.expiration_1h')}</span>
+                          </div>
+                          <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                        </button>
+                        <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-expiration">
+                          <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-expiration">
+                            <div class="component-menu__list menu-panel__list">
+                              <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-active' : ''}" data-ref="option-exp-1" data-value="1">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_1h')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item ${isPro ? 'is-active' : 'is-disabled'}" data-ref="option-exp-24" data-value="24" ${!isPro ? 'disabled' : ''}>
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ' (PRO)' : ''}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-168" data-value="168" ${!isPro ? 'disabled' : ''}>
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ' (PRO)' : ''}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-720" data-value="720" ${!isPro ? 'disabled' : ''}>
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ' (PRO)' : ''}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-0" data-value="0" ${!isPro ? 'disabled' : ''}>
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ' (PRO)' : ''}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr class="component-divider" />
+
+                    <div class="component-item component-item--stacked" data-ref="item-download-limit">
+                      <div class="component-item__text">
+                        <h4 class="component-item__title">${i18n.t('room.download_limit_title')}</h4>
+                        <p class="component-item__desc">${i18n.t('room.download_limit_desc')}</p>
+                      </div>
+                      <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-download-limit">
+                        <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-download-limit" aria-label="${i18n.t('room.download_limit_title')}">
+                          <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                            <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                            <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="download-limit-selected-text">${i18n.t('room.download_limit_unlimited')}</span>
+                          </div>
+                          <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                        </button>
+                        <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-download-limit">
+                          <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-limit">
+                            <div class="component-menu__list menu-panel__list">
+                              <button type="button" class="component-menu__item menu-item is-active" data-ref="option-limit-0" data-value="0">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_unlimited')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-limit-1" data-value="1">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_1')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-limit-5" data-value="5">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_5')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-limit-10" data-value="10">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_10')}</span>
+                              </button>
+                              <button type="button" class="component-menu__item menu-item" data-ref="option-limit-custom" data-value="custom">
+                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_custom')}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="is-hidden" data-ref="box-custom-download-limit" style="margin-top: 8px;">
+                        <input
+                          type="number"
+                          min="1"
+                          max="1000"
+                          class="field__input--simple"
+                          style="width: 100%; height: 38px; font-size: 13.5px;"
+                          data-ref="input-custom-download-limit"
+                          placeholder="${i18n.t('room.download_limit_placeholder')}"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `,
+      });
+
+      const modalEl = modalInstance.backdrop;
+      const tabBtns = modalEl.querySelectorAll<HTMLButtonElement>('[data-tab]');
+      const panes = modalEl.querySelectorAll<HTMLElement>('[data-pane]');
+      const btnCancelEl = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-room"]');
+      const btnConfirmEl = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-create-room"]');
+
+      tabBtns.forEach((tabBtn) => {
+        tabBtn.addEventListener('click', () => {
+          const targetTab = tabBtn.getAttribute('data-tab');
+          if (!targetTab) return;
+
+          tabBtns.forEach((b) => b.classList.remove('is-active'));
+          tabBtn.classList.add('is-active');
+
+          panes.forEach((pane) => {
+            if (pane.getAttribute('data-pane') === targetTab) {
+              pane.classList.remove('is-hidden');
+            } else {
+              pane.classList.add('is-hidden');
+            }
+          });
+        });
+      });
+
+      btnCancelEl?.addEventListener('click', () => {
+        modalInstance.close();
+      });
+
+      const switchCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-custom-slug"]');
+      const itemCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]');
+      const inputCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
+      const switchCloudEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-cloud"]');
+      const switchPersistentEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-persistent"]');
+      const switchPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-password"]');
+      const itemPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="item-room-password"]');
+      const inputPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-room-password"]');
+      const boxCustomDownloadLimitEl = modalEl.querySelector<HTMLElement>('[data-ref="box-custom-download-limit"]');
+      const inputCustomLimitEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-download-limit"]');
+
+      let uploadPermissionVal = 'all';
+      let expiresInHoursVal = isPro ? 24 : 1;
+      let downloadLimitMode = '0';
+
+      const uploadPermWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-upload-perm"]');
+      setupDropdown(uploadPermWrapper, {
+        onSelect: (val) => {
+          uploadPermissionVal = val;
+          uploadPermWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+          });
+        },
+      });
+
+      const expirationWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-expiration"]');
+      setupDropdown(expirationWrapper, {
+        onSelect: (val) => {
+          expiresInHoursVal = Number(val);
+          expirationWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+          });
+        },
+      });
+
+      const downloadLimitWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-limit"]');
+      setupDropdown(downloadLimitWrapper, {
+        onSelect: (val) => {
+          downloadLimitMode = val;
+          downloadLimitWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+          });
+          if (val === 'custom') {
+            boxCustomDownloadLimitEl?.classList.remove('is-hidden');
+            inputCustomLimitEl?.focus();
+          } else {
+            boxCustomDownloadLimitEl?.classList.add('is-hidden');
+            if (inputCustomLimitEl) inputCustomLimitEl.value = '';
+          }
+        },
+      });
+
+      if (!isPro) {
+        modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug-toggle"]')?.addEventListener('click', () => {
+          toast.info(i18n.t('room.pro_feature_notice'));
+        });
+        modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]')?.addEventListener('click', () => {
+          toast.info(i18n.t('room.pro_feature_notice'));
+        });
+        modalEl.querySelector<HTMLElement>('[data-ref="item-persistent-room"]')?.addEventListener('click', (e: MouseEvent) => {
+          e.preventDefault();
+          toast.info(i18n.t('room.pro_feature_notice'));
+        });
+        modalEl.querySelector<HTMLElement>('[data-ref="item-cloud-storage"]')?.addEventListener('click', (e: MouseEvent) => {
+          e.preventDefault();
+          toast.info(i18n.t('room.pro_feature_notice'));
+        });
+      } else {
+        modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug-toggle"]')?.addEventListener('click', (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+          if (switchCustomSlugEl && !switchCustomSlugEl.disabled) {
+            switchCustomSlugEl.checked = !switchCustomSlugEl.checked;
+            switchCustomSlugEl.dispatchEvent(new Event('change'));
+          }
+        });
+        modalEl.querySelector<HTMLElement>('[data-ref="item-persistent-room"]')?.addEventListener('click', (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+          if (switchPersistentEl && !switchPersistentEl.disabled) {
+            switchPersistentEl.checked = !switchPersistentEl.checked;
+            switchPersistentEl.dispatchEvent(new Event('change'));
+          }
+        });
+        modalEl.querySelector<HTMLElement>('[data-ref="item-cloud-storage"]')?.addEventListener('click', (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+          if (switchCloudEl) {
+            switchCloudEl.checked = !switchCloudEl.checked;
+            switchCloudEl.dispatchEvent(new Event('change'));
+          }
+        });
+      }
+
+      switchCustomSlugEl?.addEventListener('change', () => {
+        if (switchCustomSlugEl.checked) {
+          itemCustomSlugEl?.classList.remove('is-hidden');
+          inputCustomSlugEl?.focus();
+        } else {
+          itemCustomSlugEl?.classList.add('is-hidden');
+          if (inputCustomSlugEl) inputCustomSlugEl.value = '';
+        }
+      });
+
+      modalEl.querySelector<HTMLElement>('[data-ref="item-password-protect"]')?.addEventListener('click', (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+        if (switchPasswordEl) {
+          switchPasswordEl.checked = !switchPasswordEl.checked;
+          switchPasswordEl.dispatchEvent(new Event('change'));
+        }
+      });
+
+      switchCloudEl?.addEventListener('change', () => {
+        if (switchCloudEl.checked) {
+          if (switchPersistentEl) {
+            switchPersistentEl.checked = true;
+            switchPersistentEl.disabled = true;
+          }
+        } else {
+          if (switchPersistentEl) {
+            switchPersistentEl.disabled = false;
+          }
+        }
+      });
+
+      switchPersistentEl?.addEventListener('change', () => {
+        if (!switchPersistentEl.checked && switchCloudEl) {
+          switchCloudEl.checked = false;
+        }
+      });
+
+      switchPasswordEl?.addEventListener('change', () => {
+        if (switchPasswordEl.checked) {
+          itemPasswordEl?.classList.remove('is-hidden');
+          inputPasswordEl?.focus();
+        } else {
+          itemPasswordEl?.classList.add('is-hidden');
+          if (inputPasswordEl) inputPasswordEl.value = '';
+        }
+      });
+
+      btnConfirmEl?.addEventListener('click', async () => {
+        const slugVal = (switchCustomSlugEl?.checked && inputCustomSlugEl) ? inputCustomSlugEl.value.trim().toLowerCase() : '';
+        const saveToCloudVal = switchCloudEl?.checked || false;
+        const isPersistentVal = saveToCloudVal ? true : (switchPersistentEl?.checked || false);
+        const passwordVal = switchPasswordEl?.checked ? (inputPasswordEl?.value.trim() || '') : '';
+        let maxDownloadsVal: number | null = null;
+        if (downloadLimitMode === 'custom') {
+          const customNum = Number(inputCustomLimitEl?.value || 0);
+          maxDownloadsVal = customNum > 0 ? customNum : null;
+        } else {
+          const limitNum = Number(downloadLimitMode);
+          maxDownloadsVal = limitNum > 0 ? limitNum : null;
+        }
+
+        if (slugVal) {
+          const isValidSlug = /^[a-z0-9-]+$/.test(slugVal) && slugVal.length >= 3 && slugVal.length <= 40;
+          if (!isValidSlug) {
+            toast.error(i18n.t('room.slug_invalid'));
+            return;
+          }
+        }
+
+        if (!isPro && (slugVal || saveToCloudVal || isPersistentVal || (expiresInHoursVal > 0 && expiresInHoursVal !== 1))) {
+          toast.info(i18n.t('room.pro_feature_notice'));
+          return;
+        }
+
+        btnConfirmEl.disabled = true;
+
+        try {
+          const res = await postApi<{
+            code?: string;
+            error?: string;
+            expires_at?: number;
+            has_password?: boolean;
+            is_persistent?: boolean;
+            max_downloads?: number;
+            ok: boolean;
+            room_id?: string;
+            save_to_cloud?: boolean;
+            slug?: string;
+            upload_permission?: string;
+          }>('/api/rooms/create', {
+            custom_slug: slugVal || null,
+            expires_in_hours: expiresInHoursVal > 0 ? expiresInHoursVal : null,
+            is_persistent: isPersistentVal,
+            max_downloads: maxDownloadsVal,
+            password: passwordVal || null,
+            save_to_cloud: saveToCloudVal,
+            upload_permission: uploadPermissionVal,
+          });
+
+          if (res.ok && res.room_id) {
+            sessionStorage.setItem(`room_owner_${res.room_id}`, 'true');
+            if (res.slug) {
+              sessionStorage.setItem(`room_owner_${res.slug}`, 'true');
+            }
+            if (passwordVal) {
+              sessionStorage.setItem(`room_password_${res.room_id}`, passwordVal);
+              if (res.slug) {
+                sessionStorage.setItem(`room_password_${res.slug}`, passwordVal);
+              }
+            }
+            if (saveToCloudVal) {
+              sessionStorage.setItem(`room_save_to_cloud_${res.room_id}`, 'true');
+              if (res.slug) {
+                sessionStorage.setItem(`room_save_to_cloud_${res.slug}`, 'true');
+              }
+            }
+            sessionStorage.setItem(`room_upload_permission_${res.room_id}`, uploadPermissionVal);
+            if (res.slug) {
+              sessionStorage.setItem(`room_upload_permission_${res.slug}`, uploadPermissionVal);
+            }
+            modalInstance.close();
+            const targetUrl = res.slug ? `/room/${res.slug}` : `/room/${res.room_id}`;
+            void this.navigate(targetUrl);
+          } else {
+            btnConfirmEl.disabled = false;
+            if (res.error && res.error.includes('already in use')) {
+              toast.error(i18n.t('room.slug_in_use'));
+            } else {
+              toast.error(i18n.t('room.error_creating'));
+            }
+          }
+        } catch {
+          btnConfirmEl.disabled = false;
+          toast.error(i18n.t('room.error_creating'));
+        }
+      });
     });
 
     railHelp?.addEventListener('click', (e: MouseEvent) => {
@@ -357,9 +986,12 @@ class LayoutNavController {
 
         if (this.viewContainerEl) {
           this.viewContainerEl.innerHTML = '';
-          let nextView: HTMLElement | null = null;
+          let nextView: DocumentFragment | HTMLElement | null = null;
           if (targetRoute.path === '/') {
             nextView = await createHomeView((p) => this.navigate(p));
+          } else if (targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/')) {
+            const roomId = targetRoute.path.replace(/^\/(?:room|r)\//, '').split('/')[0];
+            nextView = await createRoomView(roomId, (p) => this.navigate(p));
           } else if (targetRoute.path.startsWith('/settings')) {
             if (targetRoute.path === '/settings/account') {
               nextView = await createSettingsAccountView((p) => this.navigate(p));
@@ -373,11 +1005,17 @@ class LayoutNavController {
               nextView = await createSettingsPurchasesView((p) => this.navigate(p));
             } else if (targetRoute.path === '/settings/guest') {
               nextView = await createSettingsGuestView((p) => this.navigate(p));
+            } else if (targetRoute.path.startsWith('/settings/organization')) {
+              nextView = await createOrganizationView((p) => this.navigate(p), targetRoute.path);
             }
+          } else if (targetRoute.path.startsWith('/organization')) {
+            nextView = await createOrganizationView((p) => this.navigate(p), targetRoute.path);
           } else if (targetRoute.path === '/pricing') {
             nextView = await createPricingView((p) => this.navigate(p));
           } else if (targetRoute.path === '/checkout') {
             nextView = await createCheckoutView((p) => this.navigate(p));
+          } else if (targetRoute.path === '/contact-sales') {
+            nextView = await createContactSalesView((p) => this.navigate(p));
           } else if (targetRoute.path.startsWith('/help')) {
             let section: HelpSection = 'terms';
             if (targetRoute.path === '/help/privacy') {
@@ -392,6 +1030,18 @@ class LayoutNavController {
 
           if (navId !== this.navigationSeq) {
             return;
+          }
+
+          if (targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/')) {
+            this.viewContainerEl.classList.add('component-view--room');
+          } else {
+            this.viewContainerEl.classList.remove('component-view--room');
+          }
+
+          const dotsBackdropEl = document.querySelector<HTMLElement>('[data-ref="view-backdrop-dots"]');
+          if (dotsBackdropEl) {
+            const showDots = targetRoute.path === '/' || targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/');
+            dotsBackdropEl.classList.toggle('is-hidden', !showDots);
           }
 
           this.viewContainerEl.innerHTML = '';
@@ -421,10 +1071,6 @@ class LayoutNavController {
   }
 
   public toggleDrawer(): void {
-    if (this.currentDrawerMode === 'general') {
-      this.setDrawerOpen(false);
-      return;
-    }
     this.setDrawerOpen(!this.isDrawerOpen);
   }
 
@@ -625,17 +1271,19 @@ class LayoutNavController {
         this.drawerFooterEl.classList.add('is-hidden');
       }
 
-      let html = `<div class="component-drawer__group" data-ref="drawer-main-group">`;
-      html += `<div class="component-drawer__title">${t('drawer.navigation')}</div>`;
-      html += this.renderDrawerNavButton({
-        href: '/',
-        icon: 'home',
-        isActive: this.currentPath === '/',
-        name: t('drawer.home'),
-        ref: 'btn-nav-home',
-      });
-      html += `</div>`;
+      let html = '';
+      if (currentUser) {
+        html += `<div class="component-drawer__group" data-ref="drawer-rooms-group">`;
+        html += `<div class="component-drawer__title">${t('drawer.my_rooms')}</div>`;
+        html += `<div data-ref="drawer-rooms-list" style="display: flex; flex-direction: column; gap: 6px;"></div>`;
+        html += `</div>`;
+      }
+
       this.drawerBodyEl.innerHTML = html;
+
+      if (currentUser) {
+        void this.populateDrawerRooms();
+      }
     }
 
     if (this.drawerEl) {
@@ -652,6 +1300,120 @@ class LayoutNavController {
           }
         });
       });
+    }
+  }
+
+  private async populateDrawerRooms(): Promise<void> {
+    if (!currentUser || !this.drawerBodyEl) return;
+    const roomsListEl = this.drawerBodyEl.querySelector<HTMLElement>('[data-ref="drawer-rooms-list"]');
+    const roomsGroupEl = this.drawerBodyEl.querySelector<HTMLElement>('[data-ref="drawer-rooms-group"]');
+    if (!roomsListEl || !roomsGroupEl) return;
+
+    try {
+      const res = await getApi<{
+        ok: boolean;
+        rooms: Array<{
+          code: string;
+          created_at: string;
+          expires_at: number | null;
+          files_count: number;
+          is_persistent: boolean;
+          max_downloads: number | null;
+          requires_password: boolean;
+          room_id: string;
+          save_to_cloud: boolean;
+          slug: string | null;
+          storage_bytes: number;
+          total_downloads: number;
+          upload_permission: string;
+        }>;
+      }>('/api/rooms/my-rooms');
+
+      if (res && res.ok && Array.isArray(res.rooms) && res.rooms.length > 0) {
+        let roomsHtml = '';
+        for (const room of res.rooms) {
+          const targetUrl = `/room/${room.slug || room.code}`;
+          const isAct = this.currentPath === targetUrl || (room.slug ? this.currentPath === `/r/${room.slug}` : false);
+          const roomLabel = room.slug ? `/r/${room.slug}` : room.code;
+          const filesCount = Number(room.files_count || 0);
+          const storageBytes = Number(room.storage_bytes || 0);
+          const totalDownloads = Number(room.total_downloads || 0);
+
+          roomsHtml += `
+            <div class="component-card component-card--flat${isAct ? ' is-active' : ''}" data-ref="card-room-${room.code}" data-route="${targetUrl}" style="padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 12px; cursor: pointer; background: var(--bg-surface); display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; width: 100%; transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast);">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                  <span class="component-item__title" style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">
+                    ${escapeHtml(roomLabel)}
+                  </span>
+                  ${room.is_persistent ? `<span class="component-badge component-badge--sm" style="font-size: 10px; padding: 2px 6px; flex-shrink: 0;">${i18n.t('room.persistent_badge')}</span>` : ''}
+                </div>
+                <button type="button" class="component-button component-button--icon" data-action="delete-room" data-room-id="${room.room_id}" aria-label="${i18n.t('common.delete')}" style="width: 26px; height: 26px; min-width: 26px; padding: 0; flex-shrink: 0; color: var(--text-secondary); border-radius: 8px;">
+                  <svg class="component-icon" aria-hidden="true" style="width: 15px; height: 15px;"><use href="/icons.svg#delete"></use></svg>
+                </button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span>${filesCount} ${i18n.t('room.files_count', { count: filesCount })}</span>
+                <span>•</span>
+                <span>${formatBytes(storageBytes)}</span>
+                <span>•</span>
+                <span>${i18n.t('room.downloads_count_unlimited', { count: totalDownloads })}</span>
+              </div>
+            </div>
+          `;
+        }
+        roomsListEl.innerHTML = roomsHtml;
+        if (this.drawerEl) {
+          renderIcons(roomsListEl);
+          roomsListEl.querySelectorAll<HTMLElement>('[data-route]').forEach((card) => {
+            card.addEventListener('click', (e: MouseEvent) => {
+              if ((e.target as HTMLElement).closest('[data-action="delete-room"]')) {
+                return;
+              }
+              const target = card.getAttribute('data-route');
+              if (target) {
+                if (window.innerWidth <= 768) {
+                  this.setDrawerOpen(false);
+                }
+                void this.navigate(target);
+              }
+            });
+          });
+
+          roomsListEl.querySelectorAll<HTMLButtonElement>('[data-action="delete-room"]').forEach((delBtn) => {
+            delBtn.addEventListener('click', (e: MouseEvent) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const roomId = delBtn.getAttribute('data-room-id');
+              if (!roomId) return;
+
+              openModal({
+                cancelText: i18n.t('common.cancel'),
+                confirmClass: 'component-button--destructive',
+                confirmText: i18n.t('room.delete_permanently'),
+                description: i18n.t('room.room_card_delete_confirm'),
+                onConfirm: async () => {
+                  try {
+                    await deleteApi(`/api/rooms/${encodeURIComponent(roomId)}`);
+                    toast.success(i18n.t('room.room_card_deleted'));
+                    await this.populateDrawerRooms();
+                  } catch {
+                    toast.error(i18n.t('common.error'));
+                  }
+                },
+                showCancel: true,
+                showConfirm: true,
+                size: 'sm',
+                title: i18n.t('room.delete_room_confirm_title'),
+              });
+            });
+          });
+        }
+      } else {
+        roomsGroupEl.remove();
+      }
+    } catch {
+      roomsGroupEl.remove();
     }
   }
 

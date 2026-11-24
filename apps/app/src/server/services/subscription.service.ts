@@ -1,5 +1,6 @@
-import { calculatePeriodEnd, getPriceAmount, PRO_PLAN } from '../config/subscription-plans.config.js';
+import { calculatePeriodEnd, ENTERPRISE_PLAN, getPriceAmount, PRO_PLAN } from '../config/subscription-plans.config.js';
 import { config } from '../config/env.config.js';
+import crypto from 'crypto';
 import { invalidateUserCache } from './user.service.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.config.js';
@@ -22,7 +23,7 @@ interface SubscriptionInfo {
 interface CreatePaymentIntentParams {
   billingPeriod: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly';
   billingType: 'one_time' | 'recurring';
-  planId: 'pro';
+  planId: 'pro' | 'enterprise';
 }
 
 interface InvoiceData {
@@ -67,13 +68,13 @@ async function getUserSubscriptionInfo(userId: number): Promise<SubscriptionInfo
   const status = user.subscription_status || 'inactive';
   const periodEnd = user.subscription_period_end || null;
 
-  const isActive = tier === 'pro' && status === 'active' && (!periodEnd || new Date(periodEnd).getTime() > Date.now());
+  const isActive = (tier === 'pro' || tier === 'enterprise') && status === 'active' && (!periodEnd || new Date(periodEnd).getTime() > Date.now());
 
   return {
     is_active: isActive,
     period_end: periodEnd,
     status: isActive ? 'active' : 'inactive',
-    tier: isActive ? 'pro' : 'free',
+    tier: isActive ? tier : 'free',
   };
 }
 
@@ -126,7 +127,7 @@ async function createSubscriptionPaymentIntent(
   }
 
   const customerId = await getOrCreateStripeCustomer(userId, email);
-  const amount = getPriceAmount(params.billingType, params.billingPeriod);
+  const amount = getPriceAmount(params.planId, params.billingType, params.billingPeriod);
   const amountInCents = Math.round(amount * 100);
 
   const paymentIntent = await stripe.paymentIntents.create({
@@ -134,7 +135,7 @@ async function createSubscriptionPaymentIntent(
     automatic_payment_methods: { enabled: true },
     currency: 'usd',
     customer: customerId,
-    description: `BoardStack Pro - ${params.billingType === 'recurring' ? 'Subscription ' + params.billingPeriod : 'One-time payment ' + params.billingPeriod}`,
+    description: `BoardStack ${params.planId === 'enterprise' ? 'Enterprise' : 'Pro'} - ${params.billingType === 'recurring' ? 'Subscription ' + params.billingPeriod : 'One-time payment ' + params.billingPeriod}`,
     metadata: {
       billingPeriod: params.billingPeriod,
       billingType: params.billingType,
@@ -194,7 +195,7 @@ async function confirmSubscriptionPayment(
 
   const billingType = (intent.metadata.billingType as 'one_time' | 'recurring') || 'recurring';
   const billingPeriod = (intent.metadata.billingPeriod as any) || 'monthly';
-  const planId = (intent.metadata.planId as 'pro') || 'pro';
+  const planId = (intent.metadata.planId as 'pro' | 'enterprise') || 'pro';
 
   const now = new Date();
   const periodEnd = calculatePeriodEnd(now, billingType, billingPeriod);
@@ -218,12 +219,41 @@ async function confirmSubscriptionPayment(
   try {
     await conn.beginTransaction();
 
+    const storageLimitBytes = planId === 'enterprise' ? 10995116277760 : 107374182400;
+
     await conn.query(
       `UPDATE users 
-       SET subscription_tier = ?, subscription_status = 'active', subscription_period_end = ?
+       SET subscription_tier = ?, subscription_status = 'active', subscription_period_end = ?, storage_limit_bytes = ?
        WHERE id = ?`,
-      [planId, periodEnd, userId]
+      [planId, periodEnd, storageLimitBytes, userId]
     );
+
+    if (planId === 'enterprise') {
+      const [existingOrg] = await conn.query<RowDataPacket[]>(
+        'SELECT id FROM organizations WHERE owner_id = ? LIMIT 1',
+        [userId]
+      );
+      if (!existingOrg || existingOrg.length === 0) {
+        const [userRows] = await conn.query<RowDataPacket[]>(
+          'SELECT username, email FROM users WHERE id = ? LIMIT 1',
+          [userId]
+        );
+        const orgUuid = crypto.randomUUID();
+        const defaultOrgName = `${userRows[0]?.username || 'Enterprise'} Organization`;
+        const defaultSlug = `org-${userId}-${Date.now().toString(36)}`;
+        const [orgResult] = await conn.query<any>(
+          `INSERT INTO organizations (uuid, owner_id, name, slug, seats_limit, saml_enabled)
+           VALUES (?, ?, ?, ?, 25, FALSE)`,
+          [orgUuid, userId, defaultOrgName, defaultSlug]
+        );
+        const orgId = orgResult.insertId;
+        await conn.query(
+          `INSERT INTO organization_members (org_id, user_id, email, role, status)
+           VALUES (?, ?, ?, 'owner', 'active')`,
+          [orgId, userId, userRows[0]?.email || '']
+        );
+      }
+    }
 
     await conn.query(
       `UPDATE subscriptions 
@@ -260,7 +290,8 @@ async function confirmSubscriptionPayment(
 async function getBillingDetails(userId: number): Promise<any> {
   const [userRows] = await pool.query<RowDataPacket[]>(
     `SELECT subscription_tier, subscription_status, subscription_period_end,
-            stripe_customer_id, stripe_subscription_id, cancel_at_period_end
+            stripe_customer_id, stripe_subscription_id, cancel_at_period_end,
+            storage_used_bytes
      FROM users WHERE id = ?`,
     [userId]
   );
@@ -288,7 +319,8 @@ async function getBillingDetails(userId: number): Promise<any> {
   );
   const latestSub = subRows[0] || null;
 
-  const isPro = user.subscription_tier === 'pro';
+  const isEnterprise = user.subscription_tier === 'enterprise';
+  const isPro = isEnterprise || user.subscription_tier === 'pro';
   const isActive = isPro && (user.subscription_status === 'active' || user.subscription_status === 'trialing');
 
   const billingType = latestSub?.billing_type || (user.stripe_subscription_id ? 'recurring' : 'one_time');
@@ -296,8 +328,11 @@ async function getBillingDetails(userId: number): Promise<any> {
   const isOneTime = billingType === 'one_time';
   const cancelAtPeriodEnd = Boolean(user.cancel_at_period_end || latestSub?.cancel_at_period_end);
 
+  const defaultAmount = isEnterprise ? 99.00 : (isPro ? 9.99 : 0);
+  const storageLimit = isEnterprise ? 10995116277760 : (isPro ? 107374182400 : 5368709120);
+
   return {
-    amount: latestSub ? Number(latestSub.amount) : (isPro ? 9.99 : 0),
+    amount: latestSub ? Number(latestSub.amount) : defaultAmount,
     billing_period: billingPeriod,
     billing_type: billingType,
     cancel_at_period_end: cancelAtPeriodEnd,
@@ -307,9 +342,11 @@ async function getBillingDetails(userId: number): Promise<any> {
     is_one_time: isOneTime,
     ok: true,
     status: isActive ? 'active' : 'inactive',
+    storage_limit_bytes: storageLimit,
+    storage_used_bytes: Number(user.storage_used_bytes || 0),
     stripe_subscription_id: user.stripe_subscription_id || null,
     success: true,
-    tier: isPro ? 'pro' : 'free',
+    tier: isActive ? (user.subscription_tier || 'free') : 'free',
   };
 }
 

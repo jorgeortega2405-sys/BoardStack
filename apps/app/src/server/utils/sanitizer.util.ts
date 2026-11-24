@@ -76,7 +76,7 @@ function matchesSignature(buffer: Buffer, sig: number[], offset = 0): boolean {
   return true;
 }
 
-function detectFileSignature(buffer: Buffer): DetectedSignature | null {
+function detectFileSignature(buffer: Buffer, originalName = ''): DetectedSignature | null {
   if (matchesSignature(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
     return {
       canonicalExtension: '.png',
@@ -135,7 +135,123 @@ function detectFileSignature(buffer: Buffer): DetectedSignature | null {
     };
   }
 
-  return null;
+  if (matchesSignature(buffer, [0x66, 0x74, 0x79, 0x70], 4)) {
+    return {
+      canonicalExtension: '.mp4',
+      category: 'any',
+      mimeType: 'video/mp4',
+    };
+  }
+
+  if (matchesSignature(buffer, [0x1a, 0x45, 0xdf, 0xa3])) {
+    return {
+      canonicalExtension: '.webm',
+      category: 'any',
+      mimeType: 'video/webm',
+    };
+  }
+
+  if (matchesSignature(buffer, [0x49, 0x44, 0x33]) || matchesSignature(buffer, [0xff, 0xfb])) {
+    return {
+      canonicalExtension: '.mp3',
+      category: 'any',
+      mimeType: 'audio/mpeg',
+    };
+  }
+
+  if (
+    matchesSignature(buffer, [0x52, 0x49, 0x46, 0x46]) &&
+    matchesSignature(buffer, [0x57, 0x41, 0x56, 0x45], 8)
+  ) {
+    return {
+      canonicalExtension: '.wav',
+      category: 'any',
+      mimeType: 'audio/wav',
+    };
+  }
+
+  if (matchesSignature(buffer, [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c])) {
+    return {
+      canonicalExtension: '.7z',
+      category: 'document',
+      mimeType: 'application/x-7z-compressed',
+    };
+  }
+
+  if (matchesSignature(buffer, [0x1f, 0x8b])) {
+    return {
+      canonicalExtension: '.gz',
+      category: 'document',
+      mimeType: 'application/gzip',
+    };
+  }
+
+  const baseName = path.basename(originalName).toLowerCase();
+  let rawExt = path.extname(originalName).toLowerCase();
+  if (!rawExt && baseName.startsWith('.')) {
+    rawExt = baseName;
+  }
+
+  const safeTextExts: Record<string, string> = {
+    '.css': 'text/css',
+    '.csv': 'text/csv',
+    '.env': 'text/plain',
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.jsx': 'text/javascript',
+    '.md': 'text/markdown',
+    '.py': 'text/x-python',
+    '.rs': 'text/rust',
+    '.sql': 'text/plain',
+    '.svg': 'image/svg+xml',
+    '.ts': 'application/typescript',
+    '.tsx': 'application/typescript',
+    '.txt': 'text/plain',
+    '.xml': 'application/xml',
+    '.yaml': 'text/yaml',
+    '.yml': 'text/yaml',
+  };
+
+  if (safeTextExts[rawExt]) {
+    return {
+      canonicalExtension: rawExt,
+      category: rawExt === '.svg' ? 'image' : 'text',
+      mimeType: safeTextExts[rawExt],
+    };
+  }
+
+  if (rawExt && /^\.[a-z0-9_-]{1,15}$/.test(rawExt)) {
+    return {
+      canonicalExtension: rawExt,
+      category: 'any',
+      mimeType: 'application/octet-stream',
+    };
+  }
+
+  const checkLen = Math.min(buffer.length, 1024);
+  let isPrintable = true;
+  for (let i = 0; i < checkLen; i++) {
+    const b = buffer[i];
+    if (b === 0) {
+      isPrintable = false;
+      break;
+    }
+  }
+
+  if (isPrintable) {
+    return {
+      canonicalExtension: rawExt || '.txt',
+      category: 'text',
+      mimeType: 'text/plain',
+    };
+  }
+
+  return {
+    canonicalExtension: rawExt || '.bin',
+    category: 'any',
+    mimeType: 'application/octet-stream',
+  };
 }
 
 function scanForMaliciousPayloads(buffer: Buffer, category: FileCategory): void {
@@ -148,26 +264,28 @@ function scanForMaliciousPayloads(buffer: Buffer, category: FileCategory): void 
     }
   }
 
-  const sampleSize = Math.min(buffer.length, 512 * 1024);
-  const sampleString = buffer.subarray(0, sampleSize).toString('utf-8', 0, sampleSize);
+  if (category === 'image' || category === 'document') {
+    const sampleSize = Math.min(buffer.length, 512 * 1024);
+    const sampleString = buffer.subarray(0, sampleSize).toString('utf-8', 0, sampleSize);
 
-  for (const pattern of MALICIOUS_SCRIPT_PATTERNS) {
-    if (pattern.test(sampleString)) {
-      throw new FileSanitizationError(
-        'Malicious or suspicious script signature detected in file content.',
-        'MALICIOUS_SCRIPT_DETECTED'
-      );
-    }
-  }
-
-  if (category === 'document') {
-    const dangerousPdfPatterns = [/\/Launch\b/i, /\/JavaScript\b/i, /\/JS\b/i, /\/EmbeddedFiles\b/i];
-    for (const pdfPattern of dangerousPdfPatterns) {
-      if (pdfPattern.test(sampleString)) {
+    for (const pattern of MALICIOUS_SCRIPT_PATTERNS) {
+      if (pattern.test(sampleString)) {
         throw new FileSanitizationError(
-          'Document contains potentially malicious active code or launch actions.',
-          'MALICIOUS_DOCUMENT_ACTION'
+          'Malicious or suspicious script signature detected in file content.',
+          'MALICIOUS_SCRIPT_DETECTED'
         );
+      }
+    }
+
+    if (category === 'document') {
+      const dangerousPdfPatterns = [/\/Launch\b/i, /\/JavaScript\b/i, /\/JS\b/i, /\/EmbeddedFiles\b/i];
+      for (const pdfPattern of dangerousPdfPatterns) {
+        if (pdfPattern.test(sampleString)) {
+          throw new FileSanitizationError(
+            'Document contains potentially malicious active code or launch actions.',
+            'MALICIOUS_DOCUMENT_ACTION'
+          );
+        }
       }
     }
   }
@@ -212,7 +330,7 @@ function sanitizeUploadedFile(
     );
   }
 
-  const detected = detectFileSignature(buffer);
+  const detected = detectFileSignature(buffer, options.originalName);
   if (!detected) {
     throw new FileSanitizationError(
       'File signature could not be verified or is not supported.',

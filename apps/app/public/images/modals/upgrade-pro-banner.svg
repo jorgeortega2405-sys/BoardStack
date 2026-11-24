@@ -20,25 +20,25 @@
 <g transform="rotate(-3.5 242 260)">
   <rect x="96" y="86" width="256" height="350" rx="16" fill="#FFFFFF" stroke="#E4E4E7" filter="url(#pro-s1)"/>
   <rect x="122" y="112" width="28" height="3" fill="#111111"/>
-  <text x="122" y="138" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="15.5" font-weight="700" fill="#111111" letter-spacing="0.4">BOARDPDF PRO</text>
-  <text x="122" y="157" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#111111" letter-spacing="0.4">HIGH-CAPACITY STUDIO</text>
+  <text x="122" y="138" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="15.5" font-weight="700" fill="#111111" letter-spacing="0.4">BOARDSTACK PRO</text>
+  <text x="122" y="157" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="700" fill="#111111" letter-spacing="0.4">CLOUD &amp; P2P SUITE</text>
 
   <line x1="122" y1="173" x2="326" y2="173" stroke="#E6E6E6"/>
   <text x="122" y="194" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="8" font-weight="600" fill="#111111" letter-spacing="1">01</text>
-  <text x="140" y="194" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">Expanded Task Capacity</text>
+  <text x="140" y="194" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">100 GB Cloud Storage</text>
   <rect x="122" y="206" width="204" height="8" rx="4" fill="#F1F1F3"/>
   <rect x="122" y="206" width="188" height="8" rx="4" fill="#111111"/>
-  <text x="122" y="227" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.5" fill="#6B6B6B">Up to 500 batch files and 1 GB cloud tasks.</text>
+  <text x="122" y="227" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.5" fill="#6B6B6B">Permanent cloud storage and async downloads.</text>
 
   <line x1="122" y1="242" x2="326" y2="242" stroke="#E6E6E6"/>
   <text x="122" y="263" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="8" font-weight="600" fill="#111111" letter-spacing="1">02</text>
-  <text x="140" y="263" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">Unlimited Neural AI Tools</text>
-  <text x="122" y="278" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.8" fill="#6B6B6B">OCR, document translation, markdown export</text>
-  <text x="122" y="289" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.8" fill="#6B6B6B">and zero daily processing queues.</text>
+  <text x="140" y="263" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">Custom Room URLs</text>
+  <text x="122" y="278" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.8" fill="#6B6B6B">Branded links like /r/your-name, custom password</text>
+  <text x="122" y="289" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="7.8" fill="#6B6B6B">and 24/7 persistent rooms without host online.</text>
 
   <line x1="122" y1="305" x2="326" y2="305" stroke="#E6E6E6"/>
   <text x="122" y="325" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="8" font-weight="600" fill="#111111" letter-spacing="1">03</text>
-  <text x="140" y="325" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">Priority Cloud Pipeline</text>
+  <text x="140" y="325" font-family="Inter,'Helvetica Neue',Arial,sans-serif" font-size="9" font-weight="600" fill="#111111">Advanced Room Controls</text>
   <rect x="122" y="340" width="136" height="6" rx="3" fill="#E6E6E6"/>
   <rect x="122" y="340" width="96" height="6" rx="3" fill="#4B5563"/>
   <rect x="122" y="352" width="110" height="6" rx="3" fill="#E6E6E6"/>

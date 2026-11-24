@@ -50,22 +50,6 @@
         if (isAuth) {
           document.documentElement.classList.add('is-auth-view');
         }
-
-        var cached = localStorage.getItem('boardstack_cached_session');
-        if (cached) {
-          try {
-            var parsed = JSON.parse(cached);
-            if (parsed && parsed.user) {
-              document.documentElement.classList.add('has-user-session');
-            } else {
-              document.documentElement.classList.add('no-user-session');
-            }
-          } catch (e) {
-            document.documentElement.classList.add('no-user-session');
-          }
-        } else {
-          document.documentElement.classList.add('no-user-session');
-        }
       } catch (e) {}
     })();
   </script>
@@ -104,6 +88,12 @@
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
                   </button>
                   <span class="component-rail__label" data-ref="rail-label-home" data-i18n="nav.home">Inicio</span>
+                </div>
+                <div class="component-rail__item" data-ref="rail-item-create-room" data-rail-id="create-room">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only component-rail__btn" data-ref="btn-rail-create-room" data-tooltip="Crear sala" data-i18n-tooltip="nav.create_room" aria-label="Crear sala">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  </button>
+                  <span class="component-rail__label" data-ref="rail-label-create-room" data-i18n="nav.create_room">Crear sala</span>
                 </div>
               </div>
             </div>
@@ -154,6 +144,10 @@
                         <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
                       </button>
                       <div class="component-menu__divider menu-divider" data-ref="active-account-divider"></div>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered is-hidden" data-ref="btn-menu-organization">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#business"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.organization">Organización</span>
+                      </button>
                       <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-menu-settings">
                         <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
                         <span class="component-menu__item-text menu-item__text" data-i18n="nav.settings">Configuración</span>
@@ -211,10 +205,10 @@
         </div>
 
         <div class="component-wrapper component-wrapper--full" data-ref="main-wrapper">
-          <div class="component-backdrop component-backdrop--dots" data-ref="view-backdrop-dots"></div>
+          <div class="component-backdrop component-backdrop--dots is-hidden" data-ref="view-backdrop-dots"></div>
 
           <div class="component-body component-body--scrollable" data-ref="scrollable-body">
-            <div class="component-container" data-ref="view-container"></div>
+            <div class="component-view" data-ref="view-container"></div>
           </div>
         </div>
       </div>

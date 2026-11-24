@@ -387,6 +387,12 @@ function setupDropdown(wrapper: HTMLElement | null, options: DropdownOptions = {
       textEl.textContent = label.trim();
     }
 
+    const itemIcon = item.querySelector<SVGUseElement>('.component-menu__item-icon use, .menu-item__icon use')?.getAttribute('href');
+    const triggerIcon = trigger?.querySelector<SVGUseElement>('.component-dropdown__trigger-icon use, .dropdown-trigger__icon use');
+    if (triggerIcon && itemIcon) {
+      triggerIcon.setAttribute('href', itemIcon);
+    }
+
     options.onSelect?.(value, item);
     close();
   };

@@ -26,6 +26,7 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
   const btnSwitchAccountMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-switch-account-menu"]');
   const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
   const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
+  const btnOrganization = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-organization"]');
   const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
   const btnPricing = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-pricing"]');
   const btnLogout = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout"]');
@@ -120,7 +121,8 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
 
       const avatarBox = document.createElement('div');
       avatarBox.className = 'component-avatar component-avatar--sm';
-      avatarBox.setAttribute('data-tier', acc.subscription_tier === 'pro' ? 'pro' : 'free');
+      const accTier = (acc.subscription_tier === 'enterprise' || acc.subscription_tier === 'pro') ? acc.subscription_tier : 'free';
+      avatarBox.setAttribute('data-tier', accTier);
 
       const img = document.createElement('img');
       img.className = 'component-avatar__img';
@@ -204,13 +206,21 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
         activeEmail.textContent = currentUser.email || '';
       }
 
-      const tier = currentUser.subscription_tier === 'pro' ? 'pro' : 'free';
+      const tier = (currentUser.subscription_tier === 'enterprise' || currentUser.subscription_tier === 'pro') ? currentUser.subscription_tier : 'free';
       if (avatarBtn && avatarBtn.getAttribute('data-tier') !== tier) {
         avatarBtn.setAttribute('data-tier', tier);
       }
       const activeAvatarBox = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-avatar-box"]');
       if (activeAvatarBox && activeAvatarBox.getAttribute('data-tier') !== tier) {
         activeAvatarBox.setAttribute('data-tier', tier);
+      }
+
+      if (btnOrganization) {
+        if (currentUser.subscription_tier === 'enterprise') {
+          btnOrganization.classList.remove('is-hidden');
+        } else {
+          btnOrganization.classList.add('is-hidden');
+        }
       }
 
       renderAccountList();
@@ -319,6 +329,12 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
     closeMenu();
     await logoutAllApi();
     onNavigate('/login');
+  });
+
+  btnOrganization?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMenu();
+    onNavigate('/organization');
   });
 
   btnSettings?.addEventListener('click', (e) => {

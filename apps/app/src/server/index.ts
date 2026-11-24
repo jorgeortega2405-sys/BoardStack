@@ -1,4 +1,5 @@
 ﻿import authRoutes from './routes/auth.routes.js';
+import { cleanupExpiredRoomsAndFiles } from './services/room.service.js';
 import compression from 'compression';
 import { config } from './config/env.config.js';
 import cookieParser from 'cookie-parser';
@@ -11,8 +12,12 @@ import { getLinkedAccounts, getValidatedCurrentUser } from './middlewares/auth.m
 import http from 'http';
 import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
+import net from 'net';
+import organizationRoutes from './routes/organization.routes.js';
 import path from 'path';
 import { pool, testDatabaseConnection } from './config/database.config.js';
+import roomRoutes from './routes/room.routes.js';
+import salesLeadRoutes from './routes/sales-lead.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import { testRedisConnection } from './config/redis.config.js';
@@ -40,6 +45,7 @@ async function runDatabaseHousekeeping(): Promise<void> {
   try {
     await pool.execute('DELETE FROM verification_codes WHERE expires_at < CURRENT_TIMESTAMP');
     await pool.execute('DELETE FROM password_resets WHERE expires_at < CURRENT_TIMESTAMP OR used = TRUE');
+    await cleanupExpiredRoomsAndFiles();
   } catch (error) {
     logger.system.error('[Housekeeping] Error cleaning expired tokens:', error);
   }
@@ -50,6 +56,9 @@ setInterval(() => {
 }, 3600000);
 
 app.use('/api', authRoutes);
+app.use('/api', organizationRoutes);
+app.use('/api', roomRoutes);
+app.use('/api', salesLeadRoutes);
 app.use('/api', settingsRoutes);
 app.use('/api', subscriptionRoutes);
 
@@ -94,6 +103,10 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
     description: 'Finaliza tu suscripción en BoardStack con procesamiento seguro.',
     title: 'Completar Suscripción - BoardStack',
   },
+  '/contact-sales': {
+    description: 'Ponte en contacto con nuestro equipo de ventas para obtener el plan de suscripción Empresas a medida.',
+    title: 'Hablar con Ventas - BoardStack Negocios',
+  },
   '/forgot-password': {
     description: 'Restablece el acceso a tu cuenta de BoardStack de forma rápida y segura.',
     title: 'Recuperar Contraseña - BoardStack',
@@ -134,9 +147,45 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
     description: 'Crea una nueva contraseña segura para tu cuenta en BoardStack.',
     title: 'Restablecer Contraseña - BoardStack',
   },
+  '/room': {
+    description: 'Sala de transferencia y colaboración en tiempo real.',
+    title: 'Sala de Transferencia - BoardStack',
+  },
   '/settings': {
     description: 'Administra tus preferencias de cuenta, tema visual, accesibilidad y seguridad.',
     title: 'Configuración - BoardStack',
+  },
+  '/organization': {
+    description: 'Administra tu organización, configuración de SAML 2.0 y gestión de asientos empresariales.',
+    title: 'Organización - BoardStack',
+  },
+  '/organization/details': {
+    description: 'Configura el nombre público, slug y dominio corporativo de tu organización.',
+    title: 'Detalles de la Organización - BoardStack',
+  },
+  '/organization/members': {
+    description: 'Administra los miembros de tu equipo y los asientos de tu suscripción empresarial.',
+    title: 'Gestionar Asientos y Equipo - BoardStack',
+  },
+  '/organization/saml': {
+    description: 'Configura la integración de Single Sign-On (SSO) con SAML 2.0 para tu empresa.',
+    title: 'Configuración SAML 2.0 y SSO - BoardStack',
+  },
+  '/settings/organization': {
+    description: 'Administra tu organización, configuración de SAML 2.0 y gestión de asientos empresariales.',
+    title: 'Organización - BoardStack',
+  },
+  '/settings/organization/details': {
+    description: 'Configura el nombre público, slug y dominio corporativo de tu organización.',
+    title: 'Detalles de la Organización - BoardStack',
+  },
+  '/settings/organization/members': {
+    description: 'Administra los miembros de tu equipo y los asientos de tu suscripción empresarial.',
+    title: 'Gestionar Asientos y Equipo - BoardStack',
+  },
+  '/settings/organization/saml': {
+    description: 'Configura la integración de Single Sign-On (SSO) con SAML 2.0 para tu empresa.',
+    title: 'Configuración SAML 2.0 y SSO - BoardStack',
   },
   '/settings/accessibility': {
     description: 'Personaliza el tema visual, modo alto contraste y movimiento reducido.',
@@ -205,13 +254,16 @@ function getIndexTemplate(): { content: string; path: string } | null {
     return null;
   }
 
-  if (cachedIndexPath === resolvedPath && cachedIndexHtml !== null) {
+  if (process.env.NODE_ENV === 'production' && cachedIndexPath === resolvedPath && cachedIndexHtml !== null) {
     return { content: cachedIndexHtml, path: resolvedPath };
   }
 
-  cachedIndexHtml = fs.readFileSync(resolvedPath, 'utf-8');
-  cachedIndexPath = resolvedPath;
-  return { content: cachedIndexHtml, path: resolvedPath };
+  const content = fs.readFileSync(resolvedPath, 'utf-8');
+  if (process.env.NODE_ENV === 'production') {
+    cachedIndexHtml = content;
+    cachedIndexPath = resolvedPath;
+  }
+  return { content, path: resolvedPath };
 }
 
 app.get('*', async (req: Request, res: Response) => {
@@ -257,11 +309,6 @@ app.get('*', async (req: Request, res: Response) => {
     if (isAuth) {
       htmlClasses.push('is-auth-view');
     }
-    if (user) {
-      htmlClasses.push('has-user-session');
-    } else {
-      htmlClasses.push('no-user-session');
-    }
 
     const classAttr = htmlClasses.length > 0 ? ` class="${htmlClasses.join(' ')}"` : '';
     html = html.replace(/<html[^>]*>/i, `<html lang="${lang}"${classAttr} data-theme="light">`);
@@ -300,7 +347,7 @@ app.get('*', async (req: Request, res: Response) => {
       html = html.replace(`data-ref="avatar-img" src="${placeholderDataUri}"`, `data-ref="avatar-img" src="${avatarSrc}"`);
       html = html.replace(`data-ref="active-account-avatar" src="${placeholderDataUri}"`, `data-ref="active-account-avatar" src="${avatarSrc}"`);
 
-      const tier = user.subscription_tier === 'pro' ? 'pro' : 'free';
+      const tier = (user.subscription_tier === 'enterprise' || user.subscription_tier === 'pro') ? user.subscription_tier : 'free';
       html = html.replace('data-ref="btn-avatar"', `data-ref="btn-avatar" data-tier="${tier}"`);
       html = html.replace('data-ref="active-account-avatar-box"', `data-ref="active-account-avatar-box" data-tier="${tier}"`);
 
@@ -322,6 +369,56 @@ app.get('*', async (req: Request, res: Response) => {
 app.use(errorHandlerMiddleware);
 
 const server = http.createServer(app);
+
+server.on('upgrade', (req, socket, head) => {
+  const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+  if (url.pathname.startsWith('/ws/room')) {
+    const proxySocket = net.connect(config.roomServer.port, config.roomServer.host, () => {
+      let rawHeaders = '';
+      if (req.rawHeaders && req.rawHeaders.length > 0) {
+        for (let i = 0; i < req.rawHeaders.length; i += 2) {
+          rawHeaders += `${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`;
+        }
+      } else {
+        rawHeaders = Object.entries(req.headers)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}\r\n`)
+          .join('');
+      }
+
+      proxySocket.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${rawHeaders}\r\n`);
+      if (head && head.length > 0) {
+        proxySocket.write(head);
+      }
+      socket.pipe(proxySocket);
+      proxySocket.pipe(socket);
+    });
+
+    proxySocket.on('error', (err) => {
+      logger.system.error('[WebSocket Proxy] Error connecting to room-server:', err);
+      socket.destroy();
+    });
+
+    socket.on('error', () => {
+      if (!proxySocket.destroyed) {
+        proxySocket.destroy();
+      }
+    });
+
+    proxySocket.on('close', () => {
+      if (!socket.destroyed) {
+        socket.destroy();
+      }
+    });
+
+    socket.on('close', () => {
+      if (!proxySocket.destroyed) {
+        proxySocket.destroy();
+      }
+    });
+  } else {
+    socket.destroy();
+  }
+});
 
 server.listen(PORT, HOST, async () => {
   logger.system.info(`[BoardStack] Server listening on http://${HOST}:${PORT}`);

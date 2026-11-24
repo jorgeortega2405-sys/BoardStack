@@ -235,41 +235,38 @@ function openInvoicePrintWindow(invoice: InvoiceData): void {
 
 async function createSettingsPurchasesView(navigate: (path: string) => void): Promise<HTMLElement> {
   const container = document.createElement('div');
-  container.className = 'component-container component-container--full';
+  container.className = 'component-layout--split-full';
   container.setAttribute('data-ref', 'settings-purchases-layout');
-  container.style.height = '100%';
-  container.style.width = '100%';
-  container.style.padding = '0';
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
 
   container.innerHTML = `
-    <div class="component-block component-block--flush" data-ref="purchases-card">
-      <div class="component-block__header" data-ref="purchases-header">
-        <div class="component-title-badge" data-ref="purchases-title-badge">
-          <h1 class="component-title-badge__text" data-ref="purchases-title">${i18n.t('settings.purchases.title')}</h1>
+    <div class="component-top" data-ref="purchases-top">
+      <div class="component-top__left" data-ref="purchases-top-left">
+        <div class="component-top__title-box" data-ref="purchases-title-heading">
+          <span class="component-top__title-text" data-ref="purchases-title">${i18n.t('settings.purchases.title')}</span>
           <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="purchases-selected-badge"></span>
         </div>
-        <div class="component-block__actions" data-ref="purchases-header-actions">
-          <div class="component-group component-group--actions is-hidden" data-ref="purchases-selection-actions">
-            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-download-invoice">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>${i18n.t('settings.purchases.download_invoice')}</span>
-            </button>
-            <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-copy-reference" data-tooltip="${i18n.t('settings.purchases.copy_reference')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              <span>${i18n.t('settings.purchases.copy_reference')}</span>
-            </button>
-            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-clear-selection" data-tooltip="${i18n.t('settings.purchases.deselect')}" aria-label="${i18n.t('settings.purchases.deselect')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-            </button>
-          </div>
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-tooltip="${i18n.t('common.search')}" aria-label="${i18n.t('common.search')}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+      </div>
+      <div class="component-top__right" data-ref="purchases-header-actions">
+        <div class="component-group component-group--actions is-hidden" data-ref="purchases-selection-actions">
+          <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-download-invoice">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            <span>${i18n.t('settings.purchases.download_invoice')}</span>
+          </button>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-copy-reference" data-tooltip="${i18n.t('settings.purchases.copy_reference')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            <span>${i18n.t('settings.purchases.copy_reference')}</span>
+          </button>
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-clear-selection" data-tooltip="${i18n.t('settings.purchases.deselect')}" aria-label="${i18n.t('settings.purchases.deselect')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-tooltip="${i18n.t('common.search')}" aria-label="${i18n.t('common.search')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+        </button>
       </div>
+    </div>
 
+    <div class="component-bottom component-bottom--full" data-ref="purchases-bottom">
       <div class="component-floating-search is-hidden" data-ref="purchases-search-toolbar">
         <div class="component-floating-search__inner" data-ref="purchases-search-inner">
           <div class="component-search component-search--floating" data-ref="search-box">
@@ -286,23 +283,21 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
         </div>
       </div>
 
-      <div class="component-block__scrollable" data-ref="purchases-scrollable">
-        <div class="component-table-wrapper component-table-wrapper--flush" data-ref="purchases-table-wrapper">
-          <table class="component-table component-table--flush" data-ref="purchases-table">
-            <thead class="component-table__head" data-ref="purchases-thead">
-              <tr>
-                <th class="component-table__cell--pl20" data-ref="th-plan">${i18n.t('settings.purchases.col_plan')}</th>
-                <th data-ref="th-period">${i18n.t('settings.purchases.col_period')}</th>
-                <th data-ref="th-amount">${i18n.t('settings.purchases.col_amount')}</th>
-                <th data-ref="th-status">${i18n.t('settings.purchases.col_status')}</th>
-                <th data-ref="th-date">${i18n.t('settings.purchases.col_date')}</th>
-                <th class="component-table__cell--pr20" data-ref="th-reference">${i18n.t('settings.purchases.col_reference')}</th>
-              </tr>
-            </thead>
-            <tbody class="component-table__body" data-ref="purchases-tbody">
-            </tbody>
-          </table>
-        </div>
+      <div class="component-table-wrapper component-table-wrapper--flush" data-ref="purchases-table-wrapper">
+        <table class="component-table component-table--flush" data-ref="purchases-table">
+          <thead class="component-table__head" data-ref="purchases-thead">
+            <tr>
+              <th class="component-table__cell--pl20" data-ref="th-plan">${i18n.t('settings.purchases.col_plan')}</th>
+              <th data-ref="th-period">${i18n.t('settings.purchases.col_period')}</th>
+              <th data-ref="th-amount">${i18n.t('settings.purchases.col_amount')}</th>
+              <th data-ref="th-status">${i18n.t('settings.purchases.col_status')}</th>
+              <th data-ref="th-date">${i18n.t('settings.purchases.col_date')}</th>
+              <th class="component-table__cell--pr20" data-ref="th-reference">${i18n.t('settings.purchases.col_reference')}</th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="purchases-tbody">
+          </tbody>
+        </table>
       </div>
     </div>
   `;

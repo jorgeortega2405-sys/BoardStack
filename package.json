@@ -12,6 +12,7 @@
     "build:server": "npm run build:server --workspace=app",
     "dev": "npm run dev --workspace=app",
     "dev:server": "npm run dev:server --workspace=app",
+    "dev:watch": "npm run dev:watch --workspace=app",
     "start": "npm run start --workspace=app",
     "typecheck": "npm run typecheck --workspace=app"
   }

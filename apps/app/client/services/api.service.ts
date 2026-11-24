@@ -61,14 +61,10 @@ function setAuthState(user: UserPayload | null, accounts: SessionAccount[]): voi
   linkedAccounts = accounts;
   if (typeof window !== 'undefined') {
     if (user) {
-      document.documentElement.classList.add('has-user-session');
-      document.documentElement.classList.remove('no-user-session');
       try {
         localStorage.setItem('boardstack_cached_session', JSON.stringify({ accounts, user }));
       } catch {}
     } else {
-      document.documentElement.classList.remove('has-user-session');
-      document.documentElement.classList.add('no-user-session');
       try {
         localStorage.removeItem('boardstack_cached_session');
       } catch {}
@@ -142,6 +138,17 @@ async function postFormApi<T = any>(url: string, formData: FormData): Promise<T>
   return parseApiResponse<T>(res);
 }
 
+async function putApi<T = any>(url: string, body?: any): Promise<T> {
+  const res = await fetch(url, {
+    body: body ? JSON.stringify(body) : undefined,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'PUT',
+  });
+  return parseApiResponse<T>(res);
+}
+
 async function deleteApi<T = any>(url: string, body?: any): Promise<T> {
   const res = await fetch(url, {
     body: body ? JSON.stringify(body) : undefined,
@@ -207,7 +214,7 @@ async function logoutAllApi(): Promise<{ success: boolean }> {
 async function createSubscriptionIntentApi(
   billingType: 'one_time' | 'recurring',
   billingPeriod: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly',
-  planId: 'pro' = 'pro'
+  planId: 'pro' | 'enterprise' = 'pro'
 ): Promise<{ amount?: number; clientSecret?: string; error?: string; ok?: boolean; paymentIntentId?: string; publishableKey?: string; success: boolean }> {
   try {
     const data = await postApi('/api/subscription/create-intent', {
@@ -263,6 +270,7 @@ export {
   onAuthChange,
   postApi,
   postFormApi,
+  putApi,
   setAuthState,
   switchAccountApi
 };

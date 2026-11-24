@@ -2,6 +2,7 @@ import { getTurnstileToken, resetTurnstile } from '../services/turnstile.service
 import { i18n } from '../i18n/i18n.service.js';
 import { postApi, setAuthState } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { toast } from '../services/toast.service.js';
 
 function setupPasswordToggle(toggleBtn: HTMLElement | null, input: HTMLInputElement | null): void {
   if (!toggleBtn || !input) return;
@@ -73,6 +74,13 @@ class LoginViewController {
     const backToCredsBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-to-credentials"]');
     const twoFaErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="login-2fa-error"]');
 
+    const ssoStep = this.container.querySelector<HTMLElement>('[data-ref="login-step-sso"]');
+    const ssoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-sso-login"]');
+    const submitSsoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-sso"]');
+    const backFromSsoBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-from-sso"]');
+    const ssoInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-sso-identifier"]');
+    const ssoErrorBanner = this.container.querySelector<HTMLElement>('[data-ref="login-sso-error"]');
+
     setupPasswordToggle(togglePasswordBtn, passwordInput);
 
     const showError = (msg: string) => {
@@ -103,11 +111,27 @@ class LoginViewController {
       }
     };
 
+    const showSsoError = (msg: string) => {
+      if (ssoErrorBanner) {
+        ssoErrorBanner.textContent = msg;
+        ssoErrorBanner.classList.remove('is-hidden');
+      }
+    };
+
+    const hideSsoError = () => {
+      if (ssoErrorBanner) {
+        ssoErrorBanner.textContent = '';
+        ssoErrorBanner.classList.add('is-hidden');
+      }
+    };
+
     const showTwoFaStep = (tempToken: string) => {
       this.currentTempToken = tempToken;
       hideError();
       hideTwoFaError();
+      hideSsoError();
       mainStep?.classList.add('is-hidden');
+      ssoStep?.classList.add('is-hidden');
       twoFaStep?.classList.remove('is-hidden');
       if (twoFaCodeInput) {
         twoFaCodeInput.value = '';
@@ -115,11 +139,27 @@ class LoginViewController {
       }
     };
 
+    const showSsoStep = () => {
+      this.currentTempToken = null;
+      hideError();
+      hideTwoFaError();
+      hideSsoError();
+      mainStep?.classList.add('is-hidden');
+      twoFaStep?.classList.add('is-hidden');
+      ssoStep?.classList.remove('is-hidden');
+      if (ssoInput) {
+        ssoInput.value = '';
+        setTimeout(() => ssoInput.focus(), 50);
+      }
+    };
+
     const showMainStep = () => {
       this.currentTempToken = null;
       hideError();
       hideTwoFaError();
+      hideSsoError();
       twoFaStep?.classList.add('is-hidden');
+      ssoStep?.classList.add('is-hidden');
       mainStep?.classList.remove('is-hidden');
       if (passwordInput) {
         passwordInput.value = '';
@@ -158,6 +198,71 @@ class LoginViewController {
       e.preventDefault();
       setButtonLoading(googleBtn, true);
       window.location.href = '/api/auth/google';
+    });
+
+    ssoBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSsoStep();
+    });
+
+    backFromSsoBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showMainStep();
+    });
+
+    const doSso = async () => {
+      if (submitSsoBtn?.classList.contains('is-loading')) return;
+      hideSsoError();
+      const identifier = ssoInput?.value.trim() || '';
+      if (!identifier) {
+        showSsoError(i18n.t('auth.enter_email'));
+        return;
+      }
+
+      setButtonLoading(submitSsoBtn, true);
+      try {
+        const resolveRes = await postApi<{ error?: string; name?: string; ok?: boolean; samlEntryPoint?: string; slug?: string }>('/api/auth/sso/resolve', { identifier });
+        if (!resolveRes.ok || !resolveRes.slug) {
+          showSsoError(resolveRes.error || i18n.t('auth.sso_error_not_found'));
+          setButtonLoading(submitSsoBtn, false);
+          return;
+        }
+
+        if (resolveRes.samlEntryPoint && (resolveRes.samlEntryPoint.startsWith('https://') || resolveRes.samlEntryPoint.startsWith('http://'))) {
+          window.location.href = resolveRes.samlEntryPoint;
+          return;
+        }
+
+        const loginRes = await postApi<{ accounts?: any[]; error?: string; message?: string; ok?: boolean; user?: any }>('/api/auth/sso/login', {
+          email: identifier,
+          orgSlug: resolveRes.slug,
+        });
+
+        if (loginRes.ok && loginRes.user) {
+          setAuthState(loginRes.user, loginRes.accounts || []);
+          toast.success(loginRes.message || i18n.t('common.success'));
+          setTimeout(() => {
+            this.onNavigate('/');
+          }, 300);
+        } else {
+          showSsoError(loginRes.error || i18n.t('common.error'));
+        }
+      } catch (err: any) {
+        showSsoError(err.message || i18n.t('common.error'));
+      } finally {
+        setButtonLoading(submitSsoBtn, false);
+      }
+    };
+
+    submitSsoBtn?.addEventListener('click', () => {
+      void doSso();
+    });
+
+    ssoInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void doSso();
+      }
     });
 
     backToCredsBtn?.addEventListener('click', (e) => {
@@ -718,6 +823,10 @@ async function createLoginView(onNavigate: (path: string) => void): Promise<HTML
             <svg class="component-icon component-icon--colored" data-ref="google-icon" width="20" height="20" aria-hidden="true"><use href="/icons.svg#google_colored"></use></svg>
             <span class="component-button__text" data-ref="google-btn-text">${i18n.t('auth.continue_google')}</span>
           </button>
+          <button type="button" class="component-button component-button--h55 component-button--w-full" data-ref="btn-sso-login">
+            <svg class="component-icon" data-ref="sso-icon" width="20" height="20" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+            <span class="component-button__text" data-ref="sso-btn-text">${i18n.t('auth.continue_sso')}</span>
+          </button>
           <div class="component-banner component-banner--danger is-hidden" data-ref="login-error"></div>
           <p class="component-note" data-ref="login-footer">
             <span>${i18n.t('auth.no_account')}</span>
@@ -742,6 +851,25 @@ async function createLoginView(onNavigate: (path: string) => void): Promise<HTML
             ${i18n.t('auth.back_to_login')}
           </button>
           <div class="component-banner component-banner--danger is-hidden" data-ref="login-2fa-error"></div>
+        </div>
+      </div>
+      <div class="is-hidden" data-ref="login-step-sso">
+        <div class="component-card__header" data-ref="login-sso-header">
+          <h1 class="component-card__title" data-ref="login-sso-title">${i18n.t('auth.sso_title')}</h1>
+          <p class="component-card__subtitle" data-ref="login-sso-subtitle">${i18n.t('auth.sso_subtitle')}</p>
+        </div>
+        <div class="component-card__body" data-ref="login-sso-form">
+          <label class="field" data-ref="field-login-sso-identifier">
+            <input class="field__input" data-ref="login-sso-identifier" type="text" maxlength="254" placeholder=" " autocomplete="email" />
+            <span class="field__label" data-ref="label-login-sso-identifier">${i18n.t('auth.sso_identifier')}</span>
+          </label>
+          <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-sso">
+            ${i18n.t('auth.submit_sso')}
+          </button>
+          <button type="button" class="component-button component-button--h55 component-button--w-full" data-ref="btn-back-from-sso">
+            ${i18n.t('auth.back_to_login')}
+          </button>
+          <div class="component-banner component-banner--danger is-hidden" data-ref="login-sso-error"></div>
         </div>
       </div>
     </div>
