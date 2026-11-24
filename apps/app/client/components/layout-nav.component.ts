@@ -1,5 +1,8 @@
+import { createAboutView } from '../views/about.view.js';
 import { createCheckoutView } from '../views/checkout.view.js';
 import { createContactSalesView } from '../views/contact-sales.view.js';
+import { createContactView } from '../views/contact.view.js';
+import { createFeaturesView } from '../views/features.view.js';
 import { createForgotPasswordView, createLoginView, createRegisterView, createResetPasswordView } from '../views/auth.view.js';
 import { createHelpView, HelpSection } from '../views/help.view.js';
 import { createHomeView } from '../views/home.view.js';
@@ -33,11 +36,14 @@ interface RouteConfig {
 
 const ROUTES: Record<string, RouteConfig> = {
   '/': { path: '/', railId: 'home', title: 'Inicio' },
+  '/about': { path: '/about', railId: 'home', title: 'Sobre nosotros' },
   '/account': { path: '/account', railId: 'login', title: 'Cuenta' },
   '/checkout': { path: '/checkout', railId: 'home', title: 'Checkout' },
+  '/contact': { path: '/contact', railId: 'home', title: 'Contacto' },
   '/contact-sales': { path: '/contact-sales', railId: 'home', title: 'Hablar con ventas' },
+  '/features': { path: '/features', railId: 'home', title: 'Características' },
   '/forgot-password': { path: '/forgot-password', railId: 'login', title: 'Recuperar contraseña' },
-  '/help': { path: '/help', railId: 'help', title: 'Términos y condiciones' },
+  '/help': { path: '/help', railId: 'help', title: 'Preguntas frecuentes' },
   '/help/cookies': { path: '/help/cookies', railId: 'help', title: 'Política de cookies' },
   '/help/privacy': { path: '/help/privacy', railId: 'help', title: 'Política de privacidad' },
   '/help/security': { path: '/help/security', railId: 'help', title: 'Política de seguridad' },
@@ -831,7 +837,7 @@ class LayoutNavController {
       this.currentDrawerMode = 'help';
       this.setDrawerOpen(true);
       if (!this.currentPath.startsWith('/help')) {
-        void this.navigate('/help/terms');
+        void this.navigate('/help');
       }
     });
 
@@ -989,6 +995,12 @@ class LayoutNavController {
           let nextView: DocumentFragment | HTMLElement | null = null;
           if (targetRoute.path === '/') {
             nextView = await createHomeView((p) => this.navigate(p));
+          } else if (targetRoute.path === '/features') {
+            nextView = await createFeaturesView((p) => this.navigate(p));
+          } else if (targetRoute.path === '/about') {
+            nextView = await createAboutView((p) => this.navigate(p));
+          } else if (targetRoute.path === '/contact') {
+            nextView = await createContactView((p) => this.navigate(p));
           } else if (targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/')) {
             const roomId = targetRoute.path.replace(/^\/(?:room|r)\//, '').split('/')[0];
             nextView = await createRoomView(roomId, (p) => this.navigate(p));
@@ -1017,8 +1029,10 @@ class LayoutNavController {
           } else if (targetRoute.path === '/contact-sales') {
             nextView = await createContactSalesView((p) => this.navigate(p));
           } else if (targetRoute.path.startsWith('/help')) {
-            let section: HelpSection = 'terms';
-            if (targetRoute.path === '/help/privacy') {
+            let section: HelpSection = 'faq';
+            if (targetRoute.path === '/help/terms') {
+              section = 'terms';
+            } else if (targetRoute.path === '/help/privacy') {
               section = 'privacy';
             } else if (targetRoute.path === '/help/cookies') {
               section = 'cookies';
@@ -1040,7 +1054,7 @@ class LayoutNavController {
 
           const dotsBackdropEl = document.querySelector<HTMLElement>('[data-ref="view-backdrop-dots"]');
           if (dotsBackdropEl) {
-            const showDots = targetRoute.path === '/' || targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/');
+            const showDots = targetRoute.path === '/' || targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/') || targetRoute.path === '/features' || targetRoute.path === '/about' || targetRoute.path === '/contact';
             dotsBackdropEl.classList.toggle('is-hidden', !showDots);
           }
 
@@ -1244,6 +1258,7 @@ class LayoutNavController {
       }
 
       const helpPages = [
+        { href: '/help', icon: 'help', name: t('drawer.faq') },
         { href: '/help/terms', icon: 'gavel', name: t('drawer.terms') },
         { href: '/help/privacy', icon: 'lock', name: t('drawer.privacy') },
         { href: '/help/cookies', icon: 'cookie', name: t('drawer.cookies') },
@@ -1254,7 +1269,7 @@ class LayoutNavController {
       html += `<div class="component-drawer__title">${t('drawer.legal_policies')}</div>`;
 
       for (const p of helpPages) {
-        const isActive = this.currentPath === p.href || (p.href === '/help/terms' && this.currentPath === '/help');
+        const isActive = this.currentPath === p.href;
         html += this.renderDrawerNavButton({
           href: p.href,
           icon: p.icon,
@@ -1475,6 +1490,9 @@ class LayoutNavController {
   private getLocalizedTitle(path: string): string {
     switch (path) {
       case '/': return t('seo.home_title');
+      case '/about': return t('seo.about_title');
+      case '/contact': return t('seo.contact_title');
+      case '/features': return t('seo.features_title');
       case '/settings/account': return t('seo.account_title');
       case '/settings/security': return t('seo.security_title');
       case '/settings/accessibility': return t('seo.accessibility_title');
@@ -1487,7 +1505,7 @@ class LayoutNavController {
       case '/register': return t('seo.register_title');
       case '/forgot-password': return t('seo.forgot_password_title');
       case '/reset-password': return t('seo.reset_password_title');
-      case '/help':
+      case '/help': return t('seo.faq_title');
       case '/help/terms': return t('seo.terms_title');
       case '/help/privacy': return t('seo.privacy_title');
       case '/help/cookies': return t('seo.cookies_title');
@@ -1499,6 +1517,10 @@ class LayoutNavController {
   private getLocalizedDescription(path: string): string {
     switch (path) {
       case '/': return t('seo.home_description');
+      case '/about': return t('seo.about_description');
+      case '/contact': return t('seo.contact_description');
+      case '/features': return t('seo.features_description');
+      case '/help': return t('seo.faq_description');
       case '/pricing': return t('seo.pricing_description');
       case '/login': return t('seo.login_description');
       case '/register': return t('seo.register_description');

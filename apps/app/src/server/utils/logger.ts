@@ -75,6 +75,7 @@ function sanitizeObject(obj: any): any {
 }
 
 class LoggerService {
+  private static readonly MAX_LOG_SIZE_BYTES = 20 * 1024 * 1024;
   private logsDir: string;
   private writeStreams: Map<string, fs.WriteStream> = new Map();
   private isInitialized = false;
@@ -95,10 +96,33 @@ class LoggerService {
     }
   }
 
+  private rotateLogIfNeeded(filename: string): void {
+    const filePath = path.join(this.logsDir, filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        if (stats.size >= LoggerService.MAX_LOG_SIZE_BYTES) {
+          const existingStream = this.writeStreams.get(filename);
+          if (existingStream) {
+            existingStream.end();
+            this.writeStreams.delete(filename);
+          }
+          const rotatedPath = `${filePath}.1`;
+          if (fs.existsSync(rotatedPath)) {
+            fs.unlinkSync(rotatedPath);
+          }
+          fs.renameSync(filePath, rotatedPath);
+        }
+      }
+    } catch {}
+  }
+
   private getWriteStream(filename: string): fs.WriteStream | null {
     if (!this.isInitialized) {
       this.ensureLogsDirectory();
     }
+
+    this.rotateLogIfNeeded(filename);
 
     if (this.writeStreams.has(filename)) {
       return this.writeStreams.get(filename)!;

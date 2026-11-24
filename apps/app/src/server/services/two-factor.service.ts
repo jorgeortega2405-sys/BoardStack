@@ -168,11 +168,18 @@ async function clearPending2FASetup(userId: number): Promise<void> {
   } catch {}
 }
 
+const consumedLoginTickets = new Set<string>();
+
+setInterval(() => {
+  consumedLoginTickets.clear();
+}, 300000).unref();
+
 function create2FALoginTicket(userId: number, ttlSeconds = 300): string {
   const now = Date.now();
   const payload = {
     exp: now + ttlSeconds * 1000,
     iat: now,
+    nonce: crypto.randomBytes(8).toString('hex'),
     type: '2fa_login',
     userId,
   };
@@ -183,6 +190,9 @@ function create2FALoginTicket(userId: number, ttlSeconds = 300): string {
 
 function verify2FALoginTicket(ticket: string): number | null {
   try {
+    if (consumedLoginTickets.has(ticket)) {
+      return null;
+    }
     const parts = ticket.split('.');
     if (parts.length !== 2) return null;
     const [str, sig] = parts;
@@ -205,11 +215,16 @@ function verify2FALoginTicket(ticket: string): number | null {
   }
 }
 
+function consume2FALoginTicket(ticket: string): void {
+  consumedLoginTickets.add(ticket);
+}
+
 export {
   base32Decode,
   base32Encode,
   calculateTotpCode,
   clearPending2FASetup,
+  consume2FALoginTicket,
   create2FALoginTicket,
   generateBackupCodes,
   generateTotpSecret,

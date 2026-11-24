@@ -3,7 +3,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
-  PutBucketPolicyCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { config } from '../config/env.config.js';
@@ -81,31 +80,6 @@ async function initS3Bucket(): Promise<boolean> {
       logger.system.info(`AWS S3 bucket "${bucketName}" not found. Creating it...`);
       await s3Client.send(new CreateBucketCommand({ Bucket: bucketName }));
       logger.system.info(`AWS S3 bucket "${bucketName}" created successfully.`);
-    }
-
-    try {
-      const publicPolicy = {
-        Statement: [
-          {
-            Action: ['s3:GetObject'],
-            Effect: 'Allow',
-            Principal: '*',
-            Resource: [`arn:aws:s3:::${bucketName}/*`],
-            Sid: 'PublicReadGetObject',
-          },
-        ],
-        Version: '2012-10-17',
-      };
-
-      await s3Client.send(
-        new PutBucketPolicyCommand({
-          Bucket: bucketName,
-          Policy: JSON.stringify(publicPolicy),
-        })
-      );
-      logger.system.info(`AWS S3 bucket "${bucketName}" public read policy applied.`);
-    } catch (policyErr) {
-      logger.system.warn(`Could not set AWS S3 public bucket policy:`, policyErr);
     }
 
     return true;

@@ -210,6 +210,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       is_persistent?: boolean;
       max_downloads?: number;
       ok: boolean;
+      owner_token?: string;
       owner_username?: string;
       requires_password?: boolean;
       room_id?: string;
@@ -239,6 +240,13 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                             sessionStorage.getItem(`room_upload_permission_${resolvedRoomId}`) ||
                             (currentSlug ? sessionStorage.getItem(`room_upload_permission_${currentSlug}`) : null) ||
                             'all';
+
+      if (meta.owner_token) {
+        sessionStorage.setItem(`room_owner_token_${resolvedRoomId}`, meta.owner_token);
+        if (currentSlug) {
+          sessionStorage.setItem(`room_owner_token_${currentSlug}`, meta.owner_token);
+        }
+      }
 
       if (
         sessionStorage.getItem(`room_owner_${resolvedRoomId}`) === 'true' ||
@@ -652,6 +660,12 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       const downloadText = (file.max_downloads !== undefined && file.max_downloads !== null)
         ? ` • ${file.download_count || 0}/${file.max_downloads}`
         : '';
+      const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
+                            (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
+                            '';
+      const fileDlUrl = savedPassword && !file.download_url.includes('password=')
+        ? `${file.download_url}?password=${encodeURIComponent(savedPassword)}`
+        : file.download_url;
 
       cardEl.innerHTML = `
         <div class="component-card__icon-box">
@@ -672,7 +686,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
               ${i18n.t('room.download_limit_reached')}
             </span>
           ` : `
-            <a href="${file.download_url}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
+            <a href="${fileDlUrl}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </a>
           `}
@@ -710,6 +724,10 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
   const loadCloudFiles = async () => {
     try {
+      const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
+                            (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
+                            '';
+      const passQuery = savedPassword ? `?password=${encodeURIComponent(savedPassword)}` : '';
       const res = await getApi<{
         files: Array<{
           download_count: number;
@@ -728,7 +746,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           size: number;
         }>;
         ok: boolean;
-      }>(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files`);
+      }>(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files${passQuery}`);
 
       if (res && res.ok && Array.isArray(res.files)) {
         res.files.forEach((f) => {
@@ -1738,8 +1756,11 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
                           (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
                           '';
+    const ownerToken = sessionStorage.getItem(`room_owner_token_${resolvedRoomId}`) ||
+                       (currentSlug ? sessionStorage.getItem(`room_owner_token_${currentSlug}`) : null) ||
+                       '';
 
-    const wsUrl = `${protocol}//${host}/ws/room/${encodeURIComponent(resolvedRoomId)}?peer_id=${encodeURIComponent(myPeerId)}&username=${encodeURIComponent(myUsername)}&avatar_url=${encodeURIComponent(myAvatarUrl)}&is_owner=${isOwner}&password=${encodeURIComponent(savedPassword)}`;
+    const wsUrl = `${protocol}//${host}/ws/room/${encodeURIComponent(resolvedRoomId)}?peer_id=${encodeURIComponent(myPeerId)}&username=${encodeURIComponent(myUsername)}&avatar_url=${encodeURIComponent(myAvatarUrl)}&is_owner=${isOwner}&owner_token=${encodeURIComponent(ownerToken)}&password=${encodeURIComponent(savedPassword)}`;
 
     ws = new WebSocket(wsUrl);
 

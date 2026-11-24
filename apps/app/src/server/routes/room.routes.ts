@@ -1,29 +1,48 @@
-import type { Request, Response } from 'express';
-import { Router } from 'express';
-import multer from 'multer';
-import { pool } from '../config/database.config.js';
-import { config } from '../config/env.config.js';
 import { asyncHandler } from '../middlewares/async.middleware.js';
-import { getValidatedCurrentUser, requireAuth } from '../middlewares/auth.middleware.js';
+import { config } from '../config/env.config.js';
 import {
   createRoomRecord,
+  decryptRoomPassword,
   deleteRoomRecord,
   findRoomByIdentifier,
   getRoomFileById,
   getRoomFiles,
   incrementFileDownloadCount,
   saveRoomFileRecord,
+  verifyRoomPassword,
 } from '../services/room.service.js';
+import crypto from 'crypto';
+import express, { Request, Response, Router } from 'express';
+import fs from 'fs';
 import { getS3Object, sanitizeAndUploadToS3 } from '../services/s3.service.js';
+import { getValidatedCurrentUser, requireAuth } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
+import multer from 'multer';
+import os from 'os';
+import path from 'path';
+import { pool } from '../config/database.config.js';
 
 const router = Router();
 
+const tempUploadDir = path.join(os.tmpdir(), 'boardstack_uploads');
+if (!fs.existsSync(tempUploadDir)) {
+  fs.mkdirSync(tempUploadDir, { recursive: true });
+}
+
 const upload = multer({
+  dest: tempUploadDir,
   limits: {
     fileSize: 500 * 1024 * 1024,
   },
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, tempUploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+      cb(null, `${uniqueSuffix}_${path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_')}`);
+    },
+  }),
 });
 
 async function broadcastToRoomServer(roomId: string, message: any): Promise<void> {
@@ -84,6 +103,9 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
     ? upload_permission
     : 'all';
 
+  const ownerToken = crypto.randomBytes(32).toString('hex');
+  const rawPassword = typeof password === 'string' && password.trim() ? password.trim() : null;
+
   const roomServerUrl = `http://${config.roomServer.host}:${config.roomServer.port}/api/rooms/create`;
   const response = await fetch(roomServerUrl, {
     body: JSON.stringify({
@@ -92,8 +114,9 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
       expires_in_hours: hours > 0 ? hours : null,
       is_persistent: isPersistent,
       max_downloads: max_downloads ? Number(max_downloads) : null,
+      owner_token: ownerToken,
       owner_username: user.username || user.email || 'Host',
-      password: typeof password === 'string' && password.trim() ? password.trim() : null,
+      password: rawPassword,
       save_to_cloud: saveToCloud,
       upload_permission: uploadPerm,
     }),
@@ -110,7 +133,6 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
   }
 
   const data = (await response.json()) as { code: string; room_id: string; slug?: string | null; [key: string]: any };
-
   const expiresAt = hours > 0 ? new Date(Date.now() + hours * 3600 * 1000) : null;
 
   try {
@@ -120,8 +142,9 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
       is_persistent: isPersistent,
       max_downloads: max_downloads ? Number(max_downloads) : null,
       owner_id: user.id,
+      owner_token: ownerToken,
       owner_username: user.username || user.email || 'Host',
-      password: typeof password === 'string' && password.trim() ? password.trim() : null,
+      password: rawPassword,
       room_id: data.room_id,
       save_to_cloud: saveToCloud,
       slug: data.slug || null,
@@ -136,6 +159,7 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
     expires_at: expiresAt ? Math.floor(expiresAt.getTime() / 1000) : null,
     is_persistent: isPersistent,
     max_downloads: max_downloads ? Number(max_downloads) : null,
+    owner_token: ownerToken,
     save_to_cloud: saveToCloud,
     upload_permission: uploadPerm,
   });
@@ -152,8 +176,18 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
   const roomServerUrl = `http://${config.roomServer.host}:${config.roomServer.port}/api/rooms/resolve/${encodeURIComponent(clean)}`;
   const response = await fetch(roomServerUrl);
 
+  const currentUser = await getValidatedCurrentUser(req, res);
+
   if (response.ok) {
-    const data = await response.json().catch(() => ({}));
+    const data = await response.json().catch(() => ({})) as Record<string, any>;
+    const dbRoom = await findRoomByIdentifier(data.room_id || clean);
+    const isOwner = Boolean(
+      (currentUser && dbRoom && dbRoom.owner_id && currentUser.id === dbRoom.owner_id) ||
+      (currentUser && dbRoom && currentUser.username === dbRoom.owner_username)
+    );
+    if (isOwner && dbRoom?.owner_token) {
+      data.owner_token = dbRoom.owner_token;
+    }
     res.status(response.status).json(data);
     return;
   }
@@ -174,6 +208,7 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  const rawPassword = decryptRoomPassword(dbRoom.password_hash);
   const createUrl = `http://${config.roomServer.host}:${config.roomServer.port}/api/rooms/create`;
   await fetch(createUrl, {
     body: JSON.stringify({
@@ -182,8 +217,9 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
       expires_at: dbRoom.expires_at ? Math.floor(new Date(dbRoom.expires_at).getTime() / 1000) : null,
       is_persistent: Boolean(dbRoom.is_persistent),
       max_downloads: dbRoom.max_downloads,
+      owner_token: dbRoom.owner_token,
       owner_username: dbRoom.owner_username,
-      password: dbRoom.password,
+      password: rawPassword,
       room_id: dbRoom.room_id,
       save_to_cloud: Boolean(dbRoom.save_to_cloud),
       upload_permission: dbRoom.upload_permission || 'all',
@@ -194,12 +230,18 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
     method: 'POST',
   }).catch(() => {});
 
+  const isOwner = Boolean(
+    (currentUser && dbRoom.owner_id && currentUser.id === dbRoom.owner_id) ||
+    (currentUser && currentUser.username === dbRoom.owner_username)
+  );
+
   res.json({
     code: dbRoom.code,
     expires_at: dbRoom.expires_at ? Math.floor(new Date(dbRoom.expires_at).getTime() / 1000) : null,
     is_persistent: Boolean(dbRoom.is_persistent),
     max_downloads: dbRoom.max_downloads,
     ok: true,
+    owner_token: isOwner ? dbRoom.owner_token : undefined,
     owner_username: dbRoom.owner_username,
     participant_count: 0,
     requires_password: Boolean(dbRoom.requires_password),
@@ -244,27 +286,42 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
     const isRoomOwner = (user && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
                         (user && user.username === dbRoom.owner_username);
     if (!isRoomOwner) {
+      if (req.file?.path) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+      }
       res.status(403).json({ error: 'Only the room host is allowed to upload files.', ok: false });
       return;
     }
   }
 
   if (dbRoom && !dbRoom.save_to_cloud) {
+    if (req.file?.path) {
+      await fs.promises.unlink(req.file.path).catch(() => {});
+    }
     res.status(400).json({ error: 'This room does not have cloud storage enabled.', ok: false });
     return;
   }
 
-  const userTier = user?.subscription_tier || 'free';
-  const tierStorageLimitBytes = userTier === 'enterprise'
-    ? 10995116277760
-    : (userTier === 'pro' ? 107374182400 : 5368709120);
+  const roomOwnerId = dbRoom?.owner_id || user?.id;
+  if (roomOwnerId) {
+    const [ownerRows] = await pool.execute<any[]>(
+      `SELECT id, subscription_tier, storage_used_bytes FROM users WHERE id = ? LIMIT 1`,
+      [roomOwnerId]
+    );
+    const ownerUser = ownerRows[0];
+    const ownerTier = ownerUser?.subscription_tier || 'free';
+    const tierStorageLimitBytes = ownerTier === 'enterprise'
+      ? 10995116277760
+      : (ownerTier === 'pro' ? 107374182400 : 5368709120);
 
-  if (user) {
-    const currentStorage = Number(user.storage_used_bytes || 0);
+    const currentStorage = Number(ownerUser?.storage_used_bytes || 0);
     if (currentStorage + req.file.size > tierStorageLimitBytes) {
-      const quotaLabel = userTier === 'enterprise' ? '10 TB' : (userTier === 'pro' ? '100 GB' : '5 GB');
+      const quotaLabel = ownerTier === 'enterprise' ? '10 TB' : (ownerTier === 'pro' ? '100 GB' : '5 GB');
+      if (req.file?.path) {
+        await fs.promises.unlink(req.file.path).catch(() => {});
+      }
       res.status(400).json({
-        error: `Storage quota exceeded (${quotaLabel} limit).`,
+        error: `Storage quota exceeded for this room (${quotaLabel} limit).`,
         ok: false,
       });
       return;
@@ -272,19 +329,20 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
   }
 
   try {
+    const fileBuffer = await fs.promises.readFile(req.file.path);
     const uploadResult = await sanitizeAndUploadToS3({
       allowedCategories: ['any'],
-      body: req.file.buffer,
+      body: fileBuffer,
       folder: `rooms/${actualRoomId}`,
       maxSizeBytes: 500 * 1024 * 1024,
       originalName: req.file.originalname,
       prefix: 'room',
     });
 
-    if (user) {
+    if (roomOwnerId) {
       await pool.execute(
         `UPDATE users SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?`,
-        [req.file.size, user.id]
+        [req.file.size, roomOwnerId]
       ).catch(() => {});
     }
 
@@ -343,6 +401,10 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
       error: err.message || 'File upload failed.',
       ok: false,
     });
+  } finally {
+    if (req.file?.path) {
+      await fs.promises.unlink(req.file.path).catch(() => {});
+    }
   }
 }
 
@@ -355,6 +417,22 @@ async function getRoomFilesHandler(req: Request, res: Response): Promise<void> {
 
   const dbRoom = await findRoomByIdentifier(roomId);
   const actualRoomId = dbRoom ? dbRoom.room_id : roomId;
+
+  if (dbRoom && dbRoom.requires_password) {
+    const user = await getValidatedCurrentUser(req, res);
+    const isOwner = Boolean(
+      (user && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
+      (user && user.username === dbRoom.owner_username)
+    );
+
+    if (!isOwner) {
+      const providedPassword = req.headers['x-room-password'] || req.query.password;
+      if (!providedPassword || !verifyRoomPassword(String(providedPassword), dbRoom.password_hash)) {
+        res.status(401).json({ error: 'Room password required.', ok: false, requires_password: true });
+        return;
+      }
+    }
+  }
 
   const rawFiles = await getRoomFiles(actualRoomId);
 
@@ -391,6 +469,22 @@ async function downloadRoomFileHandler(req: Request, res: Response): Promise<voi
 
   const dbRoom = await findRoomByIdentifier(roomId);
   const actualRoomId = dbRoom ? dbRoom.room_id : roomId;
+
+  if (dbRoom && dbRoom.requires_password) {
+    const user = await getValidatedCurrentUser(req, res);
+    const isOwner = Boolean(
+      (user && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
+      (user && user.username === dbRoom.owner_username)
+    );
+
+    if (!isOwner) {
+      const providedPassword = req.headers['x-room-password'] || req.query.password;
+      if (!providedPassword || !verifyRoomPassword(String(providedPassword), dbRoom.password_hash)) {
+        res.status(401).json({ error: 'Room password required.', ok: false, requires_password: true });
+        return;
+      }
+    }
+  }
 
   const file = await getRoomFileById(actualRoomId, fileId);
   if (!file) {
@@ -437,7 +531,23 @@ async function downloadRoomFileHandler(req: Request, res: Response): Promise<voi
       `attachment; filename="${encodeURIComponent(file.name)}"; filename*=UTF-8''${encodeURIComponent(file.name)}`
     );
 
-    (s3Response.Body as any).pipe(res);
+    const stream = s3Response.Body as any;
+    stream.on('error', (err: any) => {
+      logger.app.error(`Stream error for file ${file.file_id}:`, err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to stream file.', ok: false });
+      } else {
+        res.end();
+      }
+    });
+
+    req.on('close', () => {
+      if (stream && typeof stream.destroy === 'function') {
+        stream.destroy();
+      }
+    });
+
+    stream.pipe(res);
   } catch (err: any) {
     logger.app.error(`Failed to stream file ${file.file_id} from S3:`, err);
     res.status(500).json({ error: 'Failed to retrieve file from storage.', ok: false });

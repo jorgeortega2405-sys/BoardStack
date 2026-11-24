@@ -264,9 +264,9 @@ function scanForMaliciousPayloads(buffer: Buffer, category: FileCategory): void 
     }
   }
 
-  if (category === 'image' || category === 'document') {
-    const sampleSize = Math.min(buffer.length, 512 * 1024);
-    const sampleString = buffer.subarray(0, sampleSize).toString('utf-8', 0, sampleSize);
+  if (category === 'image' || category === 'document' || category === 'text') {
+    const sampleSize = Math.min(buffer.length, 10 * 1024 * 1024);
+    const sampleString = buffer.subarray(0, sampleSize).toString('latin1');
 
     for (const pattern of MALICIOUS_SCRIPT_PATTERNS) {
       if (pattern.test(sampleString)) {

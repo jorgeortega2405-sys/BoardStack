@@ -9,6 +9,7 @@ import {
 } from '../services/auth.service.js';
 import { config } from '../config/env.config.js';
 import {
+  consume2FALoginTicket,
   create2FALoginTicket,
   verify2FALoginTicket,
   verifyTotpCode,
@@ -194,13 +195,11 @@ async function resendRegistrationCode(req: Request, res: Response): Promise<void
       600
     );
 
-    if (!reused) {
-      try {
-        await sendVerificationCodeEmail(trimmedEmail, pending.username, activeCode);
-        logger.auth.info(`[ResendCode] Verification email resent to ${trimmedEmail} (IP: ${clientIp})`);
-      } catch (mailError) {
-        logger.auth.error('[ResendCode] Failed to resend email via SMTP:', mailError);
-      }
+    try {
+      await sendVerificationCodeEmail(trimmedEmail, pending.username, activeCode);
+      logger.auth.info(`[ResendCode] Verification email resent to ${trimmedEmail} (IP: ${clientIp})`);
+    } catch (mailError) {
+      logger.auth.error('[ResendCode] Failed to resend email via SMTP:', mailError);
     }
 
     res.status(200).json({
@@ -316,6 +315,7 @@ async function login(req: Request, res: Response): Promise<void> {
         return;
       }
 
+      consume2FALoginTicket(String(tempToken));
       void updateUserLastLogin(userRow.id, clientIp);
       logger.auth.info(`[Login2FA] Successful 2FA login for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
 
@@ -668,6 +668,15 @@ async function logout(req: Request, res: Response): Promise<void> {
   try {
     const { userId } = req.body || {};
     const targetUserId = userId ? Number(userId) : undefined;
+    const currentUser = getCurrentUser(req);
+    const idToRevoke = targetUserId || currentUser?.id;
+
+    if (idToRevoke) {
+      try {
+        const redis = getRedisClient();
+        await redis.set(`user:session_revoked:${idToRevoke}`, Date.now(), 'EX', 7 * 24 * 3600);
+      } catch {}
+    }
 
     const result = await removeAccountFromSession(res, req, targetUserId);
 

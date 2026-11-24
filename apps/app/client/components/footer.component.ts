@@ -21,7 +21,6 @@ function createFooterComponent(navigate?: (path: string) => void): HTMLElement {
             <a class="component-footer__link" data-ref="link-product-home" href="javascript:void(0)">${i18n.t('footer.product_home')}</a>
             <a class="component-footer__link" data-ref="link-product-features" href="javascript:void(0)">${i18n.t('footer.product_features')}</a>
             <a class="component-footer__link" data-ref="link-product-pricing" href="javascript:void(0)">${i18n.t('footer.product_pricing')}</a>
-            <a class="component-footer__link" data-ref="link-product-tools" href="javascript:void(0)">${i18n.t('footer.product_tools')}</a>
             <a class="component-footer__link" data-ref="link-product-faq" href="javascript:void(0)">${i18n.t('footer.product_faq')}</a>
           </div>
         </div>
@@ -41,8 +40,6 @@ function createFooterComponent(navigate?: (path: string) => void): HTMLElement {
           <div class="component-footer__links" data-ref="footer-links-company">
             <a class="component-footer__link" data-ref="link-company-about" href="javascript:void(0)">${i18n.t('footer.company_about')}</a>
             <a class="component-footer__link" data-ref="link-company-contact" href="javascript:void(0)">${i18n.t('footer.company_contact')}</a>
-            <a class="component-footer__link" data-ref="link-company-blog" href="javascript:void(0)">${i18n.t('footer.company_blog')}</a>
-            <a class="component-footer__link" data-ref="link-company-press" href="javascript:void(0)">${i18n.t('footer.company_press')}</a>
           </div>
         </div>
       </div>
@@ -52,6 +49,26 @@ function createFooterComponent(navigate?: (path: string) => void): HTMLElement {
       <span data-ref="footer-copyright">© ${new Date().getFullYear()} BoardStack. ${i18n.t('footer.all_rights_reserved')}</span>
     </div>
   `;
+
+  const bindNav = (ref: string, path: string): void => {
+    const el = footer.querySelector<HTMLAnchorElement>(`[data-ref="${ref}"]`);
+    el?.addEventListener('click', (e: MouseEvent) => {
+      e.preventDefault();
+      navigate?.(path);
+    });
+  };
+
+  bindNav('footer-brand-link', '/');
+  bindNav('link-product-home', '/');
+  bindNav('link-product-features', '/features');
+  bindNav('link-product-pricing', '/pricing');
+  bindNav('link-product-faq', '/help');
+  bindNav('link-legal-security', '/help/security');
+  bindNav('link-legal-privacy', '/help/privacy');
+  bindNav('link-legal-terms', '/help/terms');
+  bindNav('link-legal-cookies', '/help/cookies');
+  bindNav('link-company-about', '/about');
+  bindNav('link-company-contact', '/contact');
 
   const links = footer.querySelectorAll<HTMLAnchorElement>('a');
   links.forEach((link) => {

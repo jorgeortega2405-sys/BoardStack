@@ -215,24 +215,24 @@ async function generateUniqueUsername(preferred: string): Promise<string> {
     base = 'user';
   }
 
-  const [existing] = await pool.execute<RowDataPacket[]>(
-    'SELECT username FROM users WHERE username = ? OR username LIKE ? LIMIT 50',
-    [base, `${base}%`]
+  const [existingBase] = await pool.execute<RowDataPacket[]>(
+    'SELECT id FROM users WHERE username = ? LIMIT 1',
+    [base]
   );
-
-  const existingSet = new Set(existing.map((r) => String(r.username).toLowerCase()));
-  if (!existingSet.has(base)) {
+  if (existingBase.length === 0) {
     return base;
   }
 
-  let counter = 1;
   while (true) {
-    const suffix = String(counter);
-    const candidate = `${base.slice(0, 30 - suffix.length)}${suffix}`;
-    if (!existingSet.has(candidate)) {
+    const randomSuffix = crypto.randomBytes(3).toString('hex');
+    const candidate = `${base.slice(0, 23)}_${randomSuffix}`;
+    const [existingCandidate] = await pool.execute<RowDataPacket[]>(
+      'SELECT id FROM users WHERE username = ? LIMIT 1',
+      [candidate]
+    );
+    if (existingCandidate.length === 0) {
       return candidate;
     }
-    counter++;
   }
 }
 

@@ -6,7 +6,7 @@ function csrfProtectionMiddleware(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  if (req.path === '/api/subscription/webhook') {
+  if (req.path === '/api/subscription/webhook' || req.path === '/api/auth/sso/saml/acs') {
     next();
     return;
   }
@@ -18,6 +18,11 @@ function csrfProtectionMiddleware(req: Request, res: Response, next: NextFunctio
 
   if (secFetchSite === 'cross-site') {
     res.status(403).json({ error: 'Cross-origin request blocked.', ok: false });
+    return;
+  }
+
+  if (!origin && !referer) {
+    res.status(403).json({ error: 'Cross-origin request blocked: missing verification headers.', ok: false });
     return;
   }
 

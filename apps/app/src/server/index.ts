@@ -23,12 +23,17 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import { testRedisConnection } from './config/redis.config.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = config.port;
 const HOST = config.host;
 
 app.use(compression());
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((_req, res, next) => {
@@ -99,21 +104,33 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
     description: 'BoardStack ofrece una interfaz modular de alta precisión con arquitectura basada en componentes y diseño avanzado.',
     title: 'BoardStack - Plataforma Creativa Modular',
   },
+  '/about': {
+    description: 'Conoce la historia, misión y principios de BoardStack, la plataforma de transferencia y colaboración en tiempo real.',
+    title: 'Sobre nosotros - BoardStack',
+  },
   '/checkout': {
     description: 'Finaliza tu suscripción en BoardStack con procesamiento seguro.',
     title: 'Completar Suscripción - BoardStack',
   },
+  '/contact': {
+    description: 'Ponte en contacto con el equipo de BoardStack para resolver dudas o solicitar asistencia técnica.',
+    title: 'Contacto - BoardStack',
+  },
   '/contact-sales': {
     description: 'Ponte en contacto con nuestro equipo de ventas para obtener el plan de suscripción Empresas a medida.',
     title: 'Hablar con Ventas - BoardStack Negocios',
+  },
+  '/features': {
+    description: 'Conoce todas las características de BoardStack: transferencias P2P, salas persistentes, almacenamiento seguro y SSO corporativo.',
+    title: 'Características - BoardStack',
   },
   '/forgot-password': {
     description: 'Restablece el acceso a tu cuenta de BoardStack de forma rápida y segura.',
     title: 'Recuperar Contraseña - BoardStack',
   },
   '/help': {
-    description: 'Consulta los términos de servicio y políticas legales de BoardStack.',
-    title: 'Ayuda y Términos - BoardStack',
+    description: 'Encuentra respuestas a las preguntas más habituales sobre las salas, transferencias y seguridad en BoardStack.',
+    title: 'Preguntas frecuentes - BoardStack',
   },
   '/help/cookies': {
     description: 'Información sobre el uso de cookies y tecnologías similares en BoardStack.',

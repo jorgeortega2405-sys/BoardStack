@@ -7,11 +7,12 @@ import {
   getPurchasesHandler,
   getSubscriptionConfig,
   getSubscriptionStatus,
+  stripeWebhookHandler,
   updateRenewalHandler,
 } from '../controllers/subscription.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { subscriptionRateLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
+import { subscriptionRateLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.get('/subscription/invoice/:id', requireAuth, asyncHandler(getPurchaseInv
 router.post('/subscription/renewal', requireAuth, subscriptionRateLimiter, asyncHandler(updateRenewalHandler));
 router.post('/subscription/create-intent', requireAuth, subscriptionRateLimiter, asyncHandler(createPaymentIntentHandler));
 router.post('/subscription/confirm', requireAuth, subscriptionRateLimiter, asyncHandler(confirmPaymentHandler));
+router.post('/subscription/webhook', asyncHandler(stripeWebhookHandler));
 
 export default router;

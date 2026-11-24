@@ -298,6 +298,26 @@ async function resolveOrganizationByDomainOrSlug(
   return rows[0] as OrganizationRecord;
 }
 
+async function resolveOrganizationByIssuer(
+  issuer: string
+): Promise<OrganizationRecord | null> {
+  const clean = issuer.trim();
+  if (!clean) return null;
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT * FROM organizations 
+     WHERE (saml_issuer = ? OR saml_entry_point LIKE ?) AND saml_enabled = TRUE
+     LIMIT 1`,
+    [clean, `%${clean}%`]
+  );
+
+  if (!rows || rows.length === 0) {
+    return null;
+  }
+
+  return rows[0] as OrganizationRecord;
+}
+
 async function processSsoLogin(
   email: string,
   orgSlug: string
@@ -410,6 +430,7 @@ export {
   processSsoLogin,
   removeOrganizationMember,
   resolveOrganizationByDomainOrSlug,
+  resolveOrganizationByIssuer,
   updateOrganization
 };
 

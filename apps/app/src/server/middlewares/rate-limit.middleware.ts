@@ -206,6 +206,13 @@ const settingsGeneralRateLimiter = createRateLimiter({
   windowSeconds: 60,
 });
 
+const salesLeadRateLimiter = createRateLimiter({
+  keyPrefix: 'rl:sales:contact',
+  maxRequests: 5,
+  message: 'Too many contact inquiries submitted. Please wait 15 minutes before submitting again.',
+  windowSeconds: 900,
+});
+
 const subscriptionRateLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   keyPrefix: 'rl:sub:actions',
@@ -224,6 +231,7 @@ export {
   authResetPasswordRateLimiter,
   createRateLimiter,
   generalAuthRateLimiter,
+  salesLeadRateLimiter,
   settingsAvatarRateLimiter,
   settingsGeneralRateLimiter,
   settingsPasswordVerifyRateLimiter,

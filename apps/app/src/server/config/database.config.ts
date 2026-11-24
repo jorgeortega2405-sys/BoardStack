@@ -4,17 +4,17 @@ import mysql from 'mysql2/promise';
 
 const pool = mysql.createPool({
   connectTimeout: 10000,
-  connectionLimit: 20,
+  connectionLimit: 50,
   database: config.db.name,
   dateStrings: true,
   enableKeepAlive: true,
   host: config.db.host,
   idleTimeout: 60000,
   keepAliveInitialDelay: 10000,
-  maxIdle: 20,
+  maxIdle: 50,
   password: config.db.password,
   port: config.db.port,
-  queueLimit: 100,
+  queueLimit: 0,
   user: config.db.user,
   waitForConnections: true,
 });

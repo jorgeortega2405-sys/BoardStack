@@ -6,6 +6,7 @@ import {
   loginSsoHandler,
   removeMemberHandler,
   resolveSsoHandler,
+  samlAcsHandler,
   updateMyOrganizationHandler,
 } from '../controllers/organization.controller.js';
 import { asyncHandler } from '../middlewares/async.middleware.js';
@@ -23,6 +24,6 @@ router.delete('/organization/members/:id', requireAuth, asyncHandler(removeMembe
 router.post('/auth/sso/resolve', asyncHandler(resolveSsoHandler));
 router.post('/auth/sso/login', asyncHandler(loginSsoHandler));
 router.get('/auth/sso/saml/metadata', asyncHandler(getSamlMetadataHandler));
-router.post('/auth/sso/saml/acs', asyncHandler(loginSsoHandler));
+router.post('/auth/sso/saml/acs', asyncHandler(samlAcsHandler));
 
 export default router;

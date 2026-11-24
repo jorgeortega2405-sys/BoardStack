@@ -364,6 +364,12 @@ function verifyEmailChangeTicket(ticket: string, userId: number): { email: strin
   }
 }
 
+const usedSecurityActionNonces = new Set<string>();
+
+setInterval(() => {
+  usedSecurityActionNonces.clear();
+}, 600000).unref();
+
 function createSecurityActionTicket(userId: number, ttlMs = 600000): string {
   const payload = {
     exp: Date.now() + ttlMs,
@@ -388,6 +394,12 @@ function verifySecurityActionTicket(ticket: string, userId: number): boolean {
     const payload = JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
     if (payload.type !== 'security_action' || payload.userId !== userId || Date.now() > payload.exp) {
       return false;
+    }
+    if (payload.nonce && usedSecurityActionNonces.has(payload.nonce)) {
+      return false;
+    }
+    if (payload.nonce) {
+      usedSecurityActionNonces.add(payload.nonce);
     }
     return true;
   } catch {

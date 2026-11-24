@@ -37,6 +37,7 @@ struct Room {
     code: String,
     slug: Option<String>,
     password: Option<String>,
+    owner_token: Option<String>,
     is_persistent: bool,
     expires_at: Option<u64>,
     max_downloads: Option<u32>,
@@ -67,6 +68,7 @@ struct CreateRoomRequest {
     avatar_url: Option<String>,
     custom_slug: Option<String>,
     password: Option<String>,
+    owner_token: Option<String>,
     is_persistent: Option<bool>,
     expires_in_hours: Option<u64>,
     expires_at: Option<u64>,
@@ -116,7 +118,9 @@ struct WsQuery {
     peer_id: Option<String>,
     username: Option<String>,
     avatar_url: Option<String>,
+    #[allow(dead_code)]
     is_owner: Option<bool>,
+    owner_token: Option<String>,
     password: Option<String>,
 }
 
@@ -290,6 +294,14 @@ async fn create_room(
         code: code.clone(),
         slug: custom_slug.clone(),
         password,
+        owner_token: payload.owner_token.and_then(|t| {
+            let trimmed = t.trim().to_string();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        }),
         is_persistent,
         expires_at,
         max_downloads,
@@ -430,7 +442,8 @@ async fn ws_handler(
     Query(query): Query<WsQuery>,
     State(state): State<SharedState>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, room_id, query, state))
+    ws.max_message_size(1024 * 1024)
+        .on_upgrade(move |socket| handle_socket(socket, room_id, query, state))
 }
 
 async fn handle_socket(
@@ -476,7 +489,20 @@ async fn handle_socket(
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-    let is_owner = query.is_owner.unwrap_or(false);
+    let is_owner = {
+        let lock = state.lock().await;
+        if let Some(r) = lock.rooms.get(&actual_room_id) {
+            match (&query.owner_token, &r.owner_token) {
+                (Some(provided), Some(expected)) => {
+                    let p = provided.trim();
+                    !p.is_empty() && p == expected
+                }
+                _ => false,
+            }
+        } else {
+            false
+        }
+    };
     let username = query
         .username
         .filter(|s| !s.trim().is_empty())
@@ -629,7 +655,18 @@ async fn handle_socket(
     let room_tx_for_recv = room_tx.clone();
 
     let mut recv_task = tokio::spawn(async move {
+        let mut msg_count = 0u32;
+        let mut last_window = current_timestamp();
         while let Some(Ok(msg)) = receiver.next().await {
+            let now = current_timestamp();
+            if now != last_window {
+                last_window = now;
+                msg_count = 0;
+            }
+            msg_count += 1;
+            if msg_count > 60 {
+                continue;
+            }
             match msg {
                 Message::Text(text) => {
                     if is_owner {

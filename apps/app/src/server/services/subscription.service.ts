@@ -487,6 +487,62 @@ async function getPurchaseInvoice(userId: number, purchaseId: number | string): 
   };
 }
 
+async function processStripeWebhook(rawBody: Buffer | string, signature: string): Promise<{ received: boolean }> {
+  if (!config.stripe.webhookSecret) {
+    throw new Error('Stripe webhook secret is not configured.');
+  }
+
+  const event = stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
+
+  switch (event.type) {
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const userId = paymentIntent.metadata?.userId;
+      if (userId) {
+        await confirmSubscriptionPayment(Number(userId), paymentIntent.id);
+        logger.app.info(`[Stripe Webhook] Payment confirmed for user ${userId}, intent ${paymentIntent.id}`);
+      }
+      break;
+    }
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as any;
+      const customerId = invoice.customer ? String(invoice.customer) : null;
+      if (customerId) {
+        await pool.query(
+          `UPDATE subscriptions SET status = 'past_due' WHERE stripe_customer_id = ?`,
+          [customerId]
+        );
+        await pool.query(
+          `UPDATE users SET subscription_status = 'past_due' WHERE stripe_customer_id = ?`,
+          [customerId]
+        );
+        logger.app.warn(`[Stripe Webhook] Invoice payment failed for customer ${customerId}`);
+      }
+      break;
+    }
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as any;
+      const customerId = subscription.customer ? String(subscription.customer) : null;
+      if (customerId) {
+        await pool.query(
+          `UPDATE subscriptions SET status = 'canceled' WHERE stripe_customer_id = ?`,
+          [customerId]
+        );
+        await pool.query(
+          `UPDATE users SET subscription_status = 'canceled', subscription_tier = 'free' WHERE stripe_customer_id = ?`,
+          [customerId]
+        );
+        logger.app.info(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  return { received: true };
+}
+
 export {
   confirmSubscriptionPayment,
   createSubscriptionPaymentIntent,
@@ -495,6 +551,7 @@ export {
   getPurchaseInvoice,
   getUserPurchases,
   getUserSubscriptionInfo,
+  processStripeWebhook,
   updateSubscriptionRenewal
 };
 

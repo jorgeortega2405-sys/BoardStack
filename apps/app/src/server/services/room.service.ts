@@ -1,3 +1,5 @@
+import { config } from '../config/env.config.js';
+import crypto from 'crypto';
 import { deleteFromS3 } from './s3.service.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.config.js';
@@ -11,6 +13,7 @@ interface DbRoom extends RowDataPacket {
   is_persistent: number;
   max_downloads: number | null;
   owner_id: number | null;
+  owner_token: string | null;
   owner_username: string;
   password_hash: string | null;
   requires_password: number;
@@ -49,6 +52,7 @@ interface CreateRoomParams {
   is_persistent: boolean;
   max_downloads?: number | null;
   owner_id?: number | null;
+  owner_token?: string | null;
   owner_username: string;
   password?: string | null;
   room_id: string;
@@ -75,21 +79,65 @@ interface SaveRoomFileParams {
   user_id?: number | null;
 }
 
+function getEncryptionKey(): Buffer {
+  const secret = config.sessionSecret || '';
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+function encryptRoomPassword(password: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(password, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const tag = cipher.getAuthTag().toString('hex');
+  return `${iv.toString('hex')}:${tag}:${encrypted}`;
+}
+
+function decryptRoomPassword(encryptedPayload: string | null): string | null {
+  if (!encryptedPayload) return null;
+  const parts = encryptedPayload.split(':');
+  if (parts.length !== 3) return null;
+  try {
+    const [ivHex, tagHex, encryptedHex] = parts;
+    const key = getEncryptionKey();
+    const iv = Buffer.from(ivHex, 'hex');
+    const tag = Buffer.from(tagHex, 'hex');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch {
+    return null;
+  }
+}
+
+function verifyRoomPassword(plainPassword: string, encryptedPayload: string | null): boolean {
+  if (!plainPassword || !encryptedPayload) return false;
+  const decrypted = decryptRoomPassword(encryptedPayload);
+  if (!decrypted) return false;
+  if (plainPassword.length !== decrypted.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(plainPassword), Buffer.from(decrypted));
+}
+
 async function createRoomRecord(params: CreateRoomParams): Promise<void> {
   const requiresPassword = Boolean(params.password && params.password.trim());
   const formattedExpiresAt = params.expires_at ? params.expires_at.toISOString().slice(0, 19).replace('T', ' ') : null;
   const uploadPerm = params.upload_permission || 'all';
+  const storedPassword = requiresPassword ? encryptRoomPassword(params.password!.trim()) : null;
 
   await pool.execute(
     `INSERT INTO rooms (
       room_id, code, slug, owner_id, owner_username, is_persistent,
-      requires_password, password_hash, save_to_cloud, upload_permission, max_downloads, expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      requires_password, password_hash, owner_token, save_to_cloud, upload_permission, max_downloads, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
       slug = VALUES(slug),
       save_to_cloud = VALUES(save_to_cloud),
       upload_permission = VALUES(upload_permission),
       max_downloads = VALUES(max_downloads),
+      owner_token = COALESCE(VALUES(owner_token), owner_token),
       expires_at = VALUES(expires_at),
       updated_at = CURRENT_TIMESTAMP`,
     [
@@ -100,7 +148,8 @@ async function createRoomRecord(params: CreateRoomParams): Promise<void> {
       params.owner_username,
       params.is_persistent ? 1 : 0,
       requiresPassword ? 1 : 0,
-      params.password || null,
+      storedPassword,
+      params.owner_token || null,
       params.save_to_cloud ? 1 : 0,
       uploadPerm,
       params.max_downloads !== undefined && params.max_downloads !== null ? params.max_downloads : null,
@@ -220,6 +269,25 @@ async function deleteRoomRecord(roomId: string): Promise<void> {
 
 async function cleanupExpiredRoomsAndFiles(): Promise<void> {
   try {
+    const [expiredFileStats] = await pool.execute<RowDataPacket[]>(
+      `SELECT rf.room_id, COALESCE(rf.user_id, r.owner_id) AS user_id, SUM(rf.size) AS freed_bytes
+       FROM room_files rf
+       LEFT JOIN rooms r ON rf.room_id = r.room_id
+       WHERE rf.expires_at IS NOT NULL AND rf.expires_at <= NOW()
+       GROUP BY rf.room_id, COALESCE(rf.user_id, r.owner_id)`
+    );
+
+    for (const row of expiredFileStats) {
+      const freed = Number(row.freed_bytes || 0);
+      const uid = row.user_id;
+      if (uid && freed > 0) {
+        await pool.execute(
+          `UPDATE users SET storage_used_bytes = GREATEST(0, storage_used_bytes - ?) WHERE id = ?`,
+          [freed, uid]
+        ).catch(() => {});
+      }
+    }
+
     const [expiredFiles] = await pool.execute<DbRoomFile[]>(
       `SELECT * FROM room_files WHERE expires_at IS NOT NULL AND expires_at <= NOW()`
     );
@@ -250,12 +318,15 @@ async function cleanupExpiredRoomsAndFiles(): Promise<void> {
 export {
   cleanupExpiredRoomsAndFiles,
   createRoomRecord,
+  decryptRoomPassword,
   deleteRoomRecord,
+  encryptRoomPassword,
   findRoomByIdentifier,
   getRoomFileById,
   getRoomFiles,
   incrementFileDownloadCount,
-  saveRoomFileRecord
+  saveRoomFileRecord,
+  verifyRoomPassword
 };
 
 export type {

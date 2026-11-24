@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
   last_login_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_users_tier_status (subscription_tier, subscription_status)
+  INDEX idx_users_tier_status (subscription_tier, subscription_status),
+  INDEX idx_users_stripe_cust (stripe_customer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS verification_codes (
@@ -52,7 +53,8 @@ CREATE TABLE IF NOT EXISTS password_resets (
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_resets_email_used (email, used),
-  INDEX idx_reset_email (email)
+  INDEX idx_reset_email (email),
+  INDEX idx_resets_cleanup (expires_at, used)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -77,6 +79,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   is_persistent BOOLEAN NOT NULL DEFAULT FALSE,
   requires_password BOOLEAN NOT NULL DEFAULT FALSE,
   password_hash VARCHAR(255) NULL,
+  owner_token VARCHAR(128) NULL,
   save_to_cloud BOOLEAN NOT NULL DEFAULT FALSE,
   upload_permission VARCHAR(20) NOT NULL DEFAULT 'all',
   max_downloads INT UNSIGNED NULL,
@@ -86,7 +89,8 @@ CREATE TABLE IF NOT EXISTS rooms (
   INDEX idx_rooms_code (code),
   INDEX idx_rooms_slug (slug),
   INDEX idx_rooms_owner (owner_id),
-  INDEX idx_rooms_expires (expires_at)
+  INDEX idx_rooms_expires (expires_at),
+  INDEX idx_rooms_owner_created (owner_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS room_files (
@@ -111,7 +115,8 @@ CREATE TABLE IF NOT EXISTS room_files (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_rf_room (room_id),
   INDEX idx_rf_file (file_id),
-  INDEX idx_rf_expires (expires_at)
+  INDEX idx_rf_expires (expires_at),
+  INDEX idx_rf_room_created (room_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS subscriptions (

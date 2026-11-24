@@ -6,11 +6,12 @@ import {
   getPurchaseInvoice,
   getUserPurchases,
   getUserSubscriptionInfo,
+  processStripeWebhook,
   updateSubscriptionRenewal,
 } from '../services/subscription.service.js';
+import { ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
-import { ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
 import type { Request, Response } from 'express';
 import { sendError, sendSuccess } from '../utils/response.util.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
@@ -206,6 +207,23 @@ async function getPurchaseInvoiceHandler(req: Request, res: Response): Promise<v
   }
 }
 
+async function stripeWebhookHandler(req: Request, res: Response): Promise<void> {
+  const sig = req.headers['stripe-signature'];
+  if (!sig || typeof sig !== 'string') {
+    sendError(res, 'Missing Stripe signature header.', 400);
+    return;
+  }
+
+  const rawBody = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
+  try {
+    const result = await processStripeWebhook(rawBody, sig);
+    res.status(200).json(result);
+  } catch (err: any) {
+    logger.app.error('[Subscription] Stripe webhook error:', err);
+    res.status(400).send(`Webhook Error: ${err.message || 'Verification failed'}`);
+  }
+}
+
 export {
   confirmPaymentHandler,
   createPaymentIntentHandler,
@@ -214,5 +232,6 @@ export {
   getPurchasesHandler,
   getSubscriptionConfig,
   getSubscriptionStatus,
+  stripeWebhookHandler,
   updateRenewalHandler
 };
