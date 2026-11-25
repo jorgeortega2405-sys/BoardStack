@@ -1,12 +1,12 @@
-import { arrayBufferToBase64, base64ToUint8Array, formatBytes, getFileIcon } from '../utils/format.util.js';
-import { copyToClipboard, escapeHtml } from '../utils/dom.util.js';
-import { currentUser, deleteApi, getApi } from '../services/api.service.js';
-import { getGuestPersona } from '../utils/guest-personas.util.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { openConfirmModal, openCustomModal, openModal } from '../components/modal.component.js';
 import { i18n } from '../i18n/i18n.service.js';
-import { openModal } from '../components/modal.component.js';
+import { currentUser, deleteApi, getApi, patchApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { toast } from '../services/toast.service.js';
+import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { copyToClipboard, escapeHtml, setButtonLoading, setupDropdown } from '../utils/dom.util.js';
+import { arrayBufferToBase64, base64ToUint8Array, formatBytes, getFileIcon } from '../utils/format.util.js';
+import { getGuestPersona } from '../utils/guest-personas.util.js';
 
 interface RoomParticipant {
   avatar_url?: string | null;
@@ -73,6 +73,21 @@ interface ActiveDownload {
   startTime: number;
 }
 
+interface StandaloneFileItem {
+  downloadCount?: number;
+  downloadUrl?: string;
+  fileId: string;
+  isLimitReached?: boolean;
+  maxDownloads?: number | null;
+  mimeType?: string;
+  name: string;
+  progress: number;
+  senderAvatar?: string;
+  senderUsername: string;
+  size: number;
+  status: 'uploading' | 'downloading' | 'complete' | 'error';
+}
+
 interface FolderFileItem {
   downloadUrl?: string;
   fileId: string;
@@ -84,7 +99,6 @@ interface FolderFileItem {
 }
 
 interface FolderState {
-  cardEl?: HTMLElement;
   files: Map<string, FolderFileItem>;
   id: string;
   name: string;
@@ -264,7 +278,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const peers = new Map<string, PeerState>();
   const activeDownloads = new Map<string, ActiveDownload>();
   const activeFolders = new Map<string, FolderState>();
-  const activeTransfersDom = new Map<string, HTMLElement>();
+  const standaloneFiles = new Map<string, StandaloneFileItem>();
+  let currentFolderId: string | null = null;
 
   const topEl = document.createElement('div');
   topEl.className = 'component-top';
@@ -274,6 +289,11 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       <button type="button" class="component-button component-button--icon-only component-button--h40" data-ref="btn-connection-mode" data-tooltip="${i18n.t('room.connecting_p2p')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.connecting_p2p')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
       </button>
+      ${isOwner ? `
+      <button type="button" class="component-button component-button--icon-only component-button--h40" data-ref="btn-room-settings" data-tooltip="${i18n.t('room.settings_tooltip')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.settings_tooltip')}">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+      </button>
+      ` : ''}
       <button type="button" class="component-button component-button--icon-only component-button--h40 component-button--destructive" data-ref="btn-leave-room" data-tooltip="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}" data-tooltip-placement="bottom" aria-label="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
       </button>
@@ -283,9 +303,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       <div class="component-avatar-group" data-ref="participants-avatar-group"></div>
 
       <div class="component-dropdown" data-ref="add-more-wrapper">
-        <button type="button" class="component-button component-button--h40 is-hidden" data-ref="btn-add-more">
+        <button type="button" class="component-button component-button--icon-only component-button--h40 is-hidden" data-ref="btn-add-more" data-tooltip="${i18n.t('room.add_files')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.add_files')}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-          <span>${i18n.t('room.add_files')}</span>
         </button>
 
         <div class="component-dropdown-menu" data-ref="add-more-dropdown">
@@ -332,7 +351,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   `;
 
   const bottomEl = document.createElement('div');
-  bottomEl.className = 'component-bottom';
+  bottomEl.className = 'component-bottom component-bottom--full';
   bottomEl.setAttribute('data-ref', 'room-bottom');
   bottomEl.innerHTML = `
     <div class="component-dropzone" data-ref="dropzone-area">
@@ -355,7 +374,44 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       </div>
     </div>
 
-    <div class="component-grid--files is-hidden" data-ref="files-cards-grid"></div>
+    <div class="component-block__scrollable is-hidden" data-ref="room-table-container" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+      <div class="component-header is-hidden" data-ref="folder-header-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border-color, #e5e7eb);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-back-to-root" data-tooltip="${i18n.t('room.back_to_root')}" aria-label="${i18n.t('room.back_to_root')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <div class="component-table__icon-box">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <h3 class="component-title" data-ref="folder-header-title" style="font-size: 14.5px; font-weight: 700; margin: 0;"></h3>
+            <span class="component-subtitle" data-ref="folder-header-desc" style="font-size: 12px; margin: 0;"></span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="component-button component-button--h34" data-ref="btn-folder-download-all">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            <span>${i18n.t('room.download_all')}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-table-wrapper component-table-wrapper--flush" data-ref="room-files-table-wrapper">
+        <table class="component-table component-table--flush" data-ref="room-files-table">
+          <thead class="component-table__head" data-ref="room-files-thead">
+            <tr>
+              <th class="component-table__cell--pl20" data-ref="th-name">${i18n.t('room.col_name')}</th>
+              <th data-ref="th-size">${i18n.t('room.col_size')}</th>
+              <th data-ref="th-sender">${i18n.t('room.col_sender')}</th>
+              <th data-ref="th-status">${i18n.t('room.col_status')}</th>
+              <th class="component-table__cell--pr20" data-ref="th-actions" style="text-align: right;">${i18n.t('room.col_actions')}</th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="room-files-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
   `;
 
   renderIcons(topEl);
@@ -376,20 +432,41 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const btnCopyCode = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-copy-code"]');
   const btnCopyLink = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-copy-link"]');
   const btnLeaveRoom = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-leave-room"]');
+  const btnRoomSettings = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-settings"]');
 
   const roomBottomEl = bottomEl;
-  const filesCardsGridEl = bottomEl.querySelector<HTMLElement>('[data-ref="files-cards-grid"]');
+  const tableContainerEl = bottomEl.querySelector<HTMLElement>('[data-ref="room-table-container"]');
+  const folderHeaderBar = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-bar"]');
+  const folderHeaderTitle = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-title"]');
+  const folderHeaderDesc = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-desc"]');
+  const btnBackToRoot = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-root"]');
+  const btnFolderDownloadAll = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-download-all"]');
+  const filesTbody = bottomEl.querySelector<HTMLElement>('[data-ref="room-files-tbody"]');
   const dropzoneArea = bottomEl.querySelector<HTMLElement>('[data-ref="dropzone-area"]');
   const inputFiles = bottomEl.querySelector<HTMLInputElement>('[data-ref="input-files"]');
   const inputFolder = bottomEl.querySelector<HTMLInputElement>('[data-ref="input-folder"]');
   const btnSelectFiles = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-select-files"]');
   const btnSelectFolder = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-select-folder"]');
 
+  btnBackToRoot?.addEventListener('click', () => {
+    currentFolderId = null;
+    renderTableRows();
+  });
+
+  btnFolderDownloadAll?.addEventListener('click', () => {
+    if (currentFolderId) {
+      const folder = activeFolders.get(currentFolderId);
+      if (folder) {
+        downloadAllFolderFiles(folder);
+      }
+    }
+  });
+
   const checkDropzoneVisibility = () => {
-    const hasItems = activeTransfersDom.size > 0 || activeFolders.size > 0;
+    const hasItems = standaloneFiles.size > 0 || activeFolders.size > 0;
     if (hasItems) {
       dropzoneArea?.classList.add('is-hidden');
-      filesCardsGridEl?.classList.remove('is-hidden');
+      tableContainerEl?.classList.remove('is-hidden');
       if (canUpload) {
         btnAddMore?.classList.remove('is-hidden');
       } else {
@@ -397,7 +474,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       }
     } else {
       dropzoneArea?.classList.remove('is-hidden');
-      filesCardsGridEl?.classList.add('is-hidden');
+      tableContainerEl?.classList.add('is-hidden');
       btnAddMore?.classList.add('is-hidden');
     }
   };
@@ -439,9 +516,72 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     inputFiles?.click();
   });
 
+  const getFilesFromDirectoryHandle = async (dirHandle: any, parentPath = ''): Promise<File[]> => {
+    const collected: File[] = [];
+    for await (const entry of dirHandle.values()) {
+      const relativePath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+      if (entry.kind === 'file') {
+        const f = await entry.getFile();
+        Object.defineProperty(f, 'webkitRelativePath', {
+          configurable: true,
+          value: `${dirHandle.name}/${relativePath}`,
+        });
+        collected.push(f);
+      } else if (entry.kind === 'directory') {
+        const sub = await getFilesFromDirectoryHandle(entry, relativePath);
+        collected.push(...sub);
+      }
+    }
+    return collected;
+  };
+
+  const promptConfirmFolderUpload = (folderName: string, files: File[]): void => {
+    const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
+    openConfirmModal({
+      cancelText: i18n.t('common.cancel'),
+      confirmText: i18n.t('room.folder_upload_confirm_btn'),
+      description: i18n.t('room.folder_upload_confirm_desc', {
+        count: files.length,
+        folder: folderName,
+        size: formatBytes(totalBytes),
+      }),
+      onConfirm: () => {
+        void handleFilesSelected(files);
+      },
+      title: i18n.t('room.folder_upload_confirm_title'),
+    });
+  };
+
+  const selectFolderWithPicker = async (): Promise<void> => {
+    if (!canUpload) {
+      toast.error(i18n.t('room.no_upload_permission'));
+      return;
+    }
+
+    if (typeof (window as any).showDirectoryPicker === 'function') {
+      try {
+        const dirHandle = await (window as any).showDirectoryPicker();
+        if (!dirHandle) return;
+        const files = await getFilesFromDirectoryHandle(dirHandle);
+        if (files.length === 0) {
+          toast.info(i18n.t('room.folder_empty'));
+          return;
+        }
+        promptConfirmFolderUpload(dirHandle.name, files);
+        return;
+      } catch (err: any) {
+        if (err && err.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    inputFolder?.click();
+  };
+
   btnAddFolderItem?.addEventListener('click', () => {
     addMoreDropdown?.classList.remove('is-open');
-    inputFolder?.click();
+    void selectFolderWithPicker();
   });
 
   document.addEventListener('click', (e: MouseEvent) => {
@@ -545,48 +685,857 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
   btnLeaveRoom?.addEventListener('click', handleExit);
 
-  const getOrCreateFileCardEl = (
-    fileId: string,
-    name: string,
-    size: number,
-    senderUsername: string
-  ): HTMLElement => {
-    let cardEl = activeTransfersDom.get(fileId);
-    if (!cardEl && filesCardsGridEl) {
-      cardEl = document.createElement('div');
-      cardEl.className = 'component-card component-card--file';
-      cardEl.setAttribute('data-ref', `file-card-${fileId}`);
+  const openRoomSettingsModal = () => {
+    const isPro = Boolean(currentUser && (currentUser.subscription_tier === 'pro' || currentUser.subscription_tier === 'business' || currentUser.subscription_tier === 'enterprise'));
 
-      cardEl.innerHTML = `
-        <div class="component-card__icon-box">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(name)}"></use></svg>
-        </div>
-        <div class="component-card__content">
-          <h3 class="component-card__title" data-ref="file-name" title="${escapeHtml(name)}">${escapeHtml(name)}</h3>
-          <div class="component-card__meta">
-            <span class="component-card__desc" data-ref="file-size">${formatBytes(size)}</span>
-            <span class="component-card__dot">•</span>
-            <span class="component-card__desc" data-ref="file-sender">${escapeHtml(senderUsername)}</span>
-            <span class="component-card__desc" data-ref="file-downloads"></span>
-          </div>
-        </div>
-        <div class="component-card__actions" data-ref="file-actions">
-          <div class="component-ring-spinner" data-ref="file-spinner">
-            <svg viewBox="0 0 32 32">
-              <circle class="component-ring-spinner__bg" cx="16" cy="16" r="12"></circle>
-              <circle class="component-ring-spinner__val" cx="16" cy="16" r="12" style="stroke-dashoffset: 75.4;"></circle>
-            </svg>
-            <span class="component-ring-spinner__text" data-ref="file-spinner-text">0%</span>
-          </div>
-        </div>
-      `;
-
-      renderIcons(cardEl);
-      filesCardsGridEl.appendChild(cardEl);
-      activeTransfersDom.set(fileId, cardEl);
-      checkDropzoneVisibility();
+    let initialExpVal = '0';
+    if (roomExpiresAt) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const diffHours = Math.round((roomExpiresAt - nowSec) / 3600);
+      if (diffHours <= 2) {
+        initialExpVal = '1';
+      } else if (diffHours <= 36) {
+        initialExpVal = '24';
+      } else if (diffHours <= 200) {
+        initialExpVal = '168';
+      } else {
+        initialExpVal = '720';
+      }
     }
-    return cardEl!;
+
+    let initialLimitMode = '0';
+    let initialCustomLimit = '';
+    if (roomMaxDownloads !== null && roomMaxDownloads !== undefined && roomMaxDownloads > 0) {
+      if (roomMaxDownloads === 1) {
+        initialLimitMode = '1';
+      } else if (roomMaxDownloads === 5) {
+        initialLimitMode = '5';
+      } else if (roomMaxDownloads === 10) {
+        initialLimitMode = '10';
+      } else {
+        initialLimitMode = 'custom';
+        initialCustomLimit = String(roomMaxDownloads);
+      }
+    }
+
+    let selectedUploadPerm = roomUploadPermission || 'all';
+    let selectedExpiration = initialExpVal;
+    let downloadLimitMode = initialLimitMode;
+
+    const modalInstance = openCustomModal({
+      contentHtml: `
+        <div class="modal-container" data-ref="modal-container">
+          <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="${i18n.t('common.close')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+          <div class="modal-card modal-card--split-config" data-ref="modal-card">
+            <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+              <div class="modal-card__drag-handle"></div>
+            </div>
+
+            <div class="component-sidebar" data-ref="modal-sidebar">
+              <div class="component-sidebar__top">
+                <div class="component-header">
+                  <h2 class="component-title" style="font-size: 18px; font-weight: 600; line-height: 1.3;">${i18n.t('room.settings_modal_title')}</h2>
+                  <p class="component-subtitle" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">${i18n.t('room.settings_modal_desc')}</p>
+                </div>
+                <div class="component-menu component-menu--padded" data-ref="modal-categories-menu">
+                  <button type="button" class="component-menu__item is-active" data-ref="tab-general" data-tab="general">
+                    <span class="component-menu__item-icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+                    </span>
+                    <span class="component-menu__item-text">${i18n.t('room.cat_general')}</span>
+                  </button>
+                  <button type="button" class="component-menu__item" data-ref="tab-security" data-tab="security">
+                    <span class="component-menu__item-icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                    </span>
+                    <span class="component-menu__item-text">${i18n.t('room.cat_security')}</span>
+                  </button>
+                  <button type="button" class="component-menu__item" data-ref="tab-storage" data-tab="storage">
+                    <span class="component-menu__item-icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+                    </span>
+                    <span class="component-menu__item-text">${i18n.t('room.cat_storage')}</span>
+                  </button>
+                  <button type="button" class="component-menu__item" data-ref="tab-limits" data-tab="limits">
+                    <span class="component-menu__item-icon">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
+                    </span>
+                    <span class="component-menu__item-text">${i18n.t('room.cat_limits')}</span>
+                  </button>
+                </div>
+              </div>
+              <div class="component-sidebar__bottom">
+                <button type="button" class="component-button component-button--black" style="width: 100%; height: 38px; font-weight: 500;" data-ref="btn-confirm-save-settings">
+                  ${i18n.t('room.btn_save_settings')}
+                </button>
+                <button type="button" class="component-button component-button--outline" style="width: 100%; height: 38px; font-weight: 500;" data-ref="btn-cancel-settings">
+                  ${i18n.t('common.cancel')}
+                </button>
+              </div>
+            </div>
+
+            <div class="component-container--content" data-ref="modal-panes-container">
+              <div class="component-pane" data-ref="pane-general" data-pane="general">
+                <div class="component-header">
+                  <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_general')}</h3>
+                  <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_general_desc')}</p>
+                </div>
+                <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="component-item" data-ref="item-room-code-info">
+                    <div class="component-item__text">
+                      <p class="component-item__title">${i18n.t('room.current_code_label')}</p>
+                      <p class="component-item__desc">${i18n.t('room.cant_modify_code')}</p>
+                    </div>
+                    <div class="component-item__actions">
+                      <span class="component-dropdown-menu__code-pill" style="user-select: text;" data-ref="badge-static-code">${escapeHtml(currentCode)}</span>
+                    </div>
+                  </div>
+
+                  <hr class="component-divider" />
+
+                  <div class="component-item" data-ref="item-custom-slug-toggle">
+                    <div class="component-item__text">
+                      <p class="component-item__title">
+                        ${i18n.t('room.slug_toggle_title')}
+                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                      </p>
+                      <p class="component-item__desc">${i18n.t('room.slug_toggle_desc')}</p>
+                    </div>
+                    <div class="component-item__actions">
+                      <label class="component-switch" data-ref="switch-custom-slug-label">
+                        <input type="checkbox" data-ref="switch-custom-slug" ${currentSlug ? 'checked' : ''} ${!isPro ? 'disabled' : ''} />
+                        <span class="component-switch__slider"></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="component-item component-item--stacked ${!currentSlug ? 'is-hidden' : ''}" data-ref="item-custom-slug">
+                    <div class="component-item__text">
+                      <label class="component-item__title" for="field-settings-custom-slug">${i18n.t('room.slug_label')}</label>
+                      <p class="component-item__desc">${i18n.t('room.slug_desc')}</p>
+                    </div>
+                    <input
+                      type="text"
+                      id="field-settings-custom-slug"
+                      class="field__input--simple"
+                      style="width: 100%; height: 38px; font-size: 13.5px;"
+                      data-ref="input-custom-slug"
+                      value="${escapeHtml(currentSlug || '')}"
+                      placeholder="${!isPro ? i18n.t('room.pro_feature_notice') : i18n.t('room.slug_placeholder')}"
+                      autocomplete="off"
+                      spellcheck="false"
+                      maxlength="40"
+                      ${!isPro ? 'disabled' : ''}
+                    />
+                  </div>
+
+                  <hr class="component-divider" />
+
+                  <div class="component-item" data-ref="item-persistent-room">
+                    <div class="component-item__text">
+                      <p class="component-item__title">
+                        ${i18n.t('room.persistent_title')}
+                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                      </p>
+                      <p class="component-item__desc">${i18n.t('room.persistent_desc')}</p>
+                    </div>
+                    <div class="component-item__actions">
+                      <label class="component-switch" data-ref="switch-persistent-label">
+                        <input type="checkbox" data-ref="switch-persistent" ${isPersistentRoom ? 'checked' : ''} ${!isPro ? 'disabled' : ''} />
+                        <span class="component-switch__slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="component-pane is-hidden" data-ref="pane-security" data-pane="security">
+                <div class="component-header">
+                  <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_security')}</h3>
+                  <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_security_desc')}</p>
+                </div>
+                <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="component-item" data-ref="item-password-protect">
+                    <div class="component-item__text">
+                      <p class="component-item__title">${i18n.t('room.password_protect_title')}</p>
+                      <p class="component-item__desc">${i18n.t('room.password_protect_desc')}</p>
+                    </div>
+                    <div class="component-item__actions">
+                      <label class="component-switch" data-ref="switch-password-label">
+                        <input type="checkbox" data-ref="switch-password" ${hasPassword ? 'checked' : ''} />
+                        <span class="component-switch__slider"></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="component-item component-item--stacked ${!hasPassword ? 'is-hidden' : ''}" data-ref="item-room-password">
+                    <div class="component-item__text">
+                      <label class="component-item__title" for="field-settings-room-password">${i18n.t('room.password_label')}</label>
+                    </div>
+                    <input
+                      type="password"
+                      id="field-settings-room-password"
+                      class="field__input--simple"
+                      style="width: 100%; height: 38px; font-size: 13.5px;"
+                      data-ref="input-room-password"
+                      placeholder="${hasPassword ? i18n.t('room.password_action_keep') : i18n.t('room.password_placeholder')}"
+                      autocomplete="new-password"
+                      maxlength="50"
+                    />
+                  </div>
+
+                  <hr class="component-divider" />
+
+                  <div class="component-item component-item--stacked" data-ref="item-upload-permissions">
+                    <div class="component-item__text">
+                      <h4 class="component-item__title">${i18n.t('room.upload_perm_title')}</h4>
+                      <p class="component-item__desc">${i18n.t('room.upload_perm_desc')}</p>
+                    </div>
+                    <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-upload-perm">
+                      <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-upload-perm" aria-label="${i18n.t('room.upload_perm_title')}">
+                        <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                          <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#${selectedUploadPerm === 'owner_only' ? 'person' : (selectedUploadPerm === 'specific' ? 'key' : 'groups')}"></use></svg>
+                          <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="upload-perm-selected-text">${selectedUploadPerm === 'owner_only' ? i18n.t('room.upload_perm_owner_only') : (selectedUploadPerm === 'specific' ? i18n.t('room.upload_perm_specific') : i18n.t('room.upload_perm_all'))}</span>
+                        </div>
+                        <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-upload-perm">
+                        <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-upload-perm">
+                          <div class="component-menu__list menu-panel__list">
+                            <button type="button" class="component-menu__item menu-item ${selectedUploadPerm === 'all' ? 'is-active' : ''}" data-ref="option-perm-all" data-value="all">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_all')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedUploadPerm === 'owner_only' ? 'is-active' : ''}" data-ref="option-perm-owner" data-value="owner_only">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_owner_only')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedUploadPerm === 'specific' ? 'is-active' : ''}" data-ref="option-perm-specific" data-value="specific">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.upload_perm_specific')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="component-pane is-hidden" data-ref="pane-storage" data-pane="storage">
+                <div class="component-header">
+                  <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_storage')}</h3>
+                  <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_storage_desc')}</p>
+                </div>
+                <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="component-item" data-ref="item-cloud-storage">
+                    <div class="component-item__text">
+                      <p class="component-item__title">
+                        ${i18n.t('room.cloud_storage_title')}
+                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                      </p>
+                      <p class="component-item__desc">${i18n.t('room.cloud_storage_desc')}</p>
+                    </div>
+                    <div class="component-item__actions">
+                      <label class="component-switch" data-ref="switch-cloud-label">
+                        <input type="checkbox" data-ref="switch-cloud" ${saveToCloud ? 'checked' : ''} ${!isPro ? 'disabled' : ''} />
+                        <span class="component-switch__slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="component-banner" data-ref="banner-cloud-info" style="margin-top: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg class="component-icon" style="color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+                    <span style="font-weight: 600; font-size: 13px;">${i18n.t('room.cloud_badge')}</span>
+                  </div>
+                  <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0;">${i18n.t('room.cloud_offline_ready')}</p>
+                </div>
+              </div>
+
+              <div class="component-pane is-hidden" data-ref="pane-limits" data-pane="limits">
+                <div class="component-header">
+                  <h3 class="component-title" style="font-size: 17px; font-weight: 600; line-height: 1.3;">${i18n.t('room.cat_limits')}</h3>
+                  <p class="component-subtitle" style="font-size: 13px; color: var(--text-secondary);">${i18n.t('room.cat_limits_desc')}</p>
+                </div>
+                <div class="component-group" style="display: flex; flex-direction: column; gap: 8px;">
+                  <div class="component-item component-item--stacked" data-ref="item-expiration">
+                    <div class="component-item__text">
+                      <h4 class="component-item__title">${i18n.t('room.expiration_title')}</h4>
+                      <p class="component-item__desc">${i18n.t('room.expiration_desc')}</p>
+                    </div>
+                    <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-expiration">
+                      <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-expiration" aria-label="${i18n.t('room.expiration_title')}">
+                        <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                          <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
+                          <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="exp-selected-text">
+                            ${selectedExpiration === '1' ? i18n.t('room.expiration_1h') : (selectedExpiration === '24' ? i18n.t('room.expiration_24h') : (selectedExpiration === '168' ? i18n.t('room.expiration_7d') : (selectedExpiration === '720' ? i18n.t('room.expiration_30d') : i18n.t('room.expiration_never'))))}
+                          </span>
+                        </div>
+                        <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-expiration">
+                        <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-expiration">
+                          <div class="component-menu__list menu-panel__list">
+                            <button type="button" class="component-menu__item menu-item ${selectedExpiration === '1' ? 'is-active' : ''}" data-ref="option-exp-1" data-value="1">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_1h')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedExpiration === '24' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-24" data-value="24" ${!isPro ? 'disabled' : ''}>
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ' (PRO)' : ''}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedExpiration === '168' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-168" data-value="168" ${!isPro ? 'disabled' : ''}>
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ' (PRO)' : ''}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedExpiration === '720' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-720" data-value="720" ${!isPro ? 'disabled' : ''}>
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ' (PRO)' : ''}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${selectedExpiration === '0' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-0" data-value="0" ${!isPro ? 'disabled' : ''}>
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ' (PRO)' : ''}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr class="component-divider" />
+
+                  <div class="component-item component-item--stacked" data-ref="item-download-limit">
+                    <div class="component-item__text">
+                      <h4 class="component-item__title">${i18n.t('room.download_limit_title')}</h4>
+                      <p class="component-item__desc">${i18n.t('room.download_limit_desc')}</p>
+                    </div>
+                    <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-download-limit">
+                      <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-download-limit" aria-label="${i18n.t('room.download_limit_title')}">
+                        <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                          <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                          <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="download-limit-selected-text">
+                            ${downloadLimitMode === '1' ? i18n.t('room.download_limit_1') : (downloadLimitMode === '5' ? i18n.t('room.download_limit_5') : (downloadLimitMode === '10' ? i18n.t('room.download_limit_10') : (downloadLimitMode === 'custom' ? i18n.t('room.download_limit_custom') : i18n.t('room.download_limit_unlimited'))))}
+                          </span>
+                        </div>
+                        <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="component-menu-backdrop dropdown-backdrop" data-ref="dropdown-backdrop-download-limit">
+                        <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-limit">
+                          <div class="component-menu__list menu-panel__list">
+                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === '0' ? 'is-active' : ''}" data-ref="option-limit-0" data-value="0">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_unlimited')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === '1' ? 'is-active' : ''}" data-ref="option-limit-1" data-value="1">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_1')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === '5' ? 'is-active' : ''}" data-ref="option-limit-5" data-value="5">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_5')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === '10' ? 'is-active' : ''}" data-ref="option-limit-10" data-value="10">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_10')}</span>
+                            </button>
+                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === 'custom' ? 'is-active' : ''}" data-ref="option-limit-custom" data-value="custom">
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_custom')}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="${downloadLimitMode !== 'custom' ? 'is-hidden' : ''}" data-ref="box-custom-download-limit" style="margin-top: 8px;">
+                      <label class="is-hidden" for="field-settings-custom-downloads">${i18n.t('room.download_limit_label')}</label>
+                      <input
+                        type="number"
+                        id="field-settings-custom-downloads"
+                        min="1"
+                        max="1000"
+                        class="field__input--simple"
+                        style="width: 100%; height: 38px; font-size: 13.5px;"
+                        data-ref="input-custom-download-limit"
+                        value="${escapeHtml(initialCustomLimit)}"
+                        placeholder="${i18n.t('room.download_limit_placeholder')}"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+    });
+
+    const modalEl = modalInstance.backdrop;
+    const tabBtns = modalEl.querySelectorAll<HTMLButtonElement>('[data-tab]');
+    const panes = modalEl.querySelectorAll<HTMLElement>('[data-pane]');
+    const btnCancelEl = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-settings"]');
+    const btnConfirmEl = modalEl.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-save-settings"]');
+
+    tabBtns.forEach((tabBtn) => {
+      tabBtn.addEventListener('click', () => {
+        const targetTab = tabBtn.getAttribute('data-tab');
+        if (!targetTab) return;
+
+        tabBtns.forEach((b) => b.classList.remove('is-active'));
+        tabBtn.classList.add('is-active');
+
+        panes.forEach((pane) => {
+          if (pane.getAttribute('data-pane') === targetTab) {
+            pane.classList.remove('is-hidden');
+          } else {
+            pane.classList.add('is-hidden');
+          }
+        });
+      });
+    });
+
+    btnCancelEl?.addEventListener('click', () => {
+      modalInstance.close();
+    });
+
+    const switchCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-custom-slug"]');
+    const itemCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]');
+    const inputCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
+    const switchCloudEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-cloud"]');
+    const switchPersistentEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-persistent"]');
+    const switchPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-password"]');
+    const itemPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="item-room-password"]');
+    const inputPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-room-password"]');
+    const boxCustomDownloadLimitEl = modalEl.querySelector<HTMLElement>('[data-ref="box-custom-download-limit"]');
+    const inputCustomLimitEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-download-limit"]');
+
+    const uploadPermWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-upload-perm"]');
+    setupDropdown(uploadPermWrapper, {
+      onSelect: (val) => {
+        selectedUploadPerm = val;
+        uploadPermWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+          item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+        });
+        const triggerIcon = uploadPermWrapper?.querySelector<SVGUseElement>('.dropdown-trigger__icon use');
+        if (triggerIcon) {
+          triggerIcon.setAttribute('href', `/icons.svg#${val === 'owner_only' ? 'person' : (val === 'specific' ? 'key' : 'groups')}`);
+        }
+      },
+    });
+
+    const expirationWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-expiration"]');
+    setupDropdown(expirationWrapper, {
+      onSelect: (val) => {
+        selectedExpiration = val;
+        expirationWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+          item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+        });
+      },
+    });
+
+    const downloadLimitWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-limit"]');
+    setupDropdown(downloadLimitWrapper, {
+      onSelect: (val) => {
+        downloadLimitMode = val;
+        downloadLimitWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
+          item.classList.toggle('is-active', item.getAttribute('data-value') === val);
+        });
+        if (val === 'custom') {
+          boxCustomDownloadLimitEl?.classList.remove('is-hidden');
+          inputCustomLimitEl?.focus();
+        } else {
+          boxCustomDownloadLimitEl?.classList.add('is-hidden');
+          if (inputCustomLimitEl) inputCustomLimitEl.value = '';
+        }
+      },
+    });
+
+    if (!isPro) {
+      modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug-toggle"]')?.addEventListener('click', () => {
+        toast.info(i18n.t('room.pro_feature_notice'));
+      });
+      modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]')?.addEventListener('click', () => {
+        toast.info(i18n.t('room.pro_feature_notice'));
+      });
+      modalEl.querySelector<HTMLElement>('[data-ref="item-persistent-room"]')?.addEventListener('click', (e: MouseEvent) => {
+        e.preventDefault();
+        toast.info(i18n.t('room.pro_feature_notice'));
+      });
+      modalEl.querySelector<HTMLElement>('[data-ref="item-cloud-storage"]')?.addEventListener('click', (e: MouseEvent) => {
+        e.preventDefault();
+        toast.info(i18n.t('room.pro_feature_notice'));
+      });
+    } else {
+      modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug-toggle"]')?.addEventListener('click', (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+        if (switchCustomSlugEl && !switchCustomSlugEl.disabled) {
+          switchCustomSlugEl.checked = !switchCustomSlugEl.checked;
+          switchCustomSlugEl.dispatchEvent(new Event('change'));
+        }
+      });
+      modalEl.querySelector<HTMLElement>('[data-ref="item-persistent-room"]')?.addEventListener('click', (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+        if (switchPersistentEl && !switchPersistentEl.disabled) {
+          switchPersistentEl.checked = !switchPersistentEl.checked;
+          switchPersistentEl.dispatchEvent(new Event('change'));
+        }
+      });
+      modalEl.querySelector<HTMLElement>('[data-ref="item-cloud-storage"]')?.addEventListener('click', (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+        if (switchCloudEl) {
+          switchCloudEl.checked = !switchCloudEl.checked;
+          switchCloudEl.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    switchCustomSlugEl?.addEventListener('change', () => {
+      if (switchCustomSlugEl.checked) {
+        itemCustomSlugEl?.classList.remove('is-hidden');
+        inputCustomSlugEl?.focus();
+      } else {
+        itemCustomSlugEl?.classList.add('is-hidden');
+      }
+    });
+
+    modalEl.querySelector<HTMLElement>('[data-ref="item-password-protect"]')?.addEventListener('click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.component-switch') || target.tagName === 'INPUT') return;
+      if (switchPasswordEl) {
+        switchPasswordEl.checked = !switchPasswordEl.checked;
+        switchPasswordEl.dispatchEvent(new Event('change'));
+      }
+    });
+
+    switchCloudEl?.addEventListener('change', () => {
+      if (switchCloudEl.checked) {
+        if (switchPersistentEl) {
+          switchPersistentEl.checked = true;
+          switchPersistentEl.disabled = true;
+        }
+      } else {
+        if (switchPersistentEl && isPro) {
+          switchPersistentEl.disabled = false;
+        }
+      }
+    });
+
+    switchPasswordEl?.addEventListener('change', () => {
+      if (switchPasswordEl.checked) {
+        itemPasswordEl?.classList.remove('is-hidden');
+        inputPasswordEl?.focus();
+      } else {
+        itemPasswordEl?.classList.add('is-hidden');
+        if (inputPasswordEl) inputPasswordEl.value = '';
+      }
+    });
+
+    btnConfirmEl?.addEventListener('click', async () => {
+      const payload: Record<string, any> = {};
+
+      if (switchCustomSlugEl) {
+        if (switchCustomSlugEl.checked) {
+          const val = inputCustomSlugEl?.value.trim().toLowerCase() || '';
+          if (!val || val.length < 3 || val.length > 40 || !/^[a-zA-Z0-9-]+$/.test(val)) {
+            toast.error(i18n.t('room.slug_invalid'));
+            tabBtns[0]?.click();
+            inputCustomSlugEl?.focus();
+            return;
+          }
+          if (val !== (currentSlug || '')) {
+            payload.custom_slug = val;
+          }
+        } else if (currentSlug) {
+          payload.clear_slug = true;
+        }
+      }
+
+      if (switchPersistentEl) {
+        payload.is_persistent = switchPersistentEl.checked;
+      }
+
+      if (switchCloudEl) {
+        payload.save_to_cloud = switchCloudEl.checked;
+      }
+
+      if (switchPasswordEl) {
+        if (switchPasswordEl.checked) {
+          const val = inputPasswordEl?.value.trim() || '';
+          if (val.length > 0) {
+            payload.password = val;
+          }
+        } else if (hasPassword) {
+          payload.clear_password = true;
+        }
+      }
+
+      if (selectedUploadPerm !== roomUploadPermission) {
+        payload.upload_permission = selectedUploadPerm;
+      }
+
+      if (selectedExpiration === '0') {
+        payload.clear_expiration = true;
+      } else if (selectedExpiration) {
+        payload.expires_in_hours = Number(selectedExpiration);
+      }
+
+      if (downloadLimitMode === '0') {
+        payload.clear_max_downloads = true;
+      } else if (downloadLimitMode === 'custom') {
+        const val = Number(inputCustomLimitEl?.value.trim());
+        if (!val || val <= 0) {
+          toast.error(i18n.t('common.error'));
+          tabBtns[3]?.click();
+          inputCustomLimitEl?.focus();
+          return;
+        }
+        payload.max_downloads = val;
+      } else if (downloadLimitMode) {
+        payload.max_downloads = Number(downloadLimitMode);
+      }
+
+      setButtonLoading(btnConfirmEl, true);
+
+      try {
+        const res = await patchApi<{ error?: string; ok: boolean; room?: any }>(
+          `/api/rooms/${encodeURIComponent(resolvedRoomId)}`,
+          payload
+        );
+
+        if (res && res.ok && res.room) {
+          if (res.room.slug !== undefined) {
+            currentSlug = res.room.slug || null;
+          }
+          if (res.room.is_persistent !== undefined) {
+            isPersistentRoom = Boolean(res.room.is_persistent);
+          }
+          if (res.room.requires_password !== undefined) {
+            hasPassword = Boolean(res.room.requires_password);
+          }
+          if (res.room.save_to_cloud !== undefined) {
+            saveToCloud = Boolean(res.room.save_to_cloud);
+          }
+          if (res.room.upload_permission) {
+            roomUploadPermission = res.room.upload_permission;
+          }
+          if (res.room.expires_at !== undefined) {
+            roomExpiresAt = res.room.expires_at;
+          }
+          if (res.room.max_downloads !== undefined) {
+            roomMaxDownloads = res.room.max_downloads;
+          }
+          if (shareCodeDisplayEl) {
+            shareCodeDisplayEl.textContent = currentSlug ? `/r/${currentSlug}` : currentCode;
+          }
+          updateUploadUiState();
+          toast.success(i18n.t('room.settings_saved'));
+          modalInstance.close();
+        } else {
+          setButtonLoading(btnConfirmEl, false);
+          toast.error(res?.error || i18n.t('common.error'));
+        }
+      } catch (err: any) {
+        setButtonLoading(btnConfirmEl, false);
+        toast.error(err?.message || i18n.t('common.error'));
+      }
+    });
+  };
+
+  btnRoomSettings?.addEventListener('click', openRoomSettingsModal);
+
+  const renderTableRows = (): void => {
+    checkDropzoneVisibility();
+    if (!filesTbody) return;
+    filesTbody.innerHTML = '';
+
+    if (currentFolderId) {
+      const folder = activeFolders.get(currentFolderId);
+      if (!folder) {
+        currentFolderId = null;
+        renderTableRows();
+        return;
+      }
+
+      folderHeaderBar?.classList.remove('is-hidden');
+      let totalBytes = 0;
+      let hasAnyDownload = false;
+      folder.files.forEach((f) => {
+        totalBytes += f.size;
+        if (f.downloadUrl) hasAnyDownload = true;
+      });
+
+      if (folderHeaderTitle) {
+        folderHeaderTitle.textContent = folder.name;
+      }
+      if (folderHeaderDesc) {
+        folderHeaderDesc.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
+      }
+
+      if (btnFolderDownloadAll) {
+        btnFolderDownloadAll.style.display = hasAnyDownload ? 'inline-flex' : 'none';
+      }
+
+      folder.files.forEach((f) => {
+        const row = document.createElement('tr');
+        row.className = 'component-table__row';
+        row.setAttribute('data-ref', `file-row-${f.fileId}`);
+
+        const statusBadge = f.progress >= 100
+          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
+          : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${f.progress}%</span>`;
+
+        const actionHtml = f.downloadUrl
+          ? `<a href="${f.downloadUrl}" download="${escapeHtml(f.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${f.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg></a>`
+          : '';
+
+        row.innerHTML = `
+          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${f.fileId}">
+            <div class="component-table__cell-content">
+              <div class="component-table__icon-box">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(f.name)}"></use></svg>
+              </div>
+              <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(f.relativePath || f.name)}">${escapeHtml(f.name)}</span>
+            </div>
+          </td>
+          <td class="component-table__cell" data-ref="cell-size-${f.fileId}">
+            <span class="component-badge component-badge--sm">${formatBytes(f.size)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-sender-${f.fileId}">
+            <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-status-${f.fileId}">
+            ${statusBadge}
+          </td>
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${f.fileId}" style="text-align: right;">
+            <div data-ref="actions-box-${f.fileId}">
+              ${actionHtml}
+            </div>
+          </td>
+        `;
+
+        renderIcons(row);
+        filesTbody.appendChild(row);
+      });
+    } else {
+      folderHeaderBar?.classList.add('is-hidden');
+
+      activeFolders.forEach((folder) => {
+        let folderBytes = 0;
+        let allComplete = folder.files.size > 0;
+        let transferredBytes = 0;
+        folder.files.forEach((f) => {
+          folderBytes += f.size;
+          transferredBytes += Math.round((f.progress / 100) * f.size);
+          if (f.progress < 100) allComplete = false;
+        });
+
+        const overallProgress = folderBytes > 0
+          ? Math.min(100, Math.round((transferredBytes / folderBytes) * 100))
+          : 100;
+
+        const folderRow = document.createElement('tr');
+        folderRow.className = 'component-table__row component-cursor-pointer';
+        folderRow.setAttribute('data-ref', `folder-row-${folder.id}`);
+
+        const statusBadge = allComplete
+          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="folder-badge-${folder.id}">${i18n.t('room.status_ready')}</span>`
+          : `<span class="component-badge component-badge--sm" data-ref="folder-badge-${folder.id}">${overallProgress}%</span>`;
+
+        folderRow.innerHTML = `
+          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${folder.id}">
+            <div class="component-table__cell-content">
+              <div class="component-table__icon-box">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</span>
+                <span class="component-badge component-badge--sm">${i18n.t('room.folder')}</span>
+              </div>
+            </div>
+          </td>
+          <td class="component-table__cell" data-ref="cell-size-${folder.id}">
+            <span class="component-badge component-badge--sm" data-ref="folder-size-${folder.id}">${formatBytes(folderBytes)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-sender-${folder.id}">
+            <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-status-${folder.id}">
+            <span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="folder-count-${folder.id}">${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })}</span>
+            ${statusBadge}
+          </td>
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${folder.id}" style="text-align: right;">
+            <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-enter-${folder.id}" data-tooltip="${i18n.t('room.click_to_view_files')}" aria-label="${i18n.t('room.click_to_view_files')}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </td>
+        `;
+
+        folderRow.addEventListener('click', () => {
+          currentFolderId = folder.id;
+          renderTableRows();
+        });
+
+        renderIcons(folderRow);
+        filesTbody.appendChild(folderRow);
+      });
+
+      standaloneFiles.forEach((file) => {
+        const fileRow = document.createElement('tr');
+        fileRow.className = 'component-table__row';
+        fileRow.setAttribute('data-ref', `file-row-${file.fileId}`);
+
+        const statusBadge = file.progress >= 100
+          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${file.fileId}">${i18n.t('room.status_ready')}</span>`
+          : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${file.fileId}">${file.progress}%</span>`;
+
+        const downloadCountHtml = (file.maxDownloads !== undefined && file.maxDownloads !== null)
+          ? `<span class="component-badge component-badge--sm" data-ref="downloads-count-${file.fileId}">${file.downloadCount || 0}/${file.maxDownloads}</span>`
+          : '';
+
+        let actionHtml = '';
+        if (file.isLimitReached) {
+          actionHtml = `<span class="component-badge component-badge--destructive" data-ref="badge-limit-${file.fileId}">${i18n.t('room.download_limit_reached')}</span>`;
+        } else if (file.downloadUrl) {
+          actionHtml = `<a href="${file.downloadUrl}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${file.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg></a>`;
+        }
+
+        fileRow.innerHTML = `
+          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${file.fileId}">
+            <div class="component-table__cell-content">
+              <div class="component-table__icon-box">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(file.name)}"></use></svg>
+              </div>
+              <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+            </div>
+          </td>
+          <td class="component-table__cell" data-ref="cell-size-${file.fileId}">
+            <span class="component-badge component-badge--sm">${formatBytes(file.size)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-sender-${file.fileId}">
+            <span class="component-badge component-badge--sm">${escapeHtml(file.senderUsername)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-status-${file.fileId}">
+            ${statusBadge}
+            ${downloadCountHtml}
+          </td>
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${file.fileId}" style="text-align: right;">
+            <div data-ref="actions-box-${file.fileId}">
+              ${actionHtml}
+            </div>
+          </td>
+        `;
+
+        renderIcons(fileRow);
+        filesTbody.appendChild(fileRow);
+      });
+    }
   };
 
   const renderCloudFileCard = (file: {
@@ -605,75 +1554,52 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     sender_username?: string;
     size: number;
   }) => {
-    let cardEl = activeTransfersDom.get(file.file_id);
-    if (!cardEl && filesCardsGridEl) {
-      cardEl = document.createElement('div');
-      cardEl.className = 'component-card component-card--file';
-      cardEl.setAttribute('data-ref', `file-card-${file.file_id}`);
+    const senderName = file.sender_username || myUsername;
+    const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
+                          (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
+                          '';
+    const fileDlUrl = savedPassword && !file.download_url.includes('password=')
+      ? `${file.download_url}?password=${encodeURIComponent(savedPassword)}`
+      : file.download_url;
 
-      const senderName = file.sender_username || myUsername;
-      const downloadText = (file.max_downloads !== undefined && file.max_downloads !== null)
-        ? ` • ${file.download_count || 0}/${file.max_downloads}`
-        : '';
-      const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
-                            (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
-                            '';
-      const fileDlUrl = savedPassword && !file.download_url.includes('password=')
-        ? `${file.download_url}?password=${encodeURIComponent(savedPassword)}`
-        : file.download_url;
-
-      cardEl.innerHTML = `
-        <div class="component-card__icon-box">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(file.name)}"></use></svg>
-        </div>
-        <div class="component-card__content">
-          <h3 class="component-card__title" data-ref="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</h3>
-          <div class="component-card__meta">
-            <span class="component-card__desc" data-ref="file-size">${formatBytes(file.size)}</span>
-            <span class="component-card__dot">•</span>
-            <span class="component-card__desc" data-ref="file-sender">${escapeHtml(senderName)}</span>
-            <span class="component-card__desc" data-ref="file-downloads">${escapeHtml(downloadText)}</span>
-          </div>
-        </div>
-        <div class="component-card__actions" data-ref="file-actions">
-          ${file.is_limit_reached ? `
-            <span class="component-badge component-badge--destructive" data-ref="badge-limit-reached">
-              ${i18n.t('room.download_limit_reached')}
-            </span>
-          ` : `
-            <a href="${fileDlUrl}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </a>
-          `}
-        </div>
-      `;
-
-      renderIcons(cardEl);
-      filesCardsGridEl.appendChild(cardEl);
-      activeTransfersDom.set(file.file_id, cardEl);
-      checkDropzoneVisibility();
-    } else if (cardEl) {
-      const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-actions"]');
-      const downloadsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-downloads"]');
-      if (downloadsEl && file.max_downloads !== undefined && file.max_downloads !== null) {
-        downloadsEl.textContent = ` • ${file.download_count || 0}/${file.max_downloads}`;
+    if (file.folder_id && file.folder_name) {
+      let folder = activeFolders.get(file.folder_id);
+      if (!folder) {
+        folder = {
+          files: new Map(),
+          id: file.folder_id,
+          name: file.folder_name,
+          senderAvatar: file.sender_avatar || undefined,
+          senderUsername: senderName,
+        };
+        activeFolders.set(file.folder_id, folder);
       }
-      if (actionsEl) {
-        if (file.is_limit_reached) {
-          actionsEl.innerHTML = `
-            <span class="component-badge component-badge--destructive" data-ref="badge-limit-reached">
-              ${i18n.t('room.download_limit_reached')}
-            </span>
-          `;
-        } else if (!actionsEl.querySelector('[data-ref="btn-download"]')) {
-          actionsEl.innerHTML = `
-            <a href="${file.download_url}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </a>
-          `;
-          renderIcons(actionsEl);
-        }
-      }
+      folder.files.set(file.file_id, {
+        downloadUrl: fileDlUrl,
+        fileId: file.file_id,
+        mimeType: file.mime_type,
+        name: file.name,
+        progress: 100,
+        relativePath: file.relative_path || file.name,
+        size: file.size,
+      });
+      updateFolderProgress(file.folder_id);
+    } else {
+      standaloneFiles.set(file.file_id, {
+        downloadCount: file.download_count,
+        downloadUrl: fileDlUrl,
+        fileId: file.file_id,
+        isLimitReached: file.is_limit_reached,
+        maxDownloads: file.max_downloads,
+        mimeType: file.mime_type,
+        name: file.name,
+        progress: 100,
+        senderAvatar: file.sender_avatar || undefined,
+        senderUsername: senderName,
+        size: file.size,
+        status: 'complete',
+      });
+      renderTableRows();
     }
   };
 
@@ -721,41 +1647,49 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     senderUsername: string,
     downloadUrl?: string
   ) => {
-    const cardEl = getOrCreateFileCardEl(fileId, name, size, senderUsername);
-    if (!cardEl) return;
-
-    const spinnerVal = cardEl.querySelector<SVGCircleElement>('.component-ring-spinner__val');
-    const spinnerText = cardEl.querySelector<HTMLElement>('[data-ref="file-spinner-text"]');
-    const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-actions"]');
-
-    if (spinnerVal) {
-      const offset = (75.4 - (75.4 * Math.min(100, Math.max(0, progress))) / 100).toFixed(1);
-      spinnerVal.style.strokeDashoffset = offset;
+    const existingFile = standaloneFiles.get(fileId);
+    if (!existingFile) {
+      if (name && size !== undefined) {
+        const newFile: StandaloneFileItem = {
+          downloadUrl,
+          fileId,
+          name,
+          progress,
+          senderUsername: senderUsername || myUsername,
+          size,
+          status: progress >= 100 ? 'complete' : 'uploading',
+        };
+        standaloneFiles.set(fileId, newFile);
+        renderTableRows();
+      }
+      return;
     }
 
-    if (spinnerText) {
-      spinnerText.textContent = `${progress}%`;
+    existingFile.progress = progress;
+    if (downloadUrl) {
+      existingFile.downloadUrl = downloadUrl;
+      existingFile.status = 'complete';
     }
 
-    if (progress >= 100 && actionsEl) {
-      if (downloadUrl) {
-        if (!actionsEl.querySelector('[data-ref="btn-download"]')) {
-          actionsEl.innerHTML = `
-            <a href="${downloadUrl}" download="${escapeHtml(name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </a>
-          `;
-          renderIcons(actionsEl);
-        }
+    const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
+    if (badge) {
+      if (progress >= 100) {
+        badge.className = 'component-badge component-badge--sm component-badge--success';
+        badge.textContent = i18n.t('room.status_ready');
       } else {
-        if (!actionsEl.querySelector('[data-ref="icon-file-done"]')) {
-          actionsEl.innerHTML = `
-            <span class="component-badge component-badge--success" data-ref="icon-file-done">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-            </span>
-          `;
-          renderIcons(actionsEl);
-        }
+        badge.textContent = `${progress}%`;
+      }
+    }
+
+    if (downloadUrl) {
+      const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${fileId}"]`);
+      if (actionsBox && !actionsBox.querySelector('a')) {
+        actionsBox.innerHTML = `
+          <a href="${downloadUrl}" download="${escapeHtml(existingFile.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+          </a>
+        `;
+        renderIcons(actionsBox);
       }
     }
   };
@@ -777,179 +1711,79 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     });
   };
 
-  const showFolderModal = (folderId: string) => {
-    const folder = activeFolders.get(folderId);
-    if (!folder) return;
-
-    let totalBytes = 0;
-    folder.files.forEach((f) => {
-      totalBytes += f.size;
-    });
-
-    const listEl = document.createElement('div');
-    listEl.className = 'component-group';
-    listEl.style.maxHeight = '360px';
-    listEl.style.overflowY = 'auto';
-    listEl.setAttribute('data-ref', 'folder-modal-list');
-
-    const filesArr = Array.from(folder.files.values());
-    listEl.innerHTML = filesArr.map((f) => `
-      <div class="component-item" data-ref="folder-modal-item-${f.fileId}">
-        <div class="component-item__icon-box">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(f.name)}"></use></svg>
-        </div>
-        <div class="component-item__text">
-          <p class="component-item__title" title="${escapeHtml(f.relativePath || f.name)}">${escapeHtml(f.name)}</p>
-          <p class="component-item__desc">${formatBytes(f.size)}</p>
-        </div>
-        <div class="component-item__actions">
-          ${f.downloadUrl ? `
-            <a href="${f.downloadUrl}" download="${escapeHtml(f.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-modal-file-download" data-tooltip="${i18n.t('room.download_file')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_file')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </a>
-          ` : `
-            <span class="component-badge">${f.progress}%</span>
-          `}
-        </div>
-      </div>
-    `).join('');
-
-    renderIcons(listEl);
-
-    const hasAnyDownloads = filesArr.some((f) => !!f.downloadUrl);
-
-    openModal({
-      bodyHtml: listEl,
-      cancelText: i18n.t('common.close'),
-      confirmText: i18n.t('room.download_all'),
-      description: `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)}`,
-      onConfirm: () => {
-        downloadAllFolderFiles(folder);
-      },
-      showCancel: true,
-      showConfirm: hasAnyDownloads,
-      size: 'md',
-      title: folder.name,
-    });
-  };
-
-  const getOrCreateFolderCardEl = (folder: FolderState): HTMLElement => {
-    let cardEl = folder.cardEl;
-    if (!cardEl && filesCardsGridEl) {
-      cardEl = document.createElement('div');
-      cardEl.className = 'component-card component-card--file component-card--folder';
-      cardEl.setAttribute('data-ref', `folder-card-${folder.id}`);
-
-      cardEl.innerHTML = `
-        <div class="component-card__icon-box">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-        </div>
-        <div class="component-card__content">
-          <h3 class="component-card__title" data-ref="folder-name" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</h3>
-          <div class="component-card__meta">
-            <span class="component-card__desc" data-ref="folder-files-count">0 ${i18n.t('room.files_count', { count: 0 })}</span>
-            <span class="component-card__dot">•</span>
-            <span class="component-card__desc" data-ref="folder-size">0 B</span>
-            <span class="component-card__dot">•</span>
-            <span class="component-card__desc" data-ref="folder-sender">${escapeHtml(folder.senderUsername)}</span>
-          </div>
-        </div>
-        <div class="component-card__actions" data-ref="folder-actions">
-          <div class="component-ring-spinner" data-ref="folder-spinner">
-            <svg viewBox="0 0 32 32">
-              <circle class="component-ring-spinner__bg" cx="16" cy="16" r="12"></circle>
-              <circle class="component-ring-spinner__val" cx="16" cy="16" r="12" style="stroke-dashoffset: 75.4;"></circle>
-            </svg>
-            <span class="component-ring-spinner__text" data-ref="folder-spinner-text">0%</span>
-          </div>
-        </div>
-      `;
-
-      cardEl.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('[data-ref="btn-folder-download"]')) {
-          downloadAllFolderFiles(folder);
-          return;
-        }
-        showFolderModal(folder.id);
-      });
-
-      renderIcons(cardEl);
-      filesCardsGridEl.appendChild(cardEl);
-      folder.cardEl = cardEl;
-      checkDropzoneVisibility();
-    }
-    return cardEl!;
-  };
-
   const updateFolderProgress = (folderId: string) => {
     const folder = activeFolders.get(folderId);
     if (!folder) return;
 
-    const cardEl = getOrCreateFolderCardEl(folder);
-    if (!cardEl) return;
-
-    let totalBytes = 0;
-    let transferredBytes = 0;
-    let allComplete = folder.files.size > 0;
-    let hasAnyDownload = false;
-
-    folder.files.forEach((fileItem) => {
-      totalBytes += fileItem.size;
-      transferredBytes += Math.round((fileItem.progress / 100) * fileItem.size);
-      if (fileItem.progress < 100) {
-        allComplete = false;
-      }
-      if (fileItem.downloadUrl) {
-        hasAnyDownload = true;
-      }
-    });
-
-    const overallProgress = totalBytes > 0
-      ? Math.min(100, Math.round((transferredBytes / totalBytes) * 100))
-      : 0;
-
-    const countEl = cardEl.querySelector<HTMLElement>('[data-ref="folder-files-count"]');
-    const sizeEl = cardEl.querySelector<HTMLElement>('[data-ref="folder-size"]');
-    const spinnerVal = cardEl.querySelector<SVGCircleElement>('.component-ring-spinner__val');
-    const spinnerText = cardEl.querySelector<HTMLElement>('[data-ref="folder-spinner-text"]');
-    const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="folder-actions"]');
-
-    if (countEl) {
-      countEl.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })}`;
-    }
-
-    if (sizeEl) {
-      sizeEl.textContent = formatBytes(totalBytes);
-    }
-
-    if (spinnerVal) {
-      const offset = (75.4 - (75.4 * overallProgress) / 100).toFixed(1);
-      spinnerVal.style.strokeDashoffset = offset;
-    }
-
-    if (spinnerText) {
-      spinnerText.textContent = `${overallProgress}%`;
-    }
-
-    if (allComplete && actionsEl) {
-      if (hasAnyDownload) {
-        if (!actionsEl.querySelector('[data-ref="btn-folder-download"]')) {
-          actionsEl.innerHTML = `
-            <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-folder-download" data-tooltip="${i18n.t('room.download_all')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_all')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </button>
-          `;
-          renderIcons(actionsEl);
+    if (currentFolderId === folderId) {
+      folder.files.forEach((f) => {
+        const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${f.fileId}"]`);
+        if (badge) {
+          if (f.progress >= 100) {
+            badge.className = 'component-badge component-badge--sm component-badge--success';
+            badge.textContent = i18n.t('room.status_ready');
+          } else {
+            badge.textContent = `${f.progress}%`;
+          }
         }
-      } else {
-        if (!actionsEl.querySelector('[data-ref="icon-folder-done"]')) {
-          actionsEl.innerHTML = `
-            <span class="component-badge component-badge--success" data-ref="icon-folder-done">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-            </span>
-          `;
-          renderIcons(actionsEl);
+
+        if (f.downloadUrl) {
+          const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${f.fileId}"]`);
+          if (actionsBox && !actionsBox.querySelector('a')) {
+            actionsBox.innerHTML = `
+              <a href="${f.downloadUrl}" download="${escapeHtml(f.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${f.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              </a>
+            `;
+            renderIcons(actionsBox);
+          }
+        }
+      });
+
+      let totalBytes = 0;
+      let hasAnyDownload = false;
+      folder.files.forEach((f) => {
+        totalBytes += f.size;
+        if (f.downloadUrl) hasAnyDownload = true;
+      });
+      if (folderHeaderDesc) {
+        folderHeaderDesc.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
+      }
+      if (btnFolderDownloadAll) {
+        btnFolderDownloadAll.style.display = hasAnyDownload ? 'inline-flex' : 'none';
+      }
+    } else if (!currentFolderId) {
+      const row = filesTbody?.querySelector<HTMLElement>(`[data-ref="folder-row-${folderId}"]`);
+      if (!row) {
+        renderTableRows();
+        return;
+      }
+
+      let folderBytes = 0;
+      let transferredBytes = 0;
+      let allComplete = folder.files.size > 0;
+      folder.files.forEach((f) => {
+        folderBytes += f.size;
+        transferredBytes += Math.round((f.progress / 100) * f.size);
+        if (f.progress < 100) allComplete = false;
+      });
+
+      const overallProgress = folderBytes > 0
+        ? Math.min(100, Math.round((transferredBytes / folderBytes) * 100))
+        : 100;
+
+      const countEl = row.querySelector<HTMLElement>(`[data-ref="folder-count-${folderId}"]`);
+      const sizeEl = row.querySelector<HTMLElement>(`[data-ref="folder-size-${folderId}"]`);
+      const badgeEl = row.querySelector<HTMLElement>(`[data-ref="folder-badge-${folderId}"]`);
+
+      if (countEl) countEl.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })}`;
+      if (sizeEl) sizeEl.textContent = formatBytes(folderBytes);
+      if (badgeEl) {
+        if (allComplete) {
+          badgeEl.className = 'component-badge component-badge--sm component-badge--success';
+          badgeEl.textContent = i18n.t('room.status_ready');
+        } else {
+          badgeEl.textContent = `${overallProgress}%`;
         }
       }
     }
@@ -1367,29 +2201,25 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           renderCloudFileCard(json.file);
           toast.success(i18n.t('room.cloud_saved_success'));
         } else {
-          const cardEl = activeTransfersDom.get(fileId);
-          if (cardEl) {
-            const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-actions"]');
-            if (actionsEl) {
-              actionsEl.innerHTML = `
-                <span class="component-badge component-badge--destructive" data-ref="badge-upload-error">
-                  ${i18n.t('room.transfer_cancelled')}
-                </span>
-              `;
+          const fileItem = standaloneFiles.get(fileId);
+          if (fileItem) {
+            fileItem.status = 'error';
+            const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
+            if (badge) {
+              badge.className = 'component-badge component-badge--sm component-badge--destructive';
+              badge.textContent = i18n.t('room.status_error');
             }
           }
           toast.error(json?.error || i18n.t('common.error'));
         }
       } catch {
-        const cardEl = activeTransfersDom.get(fileId);
-        if (cardEl) {
-          const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-actions"]');
-          if (actionsEl) {
-            actionsEl.innerHTML = `
-              <span class="component-badge component-badge--destructive" data-ref="badge-upload-error">
-                ${i18n.t('room.transfer_cancelled')}
-              </span>
-            `;
+        const fileItem = standaloneFiles.get(fileId);
+        if (fileItem) {
+          fileItem.status = 'error';
+          const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
+          if (badge) {
+            badge.className = 'component-badge component-badge--sm component-badge--destructive';
+            badge.textContent = i18n.t('room.status_error');
           }
         }
         toast.error(i18n.t('common.error'));
@@ -1435,7 +2265,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   });
 
   btnSelectFolder?.addEventListener('click', () => {
-    inputFolder?.click();
+    void selectFolderWithPicker();
   });
 
   inputFiles?.addEventListener('change', () => {
@@ -1447,7 +2277,10 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
   inputFolder?.addEventListener('change', () => {
     if (inputFolder.files && inputFolder.files.length > 0) {
-      void handleFilesSelected(inputFolder.files);
+      const files = Array.from(inputFolder.files);
+      const relPath = (files[0] as any).webkitRelativePath || '';
+      const folderName = relPath.split('/')[0] || i18n.t('room.folder');
+      promptConfirmFolderUpload(folderName, files);
       inputFolder.value = '';
     }
   });
@@ -1468,7 +2301,13 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     if (e.dataTransfer) {
       const files = await extractFilesFromDataTransfer(e.dataTransfer);
       if (files.length > 0) {
-        void handleFilesSelected(files);
+        const hasFolder = files.some((f) => (f as any).webkitRelativePath?.includes('/'));
+        if (hasFolder) {
+          const folderName = ((files[0] as any).webkitRelativePath || '').split('/')[0] || i18n.t('room.folder');
+          promptConfirmFolderUpload(folderName, files);
+        } else {
+          void handleFilesSelected(files);
+        }
       }
     }
   });
@@ -1482,7 +2321,13 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     if (e.dataTransfer) {
       const files = await extractFilesFromDataTransfer(e.dataTransfer);
       if (files.length > 0) {
-        void handleFilesSelected(files);
+        const hasFolder = files.some((f) => (f as any).webkitRelativePath?.includes('/'));
+        if (hasFolder) {
+          const folderName = ((files[0] as any).webkitRelativePath || '').split('/')[0] || i18n.t('room.folder');
+          promptConfirmFolderUpload(folderName, files);
+        } else {
+          void handleFilesSelected(files);
+        }
       }
     }
   });
@@ -1631,6 +2476,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       }
     });
     activeDownloads.clear();
+    standaloneFiles.clear();
+    currentFolderId = null;
 
     activeFolders.forEach((folder) => {
       folder.files.forEach((fileItem) => {
@@ -1789,19 +2636,26 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         } else if (data.type === 'cloud_file_added' && (data as any).file) {
           renderCloudFileCard((data as any).file);
         } else if (data.type === 'file_downloaded' && data.file_id) {
-          const cardEl = activeTransfersDom.get(data.file_id);
-          if (cardEl) {
-            const downloadsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-downloads"]');
-            const actionsEl = cardEl.querySelector<HTMLElement>('[data-ref="file-actions"]');
-            if (downloadsEl && (data as any).max_downloads !== null && (data as any).max_downloads !== undefined) {
-              downloadsEl.textContent = ` • ${(data as any).download_count}/${(data as any).max_downloads}`;
+          const file = standaloneFiles.get(data.file_id);
+          if (file) {
+            file.downloadCount = (data as any).download_count;
+            file.maxDownloads = (data as any).max_downloads;
+            if ((data as any).is_limit_reached) {
+              file.isLimitReached = true;
             }
-            if ((data as any).is_limit_reached && actionsEl) {
-              actionsEl.innerHTML = `
-                <span class="component-badge component-badge--destructive" data-ref="badge-limit-reached">
-                  ${i18n.t('room.download_limit_reached')}
-                </span>
-              `;
+            const countBadge = filesTbody?.querySelector<HTMLElement>(`[data-ref="downloads-count-${data.file_id}"]`);
+            if (countBadge && (data as any).max_downloads !== null && (data as any).max_downloads !== undefined) {
+              countBadge.textContent = `${(data as any).download_count}/${(data as any).max_downloads}`;
+            }
+            if ((data as any).is_limit_reached) {
+              const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${data.file_id}"]`);
+              if (actionsBox) {
+                actionsBox.innerHTML = `
+                  <span class="component-badge component-badge--destructive" data-ref="badge-limit-${data.file_id}">
+                    ${i18n.t('room.download_limit_reached')}
+                  </span>
+                `;
+              }
             }
           }
         } else if (data.type === 'room_closed') {

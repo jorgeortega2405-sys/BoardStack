@@ -52,8 +52,9 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
   } catch {}
 
   const isEnterprise = billingInfo.tier === 'enterprise' && (billingInfo.hasSubscription || billingInfo.status === 'active');
+  const isBusiness = billingInfo.tier === 'business' && (billingInfo.hasSubscription || billingInfo.status === 'active');
   const isPro = billingInfo.tier === 'pro' && (billingInfo.hasSubscription || billingInfo.status === 'active');
-  const hasPaidPlan = isEnterprise || isPro;
+  const hasPaidPlan = isEnterprise || isBusiness || isPro;
 
   const isOneTime = Boolean(
     billingInfo.is_one_time ||
@@ -84,20 +85,24 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
   const usedBytes = Number(billingInfo.storage_used_bytes ?? currentUser?.storage_used_bytes ?? 0);
   const totalLimitBytes = billingInfo.storage_limit_bytes
     ? Number(billingInfo.storage_limit_bytes)
-    : (isEnterprise ? 10 * 1024 * 1024 * 1024 * 1024 : (isPro ? 100 * 1024 * 1024 * 1024 : 0));
+    : (isEnterprise ? 10 * 1024 * 1024 * 1024 * 1024 : (isBusiness ? 1024 * 1024 * 1024 * 1024 : (isPro ? 100 * 1024 * 1024 * 1024 : 0)));
 
   const formattedUsed = formatBytes(usedBytes);
-  const formattedLimit = isEnterprise ? '10 TB' : (isPro ? '100 GB' : '0 GB');
+  const formattedLimit = isEnterprise ? 'Custom' : (isBusiness ? '1 TB' : (isPro ? '100 GB' : '0 GB'));
   const usagePercent = totalLimitBytes > 0 ? Math.min(100, Math.round((usedBytes / totalLimitBytes) * 100)) : 0;
   const storageText = hasPaidPlan ? `${formattedUsed} / ${formattedLimit}` : i18n.t('settings.billing.storage_badge_free');
   const storageDesc = isEnterprise
     ? i18n.t('settings.billing.storage_usage_desc_enterprise', { limit: formattedLimit, percent: usagePercent, used: formattedUsed })
+    : isBusiness
+    ? i18n.t('settings.billing.storage_usage_desc_business', { limit: formattedLimit, percent: usagePercent, used: formattedUsed })
     : isPro
     ? i18n.t('settings.billing.storage_usage_desc_pro', { limit: formattedLimit, percent: usagePercent, used: formattedUsed })
     : i18n.t('settings.billing.storage_usage_desc_free');
 
   const planName = isEnterprise
     ? i18n.t('settings.billing.enterprise_plan_name', { period: periodLabel })
+    : isBusiness
+    ? i18n.t('settings.billing.business_plan_name', { period: periodLabel })
     : isPro
     ? i18n.t('settings.billing.pro_plan_name', { period: periodLabel })
     : i18n.t('settings.billing.free_plan_name');
@@ -114,8 +119,9 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
       : i18n.t('settings.billing.active')
     : i18n.t('settings.billing.basic_plan');
 
+  const defaultAmt = isEnterprise ? 99 : (isBusiness ? 39 : 9.99);
   const planDesc = hasPaidPlan
-    ? `${renewalTypeLabel} · $${Number(billingInfo.amount || (isEnterprise ? 99 : 9.99)).toFixed(2)} USD${
+    ? `${renewalTypeLabel} · $${Number(billingInfo.amount || defaultAmt).toFixed(2)} USD${
         dateFormatted ? ` · ${i18n.t('settings.billing.active')} (${dateFormatted})` : ''
       }. ${
         billingInfo.cancel_at_period_end
@@ -127,6 +133,20 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
   let actionsHtml = '';
   if (isEnterprise) {
     actionsHtml = `<button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-manage-org">${i18n.t('settings.billing.manage_organization')}</button>`;
+  } else if (isBusiness) {
+    if (isOneTime) {
+      actionsHtml = `<button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-manage-org">${i18n.t('settings.billing.manage_organization')}</button>`;
+    } else if (billingInfo.cancel_at_period_end) {
+      actionsHtml = `
+        <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-manage-org" style="margin-right: 8px;">${i18n.t('settings.billing.manage_organization')}</button>
+        <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-reactivate-sub">${i18n.t('settings.billing.reactivate_subscription')}</button>
+      `;
+    } else {
+      actionsHtml = `
+        <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-manage-org" style="margin-right: 8px;">${i18n.t('settings.billing.manage_organization')}</button>
+        <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-cancel-sub">${i18n.t('settings.billing.cancel_subscription')}</button>
+      `;
+    }
   } else if (isPro) {
     if (isOneTime) {
       actionsHtml = `<span class="component-badge component-badge--sm">${i18n.t('settings.billing.fixed_plan_badge')}</span>`;

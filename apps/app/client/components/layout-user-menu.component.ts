@@ -121,7 +121,7 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
 
       const avatarBox = document.createElement('div');
       avatarBox.className = 'component-avatar component-avatar--sm';
-      const accTier = (acc.subscription_tier === 'enterprise' || acc.subscription_tier === 'pro') ? acc.subscription_tier : 'free';
+      const accTier = (acc.subscription_tier === 'enterprise' || acc.subscription_tier === 'business' || acc.subscription_tier === 'pro') ? acc.subscription_tier : 'free';
       avatarBox.setAttribute('data-tier', accTier);
 
       const img = document.createElement('img');
@@ -206,7 +206,7 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
         activeEmail.textContent = currentUser.email || '';
       }
 
-      const tier = (currentUser.subscription_tier === 'enterprise' || currentUser.subscription_tier === 'pro') ? currentUser.subscription_tier : 'free';
+      const tier = (currentUser.subscription_tier === 'enterprise' || currentUser.subscription_tier === 'business' || currentUser.subscription_tier === 'pro') ? currentUser.subscription_tier : 'free';
       if (avatarBtn && avatarBtn.getAttribute('data-tier') !== tier) {
         avatarBtn.setAttribute('data-tier', tier);
       }
@@ -216,7 +216,7 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
       }
 
       if (btnOrganization) {
-        if (currentUser.subscription_tier === 'enterprise') {
+        if (currentUser.subscription_tier === 'enterprise' || currentUser.subscription_tier === 'business') {
           btnOrganization.classList.remove('is-hidden');
         } else {
           btnOrganization.classList.add('is-hidden');

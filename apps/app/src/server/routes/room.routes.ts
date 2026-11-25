@@ -9,6 +9,7 @@ import {
   getRoomFiles,
   incrementFileDownloadCount,
   saveRoomFileRecord,
+  updateRoomRecord,
   verifyRoomPassword,
 } from '../services/room.service.js';
 import crypto from 'crypto';
@@ -22,6 +23,7 @@ import multer from 'multer';
 import os from 'os';
 import path from 'path';
 import { pool } from '../config/database.config.js';
+import { roomResolveRateLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -76,7 +78,7 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
     upload_permission,
   } = req.body;
 
-  const isPro = user.subscription_tier === 'pro' || user.subscription_tier === 'enterprise';
+  const isPro = user.subscription_tier === 'pro' || user.subscription_tier === 'business' || user.subscription_tier === 'enterprise';
   const cleanSlug = typeof custom_slug === 'string' && custom_slug.trim() ? custom_slug.trim().toLowerCase() : null;
   if (cleanSlug && !isPro) {
     res.status(403).json({ error: 'Custom link is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
@@ -168,12 +170,16 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
 
 async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
   const { code } = req.params;
-  if (!code) {
+  if (!code || typeof code !== 'string') {
     res.status(400).json({ error: 'Room code or slug is required.', ok: false });
     return;
   }
 
   const clean = code.trim();
+  if (clean.length === 0 || clean.length > 64 || !/^[a-zA-Z0-9_\-]+$/.test(clean)) {
+    res.status(400).json({ error: 'Invalid room code or identifier format.', ok: false });
+    return;
+  }
   const roomServerUrl = `http://${config.roomServer.host}:${config.roomServer.port}/api/rooms/resolve/${encodeURIComponent(clean)}`;
   const response = await fetch(roomServerUrl);
 
@@ -638,10 +644,217 @@ async function deleteRoomHandler(req: Request, res: Response): Promise<void> {
   res.json({ ok: true });
 }
 
+async function updateRoomHandler(req: Request, res: Response): Promise<void> {
+  const user = await getValidatedCurrentUser(req, res);
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required.', ok: false });
+    return;
+  }
+
+  const { roomId } = req.params;
+  if (!roomId) {
+    res.status(400).json({ error: 'Room ID is required.', ok: false });
+    return;
+  }
+
+  const dbRoom = await findRoomByIdentifier(roomId);
+  if (!dbRoom) {
+    res.status(404).json({ error: 'Room not found.', ok: false });
+    return;
+  }
+
+  const isOwner = (dbRoom.owner_id && user.id === dbRoom.owner_id) || (user.username === dbRoom.owner_username);
+  if (!isOwner) {
+    res.status(403).json({ error: 'Only the room host can modify room settings.', ok: false });
+    return;
+  }
+
+  const isPro = user.subscription_tier === 'pro' || user.subscription_tier === 'business' || user.subscription_tier === 'enterprise';
+  const {
+    clear_expiration,
+    clear_max_downloads,
+    clear_password,
+    clear_slug,
+    custom_slug,
+    expires_in_hours,
+    is_persistent,
+    max_downloads,
+    password,
+    save_to_cloud,
+    upload_permission,
+  } = req.body;
+
+  let cleanSlug: string | null | undefined = undefined;
+  let shouldClearSlug = Boolean(clear_slug);
+
+  if (shouldClearSlug) {
+    cleanSlug = null;
+  } else if (custom_slug !== undefined) {
+    const raw = typeof custom_slug === 'string' ? custom_slug.trim().toLowerCase() : '';
+    if (raw.length > 0) {
+      if (!isPro) {
+        res.status(403).json({ error: 'Custom link is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+        return;
+      }
+      if (raw.length < 3 || raw.length > 40) {
+        res.status(400).json({ error: 'Custom link must be between 3 and 40 characters.', ok: false });
+        return;
+      }
+      if (!/^[a-zA-Z0-9-]+$/.test(raw)) {
+        res.status(400).json({ error: 'Custom link can only contain alphanumeric characters and hyphens.', ok: false });
+        return;
+      }
+      const [existing] = await pool.execute<any[]>(
+        'SELECT id FROM rooms WHERE slug = ? AND room_id != ? LIMIT 1',
+        [raw, dbRoom.room_id]
+      );
+      if (existing.length > 0) {
+        res.status(409).json({ error: 'Custom link is already in use by another room.', ok: false });
+        return;
+      }
+      cleanSlug = raw;
+    } else {
+      shouldClearSlug = true;
+      cleanSlug = null;
+    }
+  }
+
+  if (save_to_cloud !== undefined && Boolean(save_to_cloud) && !isPro) {
+    res.status(403).json({ error: 'Cloud storage is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+    return;
+  }
+
+  if (is_persistent !== undefined && Boolean(is_persistent) && !dbRoom.is_persistent && !isPro) {
+    res.status(403).json({ error: 'Persistent rooms are exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+    return;
+  }
+
+  let computedExpiresAt: Date | null | undefined = undefined;
+  let shouldClearExpiration = Boolean(clear_expiration);
+
+  if (shouldClearExpiration) {
+    if (!isPro) {
+      res.status(403).json({ error: 'Disabling room expiration is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+      return;
+    }
+    computedExpiresAt = null;
+  } else if (expires_in_hours !== undefined && expires_in_hours !== null && String(expires_in_hours).trim() !== '') {
+    const hours = Number(expires_in_hours);
+    if (hours !== 1 && !isPro) {
+      res.status(403).json({ error: 'Programmable expiration beyond 1 hour is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+      return;
+    }
+    if (hours > 0) {
+      computedExpiresAt = new Date(Date.now() + hours * 3600 * 1000);
+    } else {
+      if (!isPro) {
+        res.status(403).json({ error: 'Disabling room expiration is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
+        return;
+      }
+      computedExpiresAt = null;
+      shouldClearExpiration = true;
+    }
+  }
+
+  let uploadPerm: 'all' | 'owner_only' | 'specific' | undefined = undefined;
+  if (upload_permission !== undefined) {
+    uploadPerm = (upload_permission === 'owner_only' || upload_permission === 'specific')
+      ? upload_permission
+      : 'all';
+  }
+
+  let computedMaxDownloads: number | null | undefined = undefined;
+  let shouldClearMaxDownloads = Boolean(clear_max_downloads);
+
+  if (shouldClearMaxDownloads) {
+    computedMaxDownloads = null;
+  } else if (max_downloads !== undefined) {
+    const num = Number(max_downloads);
+    if (num > 0) {
+      computedMaxDownloads = num;
+    } else {
+      computedMaxDownloads = null;
+      shouldClearMaxDownloads = true;
+    }
+  }
+
+  let shouldClearPassword = Boolean(clear_password);
+  let newPassword: string | undefined = undefined;
+
+  if (shouldClearPassword) {
+    newPassword = '';
+  } else if (password !== undefined) {
+    const trimmed = typeof password === 'string' ? password.trim() : '';
+    if (trimmed.length > 0) {
+      newPassword = trimmed;
+    } else {
+      shouldClearPassword = true;
+      newPassword = '';
+    }
+  }
+
+  const updatedDbRoom = await updateRoomRecord(dbRoom.room_id, {
+    clear_expiration: shouldClearExpiration,
+    clear_max_downloads: shouldClearMaxDownloads,
+    clear_password: shouldClearPassword,
+    clear_slug: shouldClearSlug,
+    expires_at: computedExpiresAt,
+    is_persistent: is_persistent !== undefined ? Boolean(is_persistent) : undefined,
+    max_downloads: computedMaxDownloads,
+    password: newPassword,
+    save_to_cloud: save_to_cloud !== undefined ? Boolean(save_to_cloud) : undefined,
+    slug: cleanSlug,
+    upload_permission: uploadPerm,
+  });
+
+  try {
+    const roomServerUrl = `http://${config.roomServer.host}:${config.roomServer.port}/api/rooms/${encodeURIComponent(dbRoom.room_id)}/update`;
+    await fetch(roomServerUrl, {
+      body: JSON.stringify({
+        clear_expiration: shouldClearExpiration,
+        clear_max_downloads: shouldClearMaxDownloads,
+        clear_password: shouldClearPassword,
+        clear_slug: shouldClearSlug,
+        custom_slug: cleanSlug,
+        expires_at: computedExpiresAt ? Math.floor(computedExpiresAt.getTime() / 1000) : undefined,
+        expires_in_hours: expires_in_hours !== undefined && expires_in_hours !== null && Number(expires_in_hours) > 0 ? Number(expires_in_hours) : undefined,
+        is_persistent: is_persistent !== undefined ? Boolean(is_persistent) : undefined,
+        max_downloads: computedMaxDownloads,
+        password: newPassword && newPassword.length > 0 ? newPassword : (shouldClearPassword ? null : undefined),
+        save_to_cloud: save_to_cloud !== undefined ? Boolean(save_to_cloud) : undefined,
+        upload_permission: uploadPerm,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    });
+  } catch (err) {
+    logger.app.warn(`Failed to sync room update to room-server for ${dbRoom.room_id}:`, err);
+  }
+
+  res.json({
+    ok: true,
+    room: {
+      code: updatedDbRoom?.code || dbRoom.code,
+      expires_at: updatedDbRoom?.expires_at ? Math.floor(new Date(updatedDbRoom.expires_at).getTime() / 1000) : null,
+      is_persistent: Boolean(updatedDbRoom?.is_persistent),
+      max_downloads: updatedDbRoom?.max_downloads ?? null,
+      requires_password: Boolean(updatedDbRoom?.requires_password),
+      room_id: dbRoom.room_id,
+      save_to_cloud: Boolean(updatedDbRoom?.save_to_cloud),
+      slug: updatedDbRoom?.slug || null,
+      upload_permission: updatedDbRoom?.upload_permission || 'all',
+    },
+  });
+}
+
 router.post('/rooms/create', requireAuth, asyncHandler(createRoomHandler));
 router.get('/rooms/my-rooms', requireAuth, asyncHandler(getMyRoomsHandler));
+router.patch('/rooms/:roomId', requireAuth, asyncHandler(updateRoomHandler));
+router.post('/rooms/:roomId/update', requireAuth, asyncHandler(updateRoomHandler));
 router.delete('/rooms/:roomId', requireAuth, asyncHandler(deleteRoomHandler));
-router.get('/rooms/resolve/:code', asyncHandler(resolveRoomHandler));
+router.get('/rooms/resolve/:code', roomResolveRateLimiter, asyncHandler(resolveRoomHandler));
 router.post('/rooms/:roomId/files/upload', upload.single('file'), asyncHandler(uploadRoomFileHandler));
 router.get('/rooms/:roomId/files', asyncHandler(getRoomFilesHandler));
 router.get('/rooms/:roomId/files/:fileId/download', asyncHandler(downloadRoomFileHandler));

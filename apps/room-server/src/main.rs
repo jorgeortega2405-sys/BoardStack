@@ -77,6 +77,22 @@ struct CreateRoomRequest {
     upload_permission: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct UpdateRoomRequest {
+    custom_slug: Option<String>,
+    clear_slug: Option<bool>,
+    password: Option<String>,
+    clear_password: Option<bool>,
+    is_persistent: Option<bool>,
+    save_to_cloud: Option<bool>,
+    upload_permission: Option<String>,
+    expires_at: Option<u64>,
+    expires_in_hours: Option<u64>,
+    clear_expiration: Option<bool>,
+    max_downloads: Option<u32>,
+    clear_max_downloads: Option<bool>,
+}
+
 #[derive(Serialize)]
 struct CreateRoomResponse {
     ok: bool,
@@ -397,6 +413,199 @@ async fn resolve_room(
         save_to_cloud: room.save_to_cloud,
         upload_permission: room.upload_permission.clone(),
     }))
+}
+
+async fn update_room(
+    State(state): State<SharedState>,
+    Path(room_id): Path<String>,
+    Json(payload): Json<UpdateRoomRequest>,
+) -> impl IntoResponse {
+    let mut lock = state.lock().await;
+
+    let actual_id = lock
+        .slug_to_id
+        .get(&room_id.to_lowercase())
+        .or_else(|| lock.code_to_id.get(&room_id.to_uppercase()))
+        .cloned()
+        .unwrap_or(room_id);
+
+    if !lock.rooms.contains_key(&actual_id) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!(ErrorResponse {
+                ok: false,
+                error: "Room not found".to_string(),
+            })),
+        );
+    }
+
+    let (slug_to_remove, slug_to_insert) = if payload.clear_slug == Some(true) {
+        let old = lock.rooms.get(&actual_id).and_then(|r| r.slug.clone());
+        (old, None)
+    } else if let Some(raw_slug) = payload.custom_slug.as_ref() {
+        let clean = raw_slug.trim().to_lowercase();
+        if clean.is_empty() {
+            let old = lock.rooms.get(&actual_id).and_then(|r| r.slug.clone());
+            (old, None)
+        } else {
+            if clean.len() < 3 || clean.len() > 40 {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!(ErrorResponse {
+                        ok: false,
+                        error: "Custom slug must be between 3 and 40 characters".to_string(),
+                    })),
+                );
+            }
+            let is_valid = clean.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+            if !is_valid {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!(ErrorResponse {
+                        ok: false,
+                        error: "Custom slug can only contain alphanumeric characters and hyphens".to_string(),
+                    })),
+                );
+            }
+            if let Some(existing_owner) = lock.slug_to_id.get(&clean) {
+                if existing_owner != &actual_id {
+                    return (
+                        StatusCode::CONFLICT,
+                        Json(serde_json::json!(ErrorResponse {
+                            ok: false,
+                            error: "Custom slug is already in use".to_string(),
+                        })),
+                    );
+                }
+            }
+            if lock.code_to_id.contains_key(&clean.to_uppercase()) {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(serde_json::json!(ErrorResponse {
+                        ok: false,
+                        error: "Custom slug conflicts with a room code".to_string(),
+                    })),
+                );
+            }
+            let old = lock.rooms.get(&actual_id).and_then(|r| r.slug.clone());
+            let to_remove = if let Some(ref old_s) = old {
+                if old_s != &clean {
+                    Some(old_s.clone())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            (to_remove, Some(clean))
+        }
+    } else {
+        (None, None)
+    };
+
+    if let Some(ref old_slug) = slug_to_remove {
+        lock.slug_to_id.remove(old_slug);
+    }
+    if let Some(ref new_slug) = slug_to_insert {
+        lock.slug_to_id.insert(new_slug.clone(), actual_id.clone());
+    }
+
+    let room = lock.rooms.get_mut(&actual_id).unwrap();
+
+    if payload.clear_slug == Some(true) {
+        room.slug = None;
+    } else if payload.custom_slug.is_some() {
+        room.slug = slug_to_insert;
+    }
+
+    if payload.clear_password == Some(true) {
+        room.password = None;
+    } else if let Some(p) = payload.password {
+        let trimmed = p.trim().to_string();
+        if trimmed.is_empty() {
+            room.password = None;
+        } else {
+            room.password = Some(trimmed);
+        }
+    }
+
+    if let Some(perm) = payload.upload_permission {
+        if perm == "all" || perm == "owner_only" || perm == "specific" {
+            room.upload_permission = perm;
+        }
+    }
+
+    if let Some(cloud) = payload.save_to_cloud {
+        room.save_to_cloud = cloud;
+        if cloud {
+            room.is_persistent = true;
+        }
+    }
+
+    if let Some(persistent) = payload.is_persistent {
+        if !room.save_to_cloud {
+            room.is_persistent = persistent;
+        }
+    }
+
+    if payload.clear_expiration == Some(true) {
+        room.expires_at = None;
+    } else if let Some(ts) = payload.expires_at {
+        if ts > current_timestamp() {
+            room.expires_at = Some(ts);
+        } else {
+            room.expires_at = None;
+        }
+    } else if let Some(hours) = payload.expires_in_hours {
+        if hours > 0 {
+            room.expires_at = Some(current_timestamp() + hours * 3600);
+        } else {
+            room.expires_at = None;
+        }
+    }
+
+    if payload.clear_max_downloads == Some(true) {
+        room.max_downloads = None;
+    } else if let Some(m) = payload.max_downloads {
+        if m > 0 {
+            room.max_downloads = Some(m);
+        } else {
+            room.max_downloads = None;
+        }
+    }
+
+    let state_msg = serde_json::to_string(&WsRoomStatePayload {
+        r#type: "room_state".to_string(),
+        room_id: room.id.clone(),
+        code: room.code.clone(),
+        slug: room.slug.clone(),
+        is_persistent: room.is_persistent,
+        requires_password: room.password.is_some(),
+        owner_username: room.owner_username.clone(),
+        participants: room.participants.values().cloned().collect(),
+        expires_at: room.expires_at,
+        max_downloads: room.max_downloads,
+        save_to_cloud: room.save_to_cloud,
+        upload_permission: room.upload_permission.clone(),
+    }).unwrap_or_default();
+
+    let _ = room.tx.send(state_msg);
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "ok": true,
+            "room_id": room.id.clone(),
+            "code": room.code.clone(),
+            "slug": room.slug.clone(),
+            "is_persistent": room.is_persistent,
+            "has_password": room.password.is_some(),
+            "expires_at": room.expires_at,
+            "max_downloads": room.max_downloads,
+            "save_to_cloud": room.save_to_cloud,
+            "upload_permission": room.upload_permission.clone(),
+        })),
+    )
 }
 
 async fn broadcast_to_room(
@@ -855,6 +1064,7 @@ async fn main() {
         .route("/health", get(health_check))
         .route("/api/rooms/create", post(create_room))
         .route("/api/rooms/resolve/{query_key}", get(resolve_room))
+        .route("/api/rooms/{room_id}/update", post(update_room))
         .route("/api/rooms/{room_id}/broadcast", post(broadcast_to_room))
         .route("/ws/room/{room_id}", get(ws_handler))
         .layer(cors)

@@ -135,6 +135,10 @@ async function putApi<T = any>(url: string, body?: any): Promise<T> {
   return requestApi<T>(url, 'PUT', body);
 }
 
+async function patchApi<T = any>(url: string, body?: any): Promise<T> {
+  return requestApi<T>(url, 'PATCH', body);
+}
+
 async function deleteApi<T = any>(url: string, body?: any): Promise<T> {
   return requestApi<T>(url, 'DELETE', body);
 }
@@ -193,13 +197,15 @@ async function logoutAllApi(): Promise<{ success: boolean }> {
 async function createSubscriptionIntentApi(
   billingType: 'one_time' | 'recurring',
   billingPeriod: '1_month' | '6_months' | '12_months' | 'monthly' | 'yearly',
-  planId: 'pro' | 'enterprise' = 'pro'
+  planId: 'pro' | 'business' | 'enterprise' = 'pro',
+  seats?: number
 ): Promise<{ amount?: number; clientSecret?: string; error?: string; ok?: boolean; paymentIntentId?: string; publishableKey?: string; success: boolean }> {
   try {
     const data = await postApi('/api/subscription/create-intent', {
       billingPeriod,
       billingType,
       planId,
+      seats,
     });
     return {
       ...data,
@@ -247,6 +253,7 @@ export {
   logoutAllApi,
   logoutApi,
   onAuthChange,
+  patchApi,
   postApi,
   postFormApi,
   putApi,

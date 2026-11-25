@@ -61,6 +61,20 @@ interface CreateRoomParams {
   upload_permission?: 'all' | 'owner_only' | 'specific';
 }
 
+interface UpdateRoomParams {
+  clear_expiration?: boolean;
+  clear_max_downloads?: boolean;
+  clear_password?: boolean;
+  clear_slug?: boolean;
+  expires_at?: Date | null;
+  is_persistent?: boolean;
+  max_downloads?: number | null;
+  password?: string | null;
+  save_to_cloud?: boolean;
+  slug?: string | null;
+  upload_permission?: 'all' | 'owner_only' | 'specific';
+}
+
 interface SaveRoomFileParams {
   expires_at?: Date | null;
   file_id: string;
@@ -156,6 +170,79 @@ async function createRoomRecord(params: CreateRoomParams): Promise<void> {
       formattedExpiresAt,
     ]
   );
+}
+
+async function updateRoomRecord(roomId: string, params: UpdateRoomParams): Promise<DbRoom | null> {
+  const current = await findRoomByIdentifier(roomId);
+  if (!current) return null;
+
+  let newSlug = current.slug;
+  if (params.clear_slug) {
+    newSlug = null;
+  } else if (params.slug !== undefined) {
+    newSlug = params.slug ? params.slug.trim().toLowerCase() : null;
+  }
+
+  let requiresPassword = current.requires_password;
+  let passwordHash = current.password_hash;
+  if (params.clear_password) {
+    requiresPassword = 0;
+    passwordHash = null;
+  } else if (params.password !== undefined) {
+    const trimmed = params.password ? params.password.trim() : '';
+    if (trimmed.length > 0) {
+      requiresPassword = 1;
+      passwordHash = encryptRoomPassword(trimmed);
+    } else {
+      requiresPassword = 0;
+      passwordHash = null;
+    }
+  }
+
+  const saveToCloud = params.save_to_cloud !== undefined ? (params.save_to_cloud ? 1 : 0) : current.save_to_cloud;
+  const isPersistent = saveToCloud ? 1 : (params.is_persistent !== undefined ? (params.is_persistent ? 1 : 0) : current.is_persistent);
+  const uploadPerm = params.upload_permission !== undefined ? params.upload_permission : current.upload_permission;
+
+  let maxDownloads = current.max_downloads;
+  if (params.clear_max_downloads) {
+    maxDownloads = null;
+  } else if (params.max_downloads !== undefined) {
+    maxDownloads = params.max_downloads && params.max_downloads > 0 ? params.max_downloads : null;
+  }
+
+  let formattedExpiresAt = current.expires_at;
+  if (params.clear_expiration) {
+    formattedExpiresAt = null;
+  } else if (params.expires_at !== undefined) {
+    formattedExpiresAt = params.expires_at ? params.expires_at.toISOString().slice(0, 19).replace('T', ' ') : null;
+  }
+
+  await pool.execute(
+    `UPDATE rooms SET
+      slug = ?,
+      requires_password = ?,
+      password_hash = ?,
+      save_to_cloud = ?,
+      is_persistent = ?,
+      upload_permission = ?,
+      max_downloads = ?,
+      expires_at = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE room_id = ?`,
+    [
+      newSlug,
+      requiresPassword,
+      passwordHash,
+      saveToCloud,
+      isPersistent,
+      uploadPerm,
+      maxDownloads,
+      formattedExpiresAt,
+      current.room_id,
+    ]
+  );
+
+  return findRoomByIdentifier(current.room_id);
 }
 
 async function findRoomByIdentifier(identifier: string): Promise<DbRoom | null> {
@@ -326,6 +413,7 @@ export {
   getRoomFiles,
   incrementFileDownloadCount,
   saveRoomFileRecord,
+  updateRoomRecord,
   verifyRoomPassword
 };
 
@@ -333,5 +421,6 @@ export type {
   CreateRoomParams,
   DbRoom,
   DbRoomFile,
-  SaveRoomFileParams
+  SaveRoomFileParams,
+  UpdateRoomParams
 };

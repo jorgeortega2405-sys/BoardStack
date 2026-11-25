@@ -233,7 +233,7 @@ class LayoutNavController {
         return;
       }
 
-      const isPro = currentUser?.subscription_tier === 'pro' || currentUser?.subscription_tier === 'enterprise';
+      const isPro = currentUser?.subscription_tier === 'pro' || currentUser?.subscription_tier === 'business' || currentUser?.subscription_tier === 'enterprise';
 
       const modalInstance = openCustomModal({
         contentHtml: `
@@ -1047,7 +1047,7 @@ class LayoutNavController {
 
           const dotsBackdropEl = document.querySelector<HTMLElement>('[data-ref="view-backdrop-dots"]');
           if (dotsBackdropEl) {
-            const showDots = targetRoute.path === '/' || targetRoute.path.startsWith('/room/') || targetRoute.path.startsWith('/r/') || targetRoute.path === '/features' || targetRoute.path === '/about' || targetRoute.path === '/contact';
+            const showDots = targetRoute.path === '/' || targetRoute.path === '/features' || targetRoute.path === '/about' || targetRoute.path === '/contact' || targetRoute.path === '/contact-sales' || targetRoute.path === '/pricing' || targetRoute.path === '/checkout' || targetRoute.path.startsWith('/help');
             dotsBackdropEl.classList.toggle('is-hidden', !showDots);
           }
 

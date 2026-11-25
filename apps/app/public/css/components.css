@@ -800,12 +800,11 @@ html.is-auth-view [data-ref="main-wrapper"] {
 
 .component-view,
 [data-ref="view-container"] {
-  height: 100%;
   min-height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   box-sizing: border-box;
   padding: 0;
   margin: 0;
@@ -813,9 +812,13 @@ html.is-auth-view [data-ref="main-wrapper"] {
 }
 
 [data-ref="view-container"]:has(.component-top),
+[data-ref="view-container"]:has(.component-layout--split-full),
+[data-ref="view-container"]:has(.component-layout--split-centered),
 [data-ref="view-container"].component-view--room {
+  height: 100%;
   padding: 0 !important;
   overflow: hidden;
+  flex: 1 1 auto;
 }
 
 /* ==========================================================================
@@ -828,7 +831,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   box-sizing: border-box;
   padding: 24px;
   margin: 0;
@@ -1770,6 +1773,8 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-button--avatar[data-tier="free"] { --avatar-tier-bg: #9ca3af; }
 .component-avatar[data-tier="pro"],
 .component-button--avatar[data-tier="pro"] { --avatar-tier-bg: #3b82f6; }
+.component-avatar[data-tier="business"],
+.component-button--avatar[data-tier="business"] { --avatar-tier-bg: #10b981; }
 .component-avatar[data-tier="enterprise"],
 .component-button--avatar[data-tier="enterprise"] { --avatar-tier-bg: #8b5cf6; }
 
@@ -2051,7 +2056,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   gap: 24px;
   width: 100%;
   min-height: 100%;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
 }
 
 .component-block__header {
@@ -3118,7 +3123,8 @@ html.is-auth-view [data-ref="main-wrapper"] {
 /* --------------------------------------------------------------------------
    19. VISTA DE PRICING (.component-container--pricing, .component-grid--pricing)
    -------------------------------------------------------------------------- */
-.component-container--pricing {
+.component-container--pricing,
+.component-block[data-ref="pricing-plans-block"] {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3126,26 +3132,31 @@ html.is-auth-view [data-ref="main-wrapper"] {
   width: 100%;
 }
 
-.component-container--pricing .component-header {
+.component-container--pricing .component-header,
+.component-block[data-ref="pricing-plans-block"] .component-header {
   margin: 0;
   width: 100%;
+  text-align: center;
 }
 
-.component-container--pricing .component-bar--center {
+.component-container--pricing .component-bar--center,
+.component-block[data-ref="pricing-plans-block"] .component-bar--center {
   margin: 0;
   display: flex;
   justify-content: center;
   width: 100%;
 }
 
-.component-container--pricing .component-card--plan {
+.component-container--pricing .component-card--plan,
+.component-block[data-ref="pricing-plans-block"] .component-card--plan {
   flex: none;
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
 }
 
-.component-container--pricing .component-group--legal {
+.component-container--pricing .component-group--legal,
+.component-block[data-ref="pricing-plans-block"] .component-group--legal {
   width: 100%;
   margin: 0;
 }
@@ -3953,6 +3964,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   position: relative;
   box-sizing: border-box;
   overflow-y: auto;
+  background-color: var(--bg-surface, #ffffff);
 }
 
 .component-bottom--full {
@@ -4080,8 +4092,8 @@ html.is-auth-view [data-ref="main-wrapper"] {
   align-items: center;
   justify-content: center;
   text-align: center;
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
   max-width: 100%;
   flex: 1 1 auto;
   padding: 32px;
@@ -4090,7 +4102,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   background-color: var(--bg-surface, #ffffff);
   transition: border-color 0.2s ease;
   box-sizing: border-box;
-  margin: 0;
+  margin: 16px;
 }
 
 .component-dropzone:hover,
@@ -4101,14 +4113,16 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-dropzone__icon-box {
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  background-color: var(--bg-hover, #f1f5f9);
+  border-radius: 14px;
+  background-color: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
   color: var(--text-primary, #0f172a);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
   transition: transform 0.2s ease;
+  box-sizing: border-box;
 }
 
 .component-dropzone:hover .component-dropzone__icon-box,
@@ -4183,12 +4197,39 @@ html.is-auth-view [data-ref="main-wrapper"] {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background-color: var(--bg-hover, #f1f5f9);
+  background-color: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
   color: var(--text-primary, #0f172a);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.component-table__icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-primary, #111827);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.component-table__icon-box .component-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.component-table__cell-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .component-card--file .component-card__icon-box .component-icon {
@@ -4353,12 +4394,14 @@ html.is-auth-view [data-ref="main-wrapper"] {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background-color: var(--bg-hover, #f3f4f6);
+  background-color: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
   color: var(--text-primary, #111827);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .component-card--feature .component-card__icon-box .component-icon {
@@ -4433,6 +4476,13 @@ html.is-auth-view [data-ref="main-wrapper"] {
   margin: 0;
   line-height: 1.5;
   max-width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .component-grid--3-col {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
 }
 
 @media (max-width: 768px) {

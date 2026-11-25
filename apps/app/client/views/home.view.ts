@@ -28,6 +28,7 @@ async function createHomeView(navigate?: (path: string) => void): Promise<HTMLEl
           data-ref="input-room-code"
           placeholder="${i18n.t('home.room_code_placeholder')}"
           autocomplete="off"
+          maxlength="64"
           spellcheck="false"
         />
       </div>
@@ -95,6 +96,11 @@ async function createHomeView(navigate?: (path: string) => void): Promise<HTMLEl
       queryKey = `${noSpaces.slice(0, 3).toUpperCase()}-${noSpaces.slice(3).toUpperCase()}`;
     }
 
+    if (queryKey.length > 64 || !/^[a-zA-Z0-9_\-]+$/.test(queryKey)) {
+      toast.error(i18n.t('room.not_found'));
+      return;
+    }
+
     enterBtn?.setAttribute('disabled', 'true');
     try {
       const res = await getApi<{ code?: string; ok: boolean; requires_password?: boolean; room_id?: string; slug?: string }>(`/api/rooms/resolve/${encodeURIComponent(queryKey)}`);
@@ -124,7 +130,7 @@ async function createHomeView(navigate?: (path: string) => void): Promise<HTMLEl
   container.appendChild(heroBlock);
   container.appendChild(featuresBlock);
 
-  const isPro = currentUser?.subscription_tier === 'pro';
+  const isPro = currentUser?.subscription_tier === 'pro' || currentUser?.subscription_tier === 'business' || currentUser?.subscription_tier === 'enterprise';
   if (!isPro) {
     const proPromoBlock = document.createElement('div');
     proPromoBlock.className = 'component-block';

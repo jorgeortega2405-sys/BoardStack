@@ -7,6 +7,7 @@ import {
   resolveOrganizationByDomainOrSlug,
   resolveOrganizationByIssuer,
   updateOrganization,
+  updateOrganizationSeats,
 } from '../services/organization.service.js';
 import { completeUserLogin } from '../services/auth.service.js';
 import { logger } from '../utils/logger.js';
@@ -237,6 +238,32 @@ async function getSamlMetadataHandler(req: Request, res: Response): Promise<void
   res.type('application/xml').send(xml);
 }
 
+async function updateSeatsHandler(req: Request, res: Response): Promise<void> {
+  const user = requireAuthenticatedUser(req, res, 'Authentication required.');
+  if (!user) return;
+
+  const { seats } = req.body || {};
+  const parsedSeats = typeof seats === 'number' ? Math.floor(seats) : parseInt(String(seats), 10);
+  if (isNaN(parsedSeats) || parsedSeats < 3 || parsedSeats > 100) {
+    sendError(res, 'Valid seat count between 3 and 100 is required.', 400);
+    return;
+  }
+
+  try {
+    const { org } = await getOrCreateUserOrganization(user.id, user.username, user.email);
+    if (org.owner_id !== user.id) {
+      sendError(res, 'Only the organization owner can manage team seats.', 403);
+      return;
+    }
+
+    const updated = await updateOrganizationSeats(user.id, org.id, parsedSeats);
+    sendSuccess(res, updated);
+  } catch (err: any) {
+    logger.app.error('[Organization] Error updating seats:', err);
+    sendError(res, err.message || 'Error updating team seats.', 400);
+  }
+}
+
 export {
   addMemberHandler,
   getMembersHandler,
@@ -246,5 +273,6 @@ export {
   removeMemberHandler,
   resolveSsoHandler,
   samlAcsHandler,
-  updateMyOrganizationHandler
+  updateMyOrganizationHandler,
+  updateSeatsHandler
 };

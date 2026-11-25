@@ -364,7 +364,7 @@ app.get('*', async (req: Request, res: Response) => {
       html = html.replace(`data-ref="avatar-img" src="${placeholderDataUri}"`, `data-ref="avatar-img" src="${avatarSrc}"`);
       html = html.replace(`data-ref="active-account-avatar" src="${placeholderDataUri}"`, `data-ref="active-account-avatar" src="${avatarSrc}"`);
 
-      const tier = (user.subscription_tier === 'enterprise' || user.subscription_tier === 'pro') ? user.subscription_tier : 'free';
+      const tier = (user.subscription_tier === 'enterprise' || user.subscription_tier === 'business' || user.subscription_tier === 'pro') ? user.subscription_tier : 'free';
       html = html.replace('data-ref="btn-avatar"', `data-ref="btn-avatar" data-tier="${tier}"`);
       html = html.replace('data-ref="active-account-avatar-box"', `data-ref="active-account-avatar-box" data-tier="${tier}"`);
 

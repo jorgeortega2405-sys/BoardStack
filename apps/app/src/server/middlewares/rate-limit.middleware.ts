@@ -221,6 +221,13 @@ const subscriptionRateLimiter = createRateLimiter({
   windowSeconds: 600,
 });
 
+const roomResolveRateLimiter = createRateLimiter({
+  keyPrefix: 'rl:room:resolve',
+  maxRequests: 40,
+  message: 'Too many room lookup requests. Please wait a moment before trying again.',
+  windowSeconds: 60,
+});
+
 export {
   authForgotPasswordRateLimiter,
   authLoginRateLimiter,
@@ -231,6 +238,7 @@ export {
   authResetPasswordRateLimiter,
   createRateLimiter,
   generalAuthRateLimiter,
+  roomResolveRateLimiter,
   salesLeadRateLimiter,
   settingsAvatarRateLimiter,
   settingsGeneralRateLimiter,

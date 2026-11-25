@@ -1,4 +1,5 @@
 import { confirmSubscriptionPaymentApi, createSubscriptionIntentApi, currentUser, linkedAccounts, setAuthState } from '../services/api.service.js';
+import { createFooterComponent } from '../components/footer.component.js';
 import { getStripeAppearance, loadStripeSdk } from '../services/stripe.service.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -7,8 +8,8 @@ import { showToast } from '../services/toast.service.js';
 
 async function createCheckoutView(navigate: (path: string) => void): Promise<HTMLElement> {
   const container = document.createElement('div');
-  container.className = 'component-wrapper component-wrapper--full';
-  container.setAttribute('data-ref', 'checkout-wrapper');
+  container.className = 'component-layout--full component-main--gap-24';
+  container.setAttribute('data-ref', 'checkout-layout');
 
   if (!currentUser) {
     showToast(i18n.t('checkout.login_required'), 'info');
@@ -17,9 +18,10 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   }
 
   const urlParams = new URLSearchParams(window.location.search);
-  const planParam: 'pro' | 'enterprise' = urlParams.get('plan') === 'enterprise' ? 'enterprise' : 'pro';
+  const planParam: 'pro' | 'business' | 'enterprise' = urlParams.get('plan') === 'enterprise' ? 'enterprise' : (urlParams.get('plan') === 'business' ? 'business' : 'pro');
   const initialCycle = urlParams.get('cycle') === 'yearly' ? 'yearly' : 'monthly';
   const initialMode = urlParams.get('mode') === 'one_time' ? 'one_time' : 'recurring';
+  let currentSeats = Math.max(3, parseInt(urlParams.get('seats') || '3', 10) || 3);
 
   let currentStep: 1 | 2 = 1;
   let currentMode: 'one_time' | 'recurring' = initialMode;
@@ -36,9 +38,8 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   const isAlreadyActive = currentUser.subscription_tier === planParam;
 
   container.innerHTML = `
-    <div class="component-backdrop component-backdrop--dots" data-ref="checkout-backdrop"></div>
-    <div class="component-body component-body--scrollable" data-ref="checkout-scrollable">
-      <div class="component-container component-container--wide" data-ref="checkout-container">
+    <div class="component-block" data-ref="checkout-block" style="width: 100%; max-width: 1180px; margin: 0 auto;">
+      <div class="component-container component-container--wide" data-ref="checkout-container" style="width: 100%; padding: 0 16px;">
         <div class="component-grid component-grid--2-col" data-ref="checkout-grid">
           
           <div class="component-main" data-ref="checkout-main">
@@ -48,8 +49,8 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
                 <div class="component-avatar component-avatar--status" data-ref="checkout-active-icon">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 </div>
-                <h2 class="component-title" data-ref="checkout-active-title">${i18n.t('checkout.already_active_title')}</h2>
-                <p class="component-subtitle" data-ref="checkout-active-desc">${i18n.t('checkout.already_active_desc')}</p>
+                <h2 class="component-title" data-ref="checkout-active-title">${planParam === 'business' ? i18n.t('checkout.already_active_business_title') : i18n.t('checkout.already_active_title')}</h2>
+                <p class="component-subtitle" data-ref="checkout-active-desc">${planParam === 'business' ? i18n.t('checkout.already_active_business_desc') : i18n.t('checkout.already_active_desc')}</p>
                 <div class="component-group component-group--actions" data-ref="checkout-active-actions">
                   <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-goto-pricing">
                     ${i18n.t('checkout.view_other_plans')}
@@ -63,6 +64,27 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
 
             <div class="component-step ${isAlreadyActive ? 'is-hidden' : ''}" data-ref="checkout-step-1">
               <h1 class="component-title component-title--lg" data-ref="checkout-step1-title">${i18n.t('checkout.step1_title')}</h1>
+
+              ${planParam === 'business' ? `
+                <div class="component-card component-card--feature" data-ref="checkout-seats-box" style="margin-bottom: 24px; padding: 20px 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 16px; background: var(--bg-surface, #ffffff);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div>
+                      <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 2px 0;">${i18n.t('checkout.seats_label')}</h3>
+                      <p class="component-subtitle" style="font-size: 12px; margin: 0; color: var(--text-secondary);">${i18n.t('checkout.seats_base_included')}</p>
+                    </div>
+                    <span class="component-badge component-badge--success" data-ref="checkout-seats-display" style="font-size: 13.5px; font-weight: 600;">${i18n.t('checkout.seats_count', { count: currentSeats })}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-checkout-seats-minus" aria-label="${i18n.t('checkout.adjust_seats')}" style="min-width: 34px; padding: 0;">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
+                    </button>
+                    <input type="range" min="3" max="50" step="1" value="${currentSeats}" data-ref="input-checkout-seats-range" style="flex: 1; accent-color: var(--action-primary, #111827); cursor: pointer;" />
+                    <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-checkout-seats-plus" aria-label="${i18n.t('checkout.adjust_seats')}" style="min-width: 34px; padding: 0;">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              ` : ''}
               
               <div class="component-toggle-pill component-toggle-pill--slider" data-ref="checkout-mode-toggle" data-cycle="${currentMode}" data-tabs="2" data-active-index="${currentMode === 'one_time' ? '1' : '0'}" style="--slider-tab-count: 2; --slider-active-index: ${currentMode === 'one_time' ? '1' : '0'};">
                 <div class="component-toggle-indicator" data-ref="checkout-toggle-indicator"></div>
@@ -145,7 +167,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               <h3 class="component-card__title" data-ref="summary-info-title">${i18n.t('checkout.plan_info_title')}</h3>
               <div class="component-list component-list--summary" data-ref="summary-plan-details">
                 <div class="component-summary-row" data-ref="summary-row-plan">
-                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'enterprise' ? i18n.t('checkout.plan_enterprise') : i18n.t('checkout.plan_pro')}</span>
+                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'enterprise' ? i18n.t('checkout.plan_enterprise') : (planParam === 'business' ? `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})` : i18n.t('checkout.plan_pro'))}</span>
                   <span class="component-summary-row__price" data-ref="summary-plan-price">USD $9.99</span>
                 </div>
                 <div class="component-summary-row__meta" data-ref="summary-plan-cycle">${i18n.t('pricing.billing_monthly')}</div>
@@ -206,6 +228,8 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   btnGotoHome?.addEventListener('click', () => navigate('/'));
 
   if (isAlreadyActive) {
+    const footerBlock = createFooterComponent(navigate);
+    container.appendChild(footerBlock);
     return container;
   }
 
@@ -217,6 +241,22 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
       if (oneTimePeriod === '6_months') return 499.00;
       if (oneTimePeriod === '12_months') return 899.00;
       return 99.00;
+    }
+    if (planParam === 'business') {
+      const extraSeats = Math.max(0, currentSeats - 3);
+      if (currentMode === 'recurring') {
+        if (recurringPeriod === 'yearly') {
+          return (24.00 * 12) + (extraSeats * 5.00 * 12);
+        }
+        return 29.00 + (extraSeats * 6.00);
+      }
+      if (oneTimePeriod === '6_months') {
+        return 149.00 + (extraSeats * 30.00);
+      }
+      if (oneTimePeriod === '12_months') {
+        return 288.00 + (extraSeats * 60.00);
+      }
+      return 29.00 + (extraSeats * 6.00);
     }
     if (currentMode === 'recurring') {
       return recurringPeriod === 'yearly' ? 95.88 : 9.99;
@@ -248,11 +288,46 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     if (!optionsContainer) return;
     optionsContainer.innerHTML = '';
 
-    const priceMonthlyText = planParam === 'enterprise' ? 'USD $99.00' : 'USD $9.99';
-    const priceYearlyText = planParam === 'enterprise' ? 'USD $948.00' : 'USD $95.88';
-    const price1MText = planParam === 'enterprise' ? 'USD $99.00' : 'USD $9.99';
-    const price6MText = planParam === 'enterprise' ? 'USD $499.00' : 'USD $49.99';
-    const price12MText = planParam === 'enterprise' ? 'USD $899.00' : 'USD $89.99';
+    const getPrices = () => {
+      if (planParam === 'enterprise') {
+        return {
+          m1: 'USD $99.00',
+          m6: 'USD $499.00',
+          m12: 'USD $899.00',
+          monthly: 'USD $99.00',
+          yearly: 'USD $948.00',
+        };
+      }
+      if (planParam === 'business') {
+        const extraSeats = Math.max(0, currentSeats - 3);
+        const pMonthly = 29.00 + (extraSeats * 6.00);
+        const pYearly = (24.00 * 12) + (extraSeats * 5.00 * 12);
+        const p1M = 29.00 + (extraSeats * 6.00);
+        const p6M = 149.00 + (extraSeats * 30.00);
+        const p12M = 288.00 + (extraSeats * 60.00);
+        return {
+          m1: `USD $${p1M.toFixed(2)}`,
+          m6: `USD $${p6M.toFixed(2)}`,
+          m12: `USD $${p12M.toFixed(2)}`,
+          monthly: `USD $${pMonthly.toFixed(2)}`,
+          yearly: `USD $${pYearly.toFixed(2)}`,
+        };
+      }
+      return {
+        m1: 'USD $9.99',
+        m6: 'USD $49.99',
+        m12: 'USD $89.99',
+        monthly: 'USD $9.99',
+        yearly: 'USD $95.88',
+      };
+    };
+
+    const prices = getPrices();
+    const priceMonthlyText = prices.monthly;
+    const priceYearlyText = prices.yearly;
+    const price1MText = prices.m1;
+    const price6MText = prices.m6;
+    const price12MText = prices.m12;
 
     if (currentMode === 'recurring') {
       const cardMonthly = document.createElement('div');
@@ -414,6 +489,16 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     if (summaryPlanPrice) summaryPlanPrice.textContent = formatted;
     if (summaryPlanCycle) summaryPlanCycle.textContent = getCycleLabel();
     if (summaryPlanEndDate) summaryPlanEndDate.textContent = `${i18n.t('checkout.end_date_label')}: ${getFormattedEndDate()}`;
+    const planNameEl = container.querySelector<HTMLElement>('[data-ref="summary-plan-name"]');
+    if (planNameEl) {
+      if (planParam === 'enterprise') {
+        planNameEl.textContent = i18n.t('checkout.plan_enterprise');
+      } else if (planParam === 'business') {
+        planNameEl.textContent = `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})`;
+      } else {
+        planNameEl.textContent = i18n.t('checkout.plan_pro');
+      }
+    }
     if (btnSubmitText && !isSubmitting) {
       btnSubmitText.textContent = `${i18n.t('checkout.pay_now')} (${formatted})`;
     }
@@ -469,7 +554,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
 
     try {
       const period = getSelectedPeriod();
-      const res = await createSubscriptionIntentApi(currentMode, period, planParam);
+      const res = await createSubscriptionIntentApi(currentMode, period, planParam, currentSeats);
 
       if (!res.success || !res.clientSecret || !res.publishableKey) {
         if (errorBanner) {
@@ -592,11 +677,11 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
           avatarBtn.setAttribute('data-tier', planParam);
         }
 
-        showToast(i18n.t('checkout.payment_success'), 'success');
+        showToast(planParam === 'business' ? i18n.t('checkout.payment_success_business') : i18n.t('checkout.payment_success'), 'success');
 
         setTimeout(() => {
-          if (planParam === 'enterprise') {
-            navigate('/settings/organization');
+          if (planParam === 'enterprise' || planParam === 'business') {
+            navigate('/organization');
           } else {
             navigate('/');
           }
@@ -620,8 +705,37 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     void handlePaymentSubmit();
   });
 
+  if (planParam === 'business') {
+    const btnSeatsMinus = container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-minus"]');
+    const btnSeatsPlus = container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-plus"]');
+    const inputSeatsRange = container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats-range"]');
+    const seatsDisplay = container.querySelector<HTMLElement>('[data-ref="checkout-seats-display"]');
+
+    const setSeats = (newSeats: number) => {
+      currentSeats = Math.min(50, Math.max(3, newSeats));
+      if (inputSeatsRange) inputSeatsRange.value = String(currentSeats);
+      if (seatsDisplay) seatsDisplay.textContent = i18n.t('checkout.seats_count', { count: currentSeats });
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('seats', String(currentSeats));
+      window.history.replaceState({}, '', currentUrl.toString());
+      updateOptions();
+      updateSummary();
+      invalidateGateway();
+    };
+
+    btnSeatsMinus?.addEventListener('click', () => setSeats(currentSeats - 1));
+    btnSeatsPlus?.addEventListener('click', () => setSeats(currentSeats + 1));
+    inputSeatsRange?.addEventListener('input', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      if (!isNaN(val)) setSeats(val);
+    });
+  }
+
   updateOptions();
   updateSummary();
+
+  const footerBlock = createFooterComponent(navigate);
+  container.appendChild(footerBlock);
 
   return container;
 }

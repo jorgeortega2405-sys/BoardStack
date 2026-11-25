@@ -15,7 +15,7 @@ async function createSettingsAccountView(navigate: (path: string) => void): Prom
   const defaultAvatar = getUserAvatarUrl(currentUser, 80);
   const username = currentUser?.username || '';
   const email = currentUser?.email || '';
-  const isPro = currentUser?.subscription_tier === 'pro';
+  const userTier = (currentUser?.subscription_tier === 'enterprise' || currentUser?.subscription_tier === 'business' || currentUser?.subscription_tier === 'pro') ? currentUser.subscription_tier : 'free';
   const hasCustomAvatar = Boolean(currentUser?.avatar_url && currentUser.avatar_url.trim() !== '');
   let emailChangeTicket: string | null = null;
 
@@ -28,7 +28,7 @@ async function createSettingsAccountView(navigate: (path: string) => void): Prom
     <div class="component-group" data-ref="group-profile-data">
       <div class="component-item" data-ref="item-avatar">
         <div class="component-item__content" data-ref="item-avatar-content">
-          <div class="component-avatar component-avatar--lg" data-ref="avatar-preview-box" data-tooltip="${i18n.t('settings.account.change_avatar_tooltip')}" data-tier="${isPro ? 'pro' : 'free'}">
+          <div class="component-avatar component-avatar--lg" data-ref="avatar-preview-box" data-tooltip="${i18n.t('settings.account.change_avatar_tooltip')}" data-tier="${userTier}">
             <img class="component-avatar__img" data-ref="profile-avatar-img" src="${defaultAvatar}" alt="" referrerpolicy="no-referrer" />
             <div class="component-avatar__overlay" data-ref="avatar-preview-overlay">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#camera"></use></svg>

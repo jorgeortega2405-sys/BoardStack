@@ -1,9 +1,9 @@
 import crypto from 'crypto';
 import { generateUniqueUsername } from './user.service.js';
+import { getPriceAmount, getStorageTierLimitBytes, STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 import { logger } from '../utils/logger.js';
 import { pool } from '../config/database.config.js';
 import { RowDataPacket } from 'mysql2';
-import { STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 
 interface OrganizationRecord {
   created_at: string;
@@ -223,11 +223,17 @@ async function addOrganizationMember(
   );
 
   if (matchedUser) {
+    const [ownerRows] = await pool.query<RowDataPacket[]>(
+      'SELECT u.subscription_tier FROM organizations o JOIN users u ON o.owner_id = u.id WHERE o.id = ? LIMIT 1',
+      [orgId]
+    );
+    const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
+    const orgStorage = getStorageTierLimitBytes(orgTier);
     await pool.query(
       `UPDATE users 
-       SET subscription_tier = 'enterprise', storage_limit_bytes = ?
-       WHERE id = ? AND subscription_tier != 'enterprise'`,
-      [STORAGE_TIER_LIMITS.enterprise, matchedUser.id]
+       SET subscription_tier = ?, storage_limit_bytes = ?
+       WHERE id = ? AND subscription_tier = 'free'`,
+      [orgTier, orgStorage, matchedUser.id]
     );
   }
 
@@ -355,15 +361,22 @@ async function processSsoLogin(
 
   let userRow = userRows && userRows.length > 0 ? userRows[0] : null;
 
+  const [ownerRows] = await pool.query<RowDataPacket[]>(
+    'SELECT subscription_tier FROM users WHERE id = ?',
+    [org.owner_id]
+  );
+  const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
+  const orgStorage = getStorageTierLimitBytes(orgTier);
+
   if (!userRow) {
     const baseUsername = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-    const uniqueUsername = await generateUniqueUsername(baseUsername || 'enterprise_user');
+    const uniqueUsername = await generateUniqueUsername(baseUsername || 'team_user');
     const userUuid = crypto.randomUUID();
 
     const [insertResult] = await pool.query<any>(
       `INSERT INTO users (uuid, username, email, subscription_tier, subscription_status, storage_limit_bytes)
-       VALUES (?, ?, ?, 'enterprise', 'active', ?)`,
-      [userUuid, uniqueUsername, cleanEmail, STORAGE_TIER_LIMITS.enterprise]
+       VALUES (?, ?, ?, ?, 'active', ?)`,
+      [userUuid, uniqueUsername, cleanEmail, orgTier, orgStorage]
     );
 
     const newUserId = insertResult.insertId;
@@ -388,14 +401,14 @@ async function processSsoLogin(
     );
     userRow = createdUserRows[0];
   } else {
-    if (userRow.subscription_tier !== 'enterprise') {
+    if (userRow.subscription_tier === 'free') {
       await pool.query(
         `UPDATE users 
-         SET subscription_tier = 'enterprise', storage_limit_bytes = ?
+         SET subscription_tier = ?, storage_limit_bytes = ?
          WHERE id = ?`,
-        [STORAGE_TIER_LIMITS.enterprise, userRow.id]
+        [orgTier, orgStorage, userRow.id]
       );
-      userRow.subscription_tier = 'enterprise';
+      userRow.subscription_tier = orgTier;
     }
   }
 
@@ -424,6 +437,94 @@ async function processSsoLogin(
   return userRow;
 }
 
+async function updateOrganizationSeats(
+  userId: number,
+  orgId: number,
+  targetSeats: number
+): Promise<{ newAmount: number; ok: boolean; seatsLimit: number }> {
+  const [orgRows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM organizations WHERE id = ? AND owner_id = ? LIMIT 1',
+    [orgId, userId]
+  );
+
+  if (!orgRows || orgRows.length === 0) {
+    throw new Error('Organization not found or you lack administrative privileges.');
+  }
+
+  const currentOrg = orgRows[0] as OrganizationRecord;
+
+  const [countRows] = await pool.query<RowDataPacket[]>(
+    'SELECT COUNT(*) as count FROM organization_members WHERE org_id = ?',
+    [orgId]
+  );
+  const currentCount = Number(countRows[0]?.count || 0);
+
+  if (targetSeats < currentCount) {
+    throw new Error(`Cannot set seats lower than the current number of active members (${currentCount}).`);
+  }
+
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT subscription_tier, subscription_status, stripe_customer_id FROM users WHERE id = ?',
+    [userId]
+  );
+
+  if (!userRows || userRows.length === 0) {
+    throw new Error('User not found.');
+  }
+
+  const user = userRows[0];
+  const tier = user.subscription_tier;
+  if (tier !== 'business' && tier !== 'enterprise') {
+    throw new Error('Dynamic seat scaling is only available for Business and Enterprise plans.');
+  }
+
+  const [subRows] = await pool.query<RowDataPacket[]>(
+    'SELECT * FROM subscriptions WHERE user_id = ? AND status = "active" ORDER BY id DESC LIMIT 1',
+    [userId]
+  );
+  const activeSub = subRows[0] || null;
+
+  const billingType = (activeSub?.billing_type as 'recurring' | 'one_time') || 'recurring';
+  const billingPeriod = (activeSub?.billing_period as any) || 'monthly';
+  const newAmount = getPriceAmount('business', billingType, billingPeriod, targetSeats);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      'UPDATE organizations SET seats_limit = ? WHERE id = ?',
+      [targetSeats, currentOrg.id]
+    );
+
+    if (activeSub) {
+      await conn.query(
+        'UPDATE subscriptions SET amount = ? WHERE id = ?',
+        [newAmount, activeSub.id]
+      );
+    }
+
+    await conn.query(
+      `INSERT INTO purchases (user_id, plan_id, billing_type, billing_period, amount_total, currency, status, stripe_customer_id, created_at)
+       VALUES (?, 'business', ?, ?, ?, 'USD', 'completed', ?, NOW())`,
+      [userId, billingType, billingPeriod, newAmount, user.stripe_customer_id || null]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  return {
+    newAmount,
+    ok: true,
+    seatsLimit: targetSeats,
+  };
+}
+
 export {
   addOrganizationMember,
   getOrCreateUserOrganization,
@@ -432,7 +533,8 @@ export {
   removeOrganizationMember,
   resolveOrganizationByDomainOrSlug,
   resolveOrganizationByIssuer,
-  updateOrganization
+  updateOrganization,
+  updateOrganizationSeats
 };
 
 export type {

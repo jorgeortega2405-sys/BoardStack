@@ -41,8 +41,8 @@ interface OrgApiResponse {
   spEntityId: string;
 }
 
-function renderOverviewHtml(org: OrgData, membersCount: number): string {
-  const seatsLimit = org.seats_limit || 25;
+function renderOverviewHtml(org: OrgData, membersCount: number, isOwner: boolean = false): string {
+  const seatsLimit = org.seats_limit || 3;
   const availableSeats = Math.max(0, seatsLimit - membersCount);
 
   return `
@@ -76,6 +76,14 @@ function renderOverviewHtml(org: OrgData, membersCount: number): string {
             <span class="component-card__label">${i18n.t('organization.metric_seats')}</span>
             <div class="component-card__value">${membersCount} / ${seatsLimit}</div>
             <span class="component-card__subtext">${i18n.t('organization.seats_available', { count: availableSeats })}</span>
+            ${isOwner ? `
+              <div style="margin-top: 10px;">
+                <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-expand-seats">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_shopping_cart"></use></svg>
+                  <span>${i18n.t('organization.buy_seats_btn')}</span>
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -319,8 +327,8 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
   `;
 }
 
-function renderMembersHtml(org: OrgData, members: OrgMemberData[]): string {
-  const seatsLimit = org.seats_limit || 25;
+function renderMembersHtml(org: OrgData, members: OrgMemberData[], isOwner: boolean = false): string {
+  const seatsLimit = org.seats_limit || 3;
 
   const rowsHtml = members.map((m) => `
     <tr class="component-table__row" data-ref="member-row-${m.id}" data-member-id="${m.id}" data-search-target="${(m.username || '') + ' ' + m.email}">
@@ -376,6 +384,12 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[]): string {
             />
           </div>
         </div>
+        ${isOwner ? `
+          <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-expand-seats">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_shopping_cart"></use></svg>
+            <span>${i18n.t('organization.buy_seats_btn')}</span>
+          </button>
+        ` : ''}
         <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-open-add-member">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           <span>${i18n.t('organization.add_member_btn')}</span>
@@ -404,6 +418,149 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[]): string {
   `;
 }
 
+function setupExpandSeatsModal(
+  container: HTMLElement,
+  org: OrgData,
+  onUpdated: (newSeats: number) => void
+): void {
+  const expandBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref="btn-expand-seats"]');
+  expandBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      let targetSeats = Math.max(org.seats_limit || 3, 3);
+      const minSeats = Math.max(org.seats_limit || 3, 3);
+      const maxSeats = 50;
+
+      const modal = openModal({
+        bodyHtml: `
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--bg-hover, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px;">
+              <div>
+                <div style="font-size: 12px; color: var(--text-secondary);">${i18n.t('organization.seats_current_label')}</div>
+                <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">${org.seats_limit || 3} ${i18n.t('organization.metric_seats')}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 12px; color: var(--text-secondary);">${i18n.t('organization.seats_new_label')}</div>
+                <span class="component-badge component-badge--success" data-ref="modal-expand-seats-badge" style="font-size: 14px; font-weight: 700;">${targetSeats}</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label class="component-label" for="field-modal-expand-range" style="font-size: 13px; font-weight: 600;">${i18n.t('organization.seats_new_label')}</label>
+                <span data-ref="modal-expand-extra-diff" style="font-size: 12px; font-weight: 600; color: var(--action-primary, #111827);">+0 ${i18n.t('organization.metric_seats')}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-modal-seats-minus" aria-label="${i18n.t('pricing.business_seats_minus')}" style="min-width: 34px; padding: 0;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
+                </button>
+                <input
+                  type="range"
+                  id="field-modal-expand-range"
+                  data-ref="input-modal-expand-range"
+                  min="${minSeats}"
+                  max="${maxSeats}"
+                  step="1"
+                  value="${targetSeats}"
+                  style="flex: 1; accent-color: var(--action-primary, #111827); cursor: pointer;"
+                />
+                <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-modal-seats-plus" aria-label="${i18n.t('pricing.business_seats_plus')}" style="min-width: 34px; padding: 0;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; background: var(--bg-surface, #ffffff);">
+              <div style="display: flex; justify-content: space-between; font-size: 12.5px;">
+                <span style="color: var(--text-secondary);">${i18n.t('organization.seats_price_rate_monthly')}</span>
+                <span data-ref="modal-expand-monthly-price" style="font-weight: 600;">$29.00 / mes</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12.5px;">
+                <span style="color: var(--text-secondary);">${i18n.t('organization.seats_price_rate_yearly')}</span>
+                <span data-ref="modal-expand-yearly-price" style="font-weight: 600;">$24.00 / mes ($288/año)</span>
+              </div>
+            </div>
+          </div>
+        `,
+        cancelText: i18n.t('organization.modal_btn_cancel'),
+        confirmText: i18n.t('organization.btn_confirm_expand_seats'),
+        description: i18n.t('organization.modal_expand_seats_desc'),
+        onConfirm: async () => {
+          if (targetSeats === (org.seats_limit || 3)) {
+            modal.close();
+            return;
+          }
+
+          try {
+            const res = await putApi<{ ok: boolean; seatsLimit: number }>('/api/organization/seats', {
+              seats: targetSeats,
+            });
+            if (res.ok) {
+              toast.success(i18n.t('organization.seats_updated_success'));
+              modal.close();
+              onUpdated(targetSeats);
+            } else {
+              toast.error(i18n.t('organization.seats_update_error'));
+            }
+          } catch (err: any) {
+            toast.error(err.message || i18n.t('organization.seats_update_error'));
+          }
+        },
+        title: i18n.t('organization.modal_expand_seats_title'),
+      });
+
+      renderIcons(document.body);
+
+      const badge = document.querySelector<HTMLElement>('[data-ref="modal-expand-seats-badge"]');
+      const diffEl = document.querySelector<HTMLElement>('[data-ref="modal-expand-extra-diff"]');
+      const rangeInput = document.querySelector<HTMLInputElement>('[data-ref="input-modal-expand-range"]');
+      const minusBtn = document.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-minus"]');
+      const plusBtn = document.querySelector<HTMLButtonElement>('[data-ref="btn-modal-seats-plus"]');
+      const monthlyPriceEl = document.querySelector<HTMLElement>('[data-ref="modal-expand-monthly-price"]');
+      const yearlyPriceEl = document.querySelector<HTMLElement>('[data-ref="modal-expand-yearly-price"]');
+
+      const updateModalCalc = () => {
+        if (badge) badge.textContent = String(targetSeats);
+        if (rangeInput) rangeInput.value = String(targetSeats);
+        const extraFromCurrent = Math.max(0, targetSeats - (org.seats_limit || 3));
+        if (diffEl) {
+          diffEl.textContent = i18n.t('organization.seats_extra_diff', { count: extraFromCurrent });
+        }
+        const extraFromBase = Math.max(0, targetSeats - 3);
+        const totalMonthly = (29.00 + (extraFromBase * 6.00)).toFixed(2);
+        const totalYearlyMo = (24.00 + (extraFromBase * 5.00)).toFixed(2);
+        const totalYearlyBilled = ((24.00 + (extraFromBase * 5.00)) * 12).toFixed(2);
+
+        if (monthlyPriceEl) monthlyPriceEl.textContent = `$${totalMonthly} / mes`;
+        if (yearlyPriceEl) yearlyPriceEl.textContent = `$${totalYearlyMo} / mes ($${totalYearlyBilled}/año)`;
+      };
+
+      updateModalCalc();
+
+      minusBtn?.addEventListener('click', () => {
+        if (targetSeats > minSeats) {
+          targetSeats -= 1;
+          updateModalCalc();
+        }
+      });
+
+      plusBtn?.addEventListener('click', () => {
+        if (targetSeats < maxSeats) {
+          targetSeats += 1;
+          updateModalCalc();
+        }
+      });
+
+      rangeInput?.addEventListener('input', (e) => {
+        const val = parseInt((e.target as HTMLInputElement).value, 10);
+        if (!isNaN(val)) {
+          targetSeats = Math.min(maxSeats, Math.max(minSeats, val));
+          updateModalCalc();
+        }
+      });
+    });
+  });
+}
+
 async function createOrganizationView(
   navigate: (path: string) => void,
   currentSubpath = '/organization'
@@ -421,7 +578,7 @@ async function createOrganizationView(
     return container;
   }
 
-  if (currentUser.subscription_tier !== 'enterprise') {
+  if (currentUser.subscription_tier !== 'enterprise' && currentUser.subscription_tier !== 'business') {
     container.innerHTML = `
       <div class="component-container component-container--narrow" data-ref="enterprise-gate" style="margin: 40px auto; text-align: center;">
         <div class="component-avatar component-avatar--status" style="margin: 0 auto 16px auto;">
@@ -457,7 +614,7 @@ async function createOrganizationView(
     return container;
   }
 
-  const { membersCount, org, spAcsUrl, spEntityId } = orgData;
+  const { isOwner, membersCount, org, spAcsUrl, spEntityId } = orgData;
 
   if (isDetails) {
     container.innerHTML = renderDetailsHtml(org);
@@ -546,8 +703,9 @@ async function createOrganizationView(
       }
     } catch {}
 
-    container.innerHTML = renderMembersHtml(org, membersList);
+    container.innerHTML = renderMembersHtml(org, membersList, isOwner);
     renderIcons(container);
+    setupExpandSeatsModal(container, org, () => navigate('/organization/members'));
 
     const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
     searchInput?.addEventListener('input', () => {
@@ -662,8 +820,9 @@ async function createOrganizationView(
     return container;
   }
 
-  container.innerHTML = renderOverviewHtml(org, membersCount);
+  container.innerHTML = renderOverviewHtml(org, membersCount, isOwner);
   renderIcons(container);
+  setupExpandSeatsModal(container, org, () => navigate('/organization'));
 
   container.querySelector('[data-ref="btn-nav-members"]')?.addEventListener('click', () => {
     navigate('/organization/members');

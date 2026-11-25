@@ -1,3 +1,4 @@
+import { BUSINESS_PLAN, ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
 import { config } from '../config/env.config.js';
 import {
   confirmSubscriptionPayment,
@@ -9,7 +10,6 @@ import {
   processStripeWebhook,
   updateSubscriptionRenewal,
 } from '../services/subscription.service.js';
-import { ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
@@ -18,6 +18,7 @@ import { updateActiveAccountInSession } from '../services/auth.service.js';
 
 async function getSubscriptionConfig(_req: Request, res: Response): Promise<void> {
   sendSuccess(res, {
+    businessPlan: BUSINESS_PLAN,
     enterprisePlan: ENTERPRISE_PLAN,
     plan: PRO_PLAN,
     publishableKey: config.stripe.publishableKey,
@@ -49,9 +50,9 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
     const user = requireAuthenticatedUser(req, res, 'You must be logged in to make a purchase.');
     if (!user) return;
 
-    const { billingPeriod, billingType, planId } = req.body || {};
+    const { billingPeriod, billingType, planId, seats } = req.body || {};
 
-    if (planId !== 'pro' && planId !== 'enterprise') {
+    if (planId !== 'pro' && planId !== 'business' && planId !== 'enterprise') {
       sendError(res, 'Invalid subscription plan.', 400);
       return;
     }
@@ -67,10 +68,12 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
       return;
     }
 
+    const parsedSeats = typeof seats === 'number' && seats >= 3 ? Math.floor(seats) : (planId === 'business' ? 3 : undefined);
     const result = await createSubscriptionPaymentIntent(user.id, user.email, {
       billingPeriod,
       billingType,
       planId,
+      seats: parsedSeats,
     });
 
     sendSuccess(res, result);
