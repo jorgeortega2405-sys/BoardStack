@@ -297,9 +297,20 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       <button type="button" class="component-button component-button--icon-only component-button--h40 component-button--destructive" data-ref="btn-leave-room" data-tooltip="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}" data-tooltip-placement="bottom" aria-label="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
       </button>
+      <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="room-selected-badge"></span>
     </div>
 
     <div class="component-top__right" data-ref="top-right">
+      <div class="component-group component-group--actions is-hidden" data-ref="room-selection-actions">
+        <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-room-download-selected">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+          <span>${i18n.t('room.download_selected')}</span>
+        </button>
+        <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-room-clear-selection" data-tooltip="${i18n.t('room.deselect')}" aria-label="${i18n.t('room.deselect')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
       <div class="component-avatar-group" data-ref="participants-avatar-group"></div>
 
       <div class="component-dropdown" data-ref="add-more-wrapper">
@@ -375,24 +386,27 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     </div>
 
     <div class="component-block__scrollable is-hidden" data-ref="room-table-container" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      <div class="component-header is-hidden" data-ref="folder-header-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border-color, #e5e7eb);">
-        <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="component-top is-hidden" data-ref="folder-header-bar">
+        <div class="component-top__left" data-ref="folder-header-left">
           <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-back-to-root" data-tooltip="${i18n.t('room.back_to_root')}" aria-label="${i18n.t('room.back_to_root')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
-          <div class="component-table__icon-box">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
-          </div>
-          <div style="display: flex; flex-direction: column;">
-            <h3 class="component-title" data-ref="folder-header-title" style="font-size: 14.5px; font-weight: 700; margin: 0;"></h3>
-            <span class="component-subtitle" data-ref="folder-header-desc" style="font-size: 12px; margin: 0;"></span>
+          <div class="component-top__title-box" data-ref="folder-title-box">
+            <span class="component-top__title-text" data-ref="folder-header-title"></span>
+            <span class="component-badge component-badge--neutral component-badge--sm" data-ref="folder-header-desc"></span>
+            <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="folder-selected-badge"></span>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="component-button component-button--h34" data-ref="btn-folder-download-all">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            <span>${i18n.t('room.download_all')}</span>
-          </button>
+        <div class="component-top__right" data-ref="folder-header-actions">
+          <div class="component-group component-group--actions is-hidden" data-ref="folder-selection-actions">
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-folder-download-selected">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span>${i18n.t('room.download_selected')}</span>
+            </button>
+            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-folder-clear-selection" data-tooltip="${i18n.t('room.deselect')}" aria-label="${i18n.t('room.deselect')}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -403,8 +417,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
               <th class="component-table__cell--pl20" data-ref="th-name">${i18n.t('room.col_name')}</th>
               <th data-ref="th-size">${i18n.t('room.col_size')}</th>
               <th data-ref="th-sender">${i18n.t('room.col_sender')}</th>
-              <th data-ref="th-status">${i18n.t('room.col_status')}</th>
-              <th class="component-table__cell--pr20" data-ref="th-actions" style="text-align: right;">${i18n.t('room.col_actions')}</th>
+              <th class="component-table__cell--pr20" data-ref="th-status" style="text-align: right;">${i18n.t('room.col_status')}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="room-files-tbody">
@@ -433,14 +446,23 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const btnCopyLink = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-copy-link"]');
   const btnLeaveRoom = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-leave-room"]');
   const btnRoomSettings = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-settings"]');
+  const roomSelectedBadge = topEl.querySelector<HTMLElement>('[data-ref="room-selected-badge"]');
+  const roomSelectionActions = topEl.querySelector<HTMLElement>('[data-ref="room-selection-actions"]');
+  const btnRoomDownloadSelected = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-download-selected"]');
+  const btnRoomClearSelection = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-clear-selection"]');
+  const addMoreWrapper = topEl.querySelector<HTMLElement>('[data-ref="add-more-wrapper"]');
+  const shareWrapper = topEl.querySelector<HTMLElement>('[data-ref="share-wrapper"]');
 
   const roomBottomEl = bottomEl;
   const tableContainerEl = bottomEl.querySelector<HTMLElement>('[data-ref="room-table-container"]');
   const folderHeaderBar = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-bar"]');
   const folderHeaderTitle = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-title"]');
   const folderHeaderDesc = bottomEl.querySelector<HTMLElement>('[data-ref="folder-header-desc"]');
+  const folderSelectedBadge = bottomEl.querySelector<HTMLElement>('[data-ref="folder-selected-badge"]');
+  const folderSelectionActions = bottomEl.querySelector<HTMLElement>('[data-ref="folder-selection-actions"]');
+  const btnFolderDownloadSelected = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-download-selected"]');
+  const btnFolderClearSelection = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-clear-selection"]');
   const btnBackToRoot = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-root"]');
-  const btnFolderDownloadAll = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-download-all"]');
   const filesTbody = bottomEl.querySelector<HTMLElement>('[data-ref="room-files-tbody"]');
   const dropzoneArea = bottomEl.querySelector<HTMLElement>('[data-ref="dropzone-area"]');
   const inputFiles = bottomEl.querySelector<HTMLInputElement>('[data-ref="input-files"]');
@@ -448,18 +470,118 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const btnSelectFiles = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-select-files"]');
   const btnSelectFolder = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-select-folder"]');
 
-  btnBackToRoot?.addEventListener('click', () => {
-    currentFolderId = null;
-    renderTableRows();
-  });
+  const selectedItemIds = new Set<string>();
 
-  btnFolderDownloadAll?.addEventListener('click', () => {
+  const updateSelectionUI = (): void => {
+    const count = selectedItemIds.size;
+    const countText = count === 1
+      ? i18n.t('room.selected_count', { count: 1 })
+      : i18n.t('room.selected_count_plural', { count });
+
+    if (currentFolderId) {
+      if (count > 0) {
+        if (folderSelectedBadge) {
+          folderSelectedBadge.textContent = countText;
+          folderSelectedBadge.classList.remove('is-hidden');
+        }
+        folderSelectionActions?.classList.remove('is-hidden');
+      } else {
+        folderSelectedBadge?.classList.add('is-hidden');
+        folderSelectionActions?.classList.add('is-hidden');
+      }
+      roomSelectedBadge?.classList.add('is-hidden');
+      roomSelectionActions?.classList.add('is-hidden');
+    } else {
+      if (count > 0) {
+        if (roomSelectedBadge) {
+          roomSelectedBadge.textContent = countText;
+          roomSelectedBadge.classList.remove('is-hidden');
+        }
+        roomSelectionActions?.classList.remove('is-hidden');
+        addMoreWrapper?.classList.add('is-hidden');
+        shareWrapper?.classList.add('is-hidden');
+      } else {
+        roomSelectedBadge?.classList.add('is-hidden');
+        roomSelectionActions?.classList.add('is-hidden');
+        addMoreWrapper?.classList.remove('is-hidden');
+        shareWrapper?.classList.remove('is-hidden');
+      }
+      folderSelectedBadge?.classList.add('is-hidden');
+      folderSelectionActions?.classList.add('is-hidden');
+    }
+  };
+
+  const downloadSelectedFiles = (): void => {
+    if (selectedItemIds.size === 0) return;
+    const filesToDownload: { downloadUrl: string; name: string }[] = [];
+
     if (currentFolderId) {
       const folder = activeFolders.get(currentFolderId);
       if (folder) {
-        downloadAllFolderFiles(folder);
+        selectedItemIds.forEach((fileId) => {
+          const item = folder.files.get(fileId);
+          if (item && item.downloadUrl) {
+            filesToDownload.push({ downloadUrl: item.downloadUrl, name: item.name });
+          }
+        });
       }
+    } else {
+      selectedItemIds.forEach((fileId) => {
+        const item = standaloneFiles.get(fileId);
+        if (item && item.downloadUrl && !item.isLimitReached) {
+          filesToDownload.push({ downloadUrl: item.downloadUrl, name: item.name });
+        }
+      });
     }
+
+    if (filesToDownload.length === 0) {
+      toast.info(i18n.t('room.files_not_ready_to_download'));
+      return;
+    }
+
+    let delay = 0;
+    filesToDownload.forEach((file) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = file.downloadUrl;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, delay);
+      delay += 200;
+    });
+  };
+
+  btnRoomDownloadSelected?.addEventListener('click', downloadSelectedFiles);
+  btnFolderDownloadSelected?.addEventListener('click', downloadSelectedFiles);
+
+  btnRoomClearSelection?.addEventListener('click', () => {
+    selectedItemIds.clear();
+    updateSelectionUI();
+    renderTableRows();
+  });
+
+  btnFolderClearSelection?.addEventListener('click', () => {
+    selectedItemIds.clear();
+    updateSelectionUI();
+    renderTableRows();
+  });
+
+  const handleKeyDown = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape' && selectedItemIds.size > 0) {
+      selectedItemIds.clear();
+      updateSelectionUI();
+      renderTableRows();
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+
+  btnBackToRoot?.addEventListener('click', () => {
+    currentFolderId = null;
+    selectedItemIds.clear();
+    updateSelectionUI();
+    renderTableRows();
   });
 
   const checkDropzoneVisibility = () => {
@@ -1365,35 +1487,26 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
       folderHeaderBar?.classList.remove('is-hidden');
       let totalBytes = 0;
-      let hasAnyDownload = false;
       folder.files.forEach((f) => {
         totalBytes += f.size;
-        if (f.downloadUrl) hasAnyDownload = true;
       });
 
       if (folderHeaderTitle) {
         folderHeaderTitle.textContent = folder.name;
       }
       if (folderHeaderDesc) {
-        folderHeaderDesc.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
-      }
-
-      if (btnFolderDownloadAll) {
-        btnFolderDownloadAll.style.display = hasAnyDownload ? 'inline-flex' : 'none';
+        folderHeaderDesc.textContent = `${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
       }
 
       folder.files.forEach((f) => {
+        const isSelected = selectedItemIds.has(f.fileId);
         const row = document.createElement('tr');
-        row.className = 'component-table__row';
+        row.className = `component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}`;
         row.setAttribute('data-ref', `file-row-${f.fileId}`);
 
         const statusBadge = f.progress >= 100
           ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
           : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${f.progress}%</span>`;
-
-        const actionHtml = f.downloadUrl
-          ? `<a href="${f.downloadUrl}" download="${escapeHtml(f.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${f.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg></a>`
-          : '';
 
         row.innerHTML = `
           <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${f.fileId}">
@@ -1410,15 +1523,29 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${f.fileId}">
             <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
           </td>
-          <td class="component-table__cell" data-ref="cell-status-${f.fileId}">
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${f.fileId}" style="text-align: right;">
             ${statusBadge}
           </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${f.fileId}" style="text-align: right;">
-            <div data-ref="actions-box-${f.fileId}">
-              ${actionHtml}
-            </div>
-          </td>
         `;
+
+        row.addEventListener('click', (e: MouseEvent) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            if (selectedItemIds.has(f.fileId)) {
+              selectedItemIds.delete(f.fileId);
+            } else {
+              selectedItemIds.add(f.fileId);
+            }
+          } else {
+            if (selectedItemIds.has(f.fileId) && selectedItemIds.size === 1) {
+              selectedItemIds.clear();
+            } else {
+              selectedItemIds.clear();
+              selectedItemIds.add(f.fileId);
+            }
+          }
+          updateSelectionUI();
+          renderTableRows();
+        });
 
         renderIcons(row);
         filesTbody.appendChild(row);
@@ -1466,19 +1593,16 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${folder.id}">
             <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
           </td>
-          <td class="component-table__cell" data-ref="cell-status-${folder.id}">
-            <span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="folder-count-${folder.id}">${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })}</span>
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${folder.id}" style="text-align: right;">
+            <span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="folder-count-${folder.id}">${i18n.t('room.files_count', { count: folder.files.size })}</span>
             ${statusBadge}
-          </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${folder.id}" style="text-align: right;">
-            <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-enter-${folder.id}" data-tooltip="${i18n.t('room.click_to_view_files')}" aria-label="${i18n.t('room.click_to_view_files')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-            </button>
           </td>
         `;
 
         folderRow.addEventListener('click', () => {
           currentFolderId = folder.id;
+          selectedItemIds.clear();
+          updateSelectionUI();
           renderTableRows();
         });
 
@@ -1487,24 +1611,20 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       });
 
       standaloneFiles.forEach((file) => {
+        const isSelected = selectedItemIds.has(file.fileId);
         const fileRow = document.createElement('tr');
-        fileRow.className = 'component-table__row';
+        fileRow.className = `component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}`;
         fileRow.setAttribute('data-ref', `file-row-${file.fileId}`);
 
-        const statusBadge = file.progress >= 100
-          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${file.fileId}">${i18n.t('room.status_ready')}</span>`
-          : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${file.fileId}">${file.progress}%</span>`;
+        const statusBadge = file.isLimitReached
+          ? `<span class="component-badge component-badge--destructive" data-ref="badge-limit-${file.fileId}">${i18n.t('room.download_limit_reached')}</span>`
+          : (file.progress >= 100
+            ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${file.fileId}">${i18n.t('room.status_ready')}</span>`
+            : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${file.fileId}">${file.progress}%</span>`);
 
         const downloadCountHtml = (file.maxDownloads !== undefined && file.maxDownloads !== null)
-          ? `<span class="component-badge component-badge--sm" data-ref="downloads-count-${file.fileId}">${file.downloadCount || 0}/${file.maxDownloads}</span>`
+          ? `<span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="downloads-count-${file.fileId}">${file.downloadCount || 0}/${file.maxDownloads}</span>`
           : '';
-
-        let actionHtml = '';
-        if (file.isLimitReached) {
-          actionHtml = `<span class="component-badge component-badge--destructive" data-ref="badge-limit-${file.fileId}">${i18n.t('room.download_limit_reached')}</span>`;
-        } else if (file.downloadUrl) {
-          actionHtml = `<a href="${file.downloadUrl}" download="${escapeHtml(file.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${file.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg></a>`;
-        }
 
         fileRow.innerHTML = `
           <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${file.fileId}">
@@ -1521,16 +1641,30 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${file.fileId}">
             <span class="component-badge component-badge--sm">${escapeHtml(file.senderUsername)}</span>
           </td>
-          <td class="component-table__cell" data-ref="cell-status-${file.fileId}">
-            ${statusBadge}
+          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${file.fileId}" style="text-align: right;">
             ${downloadCountHtml}
-          </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-actions-${file.fileId}" style="text-align: right;">
-            <div data-ref="actions-box-${file.fileId}">
-              ${actionHtml}
-            </div>
+            ${statusBadge}
           </td>
         `;
+
+        fileRow.addEventListener('click', (e: MouseEvent) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            if (selectedItemIds.has(file.fileId)) {
+              selectedItemIds.delete(file.fileId);
+            } else {
+              selectedItemIds.add(file.fileId);
+            }
+          } else {
+            if (selectedItemIds.has(file.fileId) && selectedItemIds.size === 1) {
+              selectedItemIds.clear();
+            } else {
+              selectedItemIds.clear();
+              selectedItemIds.add(file.fileId);
+            }
+          }
+          updateSelectionUI();
+          renderTableRows();
+        });
 
         renderIcons(fileRow);
         filesTbody.appendChild(fileRow);
@@ -1680,35 +1814,6 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         badge.textContent = `${progress}%`;
       }
     }
-
-    if (downloadUrl) {
-      const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${fileId}"]`);
-      if (actionsBox && !actionsBox.querySelector('a')) {
-        actionsBox.innerHTML = `
-          <a href="${downloadUrl}" download="${escapeHtml(existingFile.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-          </a>
-        `;
-        renderIcons(actionsBox);
-      }
-    }
-  };
-
-  const downloadAllFolderFiles = (folder: FolderState) => {
-    let delay = 0;
-    folder.files.forEach((fileItem) => {
-      if (fileItem.downloadUrl) {
-        setTimeout(() => {
-          const a = document.createElement('a');
-          a.href = fileItem.downloadUrl!;
-          a.download = fileItem.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }, delay);
-        delay += 200;
-      }
-    });
   };
 
   const updateFolderProgress = (folderId: string) => {
@@ -1726,31 +1831,14 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
             badge.textContent = `${f.progress}%`;
           }
         }
-
-        if (f.downloadUrl) {
-          const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${f.fileId}"]`);
-          if (actionsBox && !actionsBox.querySelector('a')) {
-            actionsBox.innerHTML = `
-              <a href="${f.downloadUrl}" download="${escapeHtml(f.name)}" class="component-button component-button--icon-only component-button--h34" data-ref="btn-download-${f.fileId}" data-tooltip="${i18n.t('room.download_file')}" aria-label="${i18n.t('room.download_file')}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              </a>
-            `;
-            renderIcons(actionsBox);
-          }
-        }
       });
 
       let totalBytes = 0;
-      let hasAnyDownload = false;
       folder.files.forEach((f) => {
         totalBytes += f.size;
-        if (f.downloadUrl) hasAnyDownload = true;
       });
       if (folderHeaderDesc) {
-        folderHeaderDesc.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
-      }
-      if (btnFolderDownloadAll) {
-        btnFolderDownloadAll.style.display = hasAnyDownload ? 'inline-flex' : 'none';
+        folderHeaderDesc.textContent = `${i18n.t('room.files_count', { count: folder.files.size })} • ${formatBytes(totalBytes)} • ${folder.senderUsername}`;
       }
     } else if (!currentFolderId) {
       const row = filesTbody?.querySelector<HTMLElement>(`[data-ref="folder-row-${folderId}"]`);
@@ -1776,7 +1864,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       const sizeEl = row.querySelector<HTMLElement>(`[data-ref="folder-size-${folderId}"]`);
       const badgeEl = row.querySelector<HTMLElement>(`[data-ref="folder-badge-${folderId}"]`);
 
-      if (countEl) countEl.textContent = `${folder.files.size} ${i18n.t('room.files_count', { count: folder.files.size })}`;
+      if (countEl) countEl.textContent = i18n.t('room.files_count', { count: folder.files.size });
       if (sizeEl) sizeEl.textContent = formatBytes(folderBytes);
       if (badgeEl) {
         if (allComplete) {
@@ -2460,6 +2548,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     if (isCleanedUp) return;
     isCleanedUp = true;
     window.removeEventListener('beforeunload', cleanup);
+    window.removeEventListener('keydown', handleKeyDown);
     sessionStorage.removeItem(`room_owner_${roomId}`);
 
     peers.forEach((peer) => {
@@ -2648,13 +2737,10 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
               countBadge.textContent = `${(data as any).download_count}/${(data as any).max_downloads}`;
             }
             if ((data as any).is_limit_reached) {
-              const actionsBox = filesTbody?.querySelector<HTMLElement>(`[data-ref="actions-box-${data.file_id}"]`);
-              if (actionsBox) {
-                actionsBox.innerHTML = `
-                  <span class="component-badge component-badge--destructive" data-ref="badge-limit-${data.file_id}">
-                    ${i18n.t('room.download_limit_reached')}
-                  </span>
-                `;
+              const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${data.file_id}"]`);
+              if (badge) {
+                badge.className = 'component-badge component-badge--sm component-badge--destructive';
+                badge.textContent = i18n.t('room.download_limit_reached');
               }
             }
           }

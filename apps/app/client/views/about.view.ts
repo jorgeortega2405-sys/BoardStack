@@ -30,14 +30,17 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
   `;
 
   const valuesBlock = document.createElement('div');
-  valuesBlock.className = 'component-block';
+  valuesBlock.className = 'component-block component-block--compact';
   valuesBlock.setAttribute('data-ref', 'about-values-block');
+  valuesBlock.style.maxWidth = '980px';
+  valuesBlock.style.width = '100%';
+  valuesBlock.style.margin = '0 auto';
   valuesBlock.innerHTML = `
     <span class="component-badge" data-ref="values-badge">${i18n.t('about.values_badge')}</span>
-    <h2 class="component-title" data-ref="values-title">${i18n.t('about.values_title')}</h2>
+    <h2 class="component-title" style="font-size: clamp(22px, 3.5vw, 30px);" data-ref="values-title">${i18n.t('about.values_title')}</h2>
 
-    <div class="component-grid--2-col" data-ref="values-grid">
-      <div class="component-card component-card--feature" data-ref="card-val-privacy">
+    <div class="component-grid--2-col-equal" data-ref="values-grid">
+      <div class="component-card component-card--feature component-card--feature-sm" data-ref="card-val-privacy">
         <div class="component-card__icon-box">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
         </div>
@@ -45,7 +48,7 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
         <p class="component-subtitle" data-ref="val-privacy-desc">${i18n.t('about.val_privacy_desc')}</p>
       </div>
 
-      <div class="component-card component-card--feature" data-ref="card-val-speed">
+      <div class="component-card component-card--feature component-card--feature-sm" data-ref="card-val-speed">
         <div class="component-card__icon-box">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
         </div>
@@ -53,7 +56,7 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
         <p class="component-subtitle" data-ref="val-speed-desc">${i18n.t('about.val_speed_desc')}</p>
       </div>
 
-      <div class="component-card component-card--feature" data-ref="card-val-security">
+      <div class="component-card component-card--feature component-card--feature-sm" data-ref="card-val-security">
         <div class="component-card__icon-box">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
         </div>
@@ -61,7 +64,7 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
         <p class="component-subtitle" data-ref="val-security-desc">${i18n.t('about.val_security_desc')}</p>
       </div>
 
-      <div class="component-card component-card--feature" data-ref="card-val-accessibility">
+      <div class="component-card component-card--feature component-card--feature-sm" data-ref="card-val-accessibility">
         <div class="component-card__icon-box">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
         </div>
@@ -72,17 +75,21 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
   `;
 
   const quoteBlock = document.createElement('div');
-  quoteBlock.className = 'component-block';
-  quoteBlock.setAttribute('data-ref', 'about-quote-block');
+  quoteBlock.className = 'component-card component-card--feature';
+  quoteBlock.setAttribute('data-ref', 'about-quote-card');
+  quoteBlock.style.textAlign = 'center';
+  quoteBlock.style.alignItems = 'center';
+  quoteBlock.style.padding = '32px 24px';
+  quoteBlock.style.maxWidth = '980px';
+  quoteBlock.style.width = '100%';
+  quoteBlock.style.margin = '0 auto';
   quoteBlock.innerHTML = `
-    <div class="component-card component-card--feature" data-ref="about-quote-card" style="text-align: center; padding: 36px 24px;">
-      <p class="component-title" style="font-size: 18px; font-weight: 500; font-style: italic; margin-bottom: 12px; line-height: 1.5;" data-ref="quote-text">
-        "${i18n.t('about.quote_text')}"
-      </p>
-      <p class="component-subtitle" style="font-size: 13.5px;" data-ref="quote-author">
-        ${i18n.t('about.quote_author')}
-      </p>
-    </div>
+    <p class="component-title" style="font-size: 16.5px; font-weight: 500; font-style: italic; margin-bottom: 8px; line-height: 1.5;" data-ref="quote-text">
+      "${i18n.t('about.quote_text')}"
+    </p>
+    <p class="component-subtitle" style="font-size: 13px;" data-ref="quote-author">
+      ${i18n.t('about.quote_author')}
+    </p>
   `;
 
   renderIcons(heroBlock);

@@ -1317,6 +1317,11 @@ html.is-auth-view [data-ref="main-wrapper"] {
   visibility: hidden;
 }
 
+.component-group--accordion:not(.is-active) .component-accordion-body {
+  grid-template-rows: 0fr;
+  visibility: hidden;
+}
+
 .component-group--accordion.is-active .component-accordion-body {
   grid-template-rows: 1fr;
   visibility: visible;
@@ -1328,14 +1333,63 @@ html.is-auth-view [data-ref="main-wrapper"] {
   width: 100%;
   overflow: hidden;
   opacity: 0;
-  border-top: 1px solid transparent;
-  transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-top-color var(--sl-transition-fast, 0.15s ease);
+  padding: 0;
+  border-top: none;
+  box-sizing: border-box;
+  transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.component-group--accordion:not(.is-active) .component-accordion-content {
+  border-top: none !important;
+  padding: 0 !important;
 }
 
 .component-group--accordion.is-active .component-accordion-content {
   opacity: 1;
   overflow: visible;
-  border-top-color: var(--border-color, #e5e7eb);
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.component-group--compact {
+  border-radius: 14px;
+}
+
+.component-accordion-header--sm {
+  padding: 14px 20px;
+}
+
+.component-accordion-header--sm .component-item__title {
+  font-size: 14.5px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.component-accordion-header--sm .component-accordion-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.component-accordion-inner--sm {
+  padding: 14px 20px 18px 20px;
+  box-sizing: border-box;
+}
+
+.component-accordion-inner--sm .component-item__desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.component-accordion-content--sm {
+  padding: 0;
+}
+
+.component-accordion-content--sm > .component-item__desc {
+  padding: 14px 20px 18px 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .component-item {
@@ -1528,6 +1582,11 @@ html.is-auth-view [data-ref="main-wrapper"] {
   padding-right: 48px;
 }
 
+.field__input[readonly] {
+  background-color: var(--bg-hover, #f8fafc);
+  cursor: default;
+}
+
 .field__label {
   position: absolute;
   left: 16px;
@@ -1605,6 +1664,166 @@ html.is-auth-view [data-ref="main-wrapper"] {
   font-weight: 600;
   letter-spacing: 4px;
   text-align: center;
+}
+
+.field--textarea {
+  align-items: flex-start;
+}
+
+.field__textarea {
+  width: 100%;
+  min-height: 110px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px 16px 10px 16px;
+  font-family: var(--sl-font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast), background-color var(--sl-transition-fast);
+  margin: 0;
+}
+
+.field__textarea:focus {
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 1px var(--border-color-focus);
+  background-color: var(--bg-input-focus);
+}
+
+.field--textarea .field__label {
+  top: 22px;
+  transform: translateY(-50%);
+}
+
+.field__textarea:focus ~ .field__label,
+.field__textarea:not(:placeholder-shown) ~ .field__label {
+  top: 14px;
+  transform: translateY(-50%) scale(0.78);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   PROGRESS BAR AT TOP OF CARD (.component-card__progress)
+   -------------------------------------------------------------------------- */
+.component-card__progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: transparent;
+  overflow: hidden;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  z-index: 10;
+}
+
+.component-card__progress-bar {
+  position: relative;
+  height: 100%;
+  width: 50%;
+  transform-origin: left center;
+  background-color: #000000;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-theme="dark"] .component-card__progress-bar {
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+/* --------------------------------------------------------------------------
+   DROPDOWN TRIGGER AS FORM FIELD (.component-dropdown--field)
+   -------------------------------------------------------------------------- */
+.component-dropdown--field {
+  width: 100%;
+  position: relative;
+  display: flex;
+}
+
+.component-dropdown--field .component-dropdown__trigger {
+  width: 100%;
+  max-width: 100%;
+  height: 55px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 8px 16px 6px 16px;
+  background-color: var(--bg-input);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast), background-color var(--sl-transition-fast);
+  text-align: left;
+}
+
+.component-dropdown--field .component-dropdown__trigger:hover {
+  background-color: var(--bg-input-focus);
+}
+
+.component-dropdown--field.is-open .component-dropdown__trigger,
+.component-dropdown--field .component-dropdown__trigger:focus {
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 1px var(--border-color-focus);
+  background-color: var(--bg-input-focus);
+}
+
+.component-dropdown--field .component-dropdown__trigger-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.component-dropdown--field .component-dropdown__label {
+  font-family: var(--sl-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.component-dropdown--field .component-dropdown__trigger-text {
+  font-family: var(--sl-font-sans);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.component-dropdown--field .component-dropdown__trigger-chevron {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.component-dropdown--field.is-open .component-dropdown__trigger-chevron {
+  transform: rotate(180deg);
+}
+
+.component-dropdown--field .component-menu--dropdown {
+  width: 100%;
+  max-width: 100%;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 2100;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 /* --------------------------------------------------------------------------
@@ -1863,6 +2082,17 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-block--flush {
   border: none !important;
   border-radius: 0 !important;
+}
+
+.component-block--compact {
+  padding: 36px 28px;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .component-block--compact {
+    padding: 24px 16px;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -3353,6 +3583,21 @@ html.is-auth-view [data-ref="main-wrapper"] {
   align-items: start;
 }
 
+.component-grid--2-col-equal {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .component-grid--2-col-equal {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .component-main {
   display: flex;
   flex-direction: column;
@@ -3819,6 +4064,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   margin-bottom: 0;
   position: relative;
   z-index: 100;
+  flex-shrink: 0;
   box-sizing: border-box;
 }
 
@@ -3841,6 +4087,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-top__title--boxed {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   height: 40px;
   padding: 0 16px;
   border: 1px solid var(--border-color, #e2e8f0);
@@ -4423,6 +4670,33 @@ html.is-auth-view [data-ref="main-wrapper"] {
   margin: 0;
   line-height: 1.5;
   max-width: 100%;
+}
+
+.component-card--feature-sm {
+  padding: 20px 20px;
+  gap: 10px;
+  border-radius: 16px;
+}
+
+.component-card--feature-sm .component-card__icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.component-card--feature-sm .component-card__icon-box .component-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.component-card--feature-sm .component-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.component-card--feature-sm .component-subtitle {
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .component-step-card {

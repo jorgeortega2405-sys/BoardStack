@@ -1,4 +1,4 @@
-import { copyToClipboard } from '../utils/dom.util.js';
+import { copyToClipboard, setupDropdown } from '../utils/dom.util.js';
 import { currentUser, deleteApi, getApi, postApi, putApi } from '../services/api.service.js';
 import { formatDate } from '../utils/format.util.js';
 import { i18n } from '../i18n/i18n.service.js';
@@ -129,6 +129,9 @@ function renderDetailsHtml(org: OrgData): string {
   return `
     <div class="component-top" data-ref="details-top-bar">
       <div class="component-top__left" data-ref="details-top-left">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        </button>
         <div class="component-top__title-box" data-ref="details-title-heading">
           <span class="component-top__title-text" data-ref="details-top-title">${i18n.t('organization.general_title')}</span>
         </div>
@@ -144,50 +147,54 @@ function renderDetailsHtml(org: OrgData): string {
     <div class="component-bottom component-bottom--centered" data-ref="details-bottom-area">
       <div class="component-container component-container--narrow" data-ref="details-layout" style="margin: 0 auto; width: 100%; max-width: 680px;">
         
-        <div class="component-header" data-ref="details-header" style="margin-bottom: 24px;">
-          <h2 class="component-title" data-ref="details-title">${i18n.t('organization.general_title')}</h2>
-          <p class="component-subtitle" data-ref="details-subtitle">${i18n.t('organization.general_desc')}</p>
-        </div>
-
-        <div class="component-group" data-ref="group-general-fields" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="component-card" data-ref="card-org-details" style="padding: 28px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 16px;">
           
-          <div class="component-item" data-ref="item-org-name" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-org-name" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.name_label')}</label>
+          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
+            <h2 class="component-title" data-ref="details-title" style="font-size: 18px; font-weight: 700; margin: 0 0 4px 0;">${i18n.t('organization.general_title')}</h2>
+            <p class="component-subtitle" data-ref="details-subtitle" style="font-size: 13px; margin: 0;">${i18n.t('organization.general_desc')}</p>
+          </div>
+
+          <label class="field" data-ref="field-org-name">
             <input
               type="text"
-              class="component-input"
-              id="field-org-name"
+              class="field__input"
               data-ref="input-org-name"
               value="${org.name}"
-              placeholder="Acme Corporation"
-              style="width: 100%;"
+              placeholder=" "
+              required
             />
-          </div>
+            <span class="field__label">${i18n.t('organization.name_label')}</span>
+          </label>
 
-          <div class="component-item" data-ref="item-org-slug" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-org-slug" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.slug_label')}</label>
+          <label class="field" data-ref="field-org-slug">
             <input
               type="text"
-              class="component-input"
-              id="field-org-slug"
+              class="field__input"
               data-ref="input-org-slug"
               value="${org.slug}"
-              placeholder="acme-corp"
-              style="width: 100%; font-family: monospace;"
+              placeholder=" "
+              required
+              style="font-family: monospace;"
             />
-          </div>
+            <span class="field__label">${i18n.t('organization.slug_label')}</span>
+          </label>
 
-          <div class="component-item" data-ref="item-org-domain" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-org-domain" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.domain_label')}</label>
+          <label class="field" data-ref="field-org-domain">
             <input
               type="text"
-              class="component-input"
-              id="field-org-domain"
+              class="field__input"
               data-ref="input-org-domain"
               value="${org.domain || ''}"
-              placeholder="acme.com"
-              style="width: 100%;"
+              placeholder=" "
             />
+            <span class="field__label">${i18n.t('organization.domain_label')}</span>
+          </label>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-details-bottom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span>${i18n.t('organization.btn_save_changes')}</span>
+            </button>
           </div>
 
         </div>
@@ -201,6 +208,9 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
   return `
     <div class="component-top" data-ref="saml-top-bar">
       <div class="component-top__left" data-ref="saml-top-left">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        </button>
         <div class="component-top__title-box" data-ref="saml-title-heading">
           <span class="component-top__title-text" data-ref="saml-top-title">${i18n.t('organization.saml_title')}</span>
         </div>
@@ -214,17 +224,12 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
     </div>
 
     <div class="component-bottom component-bottom--centered" data-ref="saml-bottom-area">
-      <div class="component-container component-container--narrow" data-ref="saml-layout" style="margin: 0 auto; width: 100%; max-width: 680px;">
+      <div class="component-container component-container--narrow" data-ref="saml-layout" style="margin: 0 auto; width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 16px;">
         
-        <div class="component-header" data-ref="saml-header" style="margin-bottom: 24px;">
-          <h2 class="component-title" data-ref="saml-title">${i18n.t('organization.saml_title')}</h2>
-          <p class="component-subtitle" data-ref="saml-subtitle">${i18n.t('organization.saml_desc')}</p>
-        </div>
-
-        <div class="component-item" data-ref="item-saml-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px; margin-bottom: 24px;">
-          <div class="component-item__content">
-            <h4 class="component-item__title" style="font-size: 14px; font-weight: 600; margin: 0 0 2px 0;">${i18n.t('organization.saml_enable')}</h4>
-            <p class="component-item__desc" style="font-size: 12.5px; color: var(--text-secondary); margin: 0;">SAML 2.0 / SSO</p>
+        <div class="component-card" data-ref="card-saml-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff);">
+          <div>
+            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">${i18n.t('organization.saml_enable')}</h3>
+            <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">SAML 2.0 / Single Sign-On (SSO)</p>
           </div>
           <label class="component-switch" data-ref="switch-saml-label">
             <input type="checkbox" data-ref="switch-saml-enabled" ${org.saml_enabled ? 'checked' : ''} />
@@ -232,94 +237,92 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
           </label>
         </div>
 
-        <div class="component-header" style="margin-bottom: 12px;">
-          <h3 class="component-title" style="font-size: 15px; font-weight: 600;">Service Provider (SP) - BoardStack</h3>
-        </div>
-
-        <div class="component-group" data-ref="group-sp-fields" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
-          
-          <div class="component-item" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-sp-acs" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.saml_sp_acs')}</label>
-            <div style="display: flex; gap: 8px; width: 100%;">
-              <input
-                type="text"
-                class="component-input"
-                id="field-sp-acs"
-                data-ref="input-sp-acs"
-                value="${spAcsUrl}"
-                readonly
-                style="flex: 1; font-family: monospace; background: var(--bg-hover, #f8fafc);"
-              />
-              <button type="button" class="component-button component-button--h34" data-ref="btn-copy-acs" data-copy="${spAcsUrl}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              </button>
-            </div>
+        <div class="component-card" data-ref="card-sp-fields" style="padding: 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 14px;">
+          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
+            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">Service Provider (SP) - BoardStack</h3>
+            <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">${i18n.t('organization.saml_desc')}</p>
           </div>
 
-          <div class="component-item" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-sp-entity" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.saml_sp_entity_id')}</label>
-            <div style="display: flex; gap: 8px; width: 100%;">
-              <input
-                type="text"
-                class="component-input"
-                id="field-sp-entity"
-                data-ref="input-sp-entity"
-                value="${spEntityId}"
-                readonly
-                style="flex: 1; font-family: monospace; background: var(--bg-hover, #f8fafc);"
-              />
-              <button type="button" class="component-button component-button--h34" data-ref="btn-copy-entity" data-copy="${spEntityId}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="component-header" style="margin-bottom: 12px;">
-          <h3 class="component-title" style="font-size: 15px; font-weight: 600;">Identity Provider (IdP)</h3>
-        </div>
-
-        <div class="component-group" data-ref="group-idp-fields" style="display: flex; flex-direction: column; gap: 16px;">
-          
-          <div class="component-item" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-idp-entry" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.saml_idp_entry_point')}</label>
+          <label class="field" data-ref="field-sp-acs">
             <input
               type="text"
-              class="component-input"
-              id="field-idp-entry"
+              class="field__input field__input--has-action"
+              data-ref="input-sp-acs"
+              value="${spAcsUrl}"
+              readonly
+              placeholder=" "
+              style="font-family: monospace;"
+            />
+            <span class="field__label">${i18n.t('organization.saml_sp_acs')}</span>
+            <button type="button" class="field__action" data-ref="btn-copy-acs" data-copy="${spAcsUrl}" title="${i18n.t('room.link_copied')}" aria-label="Copy">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            </button>
+          </label>
+
+          <label class="field" data-ref="field-sp-entity">
+            <input
+              type="text"
+              class="field__input field__input--has-action"
+              data-ref="input-sp-entity"
+              value="${spEntityId}"
+              readonly
+              placeholder=" "
+              style="font-family: monospace;"
+            />
+            <span class="field__label">${i18n.t('organization.saml_sp_entity_id')}</span>
+            <button type="button" class="field__action" data-ref="btn-copy-entity" data-copy="${spEntityId}" title="${i18n.t('room.link_copied')}" aria-label="Copy">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            </button>
+          </label>
+        </div>
+
+        <div class="component-card" data-ref="card-idp-fields" style="padding: 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 14px;">
+          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
+            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">Identity Provider (IdP)</h3>
+            <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">${i18n.t('organization.saml_desc')}</p>
+          </div>
+
+          <label class="field" data-ref="field-idp-entry">
+            <input
+              type="text"
+              class="field__input"
               data-ref="input-idp-entry"
               value="${org.saml_entry_point || ''}"
-              placeholder="https://identity.example.com/app/boardstack/sso/saml"
-              style="width: 100%; font-family: monospace;"
+              placeholder=" "
+              style="font-family: monospace;"
             />
-          </div>
+            <span class="field__label">${i18n.t('organization.saml_idp_entry_point')}</span>
+          </label>
 
-          <div class="component-item" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-idp-issuer" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.saml_idp_issuer')}</label>
+          <label class="field" data-ref="field-idp-issuer">
             <input
               type="text"
-              class="component-input"
-              id="field-idp-issuer"
+              class="field__input"
               data-ref="input-idp-issuer"
               value="${org.saml_issuer || ''}"
-              placeholder="http://www.okta.com/exk..."
-              style="width: 100%; font-family: monospace;"
+              placeholder=" "
+              style="font-family: monospace;"
             />
-          </div>
+            <span class="field__label">${i18n.t('organization.saml_idp_issuer')}</span>
+          </label>
 
-          <div class="component-item" style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-            <label class="component-label" for="field-idp-cert" style="font-weight: 500; font-size: 13.5px;">${i18n.t('organization.saml_idp_cert')}</label>
+          <label class="field field--textarea" data-ref="field-idp-cert">
             <textarea
-              class="component-input"
-              id="field-idp-cert"
+              class="field__textarea"
               data-ref="input-idp-cert"
-              rows="4"
-              placeholder="-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----"
-              style="width: 100%; font-family: monospace; font-size: 12px; resize: vertical;"
+              rows="5"
+              placeholder=" "
+              style="font-family: monospace; font-size: 12px; line-height: 1.4;"
             >${org.saml_cert || ''}</textarea>
-          </div>
+            <span class="field__label">${i18n.t('organization.saml_idp_cert')}</span>
+          </label>
 
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-saml-bottom">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span>${i18n.t('organization.btn_save_changes')}</span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -365,6 +368,9 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[], isOwner: bool
   return `
     <div class="component-top" data-ref="members-top-bar">
       <div class="component-top__left" data-ref="members-top-left">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        </button>
         <div class="component-top__title-box" data-ref="members-title-heading">
           <span class="component-top__title-text" data-ref="members-top-title">${i18n.t('organization.seats_title')}</span>
           <span class="component-badge" data-ref="members-count-badge">${members.length} / ${seatsLimit}</span>
@@ -616,12 +622,17 @@ async function createOrganizationView(
 
   const { isOwner, membersCount, org, spAcsUrl, spEntityId } = orgData;
 
+  const baseBackPath = currentSubpath.startsWith('/settings') ? '/settings/organization' : '/organization';
+
   if (isDetails) {
     container.innerHTML = renderDetailsHtml(org);
     renderIcons(container);
 
-    const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-details"]');
-    btnSave?.addEventListener('click', async () => {
+    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
+      navigate(baseBackPath);
+    });
+
+    const handleSaveDetails = async (btnEl: HTMLButtonElement | null) => {
       const name = (container.querySelector<HTMLInputElement>('[data-ref="input-org-name"]')?.value || '').trim();
       const slug = (container.querySelector<HTMLInputElement>('[data-ref="input-org-slug"]')?.value || '').trim();
       const domain = (container.querySelector<HTMLInputElement>('[data-ref="input-org-domain"]')?.value || '').trim();
@@ -631,21 +642,27 @@ async function createOrganizationView(
         return;
       }
 
-      btnSave.disabled = true;
+      if (btnEl) btnEl.disabled = true;
       try {
         const res = await putApi<{ ok: boolean; org: OrgData }>('/api/organization', { domain, name, slug });
         if (res.ok) {
           toast.success(i18n.t('organization.org_saved'));
-          navigate('/organization');
+          navigate(baseBackPath);
         } else {
           toast.error(i18n.t('common.error'));
         }
       } catch (err: any) {
         toast.error(err.message || i18n.t('common.error'));
       } finally {
-        btnSave.disabled = false;
+        if (btnEl) btnEl.disabled = false;
       }
-    });
+    };
+
+    const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-details"]');
+    btnSave?.addEventListener('click', () => handleSaveDetails(btnSave));
+
+    const btnSaveBottom = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-details-bottom"]');
+    btnSaveBottom?.addEventListener('click', () => handleSaveDetails(btnSaveBottom));
 
     return container;
   }
@@ -654,8 +671,14 @@ async function createOrganizationView(
     container.innerHTML = renderSamlHtml(org, spAcsUrl, spEntityId);
     renderIcons(container);
 
+    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
+      navigate(baseBackPath);
+    });
+
     container.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const text = btn.getAttribute('data-copy') || '';
         if (text) {
           void copyToClipboard(text, i18n.t('room.link_copied'));
@@ -663,14 +686,13 @@ async function createOrganizationView(
       });
     });
 
-    const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-saml"]');
-    btnSave?.addEventListener('click', async () => {
+    const handleSaveSaml = async (btnEl: HTMLButtonElement | null) => {
       const samlEnabled = container.querySelector<HTMLInputElement>('[data-ref="switch-saml-enabled"]')?.checked ?? false;
       const samlEntryPoint = (container.querySelector<HTMLInputElement>('[data-ref="input-idp-entry"]')?.value || '').trim();
       const samlIssuer = (container.querySelector<HTMLInputElement>('[data-ref="input-idp-issuer"]')?.value || '').trim();
       const samlCert = (container.querySelector<HTMLTextAreaElement>('[data-ref="input-idp-cert"]')?.value || '').trim();
 
-      btnSave.disabled = true;
+      if (btnEl) btnEl.disabled = true;
       try {
         const res = await putApi<{ ok: boolean; org: OrgData }>('/api/organization', {
           samlCert,
@@ -680,16 +702,22 @@ async function createOrganizationView(
         });
         if (res.ok) {
           toast.success(i18n.t('organization.saml_saved'));
-          navigate('/organization');
+          navigate(baseBackPath);
         } else {
           toast.error(i18n.t('common.error'));
         }
       } catch (err: any) {
         toast.error(err.message || i18n.t('common.error'));
       } finally {
-        btnSave.disabled = false;
+        if (btnEl) btnEl.disabled = false;
       }
-    });
+    };
+
+    const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-saml"]');
+    btnSave?.addEventListener('click', () => handleSaveSaml(btnSave));
+
+    const btnSaveBottom = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-saml-bottom"]');
+    btnSaveBottom?.addEventListener('click', () => handleSaveSaml(btnSaveBottom));
 
     return container;
   }
@@ -705,7 +733,12 @@ async function createOrganizationView(
 
     container.innerHTML = renderMembersHtml(org, membersList, isOwner);
     renderIcons(container);
-    setupExpandSeatsModal(container, org, () => navigate('/organization/members'));
+
+    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
+      navigate(baseBackPath);
+    });
+
+    setupExpandSeatsModal(container, org, () => navigate(`${baseBackPath}/members`));
 
     const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
     searchInput?.addEventListener('input', () => {
@@ -735,7 +768,7 @@ async function createOrganizationView(
             const res = await deleteApi<{ ok: boolean }>(`/api/organization/members/${memberId}`);
             if (res.ok) {
               toast.success(i18n.t('organization.member_removed'));
-              navigate('/organization/members');
+              navigate(`${baseBackPath}/members`);
             } else {
               toast.error(i18n.t('common.error'));
             }
@@ -754,34 +787,38 @@ async function createOrganizationView(
       const modal = openModal({
         bodyHtml: `
           <div style="display: flex; flex-direction: column; gap: 14px;">
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label class="component-label" for="field-modal-member-email" style="font-size: 13px; font-weight: 500;">
-                ${i18n.t('organization.add_member_email')}
-              </label>
-              <div style="position: relative; width: 100%;">
-                <input
-                  type="email"
-                  class="component-input"
-                  id="field-modal-member-email"
-                  data-ref="input-modal-member-email"
-                  placeholder="${i18n.t('organization.modal_search_placeholder')}"
-                  style="width: 100%; box-sizing: border-box;"
-                />
+            <label class="field" data-ref="field-modal-member-email">
+              <input
+                type="email"
+                class="field__input"
+                data-ref="input-modal-member-email"
+                placeholder=" "
+                required
+              />
+              <span class="field__label">${i18n.t('organization.add_member_email')}</span>
+            </label>
+
+            <div class="component-dropdown component-dropdown--field" data-ref="dropdown-modal-member-role">
+              <input type="hidden" data-ref="select-modal-member-role" value="member" />
+              <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="trigger-modal-member-role" style="height: 55px; border-radius: 16px;">
+                <div class="component-dropdown__trigger-left dropdown-trigger__left" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;">
+                  <span style="font-size: 11px; color: var(--text-secondary); line-height: 1;">${i18n.t('organization.add_member_role')}</span>
+                  <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="text-modal-member-role" style="font-size: 14px; font-weight: 500;">${i18n.t('organization.role_member')}</span>
+                </div>
+                <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="component-menu-backdrop dropdown-backdrop">
+                <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto">
+                  <div class="component-menu__list menu-panel__list">
+                    <div class="component-menu__item menu-panel__item is-selected" data-action="select-item" data-value="member" data-label="${i18n.t('organization.role_member')}">
+                      <span>${i18n.t('organization.role_member')}</span>
+                    </div>
+                    <div class="component-menu__item menu-panel__item" data-action="select-item" data-value="admin" data-label="${i18n.t('organization.role_admin')}">
+                      <span>${i18n.t('organization.role_admin')}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label class="component-label" for="field-modal-member-role" style="font-size: 13px; font-weight: 500;">
-                ${i18n.t('organization.add_member_role')}
-              </label>
-              <select
-                class="component-input"
-                id="field-modal-member-role"
-                data-ref="select-modal-member-role"
-                style="width: 100%;"
-              >
-                <option value="member">${i18n.t('organization.role_member')}</option>
-                <option value="admin">${i18n.t('organization.role_admin')}</option>
-              </select>
             </div>
           </div>
         `,
@@ -790,9 +827,9 @@ async function createOrganizationView(
         description: i18n.t('organization.modal_add_desc'),
         onConfirm: async () => {
           const emailInput = document.querySelector<HTMLInputElement>('[data-ref="input-modal-member-email"]');
-          const roleSelect = document.querySelector<HTMLSelectElement>('[data-ref="select-modal-member-role"]');
+          const roleInput = document.querySelector<HTMLInputElement>('[data-ref="select-modal-member-role"]');
           const email = (emailInput?.value || '').trim();
-          const role = roleSelect?.value || 'member';
+          const role = roleInput?.value || 'member';
 
           if (!email || !email.includes('@')) {
             toast.error(i18n.t('organization.add_member_email'));
@@ -804,7 +841,7 @@ async function createOrganizationView(
             if (res.ok) {
               toast.success(i18n.t('organization.member_added'));
               modal.close();
-              navigate('/organization/members');
+              navigate(`${baseBackPath}/members`);
             } else {
               toast.error(i18n.t('common.error'));
             }
@@ -815,6 +852,18 @@ async function createOrganizationView(
         title: i18n.t('organization.modal_add_title'),
       });
       renderIcons(document.body);
+
+      const roleDropdown = modal.backdrop.querySelector<HTMLElement>('[data-ref="dropdown-modal-member-role"]');
+      if (roleDropdown) {
+        setupDropdown(roleDropdown, {
+          onSelect: (val: string, item: HTMLElement) => {
+            const hiddenInput = modal.backdrop.querySelector<HTMLInputElement>('[data-ref="select-modal-member-role"]');
+            const textLabel = modal.backdrop.querySelector<HTMLElement>('[data-ref="text-modal-member-role"]');
+            if (hiddenInput) hiddenInput.value = val;
+            if (textLabel) textLabel.textContent = item.textContent?.trim() || val;
+          },
+        });
+      }
     });
 
     return container;
@@ -822,17 +871,50 @@ async function createOrganizationView(
 
   container.innerHTML = renderOverviewHtml(org, membersCount, isOwner);
   renderIcons(container);
-  setupExpandSeatsModal(container, org, () => navigate('/organization'));
+  setupExpandSeatsModal(container, org, () => navigate(baseBackPath));
 
   container.querySelector('[data-ref="btn-nav-members"]')?.addEventListener('click', () => {
-    navigate('/organization/members');
+    navigate(`${baseBackPath}/members`);
   });
   container.querySelector('[data-ref="btn-nav-saml"]')?.addEventListener('click', () => {
-    navigate('/organization/saml');
+    navigate(`${baseBackPath}/saml`);
   });
   container.querySelector('[data-ref="btn-nav-details"]')?.addEventListener('click', () => {
-    navigate('/organization/details');
+    navigate(`${baseBackPath}/details`);
   });
+
+  const cardSeats = container.querySelector<HTMLElement>('[data-ref="metric-card-seats"]');
+  if (cardSeats) {
+    cardSeats.style.cursor = 'pointer';
+    cardSeats.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('[data-ref="btn-expand-seats"]')) return;
+      navigate(`${baseBackPath}/members`);
+    });
+  }
+
+  const cardMembers = container.querySelector<HTMLElement>('[data-ref="metric-card-members"]');
+  if (cardMembers) {
+    cardMembers.style.cursor = 'pointer';
+    cardMembers.addEventListener('click', () => {
+      navigate(`${baseBackPath}/members`);
+    });
+  }
+
+  const cardSso = container.querySelector<HTMLElement>('[data-ref="metric-card-sso"]');
+  if (cardSso) {
+    cardSso.style.cursor = 'pointer';
+    cardSso.addEventListener('click', () => {
+      navigate(`${baseBackPath}/saml`);
+    });
+  }
+
+  const cardDomain = container.querySelector<HTMLElement>('[data-ref="metric-card-domain"]');
+  if (cardDomain) {
+    cardDomain.style.cursor = 'pointer';
+    cardDomain.addEventListener('click', () => {
+      navigate(`${baseBackPath}/details`);
+    });
+  }
 
   return container;
 }

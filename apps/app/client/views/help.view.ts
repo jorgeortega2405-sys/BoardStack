@@ -23,8 +23,14 @@ async function createHelpView(section: HelpSection = 'faq', navigate?: (path: st
     `;
 
     const faqBlock = document.createElement('div');
-    faqBlock.className = 'component-block';
-    faqBlock.setAttribute('data-ref', 'help-faq-block');
+    faqBlock.className = 'component-container component-container--narrow';
+    faqBlock.setAttribute('data-ref', 'help-faq-container');
+    faqBlock.style.display = 'flex';
+    faqBlock.style.flexDirection = 'column';
+    faqBlock.style.gap = '12px';
+    faqBlock.style.width = '100%';
+    faqBlock.style.maxWidth = '840px';
+    faqBlock.style.margin = '0 auto';
 
     const faqItems = [
       { a: i18n.t('help.faq_a1'), id: '1', q: i18n.t('help.faq_q1') },
@@ -38,25 +44,27 @@ async function createHelpView(section: HelpSection = 'faq', navigate?: (path: st
     ];
 
     faqBlock.innerHTML = `
-      <div class="component-group" data-ref="faq-accordion-group" style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 840px;">
-        ${faqItems.map((item, idx) => `
-          <div class="component-group component-group--accordion ${idx === 0 ? 'is-active' : ''}" data-ref="faq-item-${item.id}">
-            <div class="component-accordion-header" data-ref="faq-header-${item.id}">
-              <h3 class="component-title" style="font-size: 15px; margin: 0;" data-ref="faq-question-${item.id}">${item.q}</h3>
-              <span class="component-accordion-icon" data-ref="faq-icon-${item.id}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-              </span>
+      ${faqItems.map((item, idx) => `
+        <div class="component-group component-group--accordion component-group--compact ${idx === 0 ? 'is-active' : ''}" data-ref="faq-item-${item.id}">
+          <div class="component-accordion-header component-accordion-header--sm" data-ref="faq-header-${item.id}">
+            <div class="component-item__content">
+              <h3 class="component-item__title" data-ref="faq-question-${item.id}">${item.q}</h3>
             </div>
-            <div class="component-accordion-body" data-ref="faq-body-${item.id}">
-              <div class="component-accordion-content" style="padding: 16px 24px;">
-                <p class="component-subtitle" style="font-size: 14px; line-height: 1.6; margin: 0;" data-ref="faq-answer-${item.id}">${item.a}</p>
+            <div class="component-item__actions">
+              <svg class="component-icon component-accordion-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+          <div class="component-accordion-body" data-ref="faq-body-${item.id}">
+            <div class="component-accordion-content" data-ref="faq-content-${item.id}">
+              <div class="component-accordion-inner component-accordion-inner--sm">
+                <p class="component-item__desc" data-ref="faq-answer-${item.id}">${item.a}</p>
               </div>
             </div>
           </div>
-        `).join('')}
-      </div>
+        </div>
+      `).join('')}
 
-      <div class="component-card component-card--feature" data-ref="faq-contact-card" style="text-align: center; align-items: center; padding: 28px; margin-top: 16px; width: 100%; max-width: 840px;">
+      <div class="component-card component-card--feature" data-ref="faq-contact-card" style="text-align: center; align-items: center; padding: 24px; margin-top: 8px; width: 100%;">
         <p class="component-title" style="font-size: 15px; margin-bottom: 6px;" data-ref="faq-contact-prompt">${i18n.t('help.faq_contact_prompt')}</p>
         <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-faq-contact">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
