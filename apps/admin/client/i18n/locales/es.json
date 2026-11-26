@@ -1,0 +1,144 @@
+{
+  "common": {
+    "accept": "Aceptar",
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "clear_search": "Limpiar búsqueda",
+    "close": "Cerrar",
+    "copied": "Copiado al portapapeles",
+    "error": "Ocurrió un error inesperado",
+    "loading": "Cargando...",
+    "refresh": "Actualizar",
+    "search": "Buscar",
+    "success": "Operación completada con éxito"
+  },
+  "nav": {
+    "account": "Cuenta",
+    "close_drawer": "Cerrar menú lateral",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión",
+    "menu": "Menú",
+    "profile": "Perfil",
+    "toggle_drawer": "Alternar menú lateral"
+  },
+  "drawer": {
+    "active_role": "Rol activo",
+    "app_switcher": "Aplicación",
+    "navigation": "Navegación",
+    "pages": "Páginas"
+  },
+  "auth": {
+    "back_to_login": "Volver al inicio de sesión",
+    "connection_error": "Error de conexión. Inténtalo nuevamente.",
+    "email": "Correo electrónico",
+    "email_and_password_required": "Ingresa tu correo electrónico y contraseña.",
+    "invalid_credentials": "Credenciales inválidas.",
+    "login_subtitle": "Accede al panel centralizado con tu cuenta autorizada",
+    "login_title": "Panel de Administración",
+    "password": "Contraseña",
+    "session_expired": "Tu sesión ha expirado. Inicia sesión nuevamente.",
+    "submit_login": "Iniciar sesión",
+    "toggle_password": "Mostrar u ocultar contraseña",
+    "two_factor_code_placeholder": "Código de 6 dígitos o código de respaldo",
+    "two_factor_code_required": "Ingresa el código de verificación.",
+    "two_factor_invalid": "Código de verificación inválido.",
+    "two_factor_subtitle": "Ingresa el código de tu aplicación de autenticación para continuar.",
+    "two_factor_title": "Verificación en dos pasos",
+    "verify_and_login": "Verificar e iniciar sesión"
+  },
+  "admin": {
+    "access": {
+      "no_apps": "No tienes aplicaciones o páginas habilitadas en el panel.",
+      "page_denied": "No tienes permiso para acceder a esta página o aplicación."
+    },
+    "auth": {
+      "access_denied": "No tienes permisos para acceder al panel de administración.",
+      "account_suspended": "Tu cuenta está suspendida o inactiva.",
+      "brand_title": "BoardStack Admin",
+      "login_subtitle": "Accede al panel centralizado con tu cuenta autorizada",
+      "login_title": "Panel de Administración"
+    },
+    "dashboard": {
+      "card_files_label": "Archivos subidos",
+      "card_files_sub": "{downloads} descargas registradas",
+      "card_revenue_label": "Ingresos totales",
+      "card_revenue_sub": "{purchases} pagos completados",
+      "card_rooms_label": "Salas creadas",
+      "card_rooms_sub": "{persistent} persistentes · {cloud} en nube",
+      "card_storage_label": "Almacenamiento en S3",
+      "card_storage_sub": "Espacio total ocupado en archivos",
+      "card_subscriptions_label": "Suscripciones activas",
+      "card_subscriptions_sub": "{organizations} organizaciones activas",
+      "card_users_label": "Usuarios registrados",
+      "card_users_sub": "{active} activos · {newUsers} últimos 30 días",
+      "chart_activity_subtitle": "Nuevos usuarios, salas y archivos en los últimos 7 días",
+      "chart_activity_title": "Actividad de los últimos 7 días",
+      "chart_plans_subtitle": "Distribución actual por nivel de suscripción",
+      "chart_plans_title": "Usuarios por plan",
+      "chart_revenue_subtitle": "Facturación diaria completada en los últimos 7 días",
+      "chart_revenue_title": "Ingresos de los últimos 7 días",
+      "chart_roles_subtitle": "Distribución efectiva de permisos en la aplicación",
+      "chart_roles_title": "Usuarios por rol",
+      "load_error": "No se pudieron cargar las estadísticas de la aplicación.",
+      "no_data": "Sin datos disponibles todavía",
+      "series_files": "Archivos",
+      "series_revenue": "Ingresos (USD)",
+      "series_rooms": "Salas",
+      "series_users": "Usuarios",
+      "title": "Dashboard",
+      "unavailable": "Las estadísticas de dashboard no están disponibles para esta aplicación."
+    },
+    "menu": {
+      "theme_dark": "Tema oscuro",
+      "theme_light": "Tema claro"
+    },
+    "pages": {
+      "dashboard": "Dashboard",
+      "users": "Gestionar usuarios"
+    },
+    "roles": {
+      "administrator": "Administrador",
+      "custom": "Personalizado",
+      "moderator": "Moderador",
+      "superadministrator": "Superadministrador",
+      "user": "Usuario"
+    },
+    "users": {
+      "activity_summary": "{rooms} salas · {files} arch.",
+      "col_activity": "Actividad",
+      "col_joined": "Registro",
+      "col_plan": "Plan",
+      "col_role": "Rol",
+      "col_status": "Estado",
+      "col_storage": "Almacenamiento",
+      "col_user": "Usuario",
+      "copy_email": "Copiar correo",
+      "copy_id": "Copiar ID",
+      "deselect": "Deseleccionar",
+      "empty_desc": "Aún no existen usuarios asociados a esta aplicación.",
+      "empty_title": "Sin usuarios registrados",
+      "last_login_none": "Sin accesos registrados",
+      "last_login_tooltip": "Último acceso: {date}",
+      "load_error": "No se pudo cargar el listado de usuarios.",
+      "plan_enterprise": "Enterprise",
+      "plan_free": "Free",
+      "plan_pro": "Pro",
+      "search_no_results": "No se encontraron usuarios que coincidan con tu búsqueda.",
+      "search_placeholder": "Buscar por usuario, correo, rol, plan o estado...",
+      "selected_count": "{count} seleccionado",
+      "status_active": "Activo",
+      "status_deleted": "Eliminado",
+      "status_suspended": "Suspendido",
+      "title": "Gestionar usuarios",
+      "total_count": "{count} usuarios",
+      "total_count_one": "1 usuario"
+    }
+  },
+  "seo": {
+    "login_description": "Inicia sesión en el panel centralizado de administración de BoardStack.",
+    "login_title": "Iniciar Sesión",
+    "panel_description": "Panel de administración centralizado multi-aplicación de BoardStack.",
+    "panel_title": "Panel de Administración",
+    "title_suffix": "BoardStack Admin"
+  }
+}

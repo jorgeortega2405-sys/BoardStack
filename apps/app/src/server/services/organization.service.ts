@@ -1,8 +1,14 @@
+import { corePool, pool } from '../config/database.config.js';
+import {
+  createUser,
+  ensureAppUserProfile,
+  ensureUserAppMembership,
+  findUserByEmail,
+  generateUniqueUsername,
+} from './user.service.js';
 import crypto from 'crypto';
-import { generateUniqueUsername } from './user.service.js';
 import { getPriceAmount, getStorageTierLimitBytes, STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 import { logger } from '../utils/logger.js';
-import { pool } from '../config/database.config.js';
 import { RowDataPacket } from 'mysql2';
 
 interface OrganizationRecord {
@@ -58,6 +64,7 @@ async function getOrCreateUserOrganization(
   }
 
   if (!org) {
+    await ensureAppUserProfile(userId);
     const orgUuid = crypto.randomUUID();
     const cleanName = `${username || 'Enterprise'} Organization`;
     const cleanSlug = `org-${userId}-${Date.now().toString(36)}`;
@@ -160,14 +167,40 @@ async function updateOrganization(
 
 async function getOrganizationMembers(orgId: number): Promise<OrganizationMemberRecord[]> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT m.id, m.org_id, m.user_id, m.email, m.role, m.status, m.joined_at, u.username, u.avatar_url
+    `SELECT m.id, m.org_id, m.user_id, m.email, m.role, m.status, m.joined_at
      FROM organization_members m
-     LEFT JOIN users u ON m.user_id = u.id
      WHERE m.org_id = ?
      ORDER BY (m.role = 'owner') DESC, m.joined_at ASC`,
     [orgId]
   );
-  return rows as OrganizationMemberRecord[];
+
+  const userIds = Array.from(
+    new Set(rows.map((r) => r.user_id).filter((id): id is number => typeof id === 'number' && id > 0))
+  );
+
+  const userMap = new Map<number, { avatar_url: string | null; username: string | null }>();
+  if (userIds.length > 0) {
+    const placeholders = userIds.map(() => '?').join(', ');
+    const [coreUsers] = await corePool.query<RowDataPacket[]>(
+      `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
+      userIds
+    );
+    for (const u of coreUsers) {
+      userMap.set(Number(u.id), {
+        avatar_url: u.avatar_url || null,
+        username: u.username || null,
+      });
+    }
+  }
+
+  return rows.map((row) => {
+    const info = row.user_id ? userMap.get(Number(row.user_id)) : undefined;
+    return {
+      ...row,
+      avatar_url: info?.avatar_url || null,
+      username: info?.username || null,
+    } as OrganizationMemberRecord;
+  });
 }
 
 async function addOrganizationMember(
@@ -207,7 +240,7 @@ async function addOrganizationMember(
     throw new Error('User is already registered or invited to this organization.');
   }
 
-  const [userRows] = await pool.query<RowDataPacket[]>(
+  const [userRows] = await corePool.query<RowDataPacket[]>(
     'SELECT id, username, avatar_url FROM users WHERE email = ? LIMIT 1',
     [email]
   );
@@ -215,6 +248,10 @@ async function addOrganizationMember(
   const matchedUser = userRows && userRows.length > 0 ? userRows[0] : null;
   const userId = matchedUser ? matchedUser.id : null;
   const status = matchedUser ? 'active' : 'invited';
+
+  if (matchedUser) {
+    await ensureAppUserProfile(matchedUser.id);
+  }
 
   const [insertResult] = await pool.query<any>(
     `INSERT INTO organization_members (org_id, user_id, email, role, status)
@@ -224,15 +261,15 @@ async function addOrganizationMember(
 
   if (matchedUser) {
     const [ownerRows] = await pool.query<RowDataPacket[]>(
-      'SELECT u.subscription_tier FROM organizations o JOIN users u ON o.owner_id = u.id WHERE o.id = ? LIMIT 1',
+      'SELECT p.subscription_tier FROM organizations o JOIN app_user_profiles p ON o.owner_id = p.user_id WHERE o.id = ? LIMIT 1',
       [orgId]
     );
     const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
     const orgStorage = getStorageTierLimitBytes(orgTier);
     await pool.query(
-      `UPDATE users 
+      `UPDATE app_user_profiles
        SET subscription_tier = ?, storage_limit_bytes = ?
-       WHERE id = ? AND subscription_tier = 'free'`,
+       WHERE user_id = ? AND subscription_tier = 'free'`,
       [orgTier, orgStorage, matchedUser.id]
     );
   }
@@ -354,15 +391,10 @@ async function processSsoLogin(
     throw new Error('Your email domain is not authorized for this organization SSO.');
   }
 
-  const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT * FROM users WHERE email = ? LIMIT 1',
-    [cleanEmail]
-  );
-
-  let userRow = userRows && userRows.length > 0 ? userRows[0] : null;
+  let userRow = await findUserByEmail(cleanEmail);
 
   const [ownerRows] = await pool.query<RowDataPacket[]>(
-    'SELECT subscription_tier FROM users WHERE id = ?',
+    'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ?',
     [org.owner_id]
   );
   const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
@@ -371,44 +403,32 @@ async function processSsoLogin(
   if (!userRow) {
     const baseUsername = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
     const uniqueUsername = await generateUniqueUsername(baseUsername || 'team_user');
-    const userUuid = crypto.randomUUID();
 
-    const [insertResult] = await pool.query<any>(
-      `INSERT INTO users (uuid, username, email, subscription_tier, subscription_status, storage_limit_bytes)
-       VALUES (?, ?, ?, ?, 'active', ?)`,
-      [userUuid, uniqueUsername, cleanEmail, orgTier, orgStorage]
-    );
+    userRow = await createUser({
+      email: cleanEmail,
+      username: uniqueUsername,
+    });
 
-    const newUserId = insertResult.insertId;
     await pool.query(
-      'INSERT INTO user_preferences (user_id) VALUES (?)',
-      [newUserId]
+      `UPDATE app_user_profiles
+       SET subscription_tier = ?, subscription_status = 'active', storage_limit_bytes = ?
+       WHERE user_id = ?`,
+      [orgTier, orgStorage, userRow.id]
     );
-
-    const [roleRows] = await pool.query<RowDataPacket[]>(
-      "SELECT id FROM roles WHERE name = 'USER' LIMIT 1"
-    );
-    if (roleRows && roleRows.length > 0) {
-      await pool.query(
-        'INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)',
-        [newUserId, roleRows[0].id]
-      );
-    }
-
-    const [createdUserRows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM users WHERE id = ?',
-      [newUserId]
-    );
-    userRow = createdUserRows[0];
+    userRow.subscription_tier = orgTier;
+    userRow.subscription_status = 'active';
+    userRow.storage_limit_bytes = orgStorage;
   } else {
+    await ensureUserAppMembership(userRow.id);
     if (userRow.subscription_tier === 'free') {
       await pool.query(
-        `UPDATE users 
+        `UPDATE app_user_profiles
          SET subscription_tier = ?, storage_limit_bytes = ?
-         WHERE id = ?`,
+         WHERE user_id = ?`,
         [orgTier, orgStorage, userRow.id]
       );
       userRow.subscription_tier = orgTier;
+      userRow.storage_limit_bytes = orgStorage;
     }
   }
 
@@ -464,7 +484,7 @@ async function updateOrganizationSeats(
   }
 
   const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT subscription_tier, subscription_status, stripe_customer_id FROM users WHERE id = ?',
+    'SELECT subscription_tier, subscription_status, stripe_customer_id FROM app_user_profiles WHERE user_id = ?',
     [userId]
   );
 

@@ -4,16 +4,19 @@ import { create2FALoginTicket } from '../services/two-factor.service.js';
 import { createSecurityActionTicket } from '../services/verification.service.js';
 import {
   createUser,
+  ensureAppUserProfile,
   findUserByEmail,
   findUserByGoogleId,
   findUserById,
   generateUniqueUsername,
+  hasUserAppMembership,
   linkGoogleAccount,
 } from '../services/user.service.js';
 import crypto from 'crypto';
 import { escapeHtml } from '../utils/html.util.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { hasRole } from '../services/role.service.js';
 import { logger } from '../utils/logger.js';
 import type { Request, Response } from 'express';
 
@@ -353,6 +356,19 @@ async function handleGoogleCallback(req: Request, res: Response): Promise<void> 
     }
 
     if (userRow) {
+      if (userRow.status !== 'active') {
+        res.redirect('/login?error=account_suspended');
+        return;
+      }
+
+      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+      if (!hasAppAccess) {
+        res.redirect('/login?error=no_app_account');
+        return;
+      }
+
+      await ensureAppUserProfile(userRow.id);
+
       if (userRow.two_factor_enabled) {
         const ticket = create2FALoginTicket(userRow.id);
         logger.auth.info(`[GoogleAuth] 2FA required for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);

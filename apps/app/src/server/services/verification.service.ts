@@ -1,6 +1,6 @@
 import { config } from '../config/env.config.js';
+import { corePool } from '../config/database.config.js';
 import crypto from 'crypto';
-import { pool } from '../config/database.config.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 interface PendingRegistrationPayload {
@@ -41,7 +41,7 @@ async function issueReusableVerificationCode(params: {
   updatePayloadOnReuse?: boolean;
 }): Promise<{ code: string; reused: boolean }> {
   const cleanEmail = params.email.toLowerCase().trim();
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
   try {
     await conn.beginTransaction();
 
@@ -114,7 +114,7 @@ async function getPendingRegistration(
   email: string
 ): Promise<{ code: string; passwordHash: string; username: string } | null> {
   const cleanEmail = email.toLowerCase().trim();
-  const [rows] = await pool.execute<VerificationCodeRow[]>(
+  const [rows] = await corePool.execute<VerificationCodeRow[]>(
     'SELECT * FROM verification_codes WHERE email = ? AND type = "register" AND expires_at > CURRENT_TIMESTAMP LIMIT 1',
     [cleanEmail]
   );
@@ -142,7 +142,7 @@ async function verifyAndConsumeRegistrationCode(
   const cleanEmail = email.toLowerCase().trim();
   const cleanCode = String(inputCode).trim();
 
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
   try {
     await conn.beginTransaction();
 
@@ -208,7 +208,7 @@ async function createPasswordResetToken(
   ttlSeconds = 600
 ): Promise<{ reused: boolean; token: string }> {
   const cleanEmail = email.toLowerCase().trim();
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
   try {
     await conn.beginTransaction();
 
@@ -258,7 +258,7 @@ async function verifyAndConsumePasswordResetToken(
   const cleanEmail = email.toLowerCase().trim();
   const cleanToken = String(token).trim();
 
-  const [result] = await pool.execute<ResultSetHeader>(
+  const [result] = await corePool.execute<ResultSetHeader>(
     'UPDATE password_resets SET used = TRUE WHERE email = ? AND token = ? AND used = FALSE AND expires_at > CURRENT_TIMESTAMP',
     [cleanEmail, cleanToken]
   );
@@ -289,7 +289,7 @@ async function verifyAndConsumeEmailChangeCode(
   const cleanEmail = email.toLowerCase().trim();
   const cleanCode = String(inputCode).trim();
 
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
   try {
     await conn.beginTransaction();
 

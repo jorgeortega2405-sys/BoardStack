@@ -3,6 +3,7 @@ import { cleanupExpiredRoomsAndFiles } from './services/room.service.js';
 import compression from 'compression';
 import { config } from './config/env.config.js';
 import cookieParser from 'cookie-parser';
+import { corePool, testDatabaseConnection } from './config/database.config.js';
 import { csrfProtectionMiddleware } from './middlewares/csrf.middleware.js';
 import { errorHandlerMiddleware, httpLoggerMiddleware } from './middlewares/logger.middleware.js';
 import { escapeHtml } from './utils/html.util.js';
@@ -15,7 +16,6 @@ import { logger } from './utils/logger.js';
 import net from 'net';
 import organizationRoutes from './routes/organization.routes.js';
 import path from 'path';
-import { pool, testDatabaseConnection } from './config/database.config.js';
 import roomRoutes from './routes/room.routes.js';
 import salesLeadRoutes from './routes/sales-lead.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
@@ -48,8 +48,8 @@ app.use(csrfProtectionMiddleware);
 
 async function runDatabaseHousekeeping(): Promise<void> {
   try {
-    await pool.execute('DELETE FROM verification_codes WHERE expires_at < CURRENT_TIMESTAMP');
-    await pool.execute('DELETE FROM password_resets WHERE expires_at < CURRENT_TIMESTAMP OR used = TRUE');
+    await corePool.execute('DELETE FROM verification_codes WHERE expires_at < CURRENT_TIMESTAMP');
+    await corePool.execute('DELETE FROM password_resets WHERE expires_at < CURRENT_TIMESTAMP OR used = TRUE');
     await cleanupExpiredRoomsAndFiles();
   } catch (error) {
     logger.system.error('[Housekeeping] Error cleaning expired tokens:', error);

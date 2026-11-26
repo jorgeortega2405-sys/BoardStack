@@ -1,4 +1,5 @@
 interface AppConfig {
+  appSlug: string;
   appUrl: string;
   awsS3: {
     accessKeyId: string;
@@ -10,6 +11,7 @@ interface AppConfig {
     secretAccessKey: string;
   };
   db: {
+    coreName: string;
     host: string;
     name: string;
     password?: string;
@@ -54,6 +56,7 @@ interface AppConfig {
 }
 
 const config: AppConfig = {
+  appSlug: process.env.APP_SLUG || 'app',
   appUrl: process.env.APP_URL || '',
   awsS3: {
     accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID || '',
@@ -65,8 +68,9 @@ const config: AppConfig = {
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || '',
   },
   db: {
+    coreName: process.env.CORE_DB_NAME || '',
     host: process.env.DB_HOST || '',
-    name: process.env.DB_NAME || '',
+    name: process.env.APP_DB_NAME || process.env.DB_NAME || '',
     password: process.env.DB_PASSWORD || undefined,
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || '',

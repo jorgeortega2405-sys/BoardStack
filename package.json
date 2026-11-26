@@ -8,12 +8,18 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=app",
+    "build:admin": "npm run build --workspace=admin",
+    "build:all": "npm run build --workspace=app && npm run build --workspace=admin",
     "build:client": "npm run build:client --workspace=app",
     "build:server": "npm run build:server --workspace=app",
     "dev": "npm run dev --workspace=app",
+    "dev:admin": "npm run dev:watch --workspace=admin",
     "dev:server": "npm run dev:server --workspace=app",
     "dev:watch": "npm run dev:watch --workspace=app",
     "start": "npm run start --workspace=app",
-    "typecheck": "npm run typecheck --workspace=app"
+    "start:admin": "npm run start --workspace=admin",
+    "typecheck": "npm run typecheck --workspace=app",
+    "typecheck:admin": "npm run typecheck --workspace=admin",
+    "typecheck:all": "npm run typecheck --workspace=app && npm run typecheck --workspace=admin"
   }
 }

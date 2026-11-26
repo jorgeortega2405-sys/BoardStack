@@ -346,7 +346,7 @@ async function deleteRoomRecord(roomId: string): Promise<void> {
   }
   if (ownerId && totalBytesDeleted > 0) {
     await pool.execute(
-      `UPDATE users SET storage_used_bytes = GREATEST(0, storage_used_bytes - ?) WHERE id = ?`,
+      `UPDATE app_user_profiles SET storage_used_bytes = GREATEST(0, storage_used_bytes - ?) WHERE user_id = ?`,
       [totalBytesDeleted, ownerId]
     ).catch(() => {});
   }
@@ -369,7 +369,7 @@ async function cleanupExpiredRoomsAndFiles(): Promise<void> {
       const uid = row.user_id;
       if (uid && freed > 0) {
         await pool.execute(
-          `UPDATE users SET storage_used_bytes = GREATEST(0, storage_used_bytes - ?) WHERE id = ?`,
+          `UPDATE app_user_profiles SET storage_used_bytes = GREATEST(0, storage_used_bytes - ?) WHERE user_id = ?`,
           [freed, uid]
         ).catch(() => {});
       }

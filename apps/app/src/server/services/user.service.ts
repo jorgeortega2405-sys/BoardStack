@@ -1,15 +1,15 @@
+import { config } from '../config/env.config.js';
+import { corePool, pool } from '../config/database.config.js';
 import crypto from 'crypto';
-import { ensureDefaultUserRole, getUserRolesAndPermissions } from './role.service.js';
 import { getRedisClient } from '../config/redis.config.js';
+import { getUserRolesAndPermissions } from './role.service.js';
 import { hashBackupCode } from './two-factor.service.js';
-import { pool } from '../config/database.config.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { sanitizeUser } from '../utils/user.util.js';
 import type { UserPayload } from '../types/auth.types.js';
 import { verifyPassword } from './auth.service.js';
 
-interface UserRow extends RowDataPacket {
-  ai_tokens_balance: number;
+interface CoreUserRow extends RowDataPacket {
   avatar_url: string | null;
   created_at: string;
   email: string;
@@ -20,14 +20,36 @@ interface UserRow extends RowDataPacket {
   last_login_ip: string | null;
   password_hash: string | null;
   registration_ip: string | null;
-  storage_limit_bytes: number;
-  storage_used_bytes: number;
-  subscription_status: string;
-  subscription_tier: string;
+  status: 'active' | 'deleted' | 'suspended';
   two_factor_enabled: number;
   updated_at: string;
   username: string;
   uuid: string;
+}
+
+interface AppUserProfileRow extends RowDataPacket {
+  ai_tokens_balance: number;
+  cancel_at_period_end: number;
+  storage_limit_bytes: number;
+  storage_used_bytes: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_period_end: string | null;
+  subscription_status: string;
+  subscription_tier: string;
+  user_id: number;
+}
+
+interface UserRow extends CoreUserRow {
+  ai_tokens_balance: number;
+  cancel_at_period_end: number;
+  storage_limit_bytes: number;
+  storage_used_bytes: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_period_end: string | null;
+  subscription_status: string;
+  subscription_tier: string;
 }
 
 interface UserPreferences {
@@ -45,6 +67,81 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   reduce_motion: false,
   theme: 'light',
 };
+
+const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
+
+async function ensureAppUserProfile(userId: number): Promise<void> {
+  await pool.execute(
+    'INSERT IGNORE INTO app_user_profiles (user_id) VALUES (?)',
+    [userId]
+  );
+}
+
+async function getAppUserProfile(userId: number): Promise<AppUserProfileRow | null> {
+  const [rows] = await pool.execute<AppUserProfileRow[]>(
+    'SELECT * FROM app_user_profiles WHERE user_id = ? LIMIT 1',
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+async function attachAppProfile(coreRow: CoreUserRow | null): Promise<UserRow | null> {
+  if (!coreRow) return null;
+  const profile = await getAppUserProfile(coreRow.id);
+  return {
+    ...coreRow,
+    ai_tokens_balance: profile ? Number(profile.ai_tokens_balance) : 100,
+    cancel_at_period_end: profile ? Number(profile.cancel_at_period_end) : 0,
+    storage_limit_bytes: profile ? Number(profile.storage_limit_bytes) : DEFAULT_STORAGE_LIMIT_BYTES,
+    storage_used_bytes: profile ? Number(profile.storage_used_bytes) : 0,
+    stripe_customer_id: profile?.stripe_customer_id || null,
+    stripe_subscription_id: profile?.stripe_subscription_id || null,
+    subscription_period_end: profile?.subscription_period_end || null,
+    subscription_status: profile?.subscription_status || 'inactive',
+    subscription_tier: profile?.subscription_tier || 'free',
+  };
+}
+
+async function hasUserAppMembership(userId: number, appSlug: string = config.appSlug): Promise<boolean> {
+  const [rows] = await corePool.execute<RowDataPacket[]>(
+    `SELECT ua.id
+     FROM user_apps ua
+     INNER JOIN apps a ON a.id = ua.app_id
+     WHERE ua.user_id = ? AND a.slug = ? AND a.is_active = TRUE AND ua.status = 'active'
+     LIMIT 1`,
+    [userId, appSlug.trim().toLowerCase()]
+  );
+  return rows.length > 0;
+}
+
+async function ensureUserAppMembership(userId: number, appSlug: string = config.appSlug): Promise<void> {
+  const cleanSlug = appSlug.trim().toLowerCase();
+  const [appRows] = await corePool.execute<RowDataPacket[]>(
+    'SELECT id FROM apps WHERE slug = ? AND is_active = TRUE LIMIT 1',
+    [cleanSlug]
+  );
+  if (appRows.length > 0) {
+    const appId = Number(appRows[0].id);
+    await corePool.execute(
+      `INSERT INTO user_apps (user_id, app_id, status)
+       VALUES (?, ?, 'active')
+       ON DUPLICATE KEY UPDATE status = 'active'`,
+      [userId, appId]
+    );
+    const [existingRoles] = await corePool.execute<RowDataPacket[]>(
+      'SELECT role_id FROM user_app_roles WHERE user_id = ? AND app_id = ? LIMIT 1',
+      [userId, appId]
+    );
+    if (existingRoles.length === 0) {
+      await corePool.execute(
+        `INSERT IGNORE INTO user_app_roles (user_id, app_id, role_id)
+         SELECT ?, ?, id FROM roles WHERE is_default = TRUE LIMIT 1`,
+        [userId, appId]
+      );
+    }
+  }
+  await ensureAppUserProfile(userId);
+}
 
 async function invalidateUserCache(userId: number): Promise<void> {
   try {
@@ -103,34 +200,34 @@ async function assembleSanitizedUser(userRow: any): Promise<UserPayload> {
 }
 
 async function findUserByEmail(email: string): Promise<UserRow | null> {
-  const [rows] = await pool.execute<UserRow[]>(
+  const [rows] = await corePool.execute<CoreUserRow[]>(
     'SELECT * FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
-  return rows[0] || null;
+  return attachAppProfile(rows[0] || null);
 }
 
 async function findUserById(id: number): Promise<UserRow | null> {
-  const [rows] = await pool.execute<UserRow[]>(
+  const [rows] = await corePool.execute<CoreUserRow[]>(
     'SELECT * FROM users WHERE id = ? LIMIT 1',
     [id]
   );
-  return rows[0] || null;
+  return attachAppProfile(rows[0] || null);
 }
 
 async function findUserByGoogleId(googleId: string): Promise<UserRow | null> {
-  const [rows] = await pool.execute<UserRow[]>(
+  const [rows] = await corePool.execute<CoreUserRow[]>(
     'SELECT * FROM users WHERE google_id = ? LIMIT 1',
     [googleId]
   );
-  return rows[0] || null;
+  return attachAppProfile(rows[0] || null);
 }
 
 async function findUserDuplicates(
   email: string,
   username: string
 ): Promise<{ emailExists: boolean; usernameExists: boolean }> {
-  const [rows] = await pool.execute<UserRow[]>(
+  const [rows] = await corePool.execute<CoreUserRow[]>(
     'SELECT email, username FROM users WHERE email = ? OR username = ? LIMIT 2',
     [email.toLowerCase().trim(), username.trim()]
   );
@@ -161,14 +258,16 @@ async function createUser(params: {
   const uuid = crypto.randomUUID();
   const cleanEmail = params.email.toLowerCase().trim();
   const cleanUsername = params.username.trim();
+  const cleanAppSlug = config.appSlug.trim().toLowerCase();
 
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
+  let coreUserRow: CoreUserRow | null = null;
   try {
     await conn.beginTransaction();
 
     const [result] = await conn.execute<ResultSetHeader>(
-      `INSERT INTO users (uuid, username, email, password_hash, google_id, google_email, avatar_url, registration_ip)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (uuid, username, email, password_hash, google_id, google_email, avatar_url, status, registration_ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
       [
         uuid,
         cleanUsername,
@@ -184,9 +283,19 @@ async function createUser(params: {
     const newUserId = result.insertId;
 
     await conn.execute(
-      `INSERT IGNORE INTO user_roles (user_id, role_id)
-       SELECT ?, id FROM roles WHERE is_default = TRUE LIMIT 1`,
-      [newUserId]
+      `INSERT IGNORE INTO user_apps (user_id, app_id, status)
+       SELECT ?, id, 'active' FROM apps WHERE slug = ? AND is_active = TRUE LIMIT 1`,
+      [newUserId, cleanAppSlug]
+    );
+
+    await conn.execute(
+      `INSERT IGNORE INTO user_app_roles (user_id, app_id, role_id)
+       SELECT ?, a.id, r.id
+       FROM apps a
+       CROSS JOIN roles r
+       WHERE a.slug = ? AND r.is_default = TRUE
+       LIMIT 1`,
+      [newUserId, cleanAppSlug]
     );
 
     await conn.execute(
@@ -196,30 +305,37 @@ async function createUser(params: {
       [newUserId]
     );
 
-    const [rows] = await conn.execute<UserRow[]>(
+    const [rows] = await conn.execute<CoreUserRow[]>(
       'SELECT * FROM users WHERE id = ? LIMIT 1',
       [newUserId]
     );
 
     await conn.commit();
-
-    if (!rows[0]) {
-      throw new Error('Failed to retrieve newly created user.');
-    }
-    return rows[0];
+    coreUserRow = rows[0] || null;
   } catch (err) {
     await conn.rollback();
     throw err;
   } finally {
     conn.release();
   }
+
+  if (!coreUserRow) {
+    throw new Error('Failed to retrieve newly created user.');
+  }
+
+  await ensureAppUserProfile(coreUserRow.id);
+  const fullUser = await attachAppProfile(coreUserRow);
+  if (!fullUser) {
+    throw new Error('Failed to assemble newly created user.');
+  }
+  return fullUser;
 }
 
 async function updateUserPassword(
   userId: number,
   passwordHash: string
 ): Promise<void> {
-  await pool.execute(
+  await corePool.execute(
     'UPDATE users SET password_hash = ? WHERE id = ?',
     [passwordHash, userId]
   );
@@ -232,7 +348,7 @@ async function linkGoogleAccount(
   googleId: string,
   googleEmail: string
 ): Promise<void> {
-  await pool.execute(
+  await corePool.execute(
     'UPDATE users SET google_id = ?, google_email = ? WHERE id = ?',
     [googleId, googleEmail.toLowerCase().trim(), userId]
   );
@@ -240,7 +356,7 @@ async function linkGoogleAccount(
 }
 
 async function unlinkGoogleAccount(userId: number): Promise<void> {
-  await pool.execute(
+  await corePool.execute(
     'UPDATE users SET google_id = NULL, google_email = NULL WHERE id = ?',
     [userId]
   );
@@ -251,10 +367,17 @@ async function updateUserLastLogin(
   userId: number,
   ip: string
 ): Promise<void> {
-  await pool.execute(
+  await corePool.execute(
     'UPDATE users SET last_login_ip = ?, last_login_at = CURRENT_TIMESTAMP WHERE id = ?',
     [ip, userId]
   );
+  await corePool.execute(
+    `UPDATE user_apps ua
+     INNER JOIN apps a ON a.id = ua.app_id
+     SET ua.last_seen_at = CURRENT_TIMESTAMP
+     WHERE ua.user_id = ? AND a.slug = ?`,
+    [userId, config.appSlug.trim().toLowerCase()]
+  ).catch(() => {});
 }
 
 async function generateUniqueUsername(preferred: string): Promise<string> {
@@ -263,7 +386,7 @@ async function generateUniqueUsername(preferred: string): Promise<string> {
     base = 'user';
   }
 
-  const [existingBase] = await pool.execute<RowDataPacket[]>(
+  const [existingBase] = await corePool.execute<RowDataPacket[]>(
     'SELECT id FROM users WHERE username = ? LIMIT 1',
     [base]
   );
@@ -274,7 +397,7 @@ async function generateUniqueUsername(preferred: string): Promise<string> {
   while (true) {
     const randomSuffix = crypto.randomBytes(3).toString('hex');
     const candidate = `${base.slice(0, 23)}_${randomSuffix}`;
-    const [existingCandidate] = await pool.execute<RowDataPacket[]>(
+    const [existingCandidate] = await corePool.execute<RowDataPacket[]>(
       'SELECT id FROM users WHERE username = ? LIMIT 1',
       [candidate]
     );
@@ -286,40 +409,41 @@ async function generateUniqueUsername(preferred: string): Promise<string> {
 
 async function updateUsername(userId: number, newUsername: string): Promise<boolean> {
   const clean = newUsername.trim();
-  const [existing] = await pool.execute<RowDataPacket[]>(
+  const [existing] = await corePool.execute<RowDataPacket[]>(
     'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
     [clean, userId]
   );
   if (existing.length > 0) {
     return false;
   }
-  await pool.execute('UPDATE users SET username = ? WHERE id = ?', [clean, userId]);
+  await corePool.execute('UPDATE users SET username = ? WHERE id = ?', [clean, userId]);
   await invalidateUserCache(userId);
   return true;
 }
 
 async function updateUserEmail(userId: number, newEmail: string): Promise<boolean> {
   const clean = newEmail.toLowerCase().trim();
-  const [existing] = await pool.execute<RowDataPacket[]>(
+  const [existing] = await corePool.execute<RowDataPacket[]>(
     'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
     [clean, userId]
   );
   if (existing.length > 0) {
     return false;
   }
-  await pool.execute('UPDATE users SET email = ? WHERE id = ?', [clean, userId]);
+  await corePool.execute('UPDATE users SET email = ? WHERE id = ?', [clean, userId]);
   await invalidateUserCache(userId);
   return true;
 }
 
 async function updateUserAvatar(userId: number, avatarUrl: string | null): Promise<void> {
-  await pool.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, userId]);
+  await corePool.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, userId]);
   await invalidateUserCache(userId);
 }
 
 async function deleteUserPermanently(userId: number): Promise<boolean> {
   await invalidateUserCache(userId);
-  const [result] = await pool.execute<ResultSetHeader>('DELETE FROM users WHERE id = ?', [userId]);
+  await pool.execute('DELETE FROM app_user_profiles WHERE user_id = ?', [userId]);
+  const [result] = await corePool.execute<ResultSetHeader>('DELETE FROM users WHERE id = ?', [userId]);
   return result.affectedRows > 0;
 }
 
@@ -329,12 +453,12 @@ async function getUserPreferences(userId: number): Promise<UserPreferences> {
     return { ...DEFAULT_PREFERENCES };
   }
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const [rows] = await corePool.execute<RowDataPacket[]>(
     'SELECT theme, language, reduce_motion, high_contrast, extended_alerts FROM user_preferences WHERE user_id = ? LIMIT 1',
     [userId]
   );
   if (rows.length === 0) {
-    await pool.execute(
+    await corePool.execute(
       `INSERT INTO user_preferences (user_id, theme, language, reduce_motion, high_contrast, extended_alerts)
        VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE user_id = user_id`,
@@ -377,7 +501,7 @@ async function updateUserPreferences(
     theme: updates.theme !== undefined ? String(updates.theme).toLowerCase() : current.theme,
   };
 
-  await pool.execute(
+  await corePool.execute(
     `INSERT INTO user_preferences (user_id, theme, language, reduce_motion, high_contrast, extended_alerts)
      VALUES (?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
@@ -401,7 +525,7 @@ async function updateUserPreferences(
 
 async function enableUser2FA(userId: number, secret: string, backupCodes: string[]): Promise<boolean> {
   const hashedCodes = backupCodes.map(hashBackupCode);
-  const [result] = await pool.execute<ResultSetHeader>(
+  const [result] = await corePool.execute<ResultSetHeader>(
     'UPDATE users SET two_factor_enabled = 1, two_factor_secret = ?, two_factor_recovery_codes = ? WHERE id = ?',
     [secret, JSON.stringify(hashedCodes), userId]
   );
@@ -410,7 +534,7 @@ async function enableUser2FA(userId: number, secret: string, backupCodes: string
 }
 
 async function disableUser2FA(userId: number): Promise<boolean> {
-  const [result] = await pool.execute<ResultSetHeader>(
+  const [result] = await corePool.execute<ResultSetHeader>(
     'UPDATE users SET two_factor_enabled = 0, two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?',
     [userId]
   );
@@ -423,7 +547,7 @@ async function getUser2FASecret(userId: number): Promise<{
   two_factor_recovery_codes: string | null;
   two_factor_secret: string | null;
 } | null> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const [rows] = await corePool.execute<RowDataPacket[]>(
     'SELECT two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
@@ -436,7 +560,7 @@ async function getUser2FASecret(userId: number): Promise<{
 }
 
 async function verifyAndConsumeBackupCode(userId: number, inputCode: string): Promise<boolean> {
-  const conn = await pool.getConnection();
+  const conn = await corePool.getConnection();
   try {
     await conn.beginTransaction();
 
@@ -508,14 +632,18 @@ export {
   deleteUserPermanently,
   disableUser2FA,
   enableUser2FA,
+  ensureAppUserProfile,
+  ensureUserAppMembership,
   findUserByEmail,
   findUserByGoogleId,
   findUserById,
   findUserDuplicates,
   generateUniqueUsername,
+  getAppUserProfile,
   getCachedUserData,
   getUser2FASecret,
   getUserPreferences,
+  hasUserAppMembership,
   invalidateUserCache,
   linkGoogleAccount,
   revokeUserSessions,
@@ -531,6 +659,8 @@ export {
 };
 
 export type {
+  AppUserProfileRow,
+  CoreUserRow,
   UserPreferences,
   UserRow
 };

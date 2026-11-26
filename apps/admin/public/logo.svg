@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 36" fill="none">
+  <style>
+    .brand-text { fill: #111827; }
+    .brand-accent { fill: #71717a; }
+    .brand-bg { fill: #000000; }
+  </style>
+  <rect class="brand-bg" width="36" height="36" rx="9" fill="#000000"/>
+  <circle cx="11" cy="9" r="2" fill="#ffffff"/>
+  <circle cx="18" cy="9" r="2" fill="#ffffff"/>
+  <circle cx="25" cy="9" r="2" fill="#ffffff"/>
+  <circle cx="11" cy="13.5" r="2" fill="#ffffff"/>
+  <circle cx="11" cy="18" r="2" fill="#ffffff"/>
+  <circle cx="18" cy="18" r="2" fill="#ffffff"/>
+  <circle cx="25" cy="18" r="2" fill="#ffffff"/>
+  <circle cx="25" cy="22.5" r="2" fill="#ffffff"/>
+  <circle cx="11" cy="27" r="2" fill="#ffffff"/>
+  <circle cx="18" cy="27" r="2" fill="#ffffff"/>
+  <circle cx="25" cy="27" r="2" fill="#ffffff"/>
+  <text class="brand-text" x="48" y="25" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" letter-spacing="-0.4">Board<tspan class="brand-accent" font-weight="900">Stack</tspan></text>
+</svg>

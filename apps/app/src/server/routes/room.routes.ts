@@ -312,7 +312,7 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
   const roomOwnerId = dbRoom?.owner_id || user?.id;
   if (roomOwnerId) {
     const [ownerRows] = await pool.execute<any[]>(
-      `SELECT id, subscription_tier, storage_used_bytes FROM users WHERE id = ? LIMIT 1`,
+      `SELECT user_id AS id, subscription_tier, storage_used_bytes FROM app_user_profiles WHERE user_id = ? LIMIT 1`,
       [roomOwnerId]
     );
     const ownerUser = ownerRows[0];
@@ -346,7 +346,7 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
 
     if (roomOwnerId) {
       await pool.execute(
-        `UPDATE users SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?`,
+        `UPDATE app_user_profiles SET storage_used_bytes = storage_used_bytes + ? WHERE user_id = ?`,
         [req.file.size, roomOwnerId]
       ).catch(() => {});
     }

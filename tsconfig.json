@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./apps/app" }
+    { "path": "./apps/app" },
+    { "path": "./apps/admin" }
   ]
 }

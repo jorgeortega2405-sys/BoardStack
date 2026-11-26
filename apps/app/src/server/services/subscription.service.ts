@@ -6,10 +6,10 @@ import {
   PRO_PLAN,
 } from '../config/subscription-plans.config.js';
 import { config } from '../config/env.config.js';
+import { corePool, pool } from '../config/database.config.js';
 import crypto from 'crypto';
-import { invalidateUserCache } from './user.service.js';
+import { ensureAppUserProfile, invalidateUserCache } from './user.service.js';
 import { logger } from '../utils/logger.js';
-import { pool } from '../config/database.config.js';
 import { RowDataPacket } from 'mysql2';
 import Stripe from 'stripe';
 
@@ -62,7 +62,7 @@ interface PaymentIntentResult {
 
 async function getUserSubscriptionInfo(userId: number): Promise<SubscriptionInfo> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT subscription_tier, subscription_status, subscription_period_end FROM users WHERE id = ?',
+    'SELECT subscription_tier, subscription_status, subscription_period_end FROM app_user_profiles WHERE user_id = ?',
     [userId]
   );
 
@@ -86,8 +86,9 @@ async function getUserSubscriptionInfo(userId: number): Promise<SubscriptionInfo
 }
 
 async function getOrCreateStripeCustomer(userId: number, email: string): Promise<string> {
+  await ensureAppUserProfile(userId);
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT stripe_customer_id FROM users WHERE id = ?',
+    'SELECT stripe_customer_id FROM app_user_profiles WHERE user_id = ?',
     [userId]
   );
 
@@ -113,7 +114,7 @@ async function getOrCreateStripeCustomer(userId: number, email: string): Promise
   });
 
   await pool.query(
-    'UPDATE users SET stripe_customer_id = ? WHERE id = ?',
+    'UPDATE app_user_profiles SET stripe_customer_id = ? WHERE user_id = ?',
     [customer.id, userId]
   );
 
@@ -125,7 +126,7 @@ async function createSubscriptionPaymentIntent(
   email: string,
   params: CreatePaymentIntentParams
 ): Promise<PaymentIntentResult> {
-  const [userRows] = await pool.query<RowDataPacket[]>(
+  const [userRows] = await corePool.query<RowDataPacket[]>(
     'SELECT id, email FROM users WHERE id = ?',
     [userId]
   );
@@ -236,9 +237,14 @@ async function confirmSubscriptionPayment(
     const storageLimitBytes = getStorageTierLimitBytes(planId);
 
     await conn.query(
-      `UPDATE users 
+      'INSERT IGNORE INTO app_user_profiles (user_id) VALUES (?)',
+      [userId]
+    );
+
+    await conn.query(
+      `UPDATE app_user_profiles
        SET subscription_tier = ?, subscription_status = 'active', subscription_period_end = ?, storage_limit_bytes = ?
-       WHERE id = ?`,
+       WHERE user_id = ?`,
       [planId, periodEnd, storageLimitBytes, userId]
     );
 
@@ -248,7 +254,7 @@ async function confirmSubscriptionPayment(
         [userId]
       );
       if (!existingOrg || existingOrg.length === 0) {
-        const [userRows] = await conn.query<RowDataPacket[]>(
+        const [userRows] = await corePool.query<RowDataPacket[]>(
           'SELECT username, email FROM users WHERE id = ? LIMIT 1',
           [userId]
         );
@@ -311,7 +317,7 @@ async function getBillingDetails(userId: number): Promise<any> {
     `SELECT subscription_tier, subscription_status, subscription_period_end,
             stripe_customer_id, stripe_subscription_id, cancel_at_period_end,
             storage_used_bytes
-     FROM users WHERE id = ?`,
+     FROM app_user_profiles WHERE user_id = ?`,
     [userId]
   );
 
@@ -375,7 +381,7 @@ async function updateSubscriptionRenewal(
   cancelAtPeriodEnd: boolean
 ): Promise<{ cancel_at_period_end: boolean; current_period_end: string | null; success: boolean }> {
   const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT stripe_subscription_id, subscription_period_end FROM users WHERE id = ?',
+    'SELECT stripe_subscription_id, subscription_period_end FROM app_user_profiles WHERE user_id = ?',
     [userId]
   );
   const user = userRows[0];
@@ -385,7 +391,7 @@ async function updateSubscriptionRenewal(
     await conn.beginTransaction();
 
     await conn.query(
-      'UPDATE users SET cancel_at_period_end = ? WHERE id = ?',
+      'UPDATE app_user_profiles SET cancel_at_period_end = ? WHERE user_id = ?',
       [cancelAtPeriodEnd ? 1 : 0, userId]
     );
 
@@ -465,7 +471,7 @@ async function getPurchaseInvoice(userId: number, purchaseId: number | string): 
     return null;
   }
 
-  const [userRows] = await pool.query<RowDataPacket[]>(
+  const [userRows] = await corePool.query<RowDataPacket[]>(
     'SELECT username, email FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
@@ -533,7 +539,7 @@ async function processStripeWebhook(rawBody: Buffer | string, signature: string)
           [customerId]
         );
         await pool.query(
-          `UPDATE users SET subscription_status = 'past_due' WHERE stripe_customer_id = ?`,
+          `UPDATE app_user_profiles SET subscription_status = 'past_due' WHERE stripe_customer_id = ?`,
           [customerId]
         );
         logger.app.warn(`[Stripe Webhook] Invoice payment failed for customer ${customerId}`);
@@ -549,7 +555,7 @@ async function processStripeWebhook(rawBody: Buffer | string, signature: string)
           [customerId]
         );
         await pool.query(
-          `UPDATE users SET subscription_status = 'canceled', subscription_tier = 'free' WHERE stripe_customer_id = ?`,
+          `UPDATE app_user_profiles SET subscription_status = 'canceled', subscription_tier = 'free' WHERE stripe_customer_id = ?`,
           [customerId]
         );
         logger.app.info(`[Stripe Webhook] Subscription canceled for customer ${customerId}`);

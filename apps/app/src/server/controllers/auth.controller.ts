@@ -1,13 +1,14 @@
 import {
   cacheUserData,
   createUser,
+  ensureAppUserProfile,
   findUserByEmail,
   findUserById,
   findUserDuplicates,
   getCachedUserData,
   getUser2FASecret,
+  hasUserAppMembership,
   revokeUserSessions,
-  updateUserLastLogin,
   updateUserPassword,
   verifyAndConsumeBackupCode,
 } from '../services/user.service.js';
@@ -36,7 +37,7 @@ import {
   verifyAndConsumeRegistrationCode,
   verifyRegistrationTicket,
 } from '../services/verification.service.js';
-import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles } from '../services/role.service.js';
+import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles, hasRole } from '../services/role.service.js';
 import { getClientIp } from '../utils/ip.util.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { logger } from '../utils/logger.js';
@@ -282,6 +283,19 @@ async function login(req: Request, res: Response): Promise<void> {
         return;
       }
 
+      if (userRow.status !== 'active') {
+        res.status(403).json({ error: 'This account is suspended or inactive.' });
+        return;
+      }
+
+      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+      if (!hasAppAccess) {
+        res.status(403).json({ error: 'No active account found for this application.' });
+        return;
+      }
+
+      await ensureAppUserProfile(userRow.id);
+
       const twoFactorData = await getUser2FASecret(userRow.id);
       const cleanCode = String(twoFactorCode).trim();
       let is2faValid = false;
@@ -344,6 +358,21 @@ async function login(req: Request, res: Response): Promise<void> {
       res.status(401).json({ error: 'Invalid credentials.' });
       return;
     }
+
+    if (userRow.status !== 'active') {
+      logger.auth.warn(`[Login] Suspended/inactive account attempt for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
+      res.status(403).json({ error: 'This account is suspended or inactive.' });
+      return;
+    }
+
+    const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+    if (!hasAppAccess) {
+      logger.auth.warn(`[Login] User ID ${userRow.id} (${trimmedEmail}) does not belong to app ${config.appSlug}`);
+      res.status(403).json({ error: 'No active account found for this application.' });
+      return;
+    }
+
+    await ensureAppUserProfile(userRow.id);
 
     if (userRow.two_factor_enabled) {
       const ticket = create2FALoginTicket(userRow.id);
@@ -489,7 +518,7 @@ async function me(req: Request, res: Response): Promise<void> {
           getUserPermissions(user.id),
         ]);
 
-        if (dbUser) {
+        if (dbUser && dbUser.status === 'active') {
           user.avatar_url = dbUser.avatar_url ?? null;
           user.email = dbUser.email;
           user.google_connected = Boolean(dbUser.google_id);

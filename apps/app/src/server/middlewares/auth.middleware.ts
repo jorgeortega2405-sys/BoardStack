@@ -27,7 +27,7 @@ async function getValidatedCurrentUser(req: Request, res?: Response): Promise<Se
     return null;
   }
   const dbUser = await findUserById(user.id);
-  if (!dbUser) {
+  if (!dbUser || dbUser.status !== 'active') {
     if (res) {
       clearSessionCookie(res);
     }
@@ -84,10 +84,10 @@ function requireRole(roleName: string) {
       return;
     }
     const roles = Array.isArray(user.roles) ? user.roles : [];
-    const normalizedTarget = roleName.trim().toUpperCase();
+    const normalizedTarget = roleName.trim().toLowerCase();
     const hasMatch = roles.some((r) => {
-      const norm = String(r).trim().toUpperCase();
-      return norm === normalizedTarget || (normalizedTarget === 'ADMIN' && (norm === 'SUPER_ADMIN' || norm === 'PLATFORM_ADMIN'));
+      const norm = String(r).trim().toLowerCase();
+      return norm === normalizedTarget || (normalizedTarget === 'admin' && (norm === 'superadministrator' || norm === 'administrator'));
     });
     if (!hasMatch) {
       res.status(403).json({ error: 'Access denied: insufficient role privileges.', ok: false });
