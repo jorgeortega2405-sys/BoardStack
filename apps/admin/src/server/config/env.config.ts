@@ -1,5 +1,14 @@
 interface AdminConfig {
   appUrl: string;
+  awsS3: {
+    accessKeyId: string;
+    bucket: string;
+    endpoint?: string;
+    forcePathStyle: boolean;
+    publicUrl: string;
+    region: string;
+    secretAccessKey: string;
+  };
   db: {
     appName: string;
     coreName: string;
@@ -21,6 +30,15 @@ interface AdminConfig {
 
 const config: AdminConfig = {
   appUrl: process.env.ADMIN_URL || process.env.APP_URL || '',
+  awsS3: {
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID || '',
+    bucket: process.env.AWS_S3_BUCKET || '',
+    endpoint: process.env.AWS_S3_ENDPOINT || undefined,
+    forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
+    publicUrl: process.env.AWS_S3_PUBLIC_URL || '',
+    region: process.env.AWS_S3_REGION || '',
+    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY || '',
+  },
   db: {
     appName: process.env.APP_DB_NAME || '',
     coreName: process.env.CORE_DB_NAME || '',

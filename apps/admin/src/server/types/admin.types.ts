@@ -91,6 +91,87 @@ interface AppAdminUserItem {
   uuid: string | null;
 }
 
+interface EnterpriseContractItem {
+  createdAt: string;
+  fileSizeBytes: number;
+  id: number;
+  leadId: number | null;
+  mimeType: string;
+  organizationId: number | null;
+  originalFilename: string;
+  title: string;
+  uploadedByUserId: number;
+  userId: number | null;
+  uuid: string;
+}
+
+interface EnterpriseLeadMatchedUser {
+  email: string;
+  id: number;
+  organizationDomain: string | null;
+  organizationId: number | null;
+  organizationName: string | null;
+  organizationSlug: string | null;
+  seatsLimit: number | null;
+  status: string;
+  storageLimitBytes: number;
+  storageUsedBytes: number;
+  subscriptionPeriodEnd: string | null;
+  subscriptionStatus: string;
+  subscriptionTier: string;
+  username: string;
+}
+
+interface EnterpriseLeadItem {
+  companyName: string;
+  companySize: string;
+  contractsCount: number;
+  country: string;
+  createdAt: string;
+  firstName: string;
+  hearAbout: string;
+  id: number;
+  lastName: string;
+  matchedUser: EnterpriseLeadMatchedUser | null;
+  notes: string | null;
+  phoneNumber: string;
+  roleLevel: string;
+  status: 'approved' | 'contacted' | 'pending' | 'rejected';
+  updatedAt: string;
+  userId: number | null;
+  uuid: string;
+  workEmail: string;
+}
+
+interface EnterpriseLeadDetail {
+  contracts: EnterpriseContractItem[];
+  lead: EnterpriseLeadItem;
+}
+
+interface ProvisionEnterpriseInput {
+  adminUserId: number;
+  appId: number;
+  billingPeriod: 'custom' | 'monthly' | 'yearly';
+  contractAmount: number;
+  currency: string;
+  durationMonths: number;
+  leadId?: number | null;
+  organizationDomain?: string | null;
+  organizationName: string;
+  seatsLimit: number;
+  storageLimitBytes: number;
+  userEmail: string;
+}
+
+interface ProvisionEnterpriseResult {
+  organizationId: number;
+  organizationName: string;
+  periodEnd: string;
+  seatsLimit: number;
+  storageLimitBytes: number;
+  userId: number;
+}
+
 export type {
   AccessibleAdminApp,
   AdminActivityPoint,
@@ -100,5 +181,11 @@ export type {
   AdminRevenuePoint,
   AppAdminUserItem,
   AppDashboardStats,
+  EnterpriseContractItem,
+  EnterpriseLeadDetail,
+  EnterpriseLeadItem,
+  EnterpriseLeadMatchedUser,
+  ProvisionEnterpriseInput,
+  ProvisionEnterpriseResult,
   UserAdminAccess
 };

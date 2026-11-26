@@ -145,8 +145,16 @@ async function requestApi<T = any>(url: string, method: string, body?: any): Pro
   return parseApiResponse<T>(res);
 }
 
+async function deleteApi<T = any>(url: string): Promise<T> {
+  return requestApi<T>(url, 'DELETE');
+}
+
 async function getApi<T = any>(url: string): Promise<T> {
   return requestApi<T>(url, 'GET');
+}
+
+async function patchApi<T = any>(url: string, body?: any): Promise<T> {
+  return requestApi<T>(url, 'PATCH', body);
 }
 
 async function postApi<T = any>(url: string, body?: any): Promise<T> {
@@ -180,11 +188,13 @@ export {
   accessibleApps,
   activeAppSlug,
   currentUser,
+  deleteApi,
   fetchCurrentUser,
   getActiveApp,
   getApi,
   logoutApi,
   onAuthChange,
+  patchApi,
   postApi,
   setActiveAppSlug,
   setAuthState

@@ -134,6 +134,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     volumes:
       - ./apps/admin:/app
       - /app/node_modules

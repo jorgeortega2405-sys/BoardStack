@@ -13,8 +13,11 @@ interface BillingData {
   currency: string;
   current_period_end?: string | null;
   hasSubscription: boolean;
+  is_enterprise_managed?: boolean;
   is_one_time: boolean;
   ok: boolean;
+  organization_name?: string | null;
+  seats_limit?: number | null;
   status: string;
   storage_limit_bytes?: number;
   storage_used_bytes?: number;
@@ -28,7 +31,7 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
   container.setAttribute('data-ref', 'settings-billing-layout');
 
   const initialTier = currentUser?.subscription_tier || 'free';
-  const initialIsPaid = (initialTier === 'pro' || initialTier === 'enterprise');
+  const initialIsPaid = (initialTier === 'pro' || initialTier === 'business' || initialTier === 'enterprise');
 
   let billingInfo: BillingData = {
     amount: 0,
@@ -59,6 +62,7 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
   const isOneTime = Boolean(
     billingInfo.is_one_time ||
     billingInfo.billing_type === 'one_time' ||
+    billingInfo.billing_type === 'enterprise_contract' ||
     billingInfo.billing_period?.includes('one_time') ||
     billingInfo.billing_period?.includes('1_month') ||
     billingInfo.billing_period?.includes('6_months') ||
@@ -76,6 +80,8 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
     periodLabel = i18n.t('settings.billing.period_6_months');
   } else if (billingInfo.billing_period === '12_months') {
     periodLabel = i18n.t('settings.billing.period_12_months');
+  } else if (billingInfo.billing_period === 'custom') {
+    periodLabel = i18n.t('settings.billing.custom_label');
   }
 
   const renewalTypeLabel = isOneTime
@@ -88,7 +94,9 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
     : (isEnterprise ? 10 * 1024 * 1024 * 1024 * 1024 : (isBusiness ? 1024 * 1024 * 1024 * 1024 : (isPro ? 100 * 1024 * 1024 * 1024 : 0)));
 
   const formattedUsed = formatBytes(usedBytes);
-  const formattedLimit = isEnterprise ? 'Custom' : (isBusiness ? '1 TB' : (isPro ? '100 GB' : '0 GB'));
+  const formattedLimit = isEnterprise
+    ? (totalLimitBytes > 0 ? formatBytes(totalLimitBytes) : i18n.t('settings.billing.custom_label'))
+    : (isBusiness ? '1 TB' : (isPro ? '100 GB' : '0 GB'));
   const usagePercent = totalLimitBytes > 0 ? Math.min(100, Math.round((usedBytes / totalLimitBytes) * 100)) : 0;
   const storageText = hasPaidPlan ? `${formattedUsed} / ${formattedLimit}` : i18n.t('settings.billing.storage_badge_free');
   const storageDesc = isEnterprise
@@ -119,15 +127,21 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
       : i18n.t('settings.billing.active')
     : i18n.t('settings.billing.basic_plan');
 
-  const defaultAmt = isEnterprise ? 99 : (isBusiness ? 39 : 9.99);
+  const defaultAmt = isEnterprise ? 0 : (isBusiness ? 29 : 9.99);
+  const resolvedAmount = Number(billingInfo.amount || defaultAmt);
+  const seatsNote = isEnterprise && billingInfo.seats_limit
+    ? ` ${i18n.t('settings.billing.enterprise_seats_note', { seats: billingInfo.seats_limit })}`
+    : '';
   const planDesc = hasPaidPlan
-    ? `${renewalTypeLabel} · $${Number(billingInfo.amount || defaultAmt).toFixed(2)} USD${
-        dateFormatted ? ` · ${i18n.t('settings.billing.active')} (${dateFormatted})` : ''
-      }. ${
-        billingInfo.cancel_at_period_end
-          ? i18n.t('settings.billing.no_further_charges')
-          : ''
-      }`
+    ? isEnterprise && resolvedAmount <= 0
+      ? `${i18n.t('settings.billing.enterprise_custom_contract')}${dateFormatted ? ` · ${i18n.t('settings.billing.active')} (${dateFormatted})` : ''}${seatsNote}`
+      : `${renewalTypeLabel} · $${resolvedAmount.toFixed(2)} ${billingInfo.currency || 'USD'}${
+          dateFormatted ? ` · ${i18n.t('settings.billing.active')} (${dateFormatted})` : ''
+        }${seatsNote}. ${
+          billingInfo.cancel_at_period_end
+            ? i18n.t('settings.billing.no_further_charges')
+            : ''
+        }`
     : i18n.t('settings.billing.free_access_desc');
 
   let actionsHtml = '';
@@ -208,7 +222,7 @@ async function createSettingsBillingView(navigate: (path: string) => void): Prom
           </div>
 
           ${
-            isPro && isOneTime
+            (isPro || isBusiness) && isOneTime
               ? `
               <hr class="component-divider" />
               <div class="component-item" data-ref="item-fixed-note">

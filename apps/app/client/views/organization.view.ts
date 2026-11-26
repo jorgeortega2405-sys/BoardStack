@@ -41,7 +41,12 @@ interface OrgApiResponse {
   spEntityId: string;
 }
 
-function renderOverviewHtml(org: OrgData, membersCount: number, isOwner: boolean = false): string {
+function renderOverviewHtml(
+  org: OrgData,
+  membersCount: number,
+  canSelfBuySeats = false,
+  isEnterpriseOwner = false
+): string {
   const seatsLimit = org.seats_limit || 3;
   const availableSeats = Math.max(0, seatsLimit - membersCount);
 
@@ -76,14 +81,18 @@ function renderOverviewHtml(org: OrgData, membersCount: number, isOwner: boolean
             <span class="component-card__label">${i18n.t('organization.metric_seats')}</span>
             <div class="component-card__value">${membersCount} / ${seatsLimit}</div>
             <span class="component-card__subtext">${i18n.t('organization.seats_available', { count: availableSeats })}</span>
-            ${isOwner ? `
+            ${canSelfBuySeats ? `
               <div style="margin-top: 10px;">
                 <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-expand-seats">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_shopping_cart"></use></svg>
                   <span>${i18n.t('organization.buy_seats_btn')}</span>
                 </button>
               </div>
-            ` : ''}
+            ` : (isEnterpriseOwner ? `
+              <div style="margin-top: 10px;">
+                <span class="component-badge component-badge--sm component-badge--neutral" data-ref="badge-enterprise-seats-managed">${i18n.t('organization.enterprise_managed_seats_badge')}</span>
+              </div>
+            ` : '')}
           </div>
         </div>
 
@@ -330,7 +339,7 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
   `;
 }
 
-function renderMembersHtml(org: OrgData, members: OrgMemberData[], isOwner: boolean = false): string {
+function renderMembersHtml(org: OrgData, members: OrgMemberData[], canSelfBuySeats = false): string {
   const seatsLimit = org.seats_limit || 3;
 
   const rowsHtml = members.map((m) => `
@@ -390,7 +399,7 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[], isOwner: bool
             />
           </div>
         </div>
-        ${isOwner ? `
+        ${canSelfBuySeats ? `
           <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-expand-seats">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_shopping_cart"></use></svg>
             <span>${i18n.t('organization.buy_seats_btn')}</span>
@@ -621,6 +630,8 @@ async function createOrganizationView(
   }
 
   const { isOwner, membersCount, org, spAcsUrl, spEntityId } = orgData;
+  const canSelfBuySeats = isOwner && currentUser.subscription_tier === 'business';
+  const isEnterpriseOwner = isOwner && currentUser.subscription_tier === 'enterprise';
 
   const baseBackPath = currentSubpath.startsWith('/settings') ? '/settings/organization' : '/organization';
 
@@ -731,14 +742,16 @@ async function createOrganizationView(
       }
     } catch {}
 
-    container.innerHTML = renderMembersHtml(org, membersList, isOwner);
+    container.innerHTML = renderMembersHtml(org, membersList, canSelfBuySeats);
     renderIcons(container);
 
     container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
       navigate(baseBackPath);
     });
 
-    setupExpandSeatsModal(container, org, () => navigate(`${baseBackPath}/members`));
+    if (canSelfBuySeats) {
+      setupExpandSeatsModal(container, org, () => navigate(`${baseBackPath}/members`));
+    }
 
     const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
     searchInput?.addEventListener('input', () => {
@@ -869,9 +882,11 @@ async function createOrganizationView(
     return container;
   }
 
-  container.innerHTML = renderOverviewHtml(org, membersCount, isOwner);
+  container.innerHTML = renderOverviewHtml(org, membersCount, canSelfBuySeats, isEnterpriseOwner);
   renderIcons(container);
-  setupExpandSeatsModal(container, org, () => navigate(baseBackPath));
+  if (canSelfBuySeats) {
+    setupExpandSeatsModal(container, org, () => navigate(baseBackPath));
+  }
 
   container.querySelector('[data-ref="btn-nav-members"]')?.addEventListener('click', () => {
     navigate(`${baseBackPath}/members`);

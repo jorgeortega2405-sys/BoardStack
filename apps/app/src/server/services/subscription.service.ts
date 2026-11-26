@@ -281,6 +281,13 @@ async function confirmSubscriptionPayment(
     }
 
     await conn.query(
+      `UPDATE subscriptions
+       SET status = 'replaced'
+       WHERE user_id = ? AND status = 'active' AND (stripe_payment_intent_id IS NULL OR stripe_payment_intent_id != ?)`,
+      [userId, paymentIntentId]
+    );
+
+    await conn.query(
       `UPDATE subscriptions 
        SET status = 'active', current_period_start = ?, current_period_end = ?
        WHERE stripe_payment_intent_id = ? AND user_id = ?`,
@@ -316,7 +323,7 @@ async function getBillingDetails(userId: number): Promise<any> {
   const [userRows] = await pool.query<RowDataPacket[]>(
     `SELECT subscription_tier, subscription_status, subscription_period_end,
             stripe_customer_id, stripe_subscription_id, cancel_at_period_end,
-            storage_used_bytes
+            storage_used_bytes, storage_limit_bytes
      FROM app_user_profiles WHERE user_id = ?`,
     [userId]
   );
@@ -329,8 +336,11 @@ async function getBillingDetails(userId: number): Promise<any> {
       cancel_at_period_end: false,
       current_period_end: null,
       hasSubscription: false,
+      is_enterprise_managed: false,
       is_one_time: false,
       ok: true,
+      organization_name: null,
+      seats_limit: null,
       status: 'inactive',
       success: true,
       tier: 'free',
@@ -344,6 +354,17 @@ async function getBillingDetails(userId: number): Promise<any> {
   );
   const latestSub = subRows[0] || null;
 
+  const [orgRows] = await pool.query<RowDataPacket[]>(
+    `SELECT o.name, o.seats_limit
+     FROM organizations o
+     LEFT JOIN organization_members om ON om.org_id = o.id
+     WHERE o.owner_id = ? OR om.user_id = ?
+     ORDER BY (o.owner_id = ?) DESC, o.id ASC
+     LIMIT 1`,
+    [userId, userId, userId]
+  );
+  const orgInfo = orgRows[0] || null;
+
   const isEnterprise = user.subscription_tier === 'enterprise';
   const isBusiness = user.subscription_tier === 'business';
   const isPro = isEnterprise || isBusiness || user.subscription_tier === 'pro';
@@ -351,11 +372,12 @@ async function getBillingDetails(userId: number): Promise<any> {
 
   const billingType = latestSub?.billing_type || (user.stripe_subscription_id ? 'recurring' : 'one_time');
   const billingPeriod = latestSub?.billing_period || 'monthly';
-  const isOneTime = billingType === 'one_time';
+  const isOneTime = billingType === 'one_time' || billingType === 'enterprise_contract';
   const cancelAtPeriodEnd = Boolean(user.cancel_at_period_end || latestSub?.cancel_at_period_end);
 
-  const defaultAmount = isEnterprise ? 99.00 : (isBusiness ? 29.00 : (isPro ? 9.99 : 0));
-  const storageLimit = getStorageTierLimitBytes(user.subscription_tier);
+  const defaultAmount = isEnterprise ? 0 : (isBusiness ? 29.00 : (isPro ? 9.99 : 0));
+  const customLimit = Number(user.storage_limit_bytes || 0);
+  const storageLimit = customLimit > 0 ? customLimit : getStorageTierLimitBytes(user.subscription_tier);
 
   return {
     amount: latestSub ? Number(latestSub.amount) : defaultAmount,
@@ -365,8 +387,11 @@ async function getBillingDetails(userId: number): Promise<any> {
     current_period_end: user.subscription_period_end || latestSub?.current_period_end || null,
     currency: latestSub?.currency || 'USD',
     hasSubscription: isActive,
+    is_enterprise_managed: isEnterprise,
     is_one_time: isOneTime,
     ok: true,
+    organization_name: orgInfo?.name || null,
+    seats_limit: orgInfo ? Number(orgInfo.seats_limit || 0) : null,
     status: isActive ? 'active' : 'inactive',
     storage_limit_bytes: storageLimit,
     storage_used_bytes: Number(user.storage_used_bytes || 0),

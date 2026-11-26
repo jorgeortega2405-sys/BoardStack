@@ -106,7 +106,7 @@ const BUSINESS_PLAN: PlanConfig = {
   ],
   id: 'business',
   isPopular: true,
-  maxSeats: 100,
+  maxSeats: 50,
   minSeats: 3,
   name: 'BoardStack Business',
   prices: {
@@ -244,6 +244,21 @@ const STORAGE_TIER_LIMITS = {
   pro: 107374182400,
 } as const;
 
+const TIER_RANK = {
+  business: 2,
+  enterprise: 3,
+  free: 0,
+  pro: 1,
+} as const;
+
+function getTierRank(tier: string | null | undefined): number {
+  const clean = (tier || 'free').trim().toLowerCase();
+  if (clean === 'enterprise') return TIER_RANK.enterprise;
+  if (clean === 'business') return TIER_RANK.business;
+  if (clean === 'pro') return TIER_RANK.pro;
+  return TIER_RANK.free;
+}
+
 function getStorageTierLimitBytes(tier: string | null | undefined): number {
   if (tier === 'enterprise') return STORAGE_TIER_LIMITS.enterprise;
   if (tier === 'business') return STORAGE_TIER_LIMITS.business;
@@ -263,10 +278,12 @@ export {
   ENTERPRISE_PLAN,
   PRO_PLAN,
   STORAGE_TIER_LIMITS,
+  TIER_RANK,
   calculatePeriodEnd,
   getPriceAmount,
   getStorageTierLabel,
-  getStorageTierLimitBytes
+  getStorageTierLimitBytes,
+  getTierRank
 };
 
 export type {

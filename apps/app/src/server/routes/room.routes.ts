@@ -15,6 +15,7 @@ import {
 import crypto from 'crypto';
 import express, { Request, Response, Router } from 'express';
 import fs from 'fs';
+import { getAppUserProfile } from '../services/user.service.js';
 import { getS3Object, sanitizeAndUploadToS3 } from '../services/s3.service.js';
 import { getStorageTierLabel, getStorageTierLimitBytes } from '../config/subscription-plans.config.js';
 import { getValidatedCurrentUser, requireAuth } from '../middlewares/auth.middleware.js';
@@ -78,7 +79,9 @@ async function createRoomHandler(req: Request, res: Response): Promise<void> {
     upload_permission,
   } = req.body;
 
-  const isPro = user.subscription_tier === 'pro' || user.subscription_tier === 'business' || user.subscription_tier === 'enterprise';
+  const userProfile = await getAppUserProfile(user.id);
+  const effectiveTier = userProfile?.subscription_tier || user.subscription_tier || 'free';
+  const isPro = effectiveTier === 'pro' || effectiveTier === 'business' || effectiveTier === 'enterprise';
   const cleanSlug = typeof custom_slug === 'string' && custom_slug.trim() ? custom_slug.trim().toLowerCase() : null;
   if (cleanSlug && !isPro) {
     res.status(403).json({ error: 'Custom link is exclusive to BoardStack Pro.', ok: false, requires_pro: true });
@@ -312,12 +315,13 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
   const roomOwnerId = dbRoom?.owner_id || user?.id;
   if (roomOwnerId) {
     const [ownerRows] = await pool.execute<any[]>(
-      `SELECT user_id AS id, subscription_tier, storage_used_bytes FROM app_user_profiles WHERE user_id = ? LIMIT 1`,
+      `SELECT user_id AS id, subscription_tier, storage_used_bytes, storage_limit_bytes FROM app_user_profiles WHERE user_id = ? LIMIT 1`,
       [roomOwnerId]
     );
     const ownerUser = ownerRows[0];
     const ownerTier = ownerUser?.subscription_tier || 'free';
-    const tierStorageLimitBytes = getStorageTierLimitBytes(ownerTier);
+    const customStorageLimit = Number(ownerUser?.storage_limit_bytes || 0);
+    const tierStorageLimitBytes = customStorageLimit > 0 ? customStorageLimit : getStorageTierLimitBytes(ownerTier);
 
     const currentStorage = Number(ownerUser?.storage_used_bytes || 0);
     if (currentStorage + req.file.size > tierStorageLimitBytes) {
@@ -669,7 +673,9 @@ async function updateRoomHandler(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const isPro = user.subscription_tier === 'pro' || user.subscription_tier === 'business' || user.subscription_tier === 'enterprise';
+  const userProfile = await getAppUserProfile(user.id);
+  const effectiveTier = userProfile?.subscription_tier || user.subscription_tier || 'free';
+  const isPro = effectiveTier === 'pro' || effectiveTier === 'business' || effectiveTier === 'enterprise';
   const {
     clear_expiration,
     clear_max_downloads,

@@ -65,13 +65,19 @@ async function getOrCreateUserOrganization(
 
   if (!org) {
     await ensureAppUserProfile(userId);
+    const [profileRows] = await pool.query<RowDataPacket[]>(
+      'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+    const ownerTier = String(profileRows[0]?.subscription_tier || 'free').toLowerCase();
+    const defaultSeatsLimit = ownerTier === 'enterprise' ? 25 : 3;
     const orgUuid = crypto.randomUUID();
-    const cleanName = `${username || 'Enterprise'} Organization`;
+    const cleanName = `${username || (ownerTier === 'enterprise' ? 'Enterprise' : 'Business')} Organization`;
     const cleanSlug = `org-${userId}-${Date.now().toString(36)}`;
     const [insertResult] = await pool.query<any>(
       `INSERT INTO organizations (uuid, owner_id, name, slug, seats_limit, saml_enabled)
-       VALUES (?, ?, ?, ?, 25, FALSE)`,
-      [orgUuid, userId, cleanName, cleanSlug]
+       VALUES (?, ?, ?, ?, ?, FALSE)`,
+      [orgUuid, userId, cleanName, cleanSlug, defaultSeatsLimit]
     );
 
     const orgId = insertResult.insertId;
@@ -261,11 +267,12 @@ async function addOrganizationMember(
 
   if (matchedUser) {
     const [ownerRows] = await pool.query<RowDataPacket[]>(
-      'SELECT p.subscription_tier FROM organizations o JOIN app_user_profiles p ON o.owner_id = p.user_id WHERE o.id = ? LIMIT 1',
+      'SELECT p.subscription_tier, p.storage_limit_bytes FROM organizations o JOIN app_user_profiles p ON o.owner_id = p.user_id WHERE o.id = ? LIMIT 1',
       [orgId]
     );
     const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
-    const orgStorage = getStorageTierLimitBytes(orgTier);
+    const ownerStorageLimit = Number(ownerRows[0]?.storage_limit_bytes || 0);
+    const orgStorage = ownerStorageLimit > 0 ? ownerStorageLimit : getStorageTierLimitBytes(orgTier);
     await pool.query(
       `UPDATE app_user_profiles
        SET subscription_tier = ?, storage_limit_bytes = ?
@@ -394,11 +401,12 @@ async function processSsoLogin(
   let userRow = await findUserByEmail(cleanEmail);
 
   const [ownerRows] = await pool.query<RowDataPacket[]>(
-    'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ?',
+    'SELECT subscription_tier, storage_limit_bytes FROM app_user_profiles WHERE user_id = ?',
     [org.owner_id]
   );
   const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
-  const orgStorage = getStorageTierLimitBytes(orgTier);
+  const ownerStorageLimit = Number(ownerRows[0]?.storage_limit_bytes || 0);
+  const orgStorage = ownerStorageLimit > 0 ? ownerStorageLimit : getStorageTierLimitBytes(orgTier);
 
   if (!userRow) {
     const baseUsername = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
@@ -494,8 +502,8 @@ async function updateOrganizationSeats(
 
   const user = userRows[0];
   const tier = user.subscription_tier;
-  if (tier !== 'business' && tier !== 'enterprise') {
-    throw new Error('Dynamic seat scaling is only available for Business and Enterprise plans.');
+  if (tier !== 'business') {
+    throw new Error('Dynamic self-service seat scaling is only available for Business plans. Enterprise seat adjustments are managed by Sales.');
   }
 
   const [subRows] = await pool.query<RowDataPacket[]>(

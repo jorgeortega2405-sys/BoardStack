@@ -11,17 +11,22 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   container.className = 'component-layout--full component-main--gap-24';
   container.setAttribute('data-ref', 'checkout-layout');
 
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('plan') === 'enterprise') {
+    navigate('/contact-sales');
+    return container;
+  }
+
   if (!currentUser) {
     showToast(i18n.t('checkout.login_required'), 'info');
     navigate('/login');
     return container;
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const planParam: 'pro' | 'business' | 'enterprise' = urlParams.get('plan') === 'enterprise' ? 'enterprise' : (urlParams.get('plan') === 'business' ? 'business' : 'pro');
+  const planParam: 'pro' | 'business' = urlParams.get('plan') === 'business' ? 'business' : 'pro';
   const initialCycle = urlParams.get('cycle') === 'yearly' ? 'yearly' : 'monthly';
   const initialMode = urlParams.get('mode') === 'one_time' ? 'one_time' : 'recurring';
-  let currentSeats = Math.max(3, parseInt(urlParams.get('seats') || '3', 10) || 3);
+  let currentSeats = Math.min(50, Math.max(3, parseInt(urlParams.get('seats') || '3', 10) || 3));
 
   let currentStep: 1 | 2 = 1;
   let currentMode: 'one_time' | 'recurring' = initialMode;
@@ -35,7 +40,24 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   let isInitializing = false;
   let isSubmitting = false;
 
-  const isAlreadyActive = currentUser.subscription_tier === planParam;
+  const TIER_RANK: Record<string, number> = {
+    business: 2,
+    enterprise: 3,
+    free: 0,
+    pro: 1,
+  };
+  const currentTier = currentUser.subscription_tier || 'free';
+  const isAlreadyActive = (TIER_RANK[currentTier] || 0) >= TIER_RANK[planParam];
+  const activeStatusTitle = currentTier === 'enterprise'
+    ? i18n.t('checkout.already_active_enterprise_title')
+    : (planParam === 'business' || currentTier === 'business'
+      ? i18n.t('checkout.already_active_business_title')
+      : i18n.t('checkout.already_active_title'));
+  const activeStatusDesc = currentTier === 'enterprise'
+    ? i18n.t('checkout.already_active_enterprise_desc')
+    : (planParam === 'business' || currentTier === 'business'
+      ? i18n.t('checkout.already_active_business_desc')
+      : i18n.t('checkout.already_active_desc'));
 
   container.innerHTML = `
     <div class="component-block" data-ref="checkout-block" style="width: 100%; max-width: 1180px; margin: 0 auto;">
@@ -49,8 +71,8 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
                 <div class="component-avatar component-avatar--status" data-ref="checkout-active-icon">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 </div>
-                <h2 class="component-title" data-ref="checkout-active-title">${planParam === 'business' ? i18n.t('checkout.already_active_business_title') : i18n.t('checkout.already_active_title')}</h2>
-                <p class="component-subtitle" data-ref="checkout-active-desc">${planParam === 'business' ? i18n.t('checkout.already_active_business_desc') : i18n.t('checkout.already_active_desc')}</p>
+                <h2 class="component-title" data-ref="checkout-active-title">${activeStatusTitle}</h2>
+                <p class="component-subtitle" data-ref="checkout-active-desc">${activeStatusDesc}</p>
                 <div class="component-group component-group--actions" data-ref="checkout-active-actions">
                   <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-goto-pricing">
                     ${i18n.t('checkout.view_other_plans')}
@@ -167,7 +189,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               <h3 class="component-card__title" data-ref="summary-info-title">${i18n.t('checkout.plan_info_title')}</h3>
               <div class="component-list component-list--summary" data-ref="summary-plan-details">
                 <div class="component-summary-row" data-ref="summary-row-plan">
-                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'enterprise' ? i18n.t('checkout.plan_enterprise') : (planParam === 'business' ? `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})` : i18n.t('checkout.plan_pro'))}</span>
+                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'business' ? `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})` : i18n.t('checkout.plan_pro')}</span>
                   <span class="component-summary-row__price" data-ref="summary-plan-price">USD $9.99</span>
                 </div>
                 <div class="component-summary-row__meta" data-ref="summary-plan-cycle">${i18n.t('pricing.billing_monthly')}</div>
@@ -234,14 +256,6 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   }
 
   const getSelectedPrice = (): number => {
-    if (planParam === 'enterprise') {
-      if (currentMode === 'recurring') {
-        return recurringPeriod === 'yearly' ? 948.00 : 99.00;
-      }
-      if (oneTimePeriod === '6_months') return 499.00;
-      if (oneTimePeriod === '12_months') return 899.00;
-      return 99.00;
-    }
     if (planParam === 'business') {
       const extraSeats = Math.max(0, currentSeats - 3);
       if (currentMode === 'recurring') {
@@ -289,15 +303,6 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     optionsContainer.innerHTML = '';
 
     const getPrices = () => {
-      if (planParam === 'enterprise') {
-        return {
-          m1: 'USD $99.00',
-          m6: 'USD $499.00',
-          m12: 'USD $899.00',
-          monthly: 'USD $99.00',
-          yearly: 'USD $948.00',
-        };
-      }
       if (planParam === 'business') {
         const extraSeats = Math.max(0, currentSeats - 3);
         const pMonthly = 29.00 + (extraSeats * 6.00);
@@ -491,9 +496,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     if (summaryPlanEndDate) summaryPlanEndDate.textContent = `${i18n.t('checkout.end_date_label')}: ${getFormattedEndDate()}`;
     const planNameEl = container.querySelector<HTMLElement>('[data-ref="summary-plan-name"]');
     if (planNameEl) {
-      if (planParam === 'enterprise') {
-        planNameEl.textContent = i18n.t('checkout.plan_enterprise');
-      } else if (planParam === 'business') {
+      if (planParam === 'business') {
         planNameEl.textContent = `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})`;
       } else {
         planNameEl.textContent = i18n.t('checkout.plan_pro');
@@ -680,7 +683,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
         showToast(planParam === 'business' ? i18n.t('checkout.payment_success_business') : i18n.t('checkout.payment_success'), 'success');
 
         setTimeout(() => {
-          if (planParam === 'enterprise' || planParam === 'business') {
+          if (planParam === 'business') {
             navigate('/organization');
           } else {
             navigate('/');

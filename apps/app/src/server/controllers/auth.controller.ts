@@ -507,6 +507,12 @@ async function me(req: Request, res: Response): Promise<void> {
         user.google_connected = Boolean(cachedData.google_connected);
         user.google_email = cachedData.google_email || null;
         user.has_password = Boolean(cachedData.has_password);
+        if (cachedData.storage_limit_bytes !== undefined) {
+          user.storage_limit_bytes = Number(cachedData.storage_limit_bytes);
+        }
+        if (cachedData.storage_used_bytes !== undefined) {
+          user.storage_used_bytes = Number(cachedData.storage_used_bytes);
+        }
         user.subscription_tier = cachedData.subscription_tier || 'free';
         user.username = cachedData.username;
         user.roles = cachedData.roles || [];
@@ -524,6 +530,8 @@ async function me(req: Request, res: Response): Promise<void> {
           user.google_connected = Boolean(dbUser.google_id);
           user.google_email = dbUser.google_email || null;
           user.has_password = Boolean(dbUser.password_hash);
+          user.storage_limit_bytes = dbUser.storage_limit_bytes;
+          user.storage_used_bytes = dbUser.storage_used_bytes;
           user.subscription_tier = dbUser.subscription_tier || 'free';
           user.username = dbUser.username;
           user.roles = roles;
@@ -539,6 +547,8 @@ async function me(req: Request, res: Response): Promise<void> {
             has_password: user.has_password,
             permissions: user.permissions,
             roles: user.roles,
+            storage_limit_bytes: user.storage_limit_bytes,
+            storage_used_bytes: user.storage_used_bytes,
             subscription_tier: user.subscription_tier,
             username: user.username,
           });

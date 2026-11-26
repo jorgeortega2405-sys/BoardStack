@@ -204,6 +204,8 @@ INSERT IGNORE INTO permissions (code, name, description, category) VALUES
   ('admin:rooms:view', 'Admin View Rooms', 'View application rooms management page', 'admin'),
   ('admin:billing:view', 'Admin View Billing', 'View application billing administration page', 'admin'),
   ('admin:roles:manage', 'Admin Manage Roles', 'Manage application roles and permissions', 'admin'),
+  ('admin:sales:view', 'Admin View Sales Leads', 'View enterprise sales inquiries in admin panel', 'admin'),
+  ('admin:sales:manage', 'Admin Manage Sales & Enterprise', 'Contact sales leads and provision Enterprise subscriptions', 'admin'),
   ('admin:settings:view', 'Admin View Settings', 'View application configuration page', 'admin');
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
@@ -231,7 +233,7 @@ WHERE r.slug = 'administrator'
   AND p.code IN (
     'app:access', 'profile:view', 'profile:edit', 'billing:view', 'billing:manage',
     'admin:overview:view', 'admin:users:view', 'admin:users:manage',
-    'admin:rooms:view', 'admin:billing:view', 'admin:settings:view'
+    'admin:rooms:view', 'admin:billing:view', 'admin:sales:view', 'admin:sales:manage', 'admin:settings:view'
   );
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
@@ -247,6 +249,10 @@ FROM apps a INNER JOIN permissions p ON p.code = 'admin:overview:view' WHERE a.s
 INSERT IGNORE INTO app_pages (app_id, slug, title_key, icon, required_permission_id, sort_order, is_active)
 SELECT a.id, 'users', 'admin.pages.users', 'groups', p.id, 20, TRUE
 FROM apps a INNER JOIN permissions p ON p.code = 'admin:users:view' WHERE a.slug = 'app';
+
+INSERT IGNORE INTO app_pages (app_id, slug, title_key, icon, required_permission_id, sort_order, is_active)
+SELECT a.id, 'sales', 'admin.pages.sales', 'business_center', p.id, 30, TRUE
+FROM apps a INNER JOIN permissions p ON p.code = 'admin:sales:view' WHERE a.slug = 'app';
 
 INSERT IGNORE INTO users (id, uuid, username, email, password_hash, status) VALUES
   (1, '00000000-0000-0000-0000-000000000001', 'admin', 'admin@boardstack.local', '$2b$10$B08DaMljR5e14RA5LJroxusmoNIwlSgeomJK2X76p2Zou.g6ZuLRG', 'active'),

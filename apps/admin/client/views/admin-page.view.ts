@@ -1,5 +1,6 @@
 import type { AccessibleAdminApp, AdminPageSummary, AdminViewElement } from '../types/admin.types.js';
 import { createAppDashboardView } from './app-dashboard.view.js';
+import { createAppSalesView } from './app-sales.view.js';
 import { createAppUsersView } from './app-users.view.js';
 import { escapeHtml } from '../utils/dom.util.js';
 import { getApi } from '../services/api.service.js';
@@ -24,6 +25,10 @@ async function createAdminPageView(
 
   if (normApp === 'app' && normPage === 'dashboard') {
     return createAppDashboardView(app, onAccessDenied);
+  }
+
+  if (normApp === 'app' && normPage === 'sales') {
+    return createAppSalesView(app, onAccessDenied);
   }
 
   if (normApp === 'app' && normPage === 'users') {

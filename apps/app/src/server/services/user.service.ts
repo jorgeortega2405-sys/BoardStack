@@ -170,6 +170,8 @@ async function cacheUserData(user: UserPayload): Promise<void> {
         has_password: user.has_password,
         permissions: user.permissions,
         roles: user.roles,
+        storage_limit_bytes: user.storage_limit_bytes,
+        storage_used_bytes: user.storage_used_bytes,
         subscription_tier: user.subscription_tier,
         username: user.username,
       }),

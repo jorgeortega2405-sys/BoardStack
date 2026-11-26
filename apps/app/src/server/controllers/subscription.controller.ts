@@ -1,4 +1,4 @@
-import { BUSINESS_PLAN, ENTERPRISE_PLAN, PRO_PLAN } from '../config/subscription-plans.config.js';
+import { BUSINESS_PLAN, ENTERPRISE_PLAN, getTierRank, PRO_PLAN } from '../config/subscription-plans.config.js';
 import { config } from '../config/env.config.js';
 import {
   confirmSubscriptionPayment,
@@ -52,8 +52,19 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
 
     const { billingPeriod, billingType, planId, seats } = req.body || {};
 
-    if (planId !== 'pro' && planId !== 'business' && planId !== 'enterprise') {
+    if (planId === 'enterprise') {
+      sendError(res, 'Enterprise subscriptions are provisioned by Sales. Please contact our sales team.', 400);
+      return;
+    }
+
+    if (planId !== 'pro' && planId !== 'business') {
       sendError(res, 'Invalid subscription plan.', 400);
+      return;
+    }
+
+    const currentSub = await getUserSubscriptionInfo(user.id);
+    if (currentSub.is_active && getTierRank(currentSub.tier) >= getTierRank(planId)) {
+      sendError(res, 'You already have this plan or a higher subscription tier active.', 400);
       return;
     }
 
@@ -68,7 +79,9 @@ async function createPaymentIntentHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    const parsedSeats = typeof seats === 'number' && seats >= 3 ? Math.floor(seats) : (planId === 'business' ? 3 : undefined);
+    const parsedSeats = planId === 'business'
+      ? Math.min(50, Math.max(3, typeof seats === 'number' ? Math.floor(seats) : (parseInt(String(seats || '3'), 10) || 3)))
+      : undefined;
     const result = await createSubscriptionPaymentIntent(user.id, user.email, {
       billingPeriod,
       billingType,
@@ -105,8 +118,12 @@ async function confirmPaymentHandler(req: Request, res: Response): Promise<void>
       subscription_tier: result.tier,
     });
 
+    const planLabel = result.tier === 'enterprise'
+      ? 'Enterprise'
+      : (result.tier === 'business' ? 'Business' : 'Pro');
+
     sendSuccess(res, {
-      message: `${result.tier === 'enterprise' ? 'Enterprise' : 'Pro'} subscription activated successfully.`,
+      message: `${planLabel} subscription activated successfully.`,
       periodEnd: result.periodEnd,
       status: result.status,
       tier: result.tier,

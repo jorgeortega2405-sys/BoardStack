@@ -244,8 +244,8 @@ async function updateSeatsHandler(req: Request, res: Response): Promise<void> {
 
   const { seats } = req.body || {};
   const parsedSeats = typeof seats === 'number' ? Math.floor(seats) : parseInt(String(seats), 10);
-  if (isNaN(parsedSeats) || parsedSeats < 3 || parsedSeats > 100) {
-    sendError(res, 'Valid seat count between 3 and 100 is required.', 400);
+  if (isNaN(parsedSeats) || parsedSeats < 3 || parsedSeats > 50) {
+    sendError(res, 'Valid seat count between 3 and 50 is required.', 400);
     return;
   }
 
@@ -260,7 +260,8 @@ async function updateSeatsHandler(req: Request, res: Response): Promise<void> {
     sendSuccess(res, updated);
   } catch (err: any) {
     logger.app.error('[Organization] Error updating seats:', err);
-    sendError(res, err.message || 'Error updating team seats.', 400);
+    const statusCode = typeof err?.message === 'string' && err.message.includes('only available for Business') ? 403 : 400;
+    sendError(res, err.message || 'Error updating team seats.', statusCode);
   }
 }
 

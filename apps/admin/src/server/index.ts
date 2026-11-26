@@ -10,6 +10,7 @@ import express, { Request, Response } from 'express';
 import fs from 'fs';
 import { getValidatedAdminSession } from './middlewares/auth.middleware.js';
 import http from 'http';
+import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
 import path from 'path';
 import { testDatabaseConnection } from './config/database.config.js';
@@ -228,6 +229,7 @@ server.listen(PORT, HOST, async () => {
   logger.system.info(`[BoardStack Admin] Server listening on http://${HOST}:${PORT}`);
   void testDatabaseConnection();
   void testRedisConnection();
+  void initS3Bucket();
 });
 
 const gracefulShutdown = (signal: string) => {

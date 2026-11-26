@@ -173,6 +173,28 @@ CREATE TABLE IF NOT EXISTS enterprise_leads (
   FOREIGN KEY (user_id) REFERENCES app_user_profiles(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS enterprise_contracts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  uuid VARCHAR(36) NOT NULL UNIQUE,
+  lead_id INT NULL,
+  user_id INT NULL,
+  organization_id INT NULL,
+  title VARCHAR(180) NOT NULL,
+  original_filename VARCHAR(255) NOT NULL,
+  s3_key VARCHAR(512) NOT NULL,
+  mime_type VARCHAR(120) NOT NULL,
+  file_size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  sha256_hash CHAR(64) NOT NULL,
+  uploaded_by_user_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_ec_lead (lead_id, created_at DESC),
+  INDEX idx_ec_user (user_id, created_at DESC),
+  INDEX idx_ec_org (organization_id, created_at DESC),
+  FOREIGN KEY (lead_id) REFERENCES enterprise_leads(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES app_user_profiles(user_id) ON DELETE SET NULL,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO app_user_profiles (user_id, subscription_tier, subscription_status) VALUES
   (1, 'pro', 'active'),
   (2, 'free', 'active');
