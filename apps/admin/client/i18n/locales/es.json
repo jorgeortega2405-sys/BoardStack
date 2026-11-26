@@ -14,11 +14,16 @@
   },
   "nav": {
     "account": "Cuenta",
+    "accounts": "Cuentas",
+    "add_account": "Agregar cuenta",
     "close_drawer": "Cerrar menú lateral",
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión",
+    "logout_all": "Cerrar todas las sesiones",
+    "max_accounts_reached": "Has alcanzado el límite máximo de 3 cuentas vinculadas.",
     "menu": "Menú",
     "profile": "Perfil",
+    "switch_account": "Cambiar de cuenta",
     "toggle_drawer": "Alternar menú lateral"
   },
   "drawer": {
@@ -54,9 +59,11 @@
     "auth": {
       "access_denied": "No tienes permisos para acceder al panel de administración.",
       "account_suspended": "Tu cuenta está suspendida o inactiva.",
+      "back_to_panel": "Volver al panel",
       "brand_title": "BoardStack Admin",
       "login_subtitle": "Accede al panel centralizado con tu cuenta autorizada",
-      "login_title": "Panel de Administración"
+      "login_title": "Panel de Administración",
+      "switch_account_error": "No se pudo cambiar de cuenta."
     },
     "dashboard": {
       "card_files_label": "Archivos subidos",

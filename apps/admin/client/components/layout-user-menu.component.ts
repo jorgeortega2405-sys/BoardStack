@@ -1,8 +1,23 @@
-import { currentUser, getActiveApp, logoutApi, onAuthChange, postApi } from '../services/api.service.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import {
+  currentUser,
+  fetchCurrentUser,
+  linkedAccounts,
+  logoutAllApi,
+  logoutApi,
+  onAuthChange,
+  postApi,
+  switchAccountApi,
+} from '../services/api.service.js';
+import { getUserAvatarUrl, normalizeSubscriptionTier } from '../utils/avatar.util.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { setupSheetDragToDismiss } from '../utils/dom.util.js';
 import { themeService } from '../services/theme.service.js';
+import { toast } from '../services/toast.service.js';
+
+interface UserMenuNavigateOptions {
+  force?: boolean;
+  showDeniedFeedback?: boolean;
+}
 
 function getRoleLabel(roleSlug: string, fallbackName: string): string {
   const key = `admin.roles.${roleSlug}`;
@@ -10,7 +25,10 @@ function getRoleLabel(roleSlug: string, fallbackName: string): string {
   return translated !== key ? translated : fallbackName;
 }
 
-function setupUserMenu(onNavigate: (path: string) => void): () => void {
+function setupUserMenu(
+  onNavigate: (path: string, options?: UserMenuNavigateOptions) => void,
+  onAccountSessionChange?: () => Promise<void> | void
+): () => void {
   const avatarContainer = document.querySelector<HTMLElement>('[data-ref="avatar-container"]');
   if (!avatarContainer) {
     return () => {};
@@ -22,15 +40,24 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
   const avatarMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
   const avatarDragZone = avatarMenu?.querySelector<HTMLElement>('[data-ref="avatar-menu-drag-zone"], .component-menu__drag-zone, .modal-card__drag-zone');
 
+  const panelMain = avatarContainer.querySelector<HTMLElement>('[data-ref="panel-main-options"]');
+  const panelSwitcher = avatarContainer.querySelector<HTMLElement>('[data-ref="panel-account-switcher"]');
+
+  const btnSwitchAccountMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-switch-account-menu"]');
+  const btnBackToMainMenu = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-back-to-main-menu"]');
+  const btnAddAccount = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-add-account"]');
+  const accountSwitcherList = avatarContainer.querySelector<HTMLElement>('[data-ref="account-switcher-list"]');
+
+  const activeAvatarBox = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-avatar-box"]');
   const activeAvatar = avatarContainer.querySelector<HTMLImageElement>('[data-ref="active-account-avatar"]');
   const activeName = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-name"]');
   const activeEmail = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-email"]');
-  const activeRole = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-role"]');
 
   const btnTheme = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-theme"]');
   const themeToggleIcon = avatarContainer.querySelector<SVGUseElement>('[data-ref="theme-toggle-icon"] use');
   const themeToggleLabel = avatarContainer.querySelector<HTMLElement>('[data-ref="theme-toggle-label"]');
   const btnLogout = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout"]');
+  const btnLogoutAll = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-logout-all"]');
 
   let isMenuClosing = false;
   let closeMenuTimer: ReturnType<typeof setTimeout> | null = null;
@@ -54,6 +81,8 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
         avatarBackdrop.style.removeProperty('opacity');
         avatarBackdrop.style.removeProperty('transition');
       }
+      if (panelMain) panelMain.classList.remove('is-hidden');
+      if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
       if (document.querySelectorAll('.component-menu-backdrop.is-open, .dropdown-backdrop.is-open, .drawer-backdrop.is-open').length === 0) {
         document.body.classList.remove('dropdown-open');
       }
@@ -85,6 +114,8 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
         avatarBackdrop.style.removeProperty('opacity');
         avatarBackdrop.style.removeProperty('transition');
       }
+      if (panelMain) panelMain.classList.remove('is-hidden');
+      if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
       if (document.querySelectorAll('.component-menu-backdrop.is-open, .dropdown-backdrop.is-open, .drawer-backdrop.is-open').length === 0) {
         document.body.classList.remove('dropdown-open');
       }
@@ -107,36 +138,129 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
     }
   };
 
+  const renderAccountList = () => {
+    if (!accountSwitcherList) return;
+    accountSwitcherList.innerHTML = '';
+
+    const accounts = linkedAccounts.length > 0 ? linkedAccounts : (currentUser ? [currentUser] : []);
+
+    accounts.forEach((acc) => {
+      const isCurrent = Boolean(currentUser && String(currentUser.id) === String(acc.id));
+      const accAvatarUrl = getUserAvatarUrl(acc, 80);
+      const accTier = normalizeSubscriptionTier(acc.subscription_tier);
+
+      const itemBtn = document.createElement('button');
+      itemBtn.type = 'button';
+      itemBtn.className = `component-menu__item component-menu__item--bordered menu-item menu-item--bordered account-item${isCurrent ? ' account-item--active' : ''}`;
+      itemBtn.setAttribute('data-ref', `account-item-${acc.id}`);
+
+      const avatarBox = document.createElement('div');
+      avatarBox.className = 'component-avatar component-avatar--sm';
+      avatarBox.setAttribute('data-tier', accTier);
+
+      const img = document.createElement('img');
+      img.className = 'component-avatar__img';
+      img.src = accAvatarUrl;
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+
+      avatarBox.appendChild(img);
+
+      const infoBox = document.createElement('div');
+      infoBox.className = 'account-item__info';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'account-item__name';
+      nameSpan.textContent = acc.username || '';
+
+      const emailSpan = document.createElement('span');
+      emailSpan.className = 'account-item__email';
+      emailSpan.textContent = acc.email || '';
+
+      infoBox.appendChild(nameSpan);
+      infoBox.appendChild(emailSpan);
+
+      itemBtn.appendChild(avatarBox);
+      itemBtn.appendChild(infoBox);
+
+      if (isCurrent) {
+        const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        checkIcon.setAttribute('class', 'component-icon account-item__check');
+        checkIcon.setAttribute('aria-hidden', 'true');
+        const useEl = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+        useEl.setAttribute('href', '/icons.svg#check');
+        checkIcon.appendChild(useEl);
+        itemBtn.appendChild(checkIcon);
+      } else {
+        itemBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          closeMenu(true);
+          const res = await switchAccountApi(acc.id);
+          if (res.success) {
+            if (onAccountSessionChange) {
+              await onAccountSessionChange();
+            }
+            onNavigate(window.location.pathname, { force: true, showDeniedFeedback: false });
+          } else {
+            toast.error(res.error || i18n.t('admin.auth.switch_account_error'));
+            await fetchCurrentUser();
+          }
+        });
+      }
+
+      accountSwitcherList.appendChild(itemBtn);
+    });
+
+    if (btnAddAccount) {
+      if (accounts.length >= 3) {
+        btnAddAccount.classList.add('is-hidden');
+      } else {
+        btnAddAccount.classList.remove('is-hidden');
+      }
+    }
+  };
+
   const updateUI = () => {
     updateThemeButton();
     if (currentUser) {
       avatarContainer.classList.remove('is-hidden');
       const avatarUrl = getUserAvatarUrl(currentUser, 80);
 
-      if (avatarImg && avatarImg.getAttribute('src') !== avatarUrl) {
-        avatarImg.src = avatarUrl;
+      if (avatarImg) {
+        if (avatarImg.getAttribute('src') !== avatarUrl) {
+          avatarImg.src = avatarUrl;
+        }
+        avatarImg.alt = '';
       }
-      if (activeAvatar && activeAvatar.getAttribute('src') !== avatarUrl) {
-        activeAvatar.src = avatarUrl;
+      if (activeAvatar) {
+        if (activeAvatar.getAttribute('src') !== avatarUrl) {
+          activeAvatar.src = avatarUrl;
+        }
+        activeAvatar.alt = '';
       }
-      if (activeName) {
+      if (activeName && activeName.textContent !== (currentUser.username || '')) {
         activeName.textContent = currentUser.username || '';
       }
-      if (activeEmail) {
+      if (activeEmail && activeEmail.textContent !== (currentUser.email || '')) {
         activeEmail.textContent = currentUser.email || '';
       }
 
-      const activeApp = getActiveApp();
-      if (activeRole) {
-        if (activeApp) {
-          activeRole.textContent = getRoleLabel(activeApp.roleSlug, activeApp.roleName);
-          activeRole.classList.remove('is-hidden');
-        } else {
-          activeRole.textContent = '';
-          activeRole.classList.add('is-hidden');
-        }
+      const tier = normalizeSubscriptionTier(currentUser.subscription_tier);
+      if (avatarBtn && avatarBtn.getAttribute('data-tier') !== tier) {
+        avatarBtn.setAttribute('data-tier', tier);
       }
+      if (activeAvatarBox && activeAvatarBox.getAttribute('data-tier') !== tier) {
+        activeAvatarBox.setAttribute('data-tier', tier);
+      }
+
+      renderAccountList();
     } else {
+      if (avatarBtn) {
+        avatarBtn.removeAttribute('data-tier');
+      }
+      if (activeAvatarBox) {
+        activeAvatarBox.removeAttribute('data-tier');
+      }
       avatarContainer.classList.add('is-hidden');
       closeMenu(true);
     }
@@ -181,6 +305,8 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
         avatarBackdrop.classList.add('is-open');
       }
       document.body.classList.add('dropdown-open');
+      if (panelMain) panelMain.classList.remove('is-hidden');
+      if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
       updateUI();
     }
   });
@@ -189,6 +315,29 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
     if (e.target === avatarBackdrop) {
       closeMenu();
     }
+  });
+
+  btnSwitchAccountMenu?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (panelMain) panelMain.classList.add('is-hidden');
+    if (panelSwitcher) panelSwitcher.classList.remove('is-hidden');
+    renderAccountList();
+  });
+
+  btnBackToMainMenu?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (panelSwitcher) panelSwitcher.classList.add('is-hidden');
+    if (panelMain) panelMain.classList.remove('is-hidden');
+  });
+
+  btnAddAccount?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMenu(true);
+    if (linkedAccounts.length >= 3) {
+      toast.info(i18n.t('nav.max_accounts_reached'));
+      return;
+    }
+    onNavigate('/login');
   });
 
   btnTheme?.addEventListener('click', async (e) => {
@@ -205,8 +354,30 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
   btnLogout?.addEventListener('click', async (e) => {
     e.preventDefault();
     closeMenu(true);
-    await logoutApi();
-    onNavigate('/login');
+    const res = await logoutApi();
+    if (res.success) {
+      if (res.switched && res.user) {
+        if (onAccountSessionChange) {
+          await onAccountSessionChange();
+        }
+        onNavigate(window.location.pathname, { force: true, showDeniedFeedback: false });
+      } else {
+        onNavigate('/login', { force: true, showDeniedFeedback: false });
+      }
+    } else {
+      toast.error(i18n.t('common.error'));
+    }
+  });
+
+  btnLogoutAll?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    closeMenu(true);
+    const res = await logoutAllApi();
+    if (res.success) {
+      onNavigate('/login', { force: true, showDeniedFeedback: false });
+    } else {
+      toast.error(i18n.t('common.error'));
+    }
   });
 
   document.addEventListener('click', handleDocumentClick);
@@ -237,4 +408,8 @@ function setupUserMenu(onNavigate: (path: string) => void): () => void {
 export {
   getRoleLabel,
   setupUserMenu
+};
+
+export type {
+  UserMenuNavigateOptions
 };

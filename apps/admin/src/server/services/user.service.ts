@@ -1,6 +1,7 @@
-import { corePool } from '../config/database.config.js';
+import { appPool, corePool } from '../config/database.config.js';
 import { getRedisClient } from '../config/redis.config.js';
 import { hashBackupCode } from './two-factor.service.js';
+import { normalizeSubscriptionTier } from '../utils/user.util.js';
 import type { RowDataPacket } from 'mysql2';
 
 interface CoreUserRow extends RowDataPacket {
@@ -12,6 +13,7 @@ interface CoreUserRow extends RowDataPacket {
   last_login_ip: string | null;
   password_hash: string | null;
   status: 'active' | 'deleted' | 'suspended';
+  subscription_tier?: string;
   two_factor_enabled: number;
   two_factor_recovery_codes: string | null;
   two_factor_secret: string | null;
@@ -36,12 +38,42 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
 };
 
+async function getUserSubscriptionTier(userId: number): Promise<string> {
+  const [rows] = await appPool.execute<RowDataPacket[]>(
+    'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ? LIMIT 1',
+    [userId]
+  );
+  return normalizeSubscriptionTier(rows[0]?.subscription_tier);
+}
+
+async function getUserSubscriptionTiers(userIds: number[]): Promise<Map<number, string>> {
+  const tierMap = new Map<number, string>();
+  const uniqueIds = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
+  if (uniqueIds.length === 0) {
+    return tierMap;
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const [rows] = await appPool.execute<RowDataPacket[]>(
+    `SELECT user_id, subscription_tier FROM app_user_profiles WHERE user_id IN (${placeholders})`,
+    uniqueIds
+  );
+
+  for (const row of rows) {
+    tierMap.set(Number(row.user_id), normalizeSubscriptionTier(row.subscription_tier));
+  }
+  return tierMap;
+}
+
 async function findUserByEmail(email: string): Promise<CoreUserRow | null> {
   const [rows] = await corePool.execute<CoreUserRow[]>(
     'SELECT * FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
-  return rows[0] || null;
+  const row = rows[0] || null;
+  if (!row) return null;
+  row.subscription_tier = await getUserSubscriptionTier(Number(row.id));
+  return row;
 }
 
 async function findUserById(id: number): Promise<CoreUserRow | null> {
@@ -49,7 +81,31 @@ async function findUserById(id: number): Promise<CoreUserRow | null> {
     'SELECT * FROM users WHERE id = ? LIMIT 1',
     [id]
   );
-  return rows[0] || null;
+  const row = rows[0] || null;
+  if (!row) return null;
+  row.subscription_tier = await getUserSubscriptionTier(Number(row.id));
+  return row;
+}
+
+async function findUsersByIds(ids: number[]): Promise<CoreUserRow[]> {
+  const uniqueIds = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const [[rows], tierMap] = await Promise.all([
+    corePool.execute<CoreUserRow[]>(
+      `SELECT * FROM users WHERE id IN (${placeholders})`,
+      uniqueIds
+    ),
+    getUserSubscriptionTiers(uniqueIds),
+  ]);
+
+  return rows.map((row) => {
+    row.subscription_tier = tierMap.get(Number(row.id)) || 'free';
+    return row;
+  });
 }
 
 async function updateUserLastLogin(userId: number, ip: string): Promise<void> {
@@ -64,6 +120,42 @@ async function revokeUserSessions(userId: number): Promise<void> {
     const redis = getRedisClient();
     await redis.set(`user:session_revoked:${userId}`, Date.now(), 'EX', 7 * 24 * 3600);
   } catch {}
+}
+
+async function revokeAdminSessions(userId: number): Promise<void> {
+  try {
+    const redis = getRedisClient();
+    await redis.set(`admin:session_revoked:${userId}`, Date.now(), 'EX', 7 * 24 * 3600);
+  } catch {}
+}
+
+async function getRevokedAtMap(userIds: number[]): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+  const uniqueIds = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
+  if (uniqueIds.length === 0) {
+    return result;
+  }
+
+  for (const id of uniqueIds) {
+    result.set(id, 0);
+  }
+
+  try {
+    const redis = getRedisClient();
+    const keys: string[] = [];
+    for (const id of uniqueIds) {
+      keys.push(`user:session_revoked:${id}`, `admin:session_revoked:${id}`);
+    }
+    const values = await redis.mget(...keys);
+    for (let i = 0; i < uniqueIds.length; i++) {
+      const uid = uniqueIds[i];
+      const userRevoked = Number(values[i * 2] || 0) || 0;
+      const adminRevoked = Number(values[i * 2 + 1] || 0) || 0;
+      result.set(uid, Math.max(userRevoked, adminRevoked));
+    }
+  } catch {}
+
+  return result;
 }
 
 async function getUser2FASecret(userId: number): Promise<{
@@ -186,8 +278,13 @@ export {
   DEFAULT_PREFERENCES,
   findUserByEmail,
   findUserById,
+  findUsersByIds,
+  getRevokedAtMap,
   getUser2FASecret,
   getUserPreferences,
+  getUserSubscriptionTier,
+  getUserSubscriptionTiers,
+  revokeAdminSessions,
   revokeUserSessions,
   updateUserLastLogin,
   updateUserPreferences,

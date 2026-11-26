@@ -1,12 +1,14 @@
 import type { AccessibleAdminApp } from '../types/admin.types.js';
-import type { AdminUserPayload } from '../types/auth.types.js';
+import { accessibleApps, currentUser, getApi, postApi, setAuthState } from '../services/api.service.js';
+import type { AdminSessionAccount, AdminUserPayload } from '../types/auth.types.js';
 import { i18n } from '../i18n/i18n.service.js';
-import { postApi, setAuthState } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { setButtonLoading, setupPasswordToggle } from '../utils/dom.util.js';
+import { themeService } from '../services/theme.service.js';
 
 interface LoginResponse {
   accessibleApps?: AccessibleAdminApp[];
+  accounts?: AdminSessionAccount[];
   code?: string;
   error?: string;
   message?: string;
@@ -33,6 +35,7 @@ class AdminLoginViewController {
     const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-password"]');
     const togglePasswordBtn = this.container.querySelector<HTMLElement>('[data-ref="toggle-login-password"]');
     const submitBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-submit-login"]');
+    const backToPanelBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-to-panel"]');
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="login-error"]');
 
     const twoFaCodeInput = this.container.querySelector<HTMLInputElement>('[data-ref="login-2fa-code"]');
@@ -93,13 +96,24 @@ class AdminLoginViewController {
       }
     };
 
-    const handleSuccessfulLogin = (res: LoginResponse) => {
+    const handleSuccessfulLogin = async (res: LoginResponse) => {
       const apps = res.accessibleApps || [];
       if (!res.user || apps.length === 0 || !apps[0].pages || apps[0].pages.length === 0) {
         showError(i18n.t('admin.auth.access_denied'));
         return;
       }
-      setAuthState(res.user, apps);
+      setAuthState(res.user, apps, res.accounts || []);
+      try {
+        const prefRes = await getApi<{ ok?: boolean; preferences?: { language?: string; theme?: string } }>('/api/settings/preferences');
+        if (prefRes.ok && prefRes.preferences) {
+          if (prefRes.preferences.theme) {
+            themeService.setTheme(prefRes.preferences.theme as any);
+          }
+          if (prefRes.preferences.language) {
+            i18n.setLanguage(prefRes.preferences.language, false);
+          }
+        }
+      } catch {}
       this.onNavigate(`/${apps[0].slug}/${apps[0].pages[0].slug}`);
     };
 
@@ -109,6 +123,11 @@ class AdminLoginViewController {
       }
       return res.error || i18n.t('auth.invalid_credentials');
     };
+
+    backToPanelBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.onNavigate('/');
+    });
 
     backToCredsBtn?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -135,7 +154,7 @@ class AdminLoginViewController {
         }
 
         if (res.ok && res.user) {
-          handleSuccessfulLogin(res);
+          await handleSuccessfulLogin(res);
         } else {
           showError(resolveLoginErrorMessage(res));
         }
@@ -169,7 +188,7 @@ class AdminLoginViewController {
         });
 
         if (res.ok && res.user) {
-          handleSuccessfulLogin(res);
+          await handleSuccessfulLogin(res);
         } else if (res.code === 'ADMIN_ACCESS_DENIED') {
           showMainStep();
           showError(i18n.t('admin.auth.access_denied'));
@@ -210,13 +229,14 @@ class AdminLoginViewController {
 }
 
 async function createLoginView(onNavigate: (path: string) => void): Promise<HTMLElement> {
+  const hasExistingSession = Boolean(currentUser && accessibleApps.length > 0);
   const container = document.createElement('div');
   container.className = 'component-container component-container--auth';
   container.setAttribute('data-ref', 'login-wrapper');
   container.innerHTML = `
-    <div class="component-brand" data-ref="login-brand">
+    <a class="component-brand" data-ref="login-brand" href="/" aria-label="${i18n.t('admin.auth.brand_title')}">
       <img class="component-brand__img" data-ref="logo-img" alt="${i18n.t('admin.auth.brand_title')}" src="/logo.svg" />
-    </div>
+    </a>
     <div class="component-card component-card--auth" data-ref="login-card">
       <div data-ref="login-step-main">
         <div class="component-card__header" data-ref="login-header">
@@ -238,6 +258,11 @@ async function createLoginView(onNavigate: (path: string) => void): Promise<HTML
           <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-login">
             ${i18n.t('auth.submit_login')}
           </button>
+          ${hasExistingSession ? `
+            <button type="button" class="component-button component-button--h55 component-button--w-full" data-ref="btn-back-to-panel">
+              ${i18n.t('admin.auth.back_to_panel')}
+            </button>
+          ` : ''}
           <div class="component-banner component-banner--danger is-hidden" data-ref="login-error"></div>
         </div>
       </div>

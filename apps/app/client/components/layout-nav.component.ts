@@ -300,7 +300,7 @@ class LayoutNavController {
                       <div class="component-item__text">
                         <p class="component-item__title">
                           ${i18n.t('room.slug_toggle_title')}
-                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                          ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                         </p>
                         <p class="component-item__desc">${i18n.t('room.slug_toggle_desc')}</p>
                       </div>
@@ -311,6 +311,8 @@ class LayoutNavController {
                         </label>
                       </div>
                     </div>
+
+                    <hr class="component-divider is-hidden" data-ref="divider-custom-slug" />
 
                     <div class="component-item component-item--stacked is-hidden" data-ref="item-custom-slug">
                       <div class="component-item__text">
@@ -337,7 +339,7 @@ class LayoutNavController {
                       <div class="component-item__text">
                         <p class="component-item__title">
                           ${i18n.t('room.persistent_title')}
-                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                          ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                         </p>
                         <p class="component-item__desc">${i18n.t('room.persistent_desc')}</p>
                       </div>
@@ -369,6 +371,8 @@ class LayoutNavController {
                         </label>
                       </div>
                     </div>
+
+                    <hr class="component-divider is-hidden" data-ref="divider-room-password" />
 
                     <div class="component-item component-item--stacked is-hidden" data-ref="item-room-password">
                       <div class="component-item__text">
@@ -434,7 +438,7 @@ class LayoutNavController {
                       <div class="component-item__text">
                         <p class="component-item__title">
                           ${i18n.t('room.cloud_storage_title')}
-                          <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                          ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                         </p>
                         <p class="component-item__desc">${i18n.t('room.cloud_storage_desc')}</p>
                       </div>
@@ -481,19 +485,19 @@ class LayoutNavController {
                               </button>
                               <button type="button" class="component-menu__item menu-item ${isPro ? 'is-active' : 'is-disabled'}" data-ref="option-exp-24" data-value="24" ${!isPro ? 'disabled' : ''}>
                                 <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ' (PRO)' : ''}</span>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                               </button>
                               <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-168" data-value="168" ${!isPro ? 'disabled' : ''}>
                                 <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ' (PRO)' : ''}</span>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                               </button>
                               <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-720" data-value="720" ${!isPro ? 'disabled' : ''}>
                                 <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ' (PRO)' : ''}</span>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                               </button>
                               <button type="button" class="component-menu__item menu-item ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-0" data-value="0" ${!isPro ? 'disabled' : ''}>
                                 <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ' (PRO)' : ''}</span>
+                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                               </button>
                             </div>
                           </div>
@@ -535,25 +539,9 @@ class LayoutNavController {
                                 <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                                 <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_10')}</span>
                               </button>
-                              <button type="button" class="component-menu__item menu-item" data-ref="option-limit-custom" data-value="custom">
-                                <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-                                <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_custom')}</span>
-                              </button>
                             </div>
                           </div>
                         </div>
-                      </div>
-
-                      <div class="is-hidden" data-ref="box-custom-download-limit" style="margin-top: 8px;">
-                        <input
-                          type="number"
-                          min="1"
-                          max="1000"
-                          class="field__input--simple"
-                          style="width: 100%; height: 38px; font-size: 13.5px;"
-                          data-ref="input-custom-download-limit"
-                          placeholder="${i18n.t('room.download_limit_placeholder')}"
-                        />
                       </div>
                     </div>
                   </div>
@@ -593,15 +581,15 @@ class LayoutNavController {
       });
 
       const switchCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-custom-slug"]');
+      const dividerCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="divider-custom-slug"]');
       const itemCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]');
       const inputCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
       const switchCloudEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-cloud"]');
       const switchPersistentEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-persistent"]');
       const switchPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-password"]');
+      const dividerPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="divider-room-password"]');
       const itemPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="item-room-password"]');
       const inputPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-room-password"]');
-      const boxCustomDownloadLimitEl = modalEl.querySelector<HTMLElement>('[data-ref="box-custom-download-limit"]');
-      const inputCustomLimitEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-download-limit"]');
 
       let uploadPermissionVal = 'all';
       let expiresInHoursVal = isPro ? 24 : 1;
@@ -614,6 +602,10 @@ class LayoutNavController {
           uploadPermWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === val);
           });
+          const triggerIcon = uploadPermWrapper?.querySelector<SVGUseElement>('.dropdown-trigger__icon use');
+          if (triggerIcon) {
+            triggerIcon.setAttribute('href', `/icons.svg#${val === 'owner_only' ? 'person' : (val === 'specific' ? 'key' : 'groups')}`);
+          }
         },
       });
 
@@ -634,13 +626,6 @@ class LayoutNavController {
           downloadLimitWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === val);
           });
-          if (val === 'custom') {
-            boxCustomDownloadLimitEl?.classList.remove('is-hidden');
-            inputCustomLimitEl?.focus();
-          } else {
-            boxCustomDownloadLimitEl?.classList.add('is-hidden');
-            if (inputCustomLimitEl) inputCustomLimitEl.value = '';
-          }
         },
       });
 
@@ -688,9 +673,11 @@ class LayoutNavController {
 
       switchCustomSlugEl?.addEventListener('change', () => {
         if (switchCustomSlugEl.checked) {
+          dividerCustomSlugEl?.classList.remove('is-hidden');
           itemCustomSlugEl?.classList.remove('is-hidden');
           inputCustomSlugEl?.focus();
         } else {
+          dividerCustomSlugEl?.classList.add('is-hidden');
           itemCustomSlugEl?.classList.add('is-hidden');
           if (inputCustomSlugEl) inputCustomSlugEl.value = '';
         }
@@ -726,37 +713,44 @@ class LayoutNavController {
 
       switchPasswordEl?.addEventListener('change', () => {
         if (switchPasswordEl.checked) {
+          dividerPasswordEl?.classList.remove('is-hidden');
           itemPasswordEl?.classList.remove('is-hidden');
           inputPasswordEl?.focus();
         } else {
+          dividerPasswordEl?.classList.add('is-hidden');
           itemPasswordEl?.classList.add('is-hidden');
           if (inputPasswordEl) inputPasswordEl.value = '';
         }
       });
 
       btnConfirmEl?.addEventListener('click', async () => {
-        const slugVal = (switchCustomSlugEl?.checked && inputCustomSlugEl) ? inputCustomSlugEl.value.trim().toLowerCase() : '';
+        const customSlugEnabled = Boolean(switchCustomSlugEl?.checked);
+        const slugVal = (customSlugEnabled && inputCustomSlugEl) ? inputCustomSlugEl.value.trim().toLowerCase() : '';
         const saveToCloudVal = switchCloudEl?.checked || false;
         const isPersistentVal = saveToCloudVal ? true : (switchPersistentEl?.checked || false);
-        const passwordVal = switchPasswordEl?.checked ? (inputPasswordEl?.value.trim() || '') : '';
-        let maxDownloadsVal: number | null = null;
-        if (downloadLimitMode === 'custom') {
-          const customNum = Number(inputCustomLimitEl?.value || 0);
-          maxDownloadsVal = customNum > 0 ? customNum : null;
-        } else {
-          const limitNum = Number(downloadLimitMode);
-          maxDownloadsVal = limitNum > 0 ? limitNum : null;
-        }
+        const passwordEnabled = Boolean(switchPasswordEl?.checked);
+        const passwordVal = passwordEnabled ? (inputPasswordEl?.value.trim() || '') : '';
+        const limitNum = Number(downloadLimitMode);
+        const maxDownloadsVal: number | null = limitNum > 0 ? limitNum : null;
 
-        if (slugVal) {
+        if (customSlugEnabled) {
           const isValidSlug = /^[a-z0-9-]+$/.test(slugVal) && slugVal.length >= 3 && slugVal.length <= 40;
           if (!isValidSlug) {
             toast.error(i18n.t('room.slug_invalid'));
+            tabBtns[0]?.click();
+            inputCustomSlugEl?.focus();
             return;
           }
         }
 
-        if (!isPro && (slugVal || saveToCloudVal || isPersistentVal || (expiresInHoursVal > 0 && expiresInHoursVal !== 1))) {
+        if (passwordEnabled && !passwordVal) {
+          toast.error(i18n.t('room.password_empty_error'));
+          tabBtns[1]?.click();
+          inputPasswordEl?.focus();
+          return;
+        }
+
+        if (!isPro && (slugVal || saveToCloudVal || isPersistentVal || expiresInHoursVal !== 1)) {
           toast.info(i18n.t('room.pro_feature_notice'));
           return;
         }
@@ -772,13 +766,14 @@ class LayoutNavController {
             is_persistent?: boolean;
             max_downloads?: number;
             ok: boolean;
+            owner_token?: string;
             room_id?: string;
             save_to_cloud?: boolean;
             slug?: string;
             upload_permission?: string;
           }>('/api/rooms/create', {
             custom_slug: slugVal || null,
-            expires_in_hours: expiresInHoursVal > 0 ? expiresInHoursVal : null,
+            expires_in_hours: expiresInHoursVal,
             is_persistent: isPersistentVal,
             max_downloads: maxDownloadsVal,
             password: passwordVal || null,
@@ -791,6 +786,12 @@ class LayoutNavController {
             if (res.slug) {
               sessionStorage.setItem(`room_owner_${res.slug}`, 'true');
             }
+            if (res.owner_token) {
+              sessionStorage.setItem(`room_owner_token_${res.room_id}`, res.owner_token);
+              if (res.slug) {
+                sessionStorage.setItem(`room_owner_token_${res.slug}`, res.owner_token);
+              }
+            }
             if (passwordVal) {
               sessionStorage.setItem(`room_password_${res.room_id}`, passwordVal);
               if (res.slug) {
@@ -802,11 +803,14 @@ class LayoutNavController {
               if (res.slug) {
                 sessionStorage.setItem(`room_save_to_cloud_${res.slug}`, 'true');
               }
+            } else {
+              sessionStorage.removeItem(`room_save_to_cloud_${res.room_id}`);
             }
             sessionStorage.setItem(`room_upload_permission_${res.room_id}`, uploadPermissionVal);
             if (res.slug) {
               sessionStorage.setItem(`room_upload_permission_${res.slug}`, uploadPermissionVal);
             }
+            window.dispatchEvent(new CustomEvent('boardstack:rooms-updated'));
             modalInstance.close();
             const targetUrl = res.slug ? `/room/${res.slug}` : `/room/${res.room_id}`;
             void this.navigate(targetUrl);
@@ -849,6 +853,12 @@ class LayoutNavController {
         this.setDrawerOpen(false);
       }
       void this.navigate('/login');
+    });
+
+    window.addEventListener('boardstack:rooms-updated', () => {
+      if (this.currentDrawerMode === 'general') {
+        this.renderDrawerContent();
+      }
     });
 
     window.addEventListener('popstate', () => {
@@ -1361,7 +1371,7 @@ class LayoutNavController {
                 </button>
               </div>
               <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span>${filesCount} ${i18n.t('room.files_count', { count: filesCount })}</span>
+                <span>${i18n.t('room.files_count', { count: filesCount })}</span>
                 <span>•</span>
                 <span>${formatBytes(storageBytes)}</span>
                 <span>•</span>

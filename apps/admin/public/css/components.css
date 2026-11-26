@@ -2894,7 +2894,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
 }
 
 .component-table th {
-  padding: 14px 16px;
+  padding: 12px 8px;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2909,7 +2909,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
 }
 
 .component-table td {
-  padding: 14px 16px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border-color, #e5e7eb);
   vertical-align: middle;
   white-space: nowrap;

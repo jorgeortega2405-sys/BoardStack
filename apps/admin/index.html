@@ -77,10 +77,10 @@
                       <div class="component-menu__drag-handle modal-card__drag-handle"></div>
                     </div>
                     <div class="component-menu__list menu-panel__list" data-ref="panel-main-options">
-                      <div class="component-menu__header menu-panel__header" data-ref="section-header-account">
-                        <span class="drawer-section__title" data-i18n="nav.account"></span>
+                      <div class="component-menu__header menu-panel__header" data-ref="section-header-accounts">
+                        <span class="drawer-section__title" data-i18n="nav.accounts"></span>
                       </div>
-                      <div class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered account-item account-item--active" data-ref="account-summary-item">
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
                         <div class="component-avatar component-avatar--sm" data-ref="active-account-avatar-box">
                           <img class="component-avatar__img" data-ref="active-account-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" alt="" referrerpolicy="no-referrer" />
                         </div>
@@ -88,8 +88,8 @@
                           <span class="account-item__name" data-ref="active-account-name"></span>
                           <span class="account-item__email" data-ref="active-account-email"></span>
                         </div>
-                        <span class="component-badge component-badge--sm component-badge--neutral" data-ref="active-account-role"></span>
-                      </div>
+                        <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
+                      </button>
                       <div class="component-menu__divider menu-divider" data-ref="active-account-divider"></div>
                       <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-menu-theme">
                         <svg class="component-icon component-menu__item-icon menu-item__icon" data-ref="theme-toggle-icon" aria-hidden="true"><use href="/icons.svg#dark_mode"></use></svg>
@@ -99,6 +99,23 @@
                       <button type="button" class="component-menu__item component-menu__item--danger menu-item menu-item--danger" data-ref="btn-logout">
                         <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
                         <span class="component-menu__item-text menu-item__text" data-i18n="nav.logout"></span>
+                      </button>
+                    </div>
+                    <div class="component-menu__list menu-panel__list is-hidden" data-ref="panel-account-switcher">
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="common.back"></span>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="switcher-divider"></div>
+                      <div class="account-switcher__list" data-ref="account-switcher-list"></div>
+                      <button type="button" class="component-menu__item component-menu__item--bordered menu-item menu-item--bordered" data-ref="btn-add-account">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.add_account"></span>
+                      </button>
+                      <div class="component-menu__divider menu-divider" data-ref="switcher-divider-bottom"></div>
+                      <button type="button" class="component-menu__item component-menu__item--danger menu-item menu-item--danger" data-ref="btn-logout-all">
+                        <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                        <span class="component-menu__item-text menu-item__text" data-i18n="nav.logout_all"></span>
                       </button>
                     </div>
                   </div>

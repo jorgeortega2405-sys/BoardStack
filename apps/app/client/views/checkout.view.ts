@@ -26,7 +26,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   const planParam: 'pro' | 'business' = urlParams.get('plan') === 'business' ? 'business' : 'pro';
   const initialCycle = urlParams.get('cycle') === 'yearly' ? 'yearly' : 'monthly';
   const initialMode = urlParams.get('mode') === 'one_time' ? 'one_time' : 'recurring';
-  let currentSeats = Math.min(50, Math.max(3, parseInt(urlParams.get('seats') || '3', 10) || 3));
+  const currentSeats: number = 3;
 
   let currentStep: 1 | 2 = 1;
   let currentMode: 'one_time' | 'recurring' = initialMode;
@@ -87,27 +87,6 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
             <div class="component-step ${isAlreadyActive ? 'is-hidden' : ''}" data-ref="checkout-step-1">
               <h1 class="component-title component-title--lg" data-ref="checkout-step1-title">${i18n.t('checkout.step1_title')}</h1>
 
-              ${planParam === 'business' ? `
-                <div class="component-card component-card--feature" data-ref="checkout-seats-box" style="margin-bottom: 24px; padding: 20px 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 16px; background: var(--bg-surface, #ffffff);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div>
-                      <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 2px 0;">${i18n.t('checkout.seats_label')}</h3>
-                      <p class="component-subtitle" style="font-size: 12px; margin: 0; color: var(--text-secondary);">${i18n.t('checkout.seats_base_included')}</p>
-                    </div>
-                    <span class="component-badge component-badge--success" data-ref="checkout-seats-display" style="font-size: 13.5px; font-weight: 600;">${i18n.t('checkout.seats_count', { count: currentSeats })}</span>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 14px;">
-                    <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-checkout-seats-minus" aria-label="${i18n.t('checkout.adjust_seats')}" style="min-width: 34px; padding: 0;">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-                    </button>
-                    <input type="range" min="3" max="50" step="1" value="${currentSeats}" data-ref="input-checkout-seats-range" style="flex: 1; accent-color: var(--action-primary, #111827); cursor: pointer;" />
-                    <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-checkout-seats-plus" aria-label="${i18n.t('checkout.adjust_seats')}" style="min-width: 34px; padding: 0;">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-                    </button>
-                  </div>
-                </div>
-              ` : ''}
-              
               <div class="component-toggle-pill component-toggle-pill--slider" data-ref="checkout-mode-toggle" data-cycle="${currentMode}" data-tabs="2" data-active-index="${currentMode === 'one_time' ? '1' : '0'}" style="--slider-tab-count: 2; --slider-active-index: ${currentMode === 'one_time' ? '1' : '0'};">
                 <div class="component-toggle-indicator" data-ref="checkout-toggle-indicator"></div>
                 <button type="button" class="component-tab ${currentMode === 'recurring' ? 'is-active' : ''}" data-ref="btn-mode-recurring" data-cycle="recurring">
@@ -189,7 +168,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
               <h3 class="component-card__title" data-ref="summary-info-title">${i18n.t('checkout.plan_info_title')}</h3>
               <div class="component-list component-list--summary" data-ref="summary-plan-details">
                 <div class="component-summary-row" data-ref="summary-row-plan">
-                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'business' ? `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})` : i18n.t('checkout.plan_pro')}</span>
+                  <span class="component-summary-row__title" data-ref="summary-plan-name">${planParam === 'business' ? `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_base_included')})` : i18n.t('checkout.plan_pro')}</span>
                   <span class="component-summary-row__price" data-ref="summary-plan-price">USD $9.99</span>
                 </div>
                 <div class="component-summary-row__meta" data-ref="summary-plan-cycle">${i18n.t('pricing.billing_monthly')}</div>
@@ -497,7 +476,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     const planNameEl = container.querySelector<HTMLElement>('[data-ref="summary-plan-name"]');
     if (planNameEl) {
       if (planParam === 'business') {
-        planNameEl.textContent = `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_count', { count: currentSeats })})`;
+        planNameEl.textContent = `${i18n.t('checkout.plan_business')} (${i18n.t('checkout.seats_base_included')})`;
       } else {
         planNameEl.textContent = i18n.t('checkout.plan_pro');
       }
@@ -675,7 +654,7 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
           setAuthState({ ...currentUser, subscription_tier: planParam }, linkedAccounts);
         }
 
-        const avatarBtn = document.querySelector<HTMLElement>('[data-ref="btn-user-menu"]');
+        const avatarBtn = document.querySelector<HTMLElement>('[data-ref="btn-avatar"]');
         if (avatarBtn) {
           avatarBtn.setAttribute('data-tier', planParam);
         }
@@ -707,32 +686,6 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
   btnSubmit?.addEventListener('click', () => {
     void handlePaymentSubmit();
   });
-
-  if (planParam === 'business') {
-    const btnSeatsMinus = container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-minus"]');
-    const btnSeatsPlus = container.querySelector<HTMLButtonElement>('[data-ref="btn-checkout-seats-plus"]');
-    const inputSeatsRange = container.querySelector<HTMLInputElement>('[data-ref="input-checkout-seats-range"]');
-    const seatsDisplay = container.querySelector<HTMLElement>('[data-ref="checkout-seats-display"]');
-
-    const setSeats = (newSeats: number) => {
-      currentSeats = Math.min(50, Math.max(3, newSeats));
-      if (inputSeatsRange) inputSeatsRange.value = String(currentSeats);
-      if (seatsDisplay) seatsDisplay.textContent = i18n.t('checkout.seats_count', { count: currentSeats });
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('seats', String(currentSeats));
-      window.history.replaceState({}, '', currentUrl.toString());
-      updateOptions();
-      updateSummary();
-      invalidateGateway();
-    };
-
-    btnSeatsMinus?.addEventListener('click', () => setSeats(currentSeats - 1));
-    btnSeatsPlus?.addEventListener('click', () => setSeats(currentSeats + 1));
-    inputSeatsRange?.addEventListener('input', (e) => {
-      const val = parseInt((e.target as HTMLInputElement).value, 10);
-      if (!isNaN(val)) setSeats(val);
-    });
-  }
 
   updateOptions();
   updateSummary();

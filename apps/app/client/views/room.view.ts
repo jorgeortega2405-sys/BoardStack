@@ -1,12 +1,12 @@
-import { openConfirmModal, openCustomModal, openModal } from '../components/modal.component.js';
-import { i18n } from '../i18n/i18n.service.js';
+import { arrayBufferToBase64, base64ToUint8Array, formatBytes, getFileIcon } from '../utils/format.util.js';
+import { copyToClipboard, escapeHtml, setButtonLoading, setupDropdown } from '../utils/dom.util.js';
 import { currentUser, deleteApi, getApi, patchApi } from '../services/api.service.js';
+import { getGuestPersona } from '../utils/guest-personas.util.js';
+import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { i18n } from '../i18n/i18n.service.js';
+import { openConfirmModal, openCustomModal, openModal } from '../components/modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
 import { toast } from '../services/toast.service.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
-import { copyToClipboard, escapeHtml, setButtonLoading, setupDropdown } from '../utils/dom.util.js';
-import { arrayBufferToBase64, base64ToUint8Array, formatBytes, getFileIcon } from '../utils/format.util.js';
-import { getGuestPersona } from '../utils/guest-personas.util.js';
 
 interface RoomParticipant {
   avatar_url?: string | null;
@@ -24,14 +24,14 @@ interface WsMessage {
   code?: string;
   data?: string;
   download_count?: number;
-  expires_at?: number;
+  expires_at?: number | null;
   file?: any;
   file_id?: string;
   folder_id?: string;
   folder_name?: string;
   is_limit_reached?: boolean;
   is_persistent?: boolean;
-  max_downloads?: number;
+  max_downloads?: number | null;
   mime_type?: string;
   name?: string;
   owner_username?: string;
@@ -47,7 +47,7 @@ interface WsMessage {
   sender_peer_id?: string;
   sender_username?: string;
   size?: number;
-  slug?: string;
+  slug?: string | null;
   target_peer_id?: string;
   total_chunks?: number;
   type: string;
@@ -77,6 +77,7 @@ interface StandaloneFileItem {
   downloadCount?: number;
   downloadUrl?: string;
   fileId: string;
+  isCloud?: boolean;
   isLimitReached?: boolean;
   maxDownloads?: number | null;
   mimeType?: string;
@@ -89,12 +90,29 @@ interface StandaloneFileItem {
 }
 
 interface FolderFileItem {
+  downloadCount?: number;
   downloadUrl?: string;
   fileId: string;
+  isCloud?: boolean;
+  isLimitReached?: boolean;
+  maxDownloads?: number | null;
   mimeType: string;
   name: string;
   progress: number;
   relativePath: string;
+  size: number;
+}
+
+interface LocalPendingCloudFile {
+  blob: Blob;
+  fileId: string;
+  folderId?: string;
+  folderName?: string;
+  mimeType: string;
+  name: string;
+  relativePath?: string;
+  senderAvatar?: string;
+  senderUsername: string;
   size: number;
 }
 
@@ -210,15 +228,33 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       currentSlug = meta.slug || '';
       isPersistentRoom = Boolean(meta.is_persistent);
       hasPassword = Boolean(meta.requires_password);
-      saveToCloud = Boolean(meta.save_to_cloud) ||
-                    sessionStorage.getItem(`room_save_to_cloud_${resolvedRoomId}`) === 'true' ||
-                    (currentSlug ? sessionStorage.getItem(`room_save_to_cloud_${currentSlug}`) === 'true' : false);
-      roomExpiresAt = meta.expires_at || null;
-      roomMaxDownloads = meta.max_downloads || null;
+      saveToCloud = meta.save_to_cloud !== undefined
+        ? Boolean(meta.save_to_cloud)
+        : (sessionStorage.getItem(`room_save_to_cloud_${resolvedRoomId}`) === 'true' ||
+          (currentSlug ? sessionStorage.getItem(`room_save_to_cloud_${currentSlug}`) === 'true' : false));
+      roomExpiresAt = meta.expires_at ?? null;
+      roomMaxDownloads = meta.max_downloads ?? null;
       roomUploadPermission = meta.upload_permission ||
                             sessionStorage.getItem(`room_upload_permission_${resolvedRoomId}`) ||
                             (currentSlug ? sessionStorage.getItem(`room_upload_permission_${currentSlug}`) : null) ||
                             'all';
+
+      if (saveToCloud) {
+        sessionStorage.setItem(`room_save_to_cloud_${resolvedRoomId}`, 'true');
+        if (currentSlug) {
+          sessionStorage.setItem(`room_save_to_cloud_${currentSlug}`, 'true');
+        }
+      } else {
+        sessionStorage.removeItem(`room_save_to_cloud_${resolvedRoomId}`);
+        if (currentSlug) {
+          sessionStorage.removeItem(`room_save_to_cloud_${currentSlug}`);
+        }
+      }
+
+      sessionStorage.setItem(`room_upload_permission_${resolvedRoomId}`, roomUploadPermission);
+      if (currentSlug) {
+        sessionStorage.setItem(`room_upload_permission_${currentSlug}`, roomUploadPermission);
+      }
 
       if (meta.owner_token) {
         sessionStorage.setItem(`room_owner_token_${resolvedRoomId}`, meta.owner_token);
@@ -274,11 +310,14 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   let ws: WebSocket | null = null;
   let isCleanedUp = false;
   let isAuthPending = false;
+  let hasLoadedCloudFiles = false;
 
   const peers = new Map<string, PeerState>();
   const activeDownloads = new Map<string, ActiveDownload>();
   const activeFolders = new Map<string, FolderState>();
   const standaloneFiles = new Map<string, StandaloneFileItem>();
+  const localFileBlobs = new Map<string, LocalPendingCloudFile>();
+  const cloudFileIds = new Set<string>();
   let currentFolderId: string | null = null;
 
   const topEl = document.createElement('div');
@@ -520,7 +559,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       if (folder) {
         selectedItemIds.forEach((fileId) => {
           const item = folder.files.get(fileId);
-          if (item && item.downloadUrl) {
+          if (item && item.downloadUrl && !item.isLimitReached) {
             filesToDownload.push({ downloadUrl: item.downloadUrl, name: item.name });
           }
         });
@@ -826,23 +865,21 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     }
 
     let initialLimitMode = '0';
-    let initialCustomLimit = '';
+    let hasLegacyCustomLimit = false;
     if (roomMaxDownloads !== null && roomMaxDownloads !== undefined && roomMaxDownloads > 0) {
-      if (roomMaxDownloads === 1) {
-        initialLimitMode = '1';
-      } else if (roomMaxDownloads === 5) {
-        initialLimitMode = '5';
-      } else if (roomMaxDownloads === 10) {
-        initialLimitMode = '10';
+      if (roomMaxDownloads === 1 || roomMaxDownloads === 5 || roomMaxDownloads === 10) {
+        initialLimitMode = String(roomMaxDownloads);
       } else {
-        initialLimitMode = 'custom';
-        initialCustomLimit = String(roomMaxDownloads);
+        hasLegacyCustomLimit = true;
+        initialLimitMode = String(roomMaxDownloads);
       }
     }
 
     let selectedUploadPerm = roomUploadPermission || 'all';
     let selectedExpiration = initialExpVal;
+    let expirationModified = false;
     let downloadLimitMode = initialLimitMode;
+    let downloadLimitModified = false;
 
     const modalInstance = openCustomModal({
       contentHtml: `
@@ -921,7 +958,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                     <div class="component-item__text">
                       <p class="component-item__title">
                         ${i18n.t('room.slug_toggle_title')}
-                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                       </p>
                       <p class="component-item__desc">${i18n.t('room.slug_toggle_desc')}</p>
                     </div>
@@ -932,6 +969,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                       </label>
                     </div>
                   </div>
+
+                  <hr class="component-divider ${!currentSlug ? 'is-hidden' : ''}" data-ref="divider-custom-slug" />
 
                   <div class="component-item component-item--stacked ${!currentSlug ? 'is-hidden' : ''}" data-ref="item-custom-slug">
                     <div class="component-item__text">
@@ -959,13 +998,13 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                     <div class="component-item__text">
                       <p class="component-item__title">
                         ${i18n.t('room.persistent_title')}
-                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                       </p>
                       <p class="component-item__desc">${i18n.t('room.persistent_desc')}</p>
                     </div>
                     <div class="component-item__actions">
                       <label class="component-switch" data-ref="switch-persistent-label">
-                        <input type="checkbox" data-ref="switch-persistent" ${isPersistentRoom ? 'checked' : ''} ${!isPro ? 'disabled' : ''} />
+                        <input type="checkbox" data-ref="switch-persistent" ${isPersistentRoom || saveToCloud ? 'checked' : ''} ${!isPro || saveToCloud ? 'disabled' : ''} />
                         <span class="component-switch__slider"></span>
                       </label>
                     </div>
@@ -991,6 +1030,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                       </label>
                     </div>
                   </div>
+
+                  <hr class="component-divider ${!hasPassword ? 'is-hidden' : ''}" data-ref="divider-room-password" />
 
                   <div class="component-item component-item--stacked ${!hasPassword ? 'is-hidden' : ''}" data-ref="item-room-password">
                     <div class="component-item__text">
@@ -1056,7 +1097,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                     <div class="component-item__text">
                       <p class="component-item__title">
                         ${i18n.t('room.cloud_storage_title')}
-                        <span class="component-badge component-badge--sm" style="margin-left: 6px;">PRO</span>
+                        ${!isPro ? `<span class="component-badge component-badge--sm" style="margin-left: 6px;">${i18n.t('room.pro_badge')}</span>` : ''}
                       </p>
                       <p class="component-item__desc">${i18n.t('room.cloud_storage_desc')}</p>
                     </div>
@@ -1071,7 +1112,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
                 <div class="component-banner" data-ref="banner-cloud-info" style="margin-top: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <svg class="component-icon" style="color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+                    <svg class="component-icon" style="color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
                     <span style="font-weight: 600; font-size: 13px;">${i18n.t('room.cloud_badge')}</span>
                   </div>
                   <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0;">${i18n.t('room.cloud_offline_ready')}</p>
@@ -1092,7 +1133,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                     <div class="component-dropdown dropdown-wrapper" data-ref="dropdown-wrapper-expiration">
                       <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="btn-trigger-expiration" aria-label="${i18n.t('room.expiration_title')}">
                         <div class="component-dropdown__trigger-left dropdown-trigger__left">
-                          <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
+                          <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
                           <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="exp-selected-text">
                             ${selectedExpiration === '1' ? i18n.t('room.expiration_1h') : (selectedExpiration === '24' ? i18n.t('room.expiration_24h') : (selectedExpiration === '168' ? i18n.t('room.expiration_7d') : (selectedExpiration === '720' ? i18n.t('room.expiration_30d') : i18n.t('room.expiration_never'))))}
                           </span>
@@ -1103,24 +1144,24 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                         <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-expiration">
                           <div class="component-menu__list menu-panel__list">
                             <button type="button" class="component-menu__item menu-item ${selectedExpiration === '1' ? 'is-active' : ''}" data-ref="option-exp-1" data-value="1">
-                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
+                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
                               <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_1h')}</span>
                             </button>
                             <button type="button" class="component-menu__item menu-item ${selectedExpiration === '24' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-24" data-value="24" ${!isPro ? 'disabled' : ''}>
                               <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ' (PRO)' : ''}</span>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_24h')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                             </button>
                             <button type="button" class="component-menu__item menu-item ${selectedExpiration === '168' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-168" data-value="168" ${!isPro ? 'disabled' : ''}>
                               <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ' (PRO)' : ''}</span>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_7d')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                             </button>
                             <button type="button" class="component-menu__item menu-item ${selectedExpiration === '720' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-720" data-value="720" ${!isPro ? 'disabled' : ''}>
                               <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ' (PRO)' : ''}</span>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_30d')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                             </button>
                             <button type="button" class="component-menu__item menu-item ${selectedExpiration === '0' ? 'is-active' : ''} ${!isPro ? 'is-disabled' : ''}" data-ref="option-exp-0" data-value="0" ${!isPro ? 'disabled' : ''}>
                               <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ' (PRO)' : ''}</span>
+                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.expiration_never')}${!isPro ? ` (${i18n.t('room.pro_badge')})` : ''}</span>
                             </button>
                           </div>
                         </div>
@@ -1140,7 +1181,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                         <div class="component-dropdown__trigger-left dropdown-trigger__left">
                           <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                           <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="download-limit-selected-text">
-                            ${downloadLimitMode === '1' ? i18n.t('room.download_limit_1') : (downloadLimitMode === '5' ? i18n.t('room.download_limit_5') : (downloadLimitMode === '10' ? i18n.t('room.download_limit_10') : (downloadLimitMode === 'custom' ? i18n.t('room.download_limit_custom') : i18n.t('room.download_limit_unlimited'))))}
+                            ${downloadLimitMode === '1' ? i18n.t('room.download_limit_1') : (downloadLimitMode === '5' ? i18n.t('room.download_limit_5') : (downloadLimitMode === '10' ? i18n.t('room.download_limit_10') : (hasLegacyCustomLimit ? i18n.t('room.download_limit_legacy', { count: downloadLimitMode }) : i18n.t('room.download_limit_unlimited'))))}
                           </span>
                         </div>
                         <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
@@ -1164,28 +1205,9 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
                               <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
                               <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_10')}</span>
                             </button>
-                            <button type="button" class="component-menu__item menu-item ${downloadLimitMode === 'custom' ? 'is-active' : ''}" data-ref="option-limit-custom" data-value="custom">
-                              <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-                              <span class="component-menu__item-text menu-item__text">${i18n.t('room.download_limit_custom')}</span>
-                            </button>
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div class="${downloadLimitMode !== 'custom' ? 'is-hidden' : ''}" data-ref="box-custom-download-limit" style="margin-top: 8px;">
-                      <label class="is-hidden" for="field-settings-custom-downloads">${i18n.t('room.download_limit_label')}</label>
-                      <input
-                        type="number"
-                        id="field-settings-custom-downloads"
-                        min="1"
-                        max="1000"
-                        class="field__input--simple"
-                        style="width: 100%; height: 38px; font-size: 13.5px;"
-                        data-ref="input-custom-download-limit"
-                        value="${escapeHtml(initialCustomLimit)}"
-                        placeholder="${i18n.t('room.download_limit_placeholder')}"
-                      />
                     </div>
                   </div>
                 </div>
@@ -1225,15 +1247,15 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     });
 
     const switchCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-custom-slug"]');
+    const dividerCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="divider-custom-slug"]');
     const itemCustomSlugEl = modalEl.querySelector<HTMLElement>('[data-ref="item-custom-slug"]');
     const inputCustomSlugEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
     const switchCloudEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-cloud"]');
     const switchPersistentEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-persistent"]');
     const switchPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="switch-password"]');
+    const dividerPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="divider-room-password"]');
     const itemPasswordEl = modalEl.querySelector<HTMLElement>('[data-ref="item-room-password"]');
     const inputPasswordEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-room-password"]');
-    const boxCustomDownloadLimitEl = modalEl.querySelector<HTMLElement>('[data-ref="box-custom-download-limit"]');
-    const inputCustomLimitEl = modalEl.querySelector<HTMLInputElement>('[data-ref="input-custom-download-limit"]');
 
     const uploadPermWrapper = modalEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-upload-perm"]');
     setupDropdown(uploadPermWrapper, {
@@ -1253,6 +1275,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     setupDropdown(expirationWrapper, {
       onSelect: (val) => {
         selectedExpiration = val;
+        expirationModified = true;
         expirationWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
           item.classList.toggle('is-active', item.getAttribute('data-value') === val);
         });
@@ -1263,16 +1286,10 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     setupDropdown(downloadLimitWrapper, {
       onSelect: (val) => {
         downloadLimitMode = val;
+        downloadLimitModified = true;
         downloadLimitWrapper?.querySelectorAll('.component-menu__item, .menu-item').forEach((item) => {
           item.classList.toggle('is-active', item.getAttribute('data-value') === val);
         });
-        if (val === 'custom') {
-          boxCustomDownloadLimitEl?.classList.remove('is-hidden');
-          inputCustomLimitEl?.focus();
-        } else {
-          boxCustomDownloadLimitEl?.classList.add('is-hidden');
-          if (inputCustomLimitEl) inputCustomLimitEl.value = '';
-        }
       },
     });
 
@@ -1320,9 +1337,11 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
     switchCustomSlugEl?.addEventListener('change', () => {
       if (switchCustomSlugEl.checked) {
+        dividerCustomSlugEl?.classList.remove('is-hidden');
         itemCustomSlugEl?.classList.remove('is-hidden');
         inputCustomSlugEl?.focus();
       } else {
+        dividerCustomSlugEl?.classList.add('is-hidden');
         itemCustomSlugEl?.classList.add('is-hidden');
       }
     });
@@ -1349,11 +1368,19 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       }
     });
 
+    switchPersistentEl?.addEventListener('change', () => {
+      if (!switchPersistentEl.checked && switchCloudEl) {
+        switchCloudEl.checked = false;
+      }
+    });
+
     switchPasswordEl?.addEventListener('change', () => {
       if (switchPasswordEl.checked) {
+        dividerPasswordEl?.classList.remove('is-hidden');
         itemPasswordEl?.classList.remove('is-hidden');
         inputPasswordEl?.focus();
       } else {
+        dividerPasswordEl?.classList.add('is-hidden');
         itemPasswordEl?.classList.add('is-hidden');
         if (inputPasswordEl) inputPasswordEl.value = '';
       }
@@ -1365,7 +1392,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       if (switchCustomSlugEl) {
         if (switchCustomSlugEl.checked) {
           const val = inputCustomSlugEl?.value.trim().toLowerCase() || '';
-          if (!val || val.length < 3 || val.length > 40 || !/^[a-zA-Z0-9-]+$/.test(val)) {
+          if (!val || val.length < 3 || val.length > 40 || !/^[a-z0-9-]+$/.test(val)) {
             toast.error(i18n.t('room.slug_invalid'));
             tabBtns[0]?.click();
             inputCustomSlugEl?.focus();
@@ -1379,17 +1406,26 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         }
       }
 
-      if (switchPersistentEl) {
-        payload.is_persistent = switchPersistentEl.checked;
+      const targetSaveToCloud = Boolean(switchCloudEl?.checked);
+      const targetIsPersistent = targetSaveToCloud ? true : Boolean(switchPersistentEl?.checked);
+
+      if (switchCloudEl && targetSaveToCloud !== saveToCloud) {
+        payload.save_to_cloud = targetSaveToCloud;
       }
 
-      if (switchCloudEl) {
-        payload.save_to_cloud = switchCloudEl.checked;
+      if (switchPersistentEl && targetIsPersistent !== isPersistentRoom) {
+        payload.is_persistent = targetIsPersistent;
       }
 
       if (switchPasswordEl) {
         if (switchPasswordEl.checked) {
           const val = inputPasswordEl?.value.trim() || '';
+          if (!hasPassword && val.length === 0) {
+            toast.error(i18n.t('room.password_empty_error'));
+            tabBtns[1]?.click();
+            inputPasswordEl?.focus();
+            return;
+          }
           if (val.length > 0) {
             payload.password = val;
           }
@@ -1402,38 +1438,42 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         payload.upload_permission = selectedUploadPerm;
       }
 
-      if (selectedExpiration === '0') {
-        payload.clear_expiration = true;
-      } else if (selectedExpiration) {
-        payload.expires_in_hours = Number(selectedExpiration);
+      if (expirationModified) {
+        if (selectedExpiration === '0') {
+          payload.clear_expiration = true;
+        } else if (selectedExpiration) {
+          payload.expires_in_hours = Number(selectedExpiration);
+        }
       }
 
-      if (downloadLimitMode === '0') {
-        payload.clear_max_downloads = true;
-      } else if (downloadLimitMode === 'custom') {
-        const val = Number(inputCustomLimitEl?.value.trim());
-        if (!val || val <= 0) {
-          toast.error(i18n.t('common.error'));
-          tabBtns[3]?.click();
-          inputCustomLimitEl?.focus();
-          return;
+      if (downloadLimitModified) {
+        if (downloadLimitMode === '0') {
+          payload.clear_max_downloads = true;
+        } else if (downloadLimitMode) {
+          payload.max_downloads = Number(downloadLimitMode);
         }
-        payload.max_downloads = val;
-      } else if (downloadLimitMode) {
-        payload.max_downloads = Number(downloadLimitMode);
+      }
+
+      if (Object.keys(payload).length === 0) {
+        toast.success(i18n.t('room.settings_saved'));
+        modalInstance.close();
+        return;
       }
 
       setButtonLoading(btnConfirmEl, true);
 
       try {
-        const res = await patchApi<{ error?: string; ok: boolean; room?: any }>(
+        const res = await patchApi<{ error?: string; ok: boolean; requires_pro?: boolean; room?: any }>(
           `/api/rooms/${encodeURIComponent(resolvedRoomId)}`,
           payload
         );
 
         if (res && res.ok && res.room) {
+          const prevSlug = currentSlug;
+          const wasSaveToCloud = saveToCloud;
+
           if (res.room.slug !== undefined) {
-            currentSlug = res.room.slug || null;
+            currentSlug = res.room.slug || '';
           }
           if (res.room.is_persistent !== undefined) {
             isPersistentRoom = Boolean(res.room.is_persistent);
@@ -1453,15 +1493,94 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           if (res.room.max_downloads !== undefined) {
             roomMaxDownloads = res.room.max_downloads;
           }
+
+          if (prevSlug && prevSlug !== currentSlug) {
+            sessionStorage.removeItem(`room_owner_${prevSlug}`);
+            sessionStorage.removeItem(`room_owner_token_${prevSlug}`);
+            sessionStorage.removeItem(`room_save_to_cloud_${prevSlug}`);
+            sessionStorage.removeItem(`room_upload_permission_${prevSlug}`);
+            sessionStorage.removeItem(`room_password_${prevSlug}`);
+          }
+
+          const existingOwnerToken = sessionStorage.getItem(`room_owner_token_${resolvedRoomId}`);
+          sessionStorage.setItem(`room_owner_${resolvedRoomId}`, 'true');
+          sessionStorage.setItem(`room_upload_permission_${resolvedRoomId}`, roomUploadPermission);
+          if (saveToCloud) {
+            sessionStorage.setItem(`room_save_to_cloud_${resolvedRoomId}`, 'true');
+          } else {
+            sessionStorage.removeItem(`room_save_to_cloud_${resolvedRoomId}`);
+          }
+
+          if (payload.clear_password) {
+            sessionStorage.removeItem(`room_password_${resolvedRoomId}`);
+          } else if (typeof payload.password === 'string' && payload.password.length > 0) {
+            sessionStorage.setItem(`room_password_${resolvedRoomId}`, payload.password);
+          }
+
+          const effectivePassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`);
+          if (currentSlug) {
+            sessionStorage.setItem(`room_owner_${currentSlug}`, 'true');
+            sessionStorage.setItem(`room_upload_permission_${currentSlug}`, roomUploadPermission);
+            if (existingOwnerToken) {
+              sessionStorage.setItem(`room_owner_token_${currentSlug}`, existingOwnerToken);
+            }
+            if (saveToCloud) {
+              sessionStorage.setItem(`room_save_to_cloud_${currentSlug}`, 'true');
+            } else {
+              sessionStorage.removeItem(`room_save_to_cloud_${currentSlug}`);
+            }
+            if (effectivePassword) {
+              sessionStorage.setItem(`room_password_${currentSlug}`, effectivePassword);
+            }
+          }
+
+          if (prevSlug !== currentSlug) {
+            const targetCleanPath = currentSlug ? `/room/${currentSlug}` : `/room/${resolvedRoomId}`;
+            window.history.replaceState({}, '', i18n.localizePath(targetCleanPath));
+          }
+
           if (shareCodeDisplayEl) {
             shareCodeDisplayEl.textContent = currentSlug ? `/r/${currentSlug}` : currentCode;
           }
+          syncCloudFilesMaxDownloads();
           updateUploadUiState();
+          window.dispatchEvent(new CustomEvent('boardstack:rooms-updated'));
           toast.success(i18n.t('room.settings_saved'));
           modalInstance.close();
+
+          if (!wasSaveToCloud && saveToCloud) {
+            const pendingFiles = Array.from(localFileBlobs.values()).filter((f) => !cloudFileIds.has(f.fileId));
+            if (pendingFiles.length > 0) {
+              const totalSize = pendingFiles.reduce((acc, f) => acc + f.size, 0);
+              openConfirmModal({
+                cancelText: i18n.t('room.cloud_sync_existing_skip'),
+                confirmText: i18n.t('room.cloud_sync_existing_confirm'),
+                description: i18n.t('room.cloud_sync_existing_desc', {
+                  count: pendingFiles.length,
+                  size: formatBytes(totalSize),
+                }),
+                onCancel: () => {
+                  toast.info(i18n.t('room.cloud_sync_skipped'));
+                },
+                onConfirm: () => {
+                  void uploadPendingFilesToCloud(pendingFiles);
+                  return true;
+                },
+                title: i18n.t('room.cloud_sync_existing_title'),
+              });
+            }
+          } else if (wasSaveToCloud && !saveToCloud && cloudFileIds.size > 0) {
+            toast.info(i18n.t('room.cloud_disabled_existing_kept'));
+          }
         } else {
           setButtonLoading(btnConfirmEl, false);
-          toast.error(res?.error || i18n.t('common.error'));
+          if (res?.requires_pro) {
+            toast.info(i18n.t('room.pro_feature_notice'));
+          } else if (res?.error && res.error.includes('already in use')) {
+            toast.error(i18n.t('room.slug_in_use'));
+          } else {
+            toast.error(res?.error || i18n.t('common.error'));
+          }
         }
       } catch (err: any) {
         setButtonLoading(btnConfirmEl, false);
@@ -1504,9 +1623,15 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         row.className = `component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}`;
         row.setAttribute('data-ref', `file-row-${f.fileId}`);
 
-        const statusBadge = f.progress >= 100
-          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
-          : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${f.progress}%</span>`;
+        const statusBadge = f.isLimitReached
+          ? `<span class="component-badge component-badge--sm component-badge--destructive" data-ref="badge-limit-${f.fileId}">${i18n.t('room.download_limit_reached')}</span>`
+          : (f.progress >= 100
+            ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
+            : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${f.progress}%</span>`);
+
+        const downloadCountHtml = (f.maxDownloads !== undefined && f.maxDownloads !== null)
+          ? `<span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="downloads-count-${f.fileId}">${f.downloadCount || 0}/${f.maxDownloads}</span>`
+          : '';
 
         row.innerHTML = `
           <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${f.fileId}">
@@ -1524,6 +1649,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
             <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
           </td>
           <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${f.fileId}" style="text-align: right;">
+            ${downloadCountHtml}
             ${statusBadge}
           </td>
         `;
@@ -1688,6 +1814,15 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     sender_username?: string;
     size: number;
   }) => {
+    cloudFileIds.add(file.file_id);
+    localFileBlobs.delete(file.file_id);
+
+    const activeDl = activeDownloads.get(file.file_id);
+    if (activeDl?.downloadUrl && activeDl.downloadUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(activeDl.downloadUrl);
+      activeDl.downloadUrl = undefined;
+    }
+
     const senderName = file.sender_username || myUsername;
     const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
                           (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) ||
@@ -1708,21 +1843,38 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         };
         activeFolders.set(file.folder_id, folder);
       }
+      const prevFolderFile = folder.files.get(file.file_id);
+      if (prevFolderFile?.downloadUrl && prevFolderFile.downloadUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(prevFolderFile.downloadUrl);
+      }
       folder.files.set(file.file_id, {
+        downloadCount: file.download_count,
         downloadUrl: fileDlUrl,
         fileId: file.file_id,
+        isCloud: true,
+        isLimitReached: file.is_limit_reached,
+        maxDownloads: file.max_downloads,
         mimeType: file.mime_type,
         name: file.name,
         progress: 100,
         relativePath: file.relative_path || file.name,
         size: file.size,
       });
-      updateFolderProgress(file.folder_id);
+      if (currentFolderId === file.folder_id) {
+        renderTableRows();
+      } else {
+        updateFolderProgress(file.folder_id);
+      }
     } else {
+      const prevStandalone = standaloneFiles.get(file.file_id);
+      if (prevStandalone?.downloadUrl && prevStandalone.downloadUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(prevStandalone.downloadUrl);
+      }
       standaloneFiles.set(file.file_id, {
         downloadCount: file.download_count,
         downloadUrl: fileDlUrl,
         fileId: file.file_id,
+        isCloud: true,
         isLimitReached: file.is_limit_reached,
         maxDownloads: file.max_downloads,
         mimeType: file.mime_type,
@@ -1736,6 +1888,105 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       renderTableRows();
     }
   };
+
+  function syncCloudFilesMaxDownloads(): void {
+    let changed = false;
+    standaloneFiles.forEach((item) => {
+      if (item.isCloud) {
+        item.maxDownloads = roomMaxDownloads;
+        item.isLimitReached = roomMaxDownloads !== null && (item.downloadCount || 0) >= roomMaxDownloads;
+        changed = true;
+      }
+    });
+    activeFolders.forEach((folder) => {
+      folder.files.forEach((fItem) => {
+        if (fItem.isCloud) {
+          fItem.maxDownloads = roomMaxDownloads;
+          fItem.isLimitReached = roomMaxDownloads !== null && (fItem.downloadCount || 0) >= roomMaxDownloads;
+          changed = true;
+        }
+      });
+    });
+    if (changed) {
+      renderTableRows();
+    }
+  }
+
+  async function uploadFileToCloud(item: LocalPendingCloudFile): Promise<{ error?: string; ok: boolean }> {
+    try {
+      const formData = new FormData();
+      const fileObj = item.blob instanceof File
+        ? item.blob
+        : new File([item.blob], item.name, { type: item.mimeType || 'application/octet-stream' });
+      formData.append('file', fileObj);
+      formData.append('file_id', item.fileId);
+      formData.append('peer_id', myPeerId);
+      if (item.folderId) formData.append('folder_id', item.folderId);
+      if (item.folderName) formData.append('folder_name', item.folderName);
+      if (item.relativePath) formData.append('relative_path', item.relativePath);
+      if (roomMaxDownloads) formData.append('max_downloads', String(roomMaxDownloads));
+      formData.append('sender_username', item.senderUsername);
+      if (item.senderAvatar) formData.append('sender_avatar', item.senderAvatar);
+
+      const res = await fetch(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files/upload`, {
+        body: formData,
+        method: 'POST',
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json && json.ok && json.file) {
+        renderCloudFileCard(json.file);
+        return { ok: true };
+      }
+      return { error: json?.error || i18n.t('common.error'), ok: false };
+    } catch {
+      return { error: i18n.t('common.error'), ok: false };
+    }
+  }
+
+  async function uploadPendingFilesToCloud(pendingFiles: LocalPendingCloudFile[]): Promise<void> {
+    if (pendingFiles.length === 0) return;
+
+    toast.info(i18n.t('room.cloud_sync_in_progress', { count: pendingFiles.length }));
+    let uploadedCount = 0;
+    let failedCount = 0;
+    let lastError = '';
+
+    for (const item of pendingFiles) {
+      if (isCleanedUp) break;
+      const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${item.fileId}"]`);
+      if (badge) {
+        badge.className = 'component-badge component-badge--sm';
+        badge.textContent = i18n.t('room.status_uploading');
+      }
+
+      const result = await uploadFileToCloud(item);
+      if (result.ok) {
+        uploadedCount++;
+      } else {
+        failedCount++;
+        if (result.error) {
+          lastError = result.error;
+        }
+        const errBadge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${item.fileId}"]`);
+        if (errBadge) {
+          errBadge.className = 'component-badge component-badge--sm component-badge--destructive';
+          errBadge.textContent = i18n.t('room.status_error');
+        }
+      }
+    }
+
+    if (uploadedCount > 0) {
+      window.dispatchEvent(new CustomEvent('boardstack:rooms-updated'));
+    }
+
+    if (failedCount === 0 && uploadedCount > 0) {
+      toast.success(i18n.t('room.cloud_sync_complete', { count: uploadedCount }));
+    } else if (uploadedCount > 0 && failedCount > 0) {
+      toast.info(i18n.t('room.cloud_sync_partial', { failed: failedCount, uploaded: uploadedCount }));
+    } else if (failedCount > 0) {
+      toast.error(lastError || i18n.t('room.cloud_sync_failed'));
+    }
+  }
 
   const loadCloudFiles = async () => {
     try {
@@ -1764,6 +2015,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       }>(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files${passQuery}`);
 
       if (res && res.ok && Array.isArray(res.files)) {
+        hasLoadedCloudFiles = true;
         res.files.forEach((f) => {
           renderCloudFileCard(f);
         });
@@ -1998,6 +2250,21 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
             const blob = new Blob(validChunks as BlobPart[], { type: item.metadata.mime_type });
             const downloadUrl = URL.createObjectURL(blob);
             item.downloadUrl = downloadUrl;
+
+            if (!cloudFileIds.has(item.metadata.file_id)) {
+              localFileBlobs.set(item.metadata.file_id, {
+                blob,
+                fileId: item.metadata.file_id,
+                folderId: item.metadata.folder_id,
+                folderName: item.metadata.folder_name,
+                mimeType: item.metadata.mime_type || 'application/octet-stream',
+                name: item.metadata.name,
+                relativePath: item.metadata.relative_path,
+                senderAvatar: item.metadata.sender_avatar,
+                senderUsername: item.metadata.sender_username || i18n.t('room.guest_badge'),
+                size: item.metadata.size,
+              });
+            }
 
             if (item.metadata.folder_id) {
               const folder = activeFolders.get(item.metadata.folder_id);
@@ -2268,57 +2535,48 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       type: 'file_complete',
     });
 
-    if (saveToCloud) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('file_id', fileId);
-        if (folderId) formData.append('folder_id', folderId);
-        if (folderName) formData.append('folder_name', folderName);
-        if (relativePath) formData.append('relative_path', relativePath);
-        if (roomMaxDownloads) formData.append('max_downloads', String(roomMaxDownloads));
-        formData.append('sender_username', myUsername);
-        formData.append('sender_avatar', myAvatarUrl);
+    const pendingEntry: LocalPendingCloudFile = {
+      blob: file,
+      fileId,
+      folderId,
+      folderName,
+      mimeType: file.type || 'application/octet-stream',
+      name: file.name,
+      relativePath,
+      senderAvatar: myAvatarUrl,
+      senderUsername: myUsername,
+      size: file.size,
+    };
+    localFileBlobs.set(fileId, pendingEntry);
 
-        const res = await fetch(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files/upload`, {
-          body: formData,
-          method: 'POST',
-        });
-        const json = await res.json().catch(() => ({}));
-        if (json && json.ok && json.file) {
-          renderCloudFileCard(json.file);
-          toast.success(i18n.t('room.cloud_saved_success'));
-        } else {
-          const fileItem = standaloneFiles.get(fileId);
-          if (fileItem) {
-            fileItem.status = 'error';
-            const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
-            if (badge) {
-              badge.className = 'component-badge component-badge--sm component-badge--destructive';
-              badge.textContent = i18n.t('room.status_error');
-            }
-          }
-          toast.error(json?.error || i18n.t('common.error'));
-        }
-      } catch {
+    if (saveToCloud) {
+      const uploadRes = await uploadFileToCloud(pendingEntry);
+      if (uploadRes.ok) {
+        window.dispatchEvent(new CustomEvent('boardstack:rooms-updated'));
+        toast.success(i18n.t('room.cloud_saved_success'));
+      } else {
         const fileItem = standaloneFiles.get(fileId);
         if (fileItem) {
           fileItem.status = 'error';
-          const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
-          if (badge) {
-            badge.className = 'component-badge component-badge--sm component-badge--destructive';
-            badge.textContent = i18n.t('room.status_error');
-          }
         }
-        toast.error(i18n.t('common.error'));
+        const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
+        if (badge) {
+          badge.className = 'component-badge component-badge--sm component-badge--destructive';
+          badge.textContent = i18n.t('room.status_error');
+        }
+        toast.error(uploadRes.error || i18n.t('common.error'));
       }
     } else {
+      const localUrl = URL.createObjectURL(file);
       if (isFolder && folderId) {
         const folder = activeFolders.get(folderId);
         const fItem = folder?.files.get(fileId);
         if (fItem) {
           fItem.progress = 100;
+          fItem.downloadUrl = localUrl;
           updateFolderProgress(folderId);
+        } else {
+          URL.revokeObjectURL(localUrl);
         }
       } else {
         updateFileCardProgress(
@@ -2328,7 +2586,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           100,
           0,
           i18n.t('room.transfer_completed'),
-          myUsername
+          myUsername,
+          localUrl
         );
       }
     }
@@ -2560,17 +2819,24 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     peers.clear();
 
     activeDownloads.forEach((item) => {
-      if (item.downloadUrl) {
+      if (item.downloadUrl && item.downloadUrl.startsWith('blob:')) {
         URL.revokeObjectURL(item.downloadUrl);
       }
     });
     activeDownloads.clear();
+    standaloneFiles.forEach((item) => {
+      if (item.downloadUrl && item.downloadUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(item.downloadUrl);
+      }
+    });
     standaloneFiles.clear();
+    localFileBlobs.clear();
+    cloudFileIds.clear();
     currentFolderId = null;
 
     activeFolders.forEach((folder) => {
       folder.files.forEach((fileItem) => {
-        if (fileItem.downloadUrl) {
+        if (fileItem.downloadUrl && fileItem.downloadUrl.startsWith('blob:')) {
           URL.revokeObjectURL(fileItem.downloadUrl);
         }
       });
@@ -2674,8 +2940,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
         if (data.type === 'room_state') {
           isAuthPending = false;
-          if (data.slug) {
-            currentSlug = data.slug;
+          if (data.slug !== undefined) {
+            currentSlug = data.slug || '';
           }
           if (data.is_persistent !== undefined) {
             isPersistentRoom = Boolean(data.is_persistent);
@@ -2683,12 +2949,30 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           if (data.requires_password !== undefined) {
             hasPassword = Boolean(data.requires_password);
           }
+          if (data.save_to_cloud !== undefined) {
+            saveToCloud = Boolean(data.save_to_cloud);
+          }
+          if (data.expires_at !== undefined) {
+            roomExpiresAt = data.expires_at ?? null;
+          }
+          if (data.max_downloads !== undefined) {
+            const prevLimit = roomMaxDownloads;
+            roomMaxDownloads = data.max_downloads ?? null;
+            if (prevLimit !== roomMaxDownloads) {
+              syncCloudFilesMaxDownloads();
+            }
+          }
           if (data.upload_permission) {
             roomUploadPermission = data.upload_permission;
           }
-          if (data.code && shareCodeDisplayEl) {
+          if (data.code) {
             currentCode = data.code;
-            shareCodeDisplayEl.textContent = currentSlug ? `/r/${currentSlug}` : data.code;
+          }
+          if (shareCodeDisplayEl) {
+            shareCodeDisplayEl.textContent = currentSlug ? `/r/${currentSlug}` : currentCode;
+          }
+          if (!hasLoadedCloudFiles) {
+            void loadCloudFiles();
           }
           if (Array.isArray(data.participants)) {
             const myP = data.participants.find((p) => p.peer_id === myPeerId);
@@ -2725,23 +3009,37 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         } else if (data.type === 'cloud_file_added' && (data as any).file) {
           renderCloudFileCard((data as any).file);
         } else if (data.type === 'file_downloaded' && data.file_id) {
+          const dlCount = (data as any).download_count;
+          const maxDl = (data as any).max_downloads;
+          const limitReached = Boolean((data as any).is_limit_reached);
           const file = standaloneFiles.get(data.file_id);
           if (file) {
-            file.downloadCount = (data as any).download_count;
-            file.maxDownloads = (data as any).max_downloads;
-            if ((data as any).is_limit_reached) {
+            file.downloadCount = dlCount;
+            file.maxDownloads = maxDl;
+            if (limitReached) {
               file.isLimitReached = true;
             }
-            const countBadge = filesTbody?.querySelector<HTMLElement>(`[data-ref="downloads-count-${data.file_id}"]`);
-            if (countBadge && (data as any).max_downloads !== null && (data as any).max_downloads !== undefined) {
-              countBadge.textContent = `${(data as any).download_count}/${(data as any).max_downloads}`;
-            }
-            if ((data as any).is_limit_reached) {
-              const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${data.file_id}"]`);
-              if (badge) {
-                badge.className = 'component-badge component-badge--sm component-badge--destructive';
-                badge.textContent = i18n.t('room.download_limit_reached');
+          } else {
+            activeFolders.forEach((folder) => {
+              const fItem = folder.files.get(data.file_id!);
+              if (fItem) {
+                fItem.downloadCount = dlCount;
+                fItem.maxDownloads = maxDl;
+                if (limitReached) {
+                  fItem.isLimitReached = true;
+                }
               }
+            });
+          }
+          const countBadge = filesTbody?.querySelector<HTMLElement>(`[data-ref="downloads-count-${data.file_id}"]`);
+          if (countBadge && maxDl !== null && maxDl !== undefined) {
+            countBadge.textContent = `${dlCount}/${maxDl}`;
+          }
+          if (limitReached) {
+            const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${data.file_id}"]`);
+            if (badge) {
+              badge.className = 'component-badge component-badge--sm component-badge--destructive';
+              badge.textContent = i18n.t('room.download_limit_reached');
             }
           }
         } else if (data.type === 'room_closed') {
@@ -2780,9 +3078,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     showPasswordPrompt();
   } else {
     initWebSocket();
+    void loadCloudFiles();
   }
-
-  void loadCloudFiles();
 
   return fragment;
 }

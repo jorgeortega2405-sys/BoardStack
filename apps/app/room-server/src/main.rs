@@ -83,6 +83,7 @@ struct UpdateRoomRequest {
     clear_slug: Option<bool>,
     password: Option<String>,
     clear_password: Option<bool>,
+    owner_token: Option<String>,
     is_persistent: Option<bool>,
     save_to_cloud: Option<bool>,
     upload_permission: Option<String>,
@@ -115,6 +116,7 @@ struct ResolveRoomResponse {
     slug: Option<String>,
     is_persistent: bool,
     requires_password: bool,
+    has_owner_token: bool,
     owner_username: String,
     participant_count: usize,
     expires_at: Option<u64>,
@@ -271,7 +273,15 @@ async fn create_room(
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-    if let Some(existing_room) = lock.rooms.get(&room_id) {
+    if let Some(existing_room) = lock.rooms.get_mut(&room_id) {
+        if existing_room.owner_token.is_none() {
+            if let Some(token) = payload.owner_token {
+                let trimmed = token.trim().to_string();
+                if !trimmed.is_empty() {
+                    existing_room.owner_token = Some(trimmed);
+                }
+            }
+        }
         return (
             StatusCode::OK,
             Json(serde_json::json!(CreateRoomResponse {
@@ -406,6 +416,7 @@ async fn resolve_room(
         slug: room.slug.clone(),
         is_persistent: room.is_persistent,
         requires_password: room.password.is_some(),
+        has_owner_token: room.owner_token.is_some(),
         owner_username: room.owner_username.clone(),
         participant_count: room.participants.len(),
         expires_at: room.expires_at,
@@ -518,6 +529,13 @@ async fn update_room(
         room.slug = slug_to_insert;
     }
 
+    if let Some(token) = payload.owner_token {
+        let trimmed = token.trim().to_string();
+        if !trimmed.is_empty() {
+            room.owner_token = Some(trimmed);
+        }
+    }
+
     if payload.clear_password == Some(true) {
         room.password = None;
     } else if let Some(p) = payload.password {
@@ -531,7 +549,19 @@ async fn update_room(
 
     if let Some(perm) = payload.upload_permission {
         if perm == "all" || perm == "owner_only" || perm == "specific" {
-            room.upload_permission = perm;
+            let prev_perm = room.upload_permission.clone();
+            room.upload_permission = perm.clone();
+            for p in room.participants.values_mut() {
+                if p.is_owner {
+                    p.can_upload = true;
+                } else if perm == "all" {
+                    p.can_upload = true;
+                } else if perm == "owner_only" {
+                    p.can_upload = false;
+                } else if perm == "specific" && prev_perm == "all" {
+                    p.can_upload = false;
+                }
+            }
         }
     }
 
@@ -645,6 +675,42 @@ async fn broadcast_to_room(
     )
 }
 
+async fn get_peer_permission(
+    State(state): State<SharedState>,
+    Path((room_id, peer_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let lock = state.lock().await;
+    let actual_id = lock
+        .slug_to_id
+        .get(&room_id.to_lowercase())
+        .or_else(|| lock.code_to_id.get(&room_id.to_uppercase()))
+        .cloned()
+        .unwrap_or(room_id);
+
+    if let Some(room) = lock.rooms.get(&actual_id) {
+        if let Some(participant) = room.participants.get(&peer_id) {
+            return (
+                StatusCode::OK,
+                Json(serde_json::json!({
+                    "ok": true,
+                    "found": true,
+                    "is_owner": participant.is_owner,
+                    "can_upload": participant.is_owner || participant.can_upload,
+                })),
+            );
+        }
+    }
+
+    (
+        StatusCode::NOT_FOUND,
+        Json(serde_json::json!({
+            "ok": false,
+            "found": false,
+            "can_upload": false,
+        })),
+    )
+}
+
 async fn ws_handler(
     ws: WebSocketUpgrade,
     Path(room_id): Path<String>,
@@ -746,43 +812,27 @@ async fn handle_socket(
                 joined_at: current_timestamp(),
             };
 
-            if let Some(ref expected_pw) = room.password {
-                let provided = query.password.as_deref().unwrap_or("");
-                if provided != expected_pw {
-                    let reason = if provided.is_empty() {
-                        "Password required"
+            let auth_failed = if !is_owner {
+                if let Some(ref expected_pw) = room.password {
+                    let provided = query.password.as_deref().unwrap_or("");
+                    if provided != expected_pw {
+                        Some(if provided.is_empty() {
+                            "Password required"
+                        } else {
+                            "Invalid password"
+                        })
                     } else {
-                        "Invalid password"
-                    };
-                    (None, None, Some(reason))
-                } else {
-                    if is_owner {
-                        room.owner_peer_id = Some(peer_id.clone());
+                        None
                     }
-
-                    room.participants.insert(peer_id.clone(), participant);
-                    let rx = room.tx.subscribe();
-                    let room_tx = room.tx.clone();
-
-                    let state_msg = serde_json::to_string(&WsRoomStatePayload {
-                        r#type: "room_state".to_string(),
-                        room_id: room.id.clone(),
-                        code: room.code.clone(),
-                        slug: room.slug.clone(),
-                        is_persistent: room.is_persistent,
-                        requires_password: true,
-                        owner_username: room.owner_username.clone(),
-                        participants: room.participants.values().cloned().collect(),
-                        expires_at: room.expires_at,
-                        max_downloads: room.max_downloads,
-                        save_to_cloud: room.save_to_cloud,
-                        upload_permission: room.upload_permission.clone(),
-                    })
-                    .unwrap_or_default();
-
-                    let _ = room.tx.send(state_msg);
-                    (Some(rx), Some(room_tx), None)
+                } else {
+                    None
                 }
+            } else {
+                None
+            };
+
+            if let Some(reason) = auth_failed {
+                (None, None, Some(reason))
             } else {
                 if is_owner {
                     room.owner_peer_id = Some(peer_id.clone());
@@ -798,7 +848,7 @@ async fn handle_socket(
                     code: room.code.clone(),
                     slug: room.slug.clone(),
                     is_persistent: room.is_persistent,
-                    requires_password: false,
+                    requires_password: room.password.is_some(),
                     owner_username: room.owner_username.clone(),
                     participants: room.participants.values().cloned().collect(),
                     expires_at: room.expires_at,
@@ -873,7 +923,7 @@ async fn handle_socket(
                 msg_count = 0;
             }
             msg_count += 1;
-            if msg_count > 60 {
+            if msg_count > 500 {
                 continue;
             }
             match msg {
@@ -1066,6 +1116,7 @@ async fn main() {
         .route("/api/rooms/resolve/{query_key}", get(resolve_room))
         .route("/api/rooms/{room_id}/update", post(update_room))
         .route("/api/rooms/{room_id}/broadcast", post(broadcast_to_room))
+        .route("/api/rooms/{room_id}/peers/{peer_id}", get(get_peer_permission))
         .route("/ws/room/{room_id}", get(ws_handler))
         .layer(cors)
         .with_state(state);

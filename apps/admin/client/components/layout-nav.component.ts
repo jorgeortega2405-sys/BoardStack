@@ -11,7 +11,7 @@ import { createAdminPageView } from '../views/admin-page.view.js';
 import { createLoginView } from '../views/auth.view.js';
 import { type DropdownController, escapeHtml, setupDropdown, setupSheetDragToDismiss } from '../utils/dom.util.js';
 import { finishNavigationProgress, startNavigationProgress } from '../services/navigation-progress.service.js';
-import { getRoleLabel, setupUserMenu } from './layout-user-menu.component.js';
+import { getRoleLabel, setupUserMenu, type UserMenuNavigateOptions } from './layout-user-menu.component.js';
 import { i18n, t } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { themeService } from '../services/theme.service.js';
@@ -61,22 +61,17 @@ class LayoutNavController {
     this.mainWrapper = document.querySelector<HTMLElement>('[data-ref="main-wrapper"]');
     this.viewContainerEl = document.querySelector<HTMLElement>('[data-ref="view-container"]');
 
-    setupUserMenu((path) => this.navigate(path));
+    setupUserMenu(
+      (path, options) => {
+        void this.navigate(path, true, options);
+      },
+      () => this.syncUserPreferences()
+    );
     this.bindEvents();
 
     try {
       await fetchCurrentUser();
-      if (currentUser) {
-        const prefRes = await getApi<{ ok?: boolean; preferences?: { language?: string; theme?: string } }>('/api/settings/preferences');
-        if (prefRes.ok && prefRes.preferences) {
-          if (prefRes.preferences.theme) {
-            themeService.setTheme(prefRes.preferences.theme as any);
-          }
-          if (prefRes.preferences.language) {
-            i18n.setLanguage(prefRes.preferences.language, false);
-          }
-        }
-      }
+      await this.syncUserPreferences();
     } catch {}
 
     void this.navigate(window.location.pathname, false);
@@ -94,11 +89,35 @@ class LayoutNavController {
     i18n.translateDocument(this.appLayoutEl || document.body);
   }
 
+  private async syncUserPreferences(): Promise<void> {
+    if (!currentUser) return;
+    try {
+      const prefRes = await getApi<{ ok?: boolean; preferences?: { language?: string; theme?: string } }>('/api/settings/preferences');
+      if (prefRes.ok && prefRes.preferences) {
+        if (prefRes.preferences.theme) {
+          themeService.setTheme(prefRes.preferences.theme as any);
+        }
+        if (prefRes.preferences.language) {
+          i18n.setLanguage(prefRes.preferences.language, false);
+        }
+      }
+    } catch {}
+  }
+
   private resolveTargetRoute(rawCleanPath: string, showDeniedFeedback = true): ResolvedPanelRoute {
     const clean = (rawCleanPath || '/').replace(/\/+$/, '') || '/';
 
+    if (clean === '/login') {
+      return {
+        app: null,
+        isAuth: true,
+        page: null,
+        path: '/login',
+      };
+    }
+
     if (!currentUser || accessibleApps.length === 0) {
-      if (currentUser && accessibleApps.length === 0 && showDeniedFeedback && clean !== '/login') {
+      if (currentUser && accessibleApps.length === 0 && showDeniedFeedback) {
         toast.error(i18n.t('admin.access.no_apps'));
       }
       return {
@@ -112,7 +131,7 @@ class LayoutNavController {
     const defaultApp = getActiveApp() || accessibleApps[0];
     const defaultPage = defaultApp.pages[0];
 
-    if (clean === '/' || clean === '/login') {
+    if (clean === '/') {
       return {
         app: defaultApp,
         isAuth: false,
@@ -255,7 +274,7 @@ class LayoutNavController {
     });
   }
 
-  public async navigate(path: string, updateHistory = true): Promise<void> {
+  public async navigate(path: string, updateHistory = true, options?: UserMenuNavigateOptions): Promise<void> {
     const [rawPath, rawSearch] = (path || '/').split('?');
     const { lang: urlLang, cleanPath: strippedPath } = i18n.stripLanguage(rawPath);
 
@@ -263,7 +282,7 @@ class LayoutNavController {
       i18n.setLanguage(urlLang, false);
     }
 
-    const targetRoute = this.resolveTargetRoute(strippedPath, true);
+    const targetRoute = this.resolveTargetRoute(strippedPath, options?.showDeniedFeedback ?? true);
     const localizedTarget = i18n.localizePath(targetRoute.path, i18n.getLanguage());
     const fullTarget = rawSearch ? `${localizedTarget}?${rawSearch}` : localizedTarget;
     const currentFullTarget = window.location.pathname + window.location.search;
@@ -273,10 +292,12 @@ class LayoutNavController {
       (!targetRoute.isAuth && this.viewContainerEl && this.viewContainerEl.children.length > 0)
     );
 
-    const isSameViewActive = this.loadingPath === targetRoute.path || (
-      this.loadingPath === '' &&
-      this.currentPath === targetRoute.path &&
-      isCurrentViewMounted
+    const isSameViewActive = !options?.force && (
+      this.loadingPath === targetRoute.path || (
+        this.loadingPath === '' &&
+        this.currentPath === targetRoute.path &&
+        isCurrentViewMounted
+      )
     );
 
     if (isSameViewActive) {

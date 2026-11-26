@@ -1,10 +1,11 @@
 import type { AccessibleAdminApp } from '../types/admin.types.js';
-import type { AdminUserPayload, AuthStateResponse } from '../types/auth.types.js';
+import type { AdminSessionAccount, AdminUserPayload, AuthStateResponse } from '../types/auth.types.js';
 
 declare global {
   interface Window {
     __INITIAL_SESSION__?: {
       accessibleApps?: AccessibleAdminApp[];
+      accounts?: AdminSessionAccount[];
       user?: AdminUserPayload | null;
     } | null;
   }
@@ -12,24 +13,29 @@ declare global {
 
 const SESSION_CACHE_KEY = 'boardstack_admin_cached_session';
 
-function getInitialSession(): { accessibleApps: AccessibleAdminApp[]; user: AdminUserPayload | null } {
+function getInitialSession(): {
+  accessibleApps: AccessibleAdminApp[];
+  accounts: AdminSessionAccount[];
+  user: AdminUserPayload | null;
+} {
   if (typeof window === 'undefined') {
-    return { accessibleApps: [], user: null };
+    return { accessibleApps: [], accounts: [], user: null };
   }
 
   if (window.__INITIAL_SESSION__ !== undefined) {
     if (window.__INITIAL_SESSION__ && window.__INITIAL_SESSION__.user) {
       const u = window.__INITIAL_SESSION__.user;
       const apps = window.__INITIAL_SESSION__.accessibleApps || [];
+      const accs = window.__INITIAL_SESSION__.accounts || [];
       try {
-        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ accessibleApps: apps, user: u }));
+        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ accessibleApps: apps, accounts: accs, user: u }));
       } catch {}
-      return { accessibleApps: apps, user: u };
+      return { accessibleApps: apps, accounts: accs, user: u };
     }
     try {
       localStorage.removeItem(SESSION_CACHE_KEY);
     } catch {}
-    return { accessibleApps: [], user: null };
+    return { accessibleApps: [], accounts: [], user: null };
   }
 
   try {
@@ -37,26 +43,36 @@ function getInitialSession(): { accessibleApps: AccessibleAdminApp[]; user: Admi
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.user) {
-        return { accessibleApps: parsed.accessibleApps || [], user: parsed.user };
+        return {
+          accessibleApps: parsed.accessibleApps || [],
+          accounts: parsed.accounts || [],
+          user: parsed.user,
+        };
       }
     }
   } catch {}
 
-  return { accessibleApps: [], user: null };
+  return { accessibleApps: [], accounts: [], user: null };
 }
 
 const initialAuth = getInitialSession();
 let currentUser: AdminUserPayload | null = initialAuth.user;
 let accessibleApps: AccessibleAdminApp[] = initialAuth.accessibleApps;
+let linkedAccounts: AdminSessionAccount[] = initialAuth.accounts;
 let activeAppSlug: string = initialAuth.accessibleApps[0]?.slug || '';
 
-type AuthListener = (user: AdminUserPayload | null, apps: AccessibleAdminApp[], activeSlug: string) => void;
+type AuthListener = (
+  user: AdminUserPayload | null,
+  apps: AccessibleAdminApp[],
+  activeSlug: string,
+  accounts: AdminSessionAccount[]
+) => void;
 const authListeners = new Set<AuthListener>();
 
 function notifyListeners(): void {
   for (const listener of authListeners) {
     try {
-      listener(currentUser, accessibleApps, activeAppSlug);
+      listener(currentUser, accessibleApps, activeAppSlug, linkedAccounts);
     } catch (e) {
       console.error('[AdminAuth] Error in listener:', e);
     }
@@ -70,9 +86,14 @@ function onAuthChange(callback: AuthListener): () => void {
   };
 }
 
-function setAuthState(user: AdminUserPayload | null, apps: AccessibleAdminApp[]): void {
+function setAuthState(
+  user: AdminUserPayload | null,
+  apps: AccessibleAdminApp[],
+  accounts: AdminSessionAccount[] = []
+): void {
   currentUser = user;
   accessibleApps = Array.isArray(apps) ? apps : [];
+  linkedAccounts = Array.isArray(accounts) ? accounts : [];
   if (!accessibleApps.some((a) => a.slug === activeAppSlug)) {
     activeAppSlug = accessibleApps[0]?.slug || '';
   }
@@ -80,7 +101,7 @@ function setAuthState(user: AdminUserPayload | null, apps: AccessibleAdminApp[])
   if (typeof window !== 'undefined') {
     if (user) {
       try {
-        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ accessibleApps, user }));
+        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ accessibleApps, accounts: linkedAccounts, user }));
       } catch {}
     } else {
       try {
@@ -164,22 +185,106 @@ async function postApi<T = any>(url: string, body?: any): Promise<T> {
 async function fetchCurrentUser(): Promise<AuthStateResponse> {
   try {
     const data = await getApi<AuthStateResponse>('/api/auth/me');
-    setAuthState(data.user || null, data.accessibleApps || []);
+    setAuthState(data.user || null, data.accessibleApps || [], data.accounts || []);
     return data;
   } catch (error) {
     console.error('[AdminAuth] Failed to fetch current user:', error);
-    setAuthState(null, []);
-    return { accessibleApps: [], user: null };
+    setAuthState(null, [], []);
+    return { accessibleApps: [], accounts: [], user: null };
   }
 }
 
-async function logoutApi(): Promise<{ success: boolean }> {
+async function switchAccountApi(userId: number): Promise<{
+  accessibleApps: AccessibleAdminApp[];
+  accounts: AdminSessionAccount[];
+  error?: string;
+  success: boolean;
+  user: AdminUserPayload | null;
+}> {
   try {
-    await postApi('/api/auth/logout');
-    setAuthState(null, []);
+    const data = await postApi('/api/auth/switch-account', { userId });
+    if (data.ok && data.user) {
+      const nextApps = data.accessibleApps || [];
+      const nextAccounts = data.accounts || [];
+      setAuthState(data.user, nextApps, nextAccounts);
+      return {
+        accessibleApps: nextApps,
+        accounts: nextAccounts,
+        success: true,
+        user: data.user,
+      };
+    }
+    return {
+      accessibleApps: [],
+      accounts: [],
+      error: data.error || 'Failed to switch account',
+      success: false,
+      user: null,
+    };
+  } catch {
+    return {
+      accessibleApps: [],
+      accounts: [],
+      error: 'Connection error',
+      success: false,
+      user: null,
+    };
+  }
+}
+
+async function logoutApi(userId?: number): Promise<{
+  accessibleApps: AccessibleAdminApp[];
+  accounts: AdminSessionAccount[];
+  remainingCount: number;
+  success: boolean;
+  switched: boolean;
+  user: AdminUserPayload | null;
+}> {
+  try {
+    const data = await postApi('/api/auth/logout', userId !== undefined ? { userId } : {});
+    if (data.ok === false) {
+      return {
+        accessibleApps,
+        accounts: linkedAccounts,
+        remainingCount: linkedAccounts.length,
+        success: false,
+        switched: false,
+        user: currentUser,
+      };
+    }
+    const nextApps = data.accessibleApps || [];
+    const nextAccounts = data.accounts || [];
+    const nextUser = data.user || null;
+    setAuthState(nextUser, nextApps, nextAccounts);
+    return {
+      accessibleApps: nextApps,
+      accounts: nextAccounts,
+      remainingCount: Number(data.remainingCount || 0),
+      success: true,
+      switched: Boolean(data.switched),
+      user: nextUser,
+    };
+  } catch {
+    return {
+      accessibleApps,
+      accounts: linkedAccounts,
+      remainingCount: linkedAccounts.length,
+      success: false,
+      switched: false,
+      user: currentUser,
+    };
+  }
+}
+
+async function logoutAllApi(): Promise<{ success: boolean }> {
+  try {
+    const data = await postApi('/api/auth/logout-all');
+    if (data.ok === false) {
+      return { success: false };
+    }
+    setAuthState(null, [], []);
     return { success: true };
   } catch {
-    setAuthState(null, []);
     return { success: false };
   }
 }
@@ -192,12 +297,15 @@ export {
   fetchCurrentUser,
   getActiveApp,
   getApi,
+  linkedAccounts,
+  logoutAllApi,
   logoutApi,
   onAuthChange,
   patchApi,
   postApi,
   setActiveAppSlug,
-  setAuthState
+  setAuthState,
+  switchAccountApi
 };
 
 export type {

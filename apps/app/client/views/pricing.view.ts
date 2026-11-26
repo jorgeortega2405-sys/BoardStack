@@ -10,7 +10,6 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
   container.setAttribute('data-ref', 'pricing-layout');
 
   let currentCycle: 'monthly' | 'yearly' = 'monthly';
-  let currentBusinessSeats = 3;
 
   const isCurrentEnterprise = currentUser?.subscription_tier === 'enterprise';
   const isCurrentBusiness = currentUser?.subscription_tier === 'business';
@@ -124,29 +123,7 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
             <span class="component-card-price">$<span data-ref="plan-price-val-business">29.00</span></span>
             <span class="component-card-period" data-ref="plan-period-val-business">${i18n.t('pricing.price_month')}</span>
           </div>
-          <span class="component-card-desc" data-ref="plan-subtext-business" style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);">${i18n.t('pricing.business_price_per_user', { price: '9.67' })}</span>
-        </div>
-
-        <div class="component-card-section" data-ref="card-seats-selector-business" style="margin-bottom: 8px;">
-          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--bg-hover, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${i18n.t('pricing.business_seats_label')}</span>
-              <span class="component-badge component-badge--success" data-ref="pricing-seats-counter-val" style="font-size: 12px; font-weight: 700;">${i18n.t('pricing.business_seats_counter', { count: 3 })}</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-pricing-seats-minus" aria-label="${i18n.t('pricing.business_seats_minus')}" style="min-width: 32px; height: 32px; padding: 0;">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#remove"></use></svg>
-              </button>
-              <input type="range" min="3" max="50" step="1" value="3" data-ref="input-pricing-seats-range" style="flex: 1; accent-color: var(--action-primary, #111827); cursor: pointer;" />
-              <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-pricing-seats-plus" aria-label="${i18n.t('pricing.business_seats_plus')}" style="min-width: 32px; height: 32px; padding: 0;">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              </button>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
-              <span>${i18n.t('pricing.business_seats_base_note')}</span>
-              <span data-ref="pricing-seats-extra-hint">${i18n.t('pricing.business_seats_extra_monthly')}</span>
-            </div>
-          </div>
+          <span class="component-card-desc" data-ref="plan-subtext-business" style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);">${i18n.t('pricing.business_included_seats_price', { price: '9.67' })}</span>
         </div>
 
         <div class="component-card-section component-card-section--action" data-ref="card-action-business">
@@ -297,45 +274,19 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
   const priceValBusiness = plansBlock.querySelector<HTMLElement>('[data-ref="plan-price-val-business"]');
   const periodValBusiness = plansBlock.querySelector<HTMLElement>('[data-ref="plan-period-val-business"]');
   const subtextBusiness = plansBlock.querySelector<HTMLElement>('[data-ref="plan-subtext-business"]');
-  const seatsCounterVal = plansBlock.querySelector<HTMLElement>('[data-ref="pricing-seats-counter-val"]');
-  const seatsExtraHint = plansBlock.querySelector<HTMLElement>('[data-ref="pricing-seats-extra-hint"]');
-  const inputSeatsRange = plansBlock.querySelector<HTMLInputElement>('[data-ref="input-pricing-seats-range"]');
-  const btnSeatsMinus = plansBlock.querySelector<HTMLButtonElement>('[data-ref="btn-pricing-seats-minus"]');
-  const btnSeatsPlus = plansBlock.querySelector<HTMLButtonElement>('[data-ref="btn-pricing-seats-plus"]');
   const btnGetBusiness = plansBlock.querySelector<HTMLButtonElement>('[data-ref="btn-get-business"]');
 
   const btnGetEnterprise = plansBlock.querySelector<HTMLButtonElement>('[data-ref="btn-get-enterprise"]');
 
   const updateBusinessPricing = () => {
-    const extraSeats = Math.max(0, currentBusinessSeats - 3);
-    if (seatsCounterVal) {
-      seatsCounterVal.textContent = i18n.t('pricing.business_seats_counter', { count: currentBusinessSeats });
-    }
-    if (inputSeatsRange) {
-      inputSeatsRange.value = String(currentBusinessSeats);
-    }
-
     if (currentCycle === 'yearly') {
-      const baseYearlyPerMonth = 24.00;
-      const extraYearlyPerMonth = extraSeats * 5.00;
-      const totalMonthEquiv = baseYearlyPerMonth + extraYearlyPerMonth;
-      const perUserMonth = (totalMonthEquiv / currentBusinessSeats).toFixed(2);
-      const totalAnnualCharged = (totalMonthEquiv * 12).toFixed(2);
-
-      if (priceValBusiness) priceValBusiness.textContent = totalMonthEquiv.toFixed(2);
-      if (periodValBusiness) periodValBusiness.textContent = i18n.t('pricing.business_yearly_billed_note', { amount: totalAnnualCharged });
-      if (subtextBusiness) subtextBusiness.textContent = i18n.t('pricing.business_price_per_user', { price: perUserMonth });
-      if (seatsExtraHint) seatsExtraHint.textContent = i18n.t('pricing.business_seats_extra_yearly');
+      if (priceValBusiness) priceValBusiness.textContent = '24.00';
+      if (periodValBusiness) periodValBusiness.textContent = i18n.t('pricing.business_yearly_billed_note', { amount: '288.00' });
+      if (subtextBusiness) subtextBusiness.textContent = i18n.t('pricing.business_included_seats_price', { price: '8.00' });
     } else {
-      const baseMonthly = 29.00;
-      const extraMonthly = extraSeats * 6.00;
-      const totalMonthly = baseMonthly + extraMonthly;
-      const perUserMonth = (totalMonthly / currentBusinessSeats).toFixed(2);
-
-      if (priceValBusiness) priceValBusiness.textContent = totalMonthly.toFixed(2);
+      if (priceValBusiness) priceValBusiness.textContent = '29.00';
       if (periodValBusiness) periodValBusiness.textContent = i18n.t('pricing.price_month');
-      if (subtextBusiness) subtextBusiness.textContent = i18n.t('pricing.business_price_per_user', { price: perUserMonth });
-      if (seatsExtraHint) seatsExtraHint.textContent = i18n.t('pricing.business_seats_extra_monthly');
+      if (subtextBusiness) subtextBusiness.textContent = i18n.t('pricing.business_included_seats_price', { price: '9.67' });
     }
   };
 
@@ -350,18 +301,6 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
       if (periodValPro) periodValPro.textContent = i18n.t('pricing.price_month');
     }
     updateBusinessPricing();
-  });
-
-  const setBusinessSeats = (seats: number) => {
-    currentBusinessSeats = Math.min(50, Math.max(3, seats));
-    updateBusinessPricing();
-  };
-
-  btnSeatsMinus?.addEventListener('click', () => setBusinessSeats(currentBusinessSeats - 1));
-  btnSeatsPlus?.addEventListener('click', () => setBusinessSeats(currentBusinessSeats + 1));
-  inputSeatsRange?.addEventListener('input', (e) => {
-    const val = parseInt((e.target as HTMLInputElement).value, 10);
-    if (!isNaN(val)) setBusinessSeats(val);
   });
 
   btnGetPro?.addEventListener('click', () => {
@@ -379,7 +318,7 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
       navigate('/login');
       return;
     }
-    navigate(`/checkout?plan=business&cycle=${currentCycle}&seats=${currentBusinessSeats}`);
+    navigate(`/checkout?plan=business&cycle=${currentCycle}`);
   });
 
   btnGetEnterprise?.addEventListener('click', () => {

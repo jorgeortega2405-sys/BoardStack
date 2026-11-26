@@ -242,6 +242,20 @@ async function updateRoomRecord(roomId: string, params: UpdateRoomParams): Promi
     ]
   );
 
+  if (params.clear_expiration || params.expires_at !== undefined) {
+    await pool.execute(
+      'UPDATE room_files SET expires_at = ? WHERE room_id = ?',
+      [formattedExpiresAt, current.room_id]
+    );
+  }
+
+  if (params.clear_max_downloads || params.max_downloads !== undefined) {
+    await pool.execute(
+      'UPDATE room_files SET max_downloads = ? WHERE room_id = ?',
+      [maxDownloads, current.room_id]
+    );
+  }
+
   return findRoomByIdentifier(current.room_id);
 }
 
@@ -252,6 +266,31 @@ async function findRoomByIdentifier(identifier: string): Promise<DbRoom | null> 
     [clean, clean.toLowerCase(), clean.toUpperCase()]
   );
   return rows[0] || null;
+}
+
+async function ensureRoomOwnerToken(roomId: string): Promise<string> {
+  const cleanRoomId = roomId.trim();
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT owner_token FROM rooms WHERE room_id = ? LIMIT 1`,
+    [cleanRoomId]
+  );
+  const existingToken = typeof rows[0]?.owner_token === 'string' ? rows[0].owner_token.trim() : '';
+  if (existingToken.length > 0) {
+    return existingToken;
+  }
+
+  const generatedToken = crypto.randomBytes(32).toString('hex');
+  await pool.execute(
+    `UPDATE rooms SET owner_token = ?, updated_at = CURRENT_TIMESTAMP WHERE room_id = ? AND (owner_token IS NULL OR owner_token = '')`,
+    [generatedToken, cleanRoomId]
+  );
+
+  const [verifiedRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT owner_token FROM rooms WHERE room_id = ? LIMIT 1`,
+    [cleanRoomId]
+  );
+  const storedToken = typeof verifiedRows[0]?.owner_token === 'string' ? verifiedRows[0].owner_token.trim() : '';
+  return storedToken || generatedToken;
 }
 
 async function saveRoomFileRecord(params: SaveRoomFileParams): Promise<void> {
@@ -408,6 +447,7 @@ export {
   decryptRoomPassword,
   deleteRoomRecord,
   encryptRoomPassword,
+  ensureRoomOwnerToken,
   findRoomByIdentifier,
   getRoomFileById,
   getRoomFiles,

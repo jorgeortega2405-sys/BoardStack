@@ -105,7 +105,7 @@ function createRateLimiter(options: RateLimitOptions) {
 
 const getUserOrIpKey = (req: Request): string => {
   const session = getAdminSessionPayload(req);
-  return session ? `admin:${session.userId}` : getClientIp(req);
+  return session ? `admin:${session.activeId}` : getClientIp(req);
 };
 
 const adminLoginRateLimiter = createRateLimiter({

@@ -2,7 +2,18 @@ interface AvatarUserLike {
   avatar_url?: string | null;
   email?: string | null;
   id?: number | string | null;
+  subscription_tier?: string | null;
   username?: string | null;
+}
+
+type SubscriptionTier = 'business' | 'enterprise' | 'free' | 'pro';
+
+function normalizeSubscriptionTier(tier?: string | null): SubscriptionTier {
+  const normalized = String(tier || '').trim().toLowerCase();
+  if (normalized === 'enterprise' || normalized === 'business' || normalized === 'pro') {
+    return normalized;
+  }
+  return 'free';
 }
 
 const GRADIENT_PALETTES = [
@@ -66,9 +77,11 @@ function getUserAvatarUrl(user: AvatarUserLike | null | undefined, size = 80): s
 
 export {
   getAvatarDataUri,
-  getUserAvatarUrl
+  getUserAvatarUrl,
+  normalizeSubscriptionTier
 };
 
 export type {
-  AvatarUserLike
+  AvatarUserLike,
+  SubscriptionTier
 };

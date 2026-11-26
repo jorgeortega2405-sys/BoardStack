@@ -1,6 +1,10 @@
 import {
   clearAdminSessionCookie,
   completeAdminLogin,
+  getAdminSessionPayload,
+  hydrateLinkedAdminAccounts,
+  removeAccountFromAdminSession,
+  switchAccountInAdminSession,
   verifyPassword,
 } from '../services/auth.service.js';
 import {
@@ -12,8 +16,10 @@ import {
 import {
   findUserByEmail,
   findUserById,
+  getRevokedAtMap,
   getUser2FASecret,
   getUserPreferences,
+  revokeAdminSessions,
   updateUserPreferences,
   verifyAndConsumeBackupCode,
 } from '../services/user.service.js';
@@ -80,9 +86,10 @@ async function login(req: Request, res: Response): Promise<void> {
       consume2FALoginTicket(String(tempToken));
       logger.auth.info(`[AdminLogin2FA] Successful admin login for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
 
-      const result = await completeAdminLogin(res, userRow, access.isSuperAdmin, access.accessibleApps, clientIp);
+      const result = await completeAdminLogin(res, req, userRow, access.isSuperAdmin, access.accessibleApps, clientIp);
       res.status(200).json({
         accessibleApps: result.accessibleApps,
+        accounts: result.accounts,
         message: 'Login successful.',
         ok: true,
         user: result.user,
@@ -146,10 +153,11 @@ async function login(req: Request, res: Response): Promise<void> {
     }
 
     logger.auth.info(`[AdminLogin] Successful admin login for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
-    const result = await completeAdminLogin(res, userRow, access.isSuperAdmin, access.accessibleApps, clientIp);
+    const result = await completeAdminLogin(res, req, userRow, access.isSuperAdmin, access.accessibleApps, clientIp);
 
     res.status(200).json({
       accessibleApps: result.accessibleApps,
+      accounts: result.accounts,
       message: 'Login successful.',
       ok: true,
       user: result.user,
@@ -163,10 +171,11 @@ async function login(req: Request, res: Response): Promise<void> {
 async function me(req: Request, res: Response): Promise<void> {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    const session = await getValidatedAdminSession(req, res);
+    const session = await getValidatedAdminSession(req, res, { includeAccounts: true });
     if (!session) {
       res.status(200).json({
         accessibleApps: [],
+        accounts: [],
         ok: true,
         user: null,
       });
@@ -175,8 +184,9 @@ async function me(req: Request, res: Response): Promise<void> {
 
     res.status(200).json({
       accessibleApps: session.access.accessibleApps,
+      accounts: session.accounts,
       ok: true,
-      user: sanitizeAdminUser(session.user, session.access.isSuperAdmin),
+      user: session.user,
     });
   } catch (error) {
     logger.auth.error('[AdminMe] Error retrieving current session:', error);
@@ -184,15 +194,142 @@ async function me(req: Request, res: Response): Promise<void> {
   }
 }
 
+async function switchAccount(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const targetUserId = Number(req.body?.userId);
+    if (!targetUserId || !Number.isInteger(targetUserId) || targetUserId <= 0) {
+      res.status(400).json({ error: 'Invalid user identifier.', ok: false });
+      return;
+    }
+
+    const payload = getAdminSessionPayload(req);
+    if (!payload || !Array.isArray(payload.accounts) || payload.accounts.length === 0) {
+      res.status(401).json({ error: 'Authentication required.', ok: false });
+      return;
+    }
+
+    const targetEntry = payload.accounts.find((a) => a.id === targetUserId);
+    if (!targetEntry) {
+      res.status(400).json({ error: 'The requested account is not linked to this session.', ok: false });
+      return;
+    }
+
+    const dbUser = await findUserById(targetUserId);
+    if (!dbUser || dbUser.status !== 'active') {
+      removeAccountFromAdminSession(res, req, targetUserId);
+      res.status(403).json({ error: 'This account is inactive or unavailable.', ok: false });
+      return;
+    }
+
+    const revokedAtMap = await getRevokedAtMap([targetUserId]);
+    const revokedAt = revokedAtMap.get(targetUserId) || 0;
+    const entryIat = targetEntry.iat || payload.iat || 0;
+    if (revokedAt > 0 && (!entryIat || entryIat < revokedAt)) {
+      removeAccountFromAdminSession(res, req, targetUserId);
+      res.status(401).json({ error: 'The selected account session has expired.', ok: false });
+      return;
+    }
+
+    const access = await getUserAdminAccess(Number(dbUser.id));
+    if (!access.hasAccess) {
+      removeAccountFromAdminSession(res, req, targetUserId);
+      res.status(403).json({
+        code: 'ADMIN_ACCESS_DENIED',
+        error: 'You do not have permission to access the administration panel.',
+        ok: false,
+      });
+      return;
+    }
+
+    const user = sanitizeAdminUser(dbUser, access.isSuperAdmin);
+    const switchResult = switchAccountInAdminSession(res, req, user);
+    if (!switchResult.success || !switchResult.session) {
+      res.status(400).json({ error: 'Failed to switch account.', ok: false });
+      return;
+    }
+
+    const accounts = await hydrateLinkedAdminAccounts(req, res, switchResult.session, user, access.isSuperAdmin);
+    logger.auth.info(`[AdminSwitchAccount] Switched to account ID ${user.id} (${user.email}) from IP ${clientIp}`);
+
+    res.status(200).json({
+      accessibleApps: access.accessibleApps,
+      accounts,
+      message: 'Account switched successfully.',
+      ok: true,
+      user,
+    });
+  } catch (error) {
+    logger.auth.error('[AdminSwitchAccount] Error switching account:', error);
+    res.status(500).json({ error: 'Error switching account.', ok: false });
+  }
+}
+
 async function logout(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
-  clearAdminSessionCookie(res);
-  logger.auth.info(`[AdminLogout] Admin session cleared from IP ${clientIp}`);
-  res.status(200).json({
-    accessibleApps: [],
-    ok: true,
-    user: null,
-  });
+  try {
+    const rawUserId = req.body?.userId;
+    const targetUserId = rawUserId !== undefined ? Number(rawUserId) : undefined;
+    const existingPayload = getAdminSessionPayload(req);
+    const idToRevoke = targetUserId && !isNaN(targetUserId) ? targetUserId : existingPayload?.activeId;
+
+    if (idToRevoke) {
+      await revokeAdminSessions(idToRevoke);
+    }
+
+    const removed = removeAccountFromAdminSession(res, req, targetUserId);
+    logger.auth.info(`[AdminLogout] Admin account ${idToRevoke || 'active'} logged out from IP ${clientIp}`);
+
+    if (removed.session) {
+      const nextSession = await getValidatedAdminSession(req, res, { includeAccounts: true });
+      if (nextSession) {
+        res.status(200).json({
+          accessibleApps: nextSession.access.accessibleApps,
+          accounts: nextSession.accounts,
+          ok: true,
+          remainingCount: nextSession.accounts.length,
+          switched: true,
+          user: nextSession.user,
+        });
+        return;
+      }
+    }
+
+    clearAdminSessionCookie(res, req);
+    res.status(200).json({
+      accessibleApps: [],
+      accounts: [],
+      ok: true,
+      remainingCount: 0,
+      switched: false,
+      user: null,
+    });
+  } catch (error) {
+    logger.auth.error('[AdminLogout] Error in logout:', error);
+    res.status(500).json({ error: 'Error logging out.', ok: false });
+  }
+}
+
+async function logoutAll(req: Request, res: Response): Promise<void> {
+  const clientIp = getClientIp(req);
+  try {
+    const existingPayload = getAdminSessionPayload(req);
+    if (existingPayload && Array.isArray(existingPayload.accounts)) {
+      await Promise.all(existingPayload.accounts.map((acc) => revokeAdminSessions(acc.id)));
+    }
+    clearAdminSessionCookie(res, req);
+    logger.auth.info(`[AdminLogoutAll] Cleared all admin sessions from IP ${clientIp}`);
+    res.status(200).json({
+      accessibleApps: [],
+      accounts: [],
+      message: 'All sessions have been terminated.',
+      ok: true,
+      user: null,
+    });
+  } catch (error) {
+    logger.auth.error('[AdminLogoutAll] Error in logoutAll:', error);
+    res.status(500).json({ error: 'Error terminating all sessions.', ok: false });
+  }
 }
 
 async function getPreferences(req: Request, res: Response): Promise<void> {
@@ -233,6 +370,8 @@ export {
   getPreferences,
   login,
   logout,
+  logoutAll,
   me,
+  switchAccount,
   updatePreferences
 };

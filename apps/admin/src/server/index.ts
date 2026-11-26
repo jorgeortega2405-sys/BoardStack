@@ -12,6 +12,7 @@ import { getValidatedAdminSession } from './middlewares/auth.middleware.js';
 import http from 'http';
 import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
+import { normalizeSubscriptionTier } from './utils/user.util.js';
 import path from 'path';
 import { testDatabaseConnection } from './config/database.config.js';
 import { testRedisConnection } from './config/redis.config.js';
@@ -143,13 +144,13 @@ app.get('*', async (req: Request, res: Response) => {
   const remainingRoute = '/' + segments.slice(1).join('/');
   const normRoute = remainingRoute.replace(/\/+$/, '') || '/';
 
-  const session = await getValidatedAdminSession(req, res);
+  const session = await getValidatedAdminSession(req, res, { includeAccounts: true });
 
   if (!session && normRoute !== '/login') {
     return res.redirect(302, `/${lang}/login`);
   }
 
-  if (session && (normRoute === '/login' || normRoute === '/')) {
+  if (session && normRoute === '/') {
     const firstApp = session.access.accessibleApps[0];
     const firstPage = firstApp?.pages[0];
     if (firstApp && firstPage) {
@@ -185,6 +186,7 @@ app.get('*', async (req: Request, res: Response) => {
     const sessionPayload = session
       ? {
           accessibleApps: session.access.accessibleApps,
+          accounts: session.accounts,
           user: session.user,
         }
       : null;
@@ -207,6 +209,10 @@ app.get('*', async (req: Request, res: Response) => {
       const placeholderDataUri = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E";
       html = html.replace(`data-ref="avatar-img" src="${placeholderDataUri}"`, `data-ref="avatar-img" src="${avatarSrc}"`);
       html = html.replace(`data-ref="active-account-avatar" src="${placeholderDataUri}"`, `data-ref="active-account-avatar" src="${avatarSrc}"`);
+
+      const tier = normalizeSubscriptionTier(user.subscription_tier);
+      html = html.replace('data-ref="btn-avatar"', `data-ref="btn-avatar" data-tier="${tier}"`);
+      html = html.replace('data-ref="active-account-avatar-box"', `data-ref="active-account-avatar-box" data-tier="${tier}"`);
 
       const safeName = escapeHtml(user.username || '');
       const safeEmail = escapeHtml(user.email || '');
