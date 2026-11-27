@@ -1,5 +1,6 @@
 import { appPool, corePool } from '../config/database.config.js';
 import crypto from 'crypto';
+import { DEFAULT_USER_ROLE } from '../config/roles.config.js';
 import { deleteFromS3, sanitizeAndUploadToS3 } from './s3.service.js';
 import type {
   EnterpriseContractItem,
@@ -82,7 +83,7 @@ interface ContractRow extends RowDataPacket {
   uuid: string;
 }
 
-const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
+const DEFAULT_STORAGE_LIMIT_BYTES = 0;
 const MIN_STORAGE_BYTES = 1073741824;
 const ALLOWED_CONTRACT_MIMES = [
   'application/pdf',
@@ -419,8 +420,8 @@ async function ensureUserAppMembershipForCore(userId: number, appId: number): Pr
   if (existingRoles.length === 0) {
     await corePool.execute(
       `INSERT IGNORE INTO user_app_roles (user_id, app_id, role_id)
-       SELECT ?, ?, id FROM roles WHERE is_default = TRUE LIMIT 1`,
-      [userId, appId]
+       SELECT ?, ?, id FROM roles WHERE is_default = TRUE OR UPPER(slug) = ? ORDER BY is_default DESC, id ASC LIMIT 1`,
+      [userId, appId, DEFAULT_USER_ROLE.slug]
     );
   }
 }
@@ -462,7 +463,7 @@ async function provisionEnterpriseSubscription(
   const durationMonths = Math.floor(input.durationMonths);
   const contractAmount = Number(input.contractAmount.toFixed(2));
   const cleanCurrency = (input.currency || 'USD').trim().toUpperCase().slice(0, 10) || 'USD';
-  const cleanOrgName = (input.organizationName.trim() || `${targetUser.username} Organization`).slice(0, 100);
+  const cleanOrgName = (input.organizationName.trim() || targetUser.username || 'Enterprise').slice(0, 100);
   const rawCleanDomain = input.organizationDomain
     ? input.organizationDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')
     : '';

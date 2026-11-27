@@ -163,6 +163,8 @@ async function createSettingsAccessibilityView(navigate: (path: string) => void)
     if (switchContrast) switchContrast.checked = Boolean(prefs.high_contrast);
     if (switchMotion) switchMotion.checked = Boolean(prefs.reduce_motion);
     if (switchAlerts) switchAlerts.checked = Boolean(prefs.extended_alerts);
+    document.documentElement.setAttribute('data-contrast', prefs.high_contrast ? 'high' : 'normal');
+    document.documentElement.setAttribute('data-reduce-motion', prefs.reduce_motion ? 'true' : 'false');
   };
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -209,12 +211,14 @@ async function createSettingsAccessibilityView(navigate: (path: string) => void)
   switchContrast?.addEventListener('change', () => {
     const val = switchContrast.checked;
     prefs.high_contrast = val;
+    document.documentElement.setAttribute('data-contrast', val ? 'high' : 'normal');
     void savePreference({ high_contrast: val });
   });
 
   switchMotion?.addEventListener('change', () => {
     const val = switchMotion.checked;
     prefs.reduce_motion = val;
+    document.documentElement.setAttribute('data-reduce-motion', val ? 'true' : 'false');
     void savePreference({ reduce_motion: val });
   });
 

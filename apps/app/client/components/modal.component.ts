@@ -533,7 +533,7 @@ async function open2FAModal(options: { onClose?: () => void; onSuccess?: () => v
         });
         qrCode.append(qrContainer);
       }).catch(() => {
-        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(qrUri)}" width="170" height="170" alt="QR Code" />`;
+        qrContainer.innerHTML = `<div class="component-card__subtext" data-ref="qr-fallback-info">${i18n.t('auth.two_factor_manual_entry')}</div>`;
       });
     }
 

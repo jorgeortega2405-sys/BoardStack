@@ -396,11 +396,11 @@ async function deleteRoomRecord(roomId: string): Promise<void> {
 async function cleanupExpiredRoomsAndFiles(): Promise<void> {
   try {
     const [expiredFileStats] = await pool.execute<RowDataPacket[]>(
-      `SELECT rf.room_id, COALESCE(rf.user_id, r.owner_id) AS user_id, SUM(rf.size) AS freed_bytes
+      `SELECT rf.room_id, COALESCE(r.owner_id, rf.user_id) AS user_id, SUM(rf.size) AS freed_bytes
        FROM room_files rf
        LEFT JOIN rooms r ON rf.room_id = r.room_id
        WHERE rf.expires_at IS NOT NULL AND rf.expires_at <= NOW()
-       GROUP BY rf.room_id, COALESCE(rf.user_id, r.owner_id)`
+       GROUP BY rf.room_id, COALESCE(r.owner_id, rf.user_id)`
     );
 
     for (const row of expiredFileStats) {

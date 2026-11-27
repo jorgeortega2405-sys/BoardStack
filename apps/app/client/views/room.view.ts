@@ -324,6 +324,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const localFileBlobs = new Map<string, LocalPendingCloudFile>();
   const cloudFileIds = new Set<string>();
   let currentFolderId: string | null = null;
+  let currentParticipants: RoomParticipant[] = [];
 
   const topEl = document.createElement('div');
   topEl.className = 'component-top';
@@ -1926,8 +1927,17 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       formData.append('sender_username', item.senderUsername);
       if (item.senderAvatar) formData.append('sender_avatar', item.senderAvatar);
 
+      const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
+                            (currentSlug ? sessionStorage.getItem(`room_password_${currentSlug}`) : null) || '';
+      const headers: Record<string, string> = {};
+      if (savedPassword) {
+        headers['x-room-password'] = savedPassword;
+        formData.append('password', savedPassword);
+      }
+
       const res = await fetch(`/api/rooms/${encodeURIComponent(resolvedRoomId)}/files/upload`, {
         body: formData,
+        headers,
         method: 'POST',
       });
       const json = await res.json().catch(() => ({}));
@@ -2140,7 +2150,12 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       }
     });
 
-    const needRelay = !sentP2P || Array.from(peers.values()).some((p) => !p.dataChannel || p.dataChannel.readyState !== 'open');
+    const otherParticipants = currentParticipants.filter((p) => p.peer_id !== myPeerId);
+    const needRelay = !sentP2P ||
+      otherParticipants.some((p) => {
+        const peer = peers.get(p.peer_id);
+        return !peer || !peer.dataChannel || peer.dataChannel.readyState !== 'open';
+      });
     if (needRelay && ws && ws.readyState === WebSocket.OPEN) {
       ws.send(msgStr);
     }
@@ -2763,6 +2778,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       uniqueParticipantsMap.set(p.peer_id, p);
     });
     const uniqueParticipants = Array.from(uniqueParticipantsMap.values());
+    currentParticipants = uniqueParticipants;
     const activePeerIds = new Set(uniqueParticipants.map((p) => p.peer_id));
 
     let removedStalePeer = false;

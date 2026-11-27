@@ -1,4 +1,5 @@
 import { createFooterComponent } from '../components/footer.component.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { currentUser } from '../services/api.service.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -326,6 +327,8 @@ async function createPricingView(navigate: (path: string) => void): Promise<HTML
     navigate('/contact-sales');
   });
 
+  const topLogoBlock = createHeaderLogoComponent(navigate);
+  container.appendChild(topLogoBlock);
   container.appendChild(plansBlock);
   container.appendChild(legalBlock);
   container.appendChild(footerBlock);

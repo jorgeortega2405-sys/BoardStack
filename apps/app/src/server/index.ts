@@ -3,13 +3,15 @@ import { cleanupExpiredRoomsAndFiles } from './services/room.service.js';
 import compression from 'compression';
 import { config } from './config/env.config.js';
 import cookieParser from 'cookie-parser';
-import { corePool, testDatabaseConnection } from './config/database.config.js';
+import { corePool, pool, testDatabaseConnection } from './config/database.config.js';
+import contactRoutes from './routes/contact.routes.js';
 import { csrfProtectionMiddleware } from './middlewares/csrf.middleware.js';
 import { errorHandlerMiddleware, httpLoggerMiddleware } from './middlewares/logger.middleware.js';
 import { escapeHtml } from './utils/html.util.js';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
 import { getLinkedAccounts, getValidatedCurrentUser } from './middlewares/auth.middleware.js';
+import { getRedisClient, testRedisConnection } from './config/redis.config.js';
 import http from 'http';
 import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
@@ -20,7 +22,7 @@ import roomRoutes from './routes/room.routes.js';
 import salesLeadRoutes from './routes/sales-lead.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
-import { testRedisConnection } from './config/redis.config.js';
+import { syncRolesCatalog } from './services/role.service.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -61,16 +63,35 @@ setInterval(() => {
 }, 3600000);
 
 app.use('/api', authRoutes);
+app.use('/api', contactRoutes);
 app.use('/api', organizationRoutes);
 app.use('/api', roomRoutes);
 app.use('/api', salesLeadRoutes);
 app.use('/api', settingsRoutes);
 app.use('/api', subscriptionRoutes);
 
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({
+app.get('/api/health', async (_req: Request, res: Response) => {
+  let dbOk = false;
+  let redisOk = false;
+  try {
+    await pool.query('SELECT 1');
+    dbOk = true;
+  } catch {}
+  try {
+    const redis = getRedisClient();
+    if (redis && (await redis.ping()) === 'PONG') {
+      redisOk = true;
+    }
+  } catch {}
+
+  const isHealthy = dbOk && redisOk;
+  res.status(isHealthy ? 200 : 503).json({
     app: 'BoardStack',
-    status: 'ok',
+    checks: {
+      database: dbOk ? 'ok' : 'unreachable',
+      redis: redisOk ? 'ok' : 'unreachable',
+    },
+    status: isHealthy ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
@@ -459,12 +480,21 @@ server.listen(PORT, HOST, async () => {
   void testRedisConnection();
   void initS3Bucket();
   void runDatabaseHousekeeping();
+  void syncRolesCatalog();
 });
 
 const gracefulShutdown = (signal: string) => {
   logger.system.info(`[BoardStack] Signal ${signal} received. Closing HTTP server...`);
-  server.close(() => {
+  server.close(async () => {
     logger.system.info('[BoardStack] HTTP server closed gracefully.');
+    try {
+      await pool.end();
+      await corePool.end();
+    } catch {}
+    try {
+      const redis = getRedisClient();
+      await redis?.quit();
+    } catch {}
     process.exit(0);
   });
 };

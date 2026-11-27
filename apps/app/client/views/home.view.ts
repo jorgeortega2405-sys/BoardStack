@@ -1,6 +1,7 @@
 import { createFooterComponent } from '../components/footer.component.js';
-import { i18n } from '../i18n/i18n.service.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { currentUser, getApi } from '../services/api.service.js';
+import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { toast } from '../services/toast.service.js';
 
@@ -103,7 +104,10 @@ async function createHomeView(navigate?: (path: string) => void): Promise<HTMLEl
 
     enterBtn?.setAttribute('disabled', 'true');
     try {
-      const res = await getApi<{ code?: string; ok: boolean; requires_password?: boolean; room_id?: string; slug?: string }>(`/api/rooms/resolve/${encodeURIComponent(queryKey)}`);
+      let res = await getApi<{ code?: string; ok: boolean; requires_password?: boolean; room_id?: string; slug?: string }>(`/api/rooms/resolve/${encodeURIComponent(queryKey)}`);
+      if (!res.ok && queryKey !== rawVal && /^[a-zA-Z0-9_\-]+$/.test(rawVal)) {
+        res = await getApi<{ code?: string; ok: boolean; requires_password?: boolean; room_id?: string; slug?: string }>(`/api/rooms/resolve/${encodeURIComponent(rawVal)}`);
+      }
       if (res.ok && res.room_id) {
         navigate?.(`/room/${res.slug || res.room_id}`);
       } else {
@@ -127,6 +131,8 @@ async function createHomeView(navigate?: (path: string) => void): Promise<HTMLEl
     }
   });
 
+  const topLogoBlock = createHeaderLogoComponent(navigate);
+  container.appendChild(topLogoBlock);
   container.appendChild(heroBlock);
   container.appendChild(featuresBlock);
 

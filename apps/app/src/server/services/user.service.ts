@@ -68,7 +68,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
 };
 
-const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
+const DEFAULT_STORAGE_LIMIT_BYTES = 0;
 
 async function ensureAppUserProfile(userId: number): Promise<void> {
   await pool.execute(

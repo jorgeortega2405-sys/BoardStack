@@ -18,6 +18,7 @@
     "dev:watch": "npm run dev:watch --workspace=app",
     "start": "npm run start --workspace=app",
     "start:admin": "npm run start --workspace=admin",
+    "test": "npm run test --workspace=app",
     "typecheck": "npm run typecheck --workspace=app",
     "typecheck:admin": "npm run typecheck --workspace=admin",
     "typecheck:all": "npm run typecheck --workspace=app && npm run typecheck --workspace=admin"

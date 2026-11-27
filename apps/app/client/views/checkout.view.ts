@@ -47,7 +47,8 @@ async function createCheckoutView(navigate: (path: string) => void): Promise<HTM
     pro: 1,
   };
   const currentTier = currentUser.subscription_tier || 'free';
-  const isAlreadyActive = (TIER_RANK[currentTier] || 0) >= TIER_RANK[planParam];
+  const isSubscriptionActive = currentUser.subscription_status === 'active';
+  const isAlreadyActive = isSubscriptionActive && (TIER_RANK[currentTier] || 0) >= TIER_RANK[planParam];
   const activeStatusTitle = currentTier === 'enterprise'
     ? i18n.t('checkout.already_active_enterprise_title')
     : (planParam === 'business' || currentTier === 'business'

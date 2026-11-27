@@ -1,4 +1,5 @@
 import { createFooterComponent } from '../components/footer.component.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 
@@ -97,7 +98,9 @@ async function createAboutView(navigate?: (path: string) => void): Promise<HTMLE
   renderIcons(valuesBlock);
 
   const footerBlock = createFooterComponent(navigate);
+  const topLogoBlock = createHeaderLogoComponent(navigate);
 
+  container.appendChild(topLogoBlock);
   container.appendChild(heroBlock);
   container.appendChild(missionBlock);
   container.appendChild(valuesBlock);

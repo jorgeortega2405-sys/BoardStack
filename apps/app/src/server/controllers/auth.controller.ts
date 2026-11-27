@@ -1,3 +1,26 @@
+import { config } from '../config/env.config.js';
+import { getRedisClient } from '../config/redis.config.js';
+import { SUPER_ADMIN_ROLE_SLUG } from '../config/roles.config.js';
+import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
+import {
+  clearSessionCookie,
+  completeUserLogin,
+  getMultiAccountSession,
+  hashPassword,
+  removeAccountFromSession,
+  switchAccountInSession,
+  updateActiveAccountInSession,
+  verifyPassword,
+} from '../services/auth.service.js';
+import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
+import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles, hasRole } from '../services/role.service.js';
+import { verifyTurnstileToken } from '../services/turnstile.service.js';
+import {
+  consume2FALoginTicket,
+  create2FALoginTicket,
+  verify2FALoginTicket,
+  verifyTotpCode,
+} from '../services/two-factor.service.js';
 import {
   cacheUserData,
   createUser,
@@ -13,22 +36,6 @@ import {
   verifyAndConsumeBackupCode,
 } from '../services/user.service.js';
 import {
-  clearSessionCookie,
-  completeUserLogin,
-  hashPassword,
-  removeAccountFromSession,
-  switchAccountInSession,
-  updateActiveAccountInSession,
-  verifyPassword,
-} from '../services/auth.service.js';
-import { config } from '../config/env.config.js';
-import {
-  consume2FALoginTicket,
-  create2FALoginTicket,
-  verify2FALoginTicket,
-  verifyTotpCode,
-} from '../services/two-factor.service.js';
-import {
   createPasswordResetToken,
   createRegistrationTicket,
   getPendingRegistration,
@@ -37,15 +44,12 @@ import {
   verifyAndConsumeRegistrationCode,
   verifyRegistrationTicket,
 } from '../services/verification.service.js';
-import { getAllPermissions, getAllRoles, getUserPermissions, getUserRoles, hasRole } from '../services/role.service.js';
-import { getClientIp } from '../utils/ip.util.js';
-import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
-import { logger } from '../utils/logger.js';
-import type { Request, Response } from 'express';
-import { sanitizeUser } from '../utils/user.util.js';
-import { sendError, sendSuccess } from '../utils/response.util.js';
-import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
 import type { UserPayload } from '../types/auth.types.js';
+import { getClientIp } from '../utils/ip.util.js';
+import { logger } from '../utils/logger.js';
+import { sendError, sendSuccess } from '../utils/response.util.js';
+import { sanitizeUser } from '../utils/user.util.js';
+import type { Request, Response } from 'express';
 
 async function validateStage1(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
@@ -95,6 +99,11 @@ async function sendRegistrationCode(req: Request, res: Response): Promise<void> 
     if (!hasValidTicket && config.turnstile.enabled) {
       if (!turnstileToken || typeof turnstileToken !== 'string') {
         res.status(403).json({ error: 'Security verification required. Please complete step 1 first.' });
+        return;
+      }
+      const turnstileResult = await verifyTurnstileToken(turnstileToken, clientIp);
+      if (!turnstileResult.success) {
+        res.status(403).json({ error: turnstileResult.error || 'Security verification failed.' });
         return;
       }
     }
@@ -178,6 +187,11 @@ async function resendRegistrationCode(req: Request, res: Response): Promise<void
     if (!hasValidTicket && config.turnstile.enabled) {
       if (!turnstileToken || typeof turnstileToken !== 'string') {
         res.status(403).json({ error: 'Security verification required. Please restart registration.' });
+        return;
+      }
+      const turnstileResult = await verifyTurnstileToken(turnstileToken, clientIp);
+      if (!turnstileResult.success) {
+        res.status(403).json({ error: turnstileResult.error || 'Security verification failed.' });
         return;
       }
     }
@@ -288,7 +302,7 @@ async function login(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, SUPER_ADMIN_ROLE_SLUG));
       if (!hasAppAccess) {
         res.status(403).json({ error: 'No active account found for this application.' });
         return;
@@ -314,6 +328,18 @@ async function login(req: Request, res: Response): Promise<void> {
       }
 
       if (!is2faValid) {
+        const redis = getRedisClient();
+        const tokenFailKey = `2fa:attempts:${tempToken}`;
+        try {
+          const fails = await redis.incr(tokenFailKey);
+          if (fails === 1) {
+            await redis.expire(tokenFailKey, 300);
+          }
+          if (fails >= 5) {
+            consume2FALoginTicket(String(tempToken));
+            await redis.del(tokenFailKey);
+          }
+        } catch {}
         logger.auth.warn(`[Login2FA] Invalid 2FA code for user ID ${userRow.id} (${userRow.email}) from IP ${clientIp}`);
         res.status(401).json({ error: 'Invalid two-factor authentication code or backup code.' });
         return;
@@ -344,9 +370,26 @@ async function login(req: Request, res: Response): Promise<void> {
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
+    const redis = getRedisClient();
+    const lockoutKey = `login:lockout:${trimmedEmail}`;
+    try {
+      const attempts = await redis.get(lockoutKey);
+      if (attempts && Number(attempts) >= 5) {
+        logger.auth.warn(`[Login] Account locked due to excessive failed attempts: ${trimmedEmail} (IP: ${clientIp})`);
+        res.status(429).json({ error: 'Account temporarily locked due to excessive failed attempts. Please try again in 15 minutes.' });
+        return;
+      }
+    } catch {}
+
     const userRow = await findUserByEmail(trimmedEmail);
 
     if (!userRow || !userRow.password_hash) {
+      try {
+        const current = await redis.incr(lockoutKey);
+        if (current === 1) {
+          await redis.expire(lockoutKey, 900);
+        }
+      } catch {}
       logger.auth.warn(`[Login] Failed login attempt for ${trimmedEmail} (user not found or no password) from IP ${clientIp}`);
       res.status(401).json({ error: 'Invalid credentials.' });
       return;
@@ -354,10 +397,20 @@ async function login(req: Request, res: Response): Promise<void> {
 
     const isMatch = await verifyPassword(String(password), userRow.password_hash);
     if (!isMatch) {
+      try {
+        const current = await redis.incr(lockoutKey);
+        if (current === 1) {
+          await redis.expire(lockoutKey, 900);
+        }
+      } catch {}
       logger.auth.warn(`[Login] Invalid password for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
       res.status(401).json({ error: 'Invalid credentials.' });
       return;
     }
+
+    try {
+      await redis.del(lockoutKey);
+    } catch {}
 
     if (userRow.status !== 'active') {
       logger.auth.warn(`[Login] Suspended/inactive account attempt for user ID ${userRow.id} (${trimmedEmail}) from IP ${clientIp}`);
@@ -365,7 +418,7 @@ async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+    const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, SUPER_ADMIN_ROLE_SLUG));
     if (!hasAppAccess) {
       logger.auth.warn(`[Login] User ID ${userRow.id} (${trimmedEmail}) does not belong to app ${config.appSlug}`);
       res.status(403).json({ error: 'No active account found for this application.' });
@@ -606,8 +659,25 @@ async function logout(req: Request, res: Response): Promise<void> {
   try {
     const { userId } = req.body || {};
     const targetUserId = userId ? Number(userId) : undefined;
-    const currentUser = getCurrentUser(req);
-    const idToRevoke = targetUserId || currentUser?.id;
+    const session = getMultiAccountSession(req);
+    if (!session || !session.accounts || session.accounts.length === 0) {
+      clearSessionCookie(res);
+      res.status(200).json({
+        accounts: [],
+        ok: true,
+        remainingCount: 0,
+        switched: false,
+        user: null,
+      });
+      return;
+    }
+
+    const idToRevoke = targetUserId || session.activeId;
+    const isAccountInSession = session.accounts.some((a) => a.id === idToRevoke);
+    if (!isAccountInSession) {
+      res.status(403).json({ error: 'Cannot log out account not present in current session.', ok: false });
+      return;
+    }
 
     if (idToRevoke) {
       await revokeUserSessions(idToRevoke);
@@ -633,9 +703,13 @@ async function logout(req: Request, res: Response): Promise<void> {
 async function logoutAll(req: Request, res: Response): Promise<void> {
   const clientIp = getClientIp(req);
   try {
-    const user = getCurrentUser(req);
-    if (user && user.id) {
-      await revokeUserSessions(user.id);
+    const session = getMultiAccountSession(req);
+    if (session && Array.isArray(session.accounts)) {
+      for (const account of session.accounts) {
+        if (account.id) {
+          await revokeUserSessions(account.id);
+        }
+      }
     }
     clearSessionCookie(res);
     logger.auth.info(`[LogoutAll] Cleared all sessions from IP ${clientIp}`);

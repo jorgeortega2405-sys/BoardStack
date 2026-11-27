@@ -271,7 +271,25 @@ async function logout(req: Request, res: Response): Promise<void> {
     const rawUserId = req.body?.userId;
     const targetUserId = rawUserId !== undefined ? Number(rawUserId) : undefined;
     const existingPayload = getAdminSessionPayload(req);
-    const idToRevoke = targetUserId && !isNaN(targetUserId) ? targetUserId : existingPayload?.activeId;
+    if (!existingPayload || !existingPayload.accounts || existingPayload.accounts.length === 0) {
+      clearAdminSessionCookie(res, req);
+      res.status(200).json({
+        accessibleApps: [],
+        accounts: [],
+        ok: true,
+        remainingCount: 0,
+        switched: false,
+        user: null,
+      });
+      return;
+    }
+
+    const idToRevoke = targetUserId && !isNaN(targetUserId) ? targetUserId : existingPayload.activeId;
+    const isAccountInSession = existingPayload.accounts.some((a) => a.id === idToRevoke);
+    if (!isAccountInSession) {
+      res.status(403).json({ error: 'Cannot log out account not present in current session.', ok: false });
+      return;
+    }
 
     if (idToRevoke) {
       await revokeAdminSessions(idToRevoke);

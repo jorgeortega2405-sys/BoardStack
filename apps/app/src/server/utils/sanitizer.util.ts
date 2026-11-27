@@ -264,7 +264,7 @@ function scanForMaliciousPayloads(buffer: Buffer, category: FileCategory): void 
     }
   }
 
-  if (category === 'image' || category === 'document' || category === 'text') {
+  if (category === 'image' || category === 'document' || category === 'text' || category === 'any') {
     const sampleSize = Math.min(buffer.length, 10 * 1024 * 1024);
     const sampleString = buffer.subarray(0, sampleSize).toString('latin1');
 

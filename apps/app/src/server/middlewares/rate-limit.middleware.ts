@@ -206,6 +206,13 @@ const settingsGeneralRateLimiter = createRateLimiter({
   windowSeconds: 60,
 });
 
+const contactRateLimiter = createRateLimiter({
+  keyPrefix: 'rl:contact:submit',
+  maxRequests: 5,
+  message: 'Too many contact messages submitted. Please wait 15 minutes before submitting again.',
+  windowSeconds: 900,
+});
+
 const salesLeadRateLimiter = createRateLimiter({
   keyPrefix: 'rl:sales:contact',
   maxRequests: 5,
@@ -236,6 +243,7 @@ export {
   authRegisterVerifyRateLimiter,
   authResendCodeRateLimiter,
   authResetPasswordRateLimiter,
+  contactRateLimiter,
   createRateLimiter,
   generalAuthRateLimiter,
   roomResolveRateLimiter,

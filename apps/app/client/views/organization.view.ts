@@ -60,12 +60,13 @@ function renderOverviewHtml(
 ): string {
   const seatsLimit = org.seats_limit || 3;
   const availableSeats = Math.max(0, seatsLimit - membersCount);
+  const displayOrgName = (org.name || '').replace(/\s+Organization$/i, '').trim() || org.name;
 
   return `
     <div class="component-top" data-ref="org-top-bar">
       <div class="component-top__left" data-ref="org-top-left">
         <div class="component-top__title-box" data-ref="org-title-heading">
-          <span class="component-top__title-text" data-ref="org-top-title">${org.name}</span>
+          <span class="component-top__title-text" data-ref="org-top-title">${escapeHtml(displayOrgName)}</span>
         </div>
       </div>
       <div class="component-top__right" data-ref="org-top-right">
@@ -146,12 +147,10 @@ function renderOverviewHtml(
 }
 
 function renderDetailsHtml(org: OrgData): string {
+  const displayOrgName = (org.name || '').replace(/\s+Organization$/i, '').trim() || org.name;
   return `
     <div class="component-top" data-ref="details-top-bar">
       <div class="component-top__left" data-ref="details-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-        </button>
         <div class="component-top__title-box" data-ref="details-title-heading">
           <span class="component-top__title-text" data-ref="details-top-title">${i18n.t('organization.general_title')}</span>
         </div>
@@ -177,7 +176,7 @@ function renderDetailsHtml(org: OrgData): string {
               type="text"
               class="field__input"
               data-ref="input-org-name"
-              value="${escapeHtml(org.name)}"
+              value="${escapeHtml(displayOrgName)}"
               placeholder=" "
               required
             />
@@ -217,9 +216,6 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
   return `
     <div class="component-top" data-ref="saml-top-bar">
       <div class="component-top__left" data-ref="saml-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-        </button>
         <div class="component-top__title-box" data-ref="saml-title-heading">
           <span class="component-top__title-text" data-ref="saml-top-title">${i18n.t('organization.saml_title')}</span>
         </div>
@@ -341,9 +337,6 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[], canSelfBuySea
   return `
     <div class="component-top" data-ref="members-top-bar">
       <div class="component-top__left" data-ref="members-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-        </button>
         <div class="component-top__title-box" data-ref="members-title-heading">
           <span class="component-top__title-text" data-ref="members-top-title">${i18n.t('organization.seats_title')}</span>
           <span class="component-badge component-badge--sm" data-ref="members-count-badge">${members.length} / ${seatsLimit}</span>
@@ -623,10 +616,6 @@ async function createOrganizationView(
     container.innerHTML = renderDetailsHtml(org);
     renderIcons(container);
 
-    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
-      navigate(baseBackPath);
-    });
-
     const handleSaveDetails = async (btnEl: HTMLButtonElement | null) => {
       const name = (container.querySelector<HTMLInputElement>('[data-ref="input-org-name"]')?.value || '').trim();
       const slug = (container.querySelector<HTMLInputElement>('[data-ref="input-org-slug"]')?.value || '').trim();
@@ -663,10 +652,6 @@ async function createOrganizationView(
     container.innerHTML = renderSamlHtml(org, spAcsUrl, spEntityId);
     renderIcons(container);
 
-    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
-      navigate(baseBackPath);
-    });
-
     container.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -687,6 +672,10 @@ async function createOrganizationView(
       if (btnEl) btnEl.disabled = true;
       try {
         const res = await putApi<{ ok: boolean; org: OrgData }>('/api/organization', {
+          saml_cert: samlCert,
+          saml_enabled: samlEnabled,
+          saml_entry_point: samlEntryPoint,
+          saml_issuer: samlIssuer,
           samlCert,
           samlEnabled,
           samlEntryPoint,
@@ -722,10 +711,6 @@ async function createOrganizationView(
 
     container.innerHTML = renderMembersHtml(org, membersList, canSelfBuySeats);
     renderIcons(container);
-
-    container.querySelector('[data-ref="btn-back-to-org"]')?.addEventListener('click', () => {
-      navigate(baseBackPath);
-    });
 
     const seatsLimit = org.seats_limit || 3;
     const countBadge = container.querySelector<HTMLElement>('[data-ref="members-count-badge"]');
@@ -1033,24 +1018,26 @@ async function createOrganizationView(
               <span class="field__label">${i18n.t('organization.add_member_email')}</span>
             </label>
 
-            <div class="component-dropdown component-dropdown--field" data-ref="dropdown-modal-member-role">
+            <div class="component-dropdown dropdown-wrapper component-dropdown--full" data-ref="dropdown-modal-member-role">
               <input type="hidden" data-ref="select-modal-member-role" value="member" />
-              <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="trigger-modal-member-role" style="height: 55px; border-radius: 16px;">
-                <div class="component-dropdown__trigger-left dropdown-trigger__left" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;">
-                  <span style="font-size: 11px; color: var(--text-secondary); line-height: 1;">${i18n.t('organization.add_member_role')}</span>
-                  <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="text-modal-member-role" style="font-size: 14px; font-weight: 500;">${i18n.t('organization.role_member')}</span>
+              <button type="button" class="component-dropdown__trigger dropdown-trigger" data-ref="trigger-modal-member-role" aria-label="${i18n.t('organization.add_member_role')}">
+                <div class="component-dropdown__trigger-left dropdown-trigger__left">
+                  <svg class="component-icon component-dropdown__trigger-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
+                  <span class="component-dropdown__trigger-text dropdown-trigger__text" data-ref="text-modal-member-role">${i18n.t('organization.role_member')}</span>
                 </div>
                 <svg class="component-icon component-dropdown__trigger-chevron dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
               <div class="component-menu-backdrop dropdown-backdrop">
                 <div class="component-menu component-menu--dropdown component-menu--w-full component-menu--h-auto menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto">
                   <div class="component-menu__list menu-panel__list">
-                    <div class="component-menu__item menu-panel__item is-selected" data-action="select-item" data-value="member" data-label="${i18n.t('organization.role_member')}">
-                      <span>${i18n.t('organization.role_member')}</span>
-                    </div>
-                    <div class="component-menu__item menu-panel__item" data-action="select-item" data-value="admin" data-label="${i18n.t('organization.role_admin')}">
-                      <span>${i18n.t('organization.role_admin')}</span>
-                    </div>
+                    <button type="button" class="component-menu__item menu-item is-active" data-ref="opt-member" data-value="member">
+                      <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
+                      <span class="component-menu__item-text menu-item__text">${i18n.t('organization.role_member')}</span>
+                    </button>
+                    <button type="button" class="component-menu__item menu-item" data-ref="opt-admin" data-value="admin">
+                      <svg class="component-icon component-menu__item-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#admin_panel_settings"></use></svg>
+                      <span class="component-menu__item-text menu-item__text">${i18n.t('organization.role_admin')}</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1095,7 +1082,15 @@ async function createOrganizationView(
             const hiddenInput = modal.backdrop.querySelector<HTMLInputElement>('[data-ref="select-modal-member-role"]');
             const textLabel = modal.backdrop.querySelector<HTMLElement>('[data-ref="text-modal-member-role"]');
             if (hiddenInput) hiddenInput.value = val;
-            if (textLabel) textLabel.textContent = item.textContent?.trim() || val;
+            const textSpan = item.querySelector('.menu-item__text, .component-menu__item-text');
+            if (textLabel) textLabel.textContent = textSpan?.textContent?.trim() || item.textContent?.trim() || val;
+            roleDropdown.querySelectorAll('.component-menu__item, .menu-item').forEach((opt) => {
+              opt.classList.toggle('is-active', opt.getAttribute('data-value') === val);
+            });
+            const triggerIcon = roleDropdown.querySelector<SVGUseElement>('.dropdown-trigger__icon use');
+            if (triggerIcon) {
+              triggerIcon.setAttribute('href', `/icons.svg#${val === 'admin' ? 'admin_panel_settings' : 'badge'}`);
+            }
           },
         });
       }

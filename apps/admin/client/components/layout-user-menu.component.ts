@@ -20,7 +20,11 @@ interface UserMenuNavigateOptions {
 }
 
 function getRoleLabel(roleSlug: string, fallbackName: string): string {
-  const key = `admin.roles.${roleSlug}`;
+  const normalizedSlug = String(roleSlug || '').trim().toLowerCase();
+  if (!normalizedSlug) {
+    return fallbackName;
+  }
+  const key = `admin.roles.${normalizedSlug}`;
   const translated = i18n.t(key);
   return translated !== key ? translated : fallbackName;
 }

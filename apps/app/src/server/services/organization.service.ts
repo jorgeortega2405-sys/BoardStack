@@ -1,15 +1,17 @@
 import { corePool, pool } from '../config/database.config.js';
+import { getRedisClient } from '../config/redis.config.js';
+import { getPriceAmount, getStorageTierLimitBytes, STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 import {
   createUser,
   ensureAppUserProfile,
   ensureUserAppMembership,
   findUserByEmail,
   generateUniqueUsername,
+  revokeUserSessions,
 } from './user.service.js';
-import crypto from 'crypto';
-import { getPriceAmount, getStorageTierLimitBytes, STORAGE_TIER_LIMITS } from '../config/subscription-plans.config.js';
 import { logger } from '../utils/logger.js';
-import { RowDataPacket } from 'mysql2';
+import crypto from 'crypto';
+import type { RowDataPacket } from 'mysql2';
 
 interface OrganizationRecord {
   created_at: string;
@@ -71,9 +73,12 @@ async function getOrCreateUserOrganization(
       [userId]
     );
     const ownerTier = String(profileRows[0]?.subscription_tier || 'free').toLowerCase();
+    if (ownerTier !== 'business' && ownerTier !== 'enterprise') {
+      throw new Error('Organization management is exclusive to Business and Enterprise plans.');
+    }
     const defaultSeatsLimit = ownerTier === 'enterprise' ? 25 : 3;
     const orgUuid = crypto.randomUUID();
-    const cleanName = `${username || (ownerTier === 'enterprise' ? 'Enterprise' : 'Business')} Organization`;
+    const cleanName = username || (ownerTier === 'enterprise' ? 'Enterprise' : 'Business');
     const cleanSlug = `org-${userId}-${Date.now().toString(36)}`;
     const [insertResult] = await pool.query<any>(
       `INSERT INTO organizations (uuid, owner_id, name, slug, seats_limit, saml_enabled)
@@ -93,6 +98,14 @@ async function getOrCreateUserOrganization(
       [orgId]
     );
     org = createdRows[0] as OrganizationRecord;
+  }
+
+  if (org && org.name && /\s+Organization$/i.test(org.name)) {
+    const strippedName = org.name.replace(/\s+Organization$/i, '').trim();
+    if (strippedName.length > 0) {
+      await pool.query('UPDATE organizations SET name = ? WHERE id = ?', [strippedName, org.id]);
+      org.name = strippedName;
+    }
   }
 
   const [countRows] = await pool.query<RowDataPacket[]>(
@@ -285,20 +298,22 @@ async function addOrganizationMember(
       'SELECT p.subscription_tier, p.storage_limit_bytes FROM organizations o JOIN app_user_profiles p ON o.owner_id = p.user_id WHERE o.id = ? LIMIT 1',
       [orgId]
     );
-    const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
-    const ownerStorageLimit = Number(ownerRows[0]?.storage_limit_bytes || 0);
-    const orgStorage = ownerStorageLimit > 0 ? ownerStorageLimit : getStorageTierLimitBytes(orgTier);
-    await pool.query(
-      `UPDATE app_user_profiles
-       SET subscription_tier = ?, storage_limit_bytes = ?
-       WHERE user_id = ? AND subscription_tier = 'free'`,
-      [orgTier, orgStorage, matchedUser.id]
-    );
-    const [memberProfileRows] = await pool.query<RowDataPacket[]>(
-      'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ? LIMIT 1',
-      [matchedUser.id]
-    );
-    memberSubscriptionTier = String(memberProfileRows[0]?.subscription_tier || orgTier || 'free').toLowerCase();
+    const ownerTier = String(ownerRows[0]?.subscription_tier || '').toLowerCase();
+    if (ownerTier === 'enterprise' || ownerTier === 'business') {
+      const ownerStorageLimit = Number(ownerRows[0]?.storage_limit_bytes || 0);
+      const orgStorage = ownerStorageLimit > 0 ? ownerStorageLimit : getStorageTierLimitBytes(ownerTier);
+      await pool.query(
+        `UPDATE app_user_profiles
+         SET subscription_tier = ?, subscription_status = 'active', storage_limit_bytes = ?
+         WHERE user_id = ? AND subscription_tier = 'free'`,
+        [ownerTier, orgStorage, matchedUser.id]
+      );
+      try {
+        const redis = getRedisClient();
+        await redis.del(`user:cache:${matchedUser.id}`);
+      } catch {}
+      memberSubscriptionTier = ownerTier;
+    }
   }
 
   return {
@@ -342,6 +357,26 @@ async function removeOrganizationMember(
     'DELETE FROM organization_members WHERE id = ? AND org_id = ?',
     [memberId, orgId]
   );
+
+  if (member.user_id) {
+    const [subRows] = await pool.query<RowDataPacket[]>(
+      'SELECT id FROM subscriptions WHERE user_id = ? AND status = "active" LIMIT 1',
+      [member.user_id]
+    );
+    if (!subRows || subRows.length === 0) {
+      await pool.query(
+        `UPDATE app_user_profiles
+         SET subscription_tier = 'free', storage_limit_bytes = 0
+         WHERE user_id = ?`,
+        [member.user_id]
+      );
+    }
+    try {
+      const redis = getRedisClient();
+      await redis.del(`user:cache:${member.user_id}`);
+    } catch {}
+    await revokeUserSessions(member.user_id);
+  }
 
   return true;
 }
@@ -419,15 +454,30 @@ async function processSsoLogin(
     throw new Error('Your email domain is not authorized for this organization SSO.');
   }
 
-  let userRow = await findUserByEmail(cleanEmail);
+  if (!isMember) {
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      'SELECT COUNT(*) as count FROM organization_members WHERE org_id = ?',
+      [org.id]
+    );
+    const count = Number(countRows[0]?.count || 0);
+    if (count >= org.seats_limit) {
+      throw new Error('Organization has reached its maximum seat capacity.');
+    }
+  }
 
   const [ownerRows] = await pool.query<RowDataPacket[]>(
     'SELECT subscription_tier, storage_limit_bytes FROM app_user_profiles WHERE user_id = ?',
     [org.owner_id]
   );
-  const orgTier = ownerRows[0]?.subscription_tier === 'enterprise' ? 'enterprise' : 'business';
+  const ownerTier = String(ownerRows[0]?.subscription_tier || '').toLowerCase();
+  if (ownerTier !== 'business' && ownerTier !== 'enterprise') {
+    throw new Error('Organization does not have an active Business or Enterprise subscription.');
+  }
+  const orgTier = ownerTier;
   const ownerStorageLimit = Number(ownerRows[0]?.storage_limit_bytes || 0);
   const orgStorage = ownerStorageLimit > 0 ? ownerStorageLimit : getStorageTierLimitBytes(orgTier);
+
+  let userRow = await findUserByEmail(cleanEmail);
 
   if (!userRow) {
     const baseUsername = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
@@ -469,21 +519,24 @@ async function processSsoLogin(
       );
     }
   } else {
-    const [countRows] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) as count FROM organization_members WHERE org_id = ?',
-      [org.id]
+    await pool.query(
+      `INSERT INTO organization_members (org_id, user_id, email, role, status)
+       VALUES (?, ?, ?, 'member', 'active')`,
+      [org.id, userRow.id, cleanEmail]
     );
-    const count = Number(countRows[0]?.count || 0);
-    if (count < org.seats_limit) {
-      await pool.query(
-        `INSERT INTO organization_members (org_id, user_id, email, role, status)
-         VALUES (?, ?, ?, 'member', 'active')`,
-        [org.id, userRow.id, cleanEmail]
-      );
-    }
   }
 
   return userRow;
+}
+
+async function isUserOrganizationAdmin(orgId: number, userId: number): Promise<boolean> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT role FROM organization_members WHERE org_id = ? AND user_id = ? AND status = "active" LIMIT 1',
+    [orgId, userId]
+  );
+  if (!rows || rows.length === 0) return false;
+  const role = rows[0]?.role;
+  return role === 'owner' || role === 'admin';
 }
 
 async function updateOrganizationSeats(
@@ -578,6 +631,7 @@ export {
   addOrganizationMember,
   getOrCreateUserOrganization,
   getOrganizationMembers,
+  isUserOrganizationAdmin,
   processSsoLogin,
   removeOrganizationMember,
   resolveOrganizationByDomainOrSlug,

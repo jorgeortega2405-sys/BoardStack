@@ -1,7 +1,10 @@
-import { completeUserLogin } from '../services/auth.service.js';
 import { config } from '../config/env.config.js';
+import { getRedisClient } from '../config/redis.config.js';
+import { SUPER_ADMIN_ROLE_SLUG } from '../config/roles.config.js';
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { completeUserLogin } from '../services/auth.service.js';
+import { hasRole } from '../services/role.service.js';
 import { create2FALoginTicket } from '../services/two-factor.service.js';
-import { createSecurityActionTicket } from '../services/verification.service.js';
 import {
   createUser,
   ensureAppUserProfile,
@@ -12,12 +15,11 @@ import {
   hasUserAppMembership,
   linkGoogleAccount,
 } from '../services/user.service.js';
-import crypto from 'crypto';
+import { createSecurityActionTicket } from '../services/verification.service.js';
 import { escapeHtml } from '../utils/html.util.js';
 import { getClientIp } from '../utils/ip.util.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { hasRole } from '../services/role.service.js';
 import { logger } from '../utils/logger.js';
+import crypto from 'crypto';
 import type { Request, Response } from 'express';
 
 interface GoogleAuthStatePayload {
@@ -212,6 +214,24 @@ async function handleGoogleCallback(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    const redis = getRedisClient();
+    const nonceKey = `oauth:google:nonce:${statePayload.nonce}`;
+    try {
+      const isNewNonce = await redis.set(nonceKey, '1', 'EX', 900, 'NX');
+      if (!isNewNonce) {
+        if (isVerifyMode) {
+          sendGoogleVerifyPopupResponse(res, {
+            code: 'REPLAY_DETECTED',
+            error: 'Authentication request has already been used.',
+            ok: false,
+          });
+          return;
+        }
+        res.redirect('/login?error=oauth_state_replayed');
+        return;
+      }
+    } catch {}
+
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       body: new URLSearchParams({
         client_id: config.googleOAuth.clientId,
@@ -272,21 +292,22 @@ async function handleGoogleCallback(req: Request, res: Response): Promise<void> 
 
     const profile = (await profileRes.json()) as {
       email?: string;
+      email_verified?: boolean;
       name?: string;
       picture?: string;
       sub?: string;
     };
 
-    if (!profile.sub || !profile.email) {
+    if (!profile.sub || !profile.email || profile.email_verified !== true) {
       if (isVerifyMode) {
         sendGoogleVerifyPopupResponse(res, {
           code: 'GOOGLE_FAILED',
-          error: 'Incomplete Google account information.',
+          error: 'Unverified or incomplete Google account information.',
           ok: false,
         });
         return;
       }
-      res.redirect('/login?error=google_missing_info');
+      res.redirect('/login?error=google_email_unverified');
       return;
     }
 
@@ -361,7 +382,7 @@ async function handleGoogleCallback(req: Request, res: Response): Promise<void> 
         return;
       }
 
-      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, 'superadministrator'));
+      const hasAppAccess = (await hasUserAppMembership(userRow.id)) || (await hasRole(userRow.id, SUPER_ADMIN_ROLE_SLUG));
       if (!hasAppAccess) {
         res.redirect('/login?error=no_app_account');
         return;

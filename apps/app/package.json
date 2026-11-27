@@ -12,6 +12,7 @@
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
+    "test": "tsx --test tests/roles.test.ts tests/subscription-plans.test.ts tests/sso-saml.test.ts tests/defensive-security.test.ts tests/contact-messages.test.ts",
     "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit"
   },
   "dependencies": {

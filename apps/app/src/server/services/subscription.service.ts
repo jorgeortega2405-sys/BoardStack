@@ -259,7 +259,7 @@ async function confirmSubscriptionPayment(
           [userId]
         );
         const orgUuid = crypto.randomUUID();
-        const defaultOrgName = `${userRows[0]?.username || (planId === 'business' ? 'Business' : 'Enterprise')} Organization`;
+        const defaultOrgName = userRows[0]?.username || (planId === 'business' ? 'Business' : 'Enterprise');
         const defaultSlug = `org-${userId}-${Date.now().toString(36)}`;
         const [orgResult] = await conn.query<any>(
           `INSERT INTO organizations (uuid, owner_id, name, slug, seats_limit, saml_enabled)

@@ -1,7 +1,9 @@
+import { completeUserLogin } from '../services/auth.service.js';
 import {
   addOrganizationMember,
   getOrCreateUserOrganization,
   getOrganizationMembers,
+  isUserOrganizationAdmin,
   processSsoLogin,
   removeOrganizationMember,
   resolveOrganizationByDomainOrSlug,
@@ -9,10 +11,9 @@ import {
   updateOrganization,
   updateOrganizationSeats,
 } from '../services/organization.service.js';
-import { completeUserLogin } from '../services/auth.service.js';
 import { logger } from '../utils/logger.js';
-import type { Request, Response } from 'express';
 import { requireAuthenticatedUser, sendError, sendSuccess } from '../utils/response.util.js';
+import type { Request, Response } from 'express';
 
 async function getMyOrganizationHandler(req: Request, res: Response): Promise<void> {
   const user = requireAuthenticatedUser(req, res, 'Authentication required.');
@@ -42,7 +43,16 @@ async function updateMyOrganizationHandler(req: Request, res: Response): Promise
   if (!user) return;
 
   try {
-    const updated = await updateOrganization(user.id, req.body || {});
+    const b = req.body || {};
+    const payload = {
+      ...b,
+      name: b.name,
+      saml_cert: b.saml_cert ?? b.samlCert,
+      saml_enabled: b.saml_enabled ?? b.samlEnabled,
+      saml_entry_point: b.saml_entry_point ?? b.samlEntryPoint,
+      saml_issuer: b.saml_issuer ?? b.samlIssuer,
+    };
+    const updated = await updateOrganization(user.id, payload);
     sendSuccess(res, { org: updated });
   } catch (err: any) {
     logger.app.error('[Organization] Error updating organization:', err);
@@ -80,8 +90,10 @@ async function addMemberHandler(req: Request, res: Response): Promise<void> {
 
   try {
     const { org } = await getOrCreateUserOrganization(user.id, user.username, user.email);
-    if (org.owner_id !== user.id) {
-      sendError(res, 'Only the organization owner can invite new members.', 403);
+    const isOwner = org.owner_id === user.id;
+    const isAdmin = !isOwner && (await isUserOrganizationAdmin(org.id, user.id));
+    if (!isOwner && !isAdmin) {
+      sendError(res, 'Only the organization owner or admin can invite new members.', 403);
       return;
     }
 
@@ -105,8 +117,10 @@ async function removeMemberHandler(req: Request, res: Response): Promise<void> {
 
   try {
     const { org } = await getOrCreateUserOrganization(user.id, user.username, user.email);
-    if (org.owner_id !== user.id) {
-      sendError(res, 'Only the organization owner can remove members.', 403);
+    const isOwner = org.owner_id === user.id;
+    const isAdmin = !isOwner && (await isUserOrganizationAdmin(org.id, user.id));
+    if (!isOwner && !isAdmin) {
+      sendError(res, 'Only the organization owner or admin can remove members.', 403);
       return;
     }
 
@@ -174,13 +188,16 @@ async function samlAcsHandler(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    if (org.saml_cert && org.saml_cert.trim().length > 0) {
-      const cleanCert = org.saml_cert.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, '');
-      const xmlWithoutWs = xml.replace(/\s+/g, '');
-      if (!xmlWithoutWs.includes(cleanCert)) {
-        sendError(res, 'SAML response signature certificate does not match organization configuration.', 401);
-        return;
-      }
+    if (!org.saml_cert || org.saml_cert.trim().length === 0) {
+      sendError(res, 'SAML SSO certificate is not configured for this organization.', 401);
+      return;
+    }
+
+    const cleanCert = org.saml_cert.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, '');
+    const xmlWithoutWs = xml.replace(/\s+/g, '');
+    if (!xmlWithoutWs.includes(cleanCert)) {
+      sendError(res, 'SAML response signature certificate does not match organization configuration.', 401);
+      return;
     }
 
     const notOnOrAfterMatch = xml.match(/NotOnOrAfter="([^"]+)"/i);
@@ -193,6 +210,10 @@ async function samlAcsHandler(req: Request, res: Response): Promise<void> {
     }
 
     const userRow = await processSsoLogin(email, org.slug);
+    if (userRow.status && userRow.status !== 'active') {
+      sendError(res, 'Account is inactive or suspended.', 403);
+      return;
+    }
     const { accounts, user } = await completeUserLogin(res, req, userRow);
 
     if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {

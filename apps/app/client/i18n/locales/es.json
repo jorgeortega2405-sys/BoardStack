@@ -322,6 +322,7 @@
     "two_factor_code_placeholder": "Código 2FA o de recuperación",
     "two_factor_code_required": "Por favor ingresa tu código de verificación.",
     "two_factor_invalid": "Código de verificación o de recuperación incorrecto.",
+    "two_factor_manual_entry": "No se pudo renderizar el código QR. Copia la clave secreta manual a continuación en tu aplicación de autenticación.",
     "two_factor_subtitle": "Ingresa el código de 6 dígitos de tu aplicación de autenticación o un código de recuperación.",
     "two_factor_title": "Verificación en dos pasos",
     "update_password": "Actualizar contraseña",
@@ -820,8 +821,39 @@
     "terms_body_2": "Nos reservamos el derecho de suspender cuentas que violen normas de seguridad, vulneren la integridad de la plataforma o intenten accesos no autorizados a servicios internos.",
     "terms_heading": "Términos y Condiciones de Servicio"
   },
+  "role_descriptions": {
+    "billing_agent": "Consultas y operaciones de billing.",
+    "customer_success": "Gestión de clientes, cuentas y adopción.",
+    "data_analyst": "Analytics y reportes.",
+    "devops": "Infraestructura, deployments y servicios.",
+    "finance_admin": "Configuración financiera.",
+    "iam_admin": "Usuarios, grupos, roles, permisos y provisioning.",
+    "platform_admin": "Administración general de la plataforma.",
+    "privacy_admin": "Privacidad, solicitudes de datos y políticas.",
+    "read_only_admin": "Administración/diagnóstico de solo lectura.",
+    "refunds_admin": "Refunds/credits con permisos específicos.",
+    "security_admin": "IAM, MFA, SSO, sesiones, políticas de seguridad.",
+    "super_admin": "Acceso excepcional a toda la plataforma.",
+    "support_l1": "Soporte básico y resolución de incidencias comunes.",
+    "support_l2": "Soporte técnico avanzado.",
+    "user": "Usuario estándar de la plataforma."
+  },
   "roles": {
     "admin": "Administrador",
+    "billing_agent": "Billing Agent",
+    "customer_success": "Customer Success",
+    "data_analyst": "Data Analyst",
+    "devops": "DevOps",
+    "finance_admin": "Finance Admin",
+    "iam_admin": "IAM Admin",
+    "platform_admin": "Platform Admin",
+    "privacy_admin": "Privacy Admin",
+    "read_only_admin": "Read-Only Admin",
+    "refunds_admin": "Refunds Admin",
+    "security_admin": "Security Admin",
+    "super_admin": "Super Admin",
+    "support_l1": "Support L1",
+    "support_l2": "Support L2",
     "user": "Usuario"
   },
   "footer": {
@@ -1074,8 +1106,11 @@
     "field_message": "Mensaje",
     "field_message_placeholder": "Describe tu duda, sugerencia o comentario...",
     "btn_submit": "Enviar mensaje",
-    "success_mock": "¡Mensaje recibido! Gracias por contactarnos, te responderemos pronto.",
-    "err_required": "Por favor completa todos los campos del formulario."
+    "err_invalid_email": "Por favor ingresa un correo electrónico válido.",
+    "err_required": "Por favor completa todos los campos del formulario.",
+    "err_send": "Ocurrió un error al enviar tu mensaje. Inténtalo nuevamente.",
+    "success": "¡Mensaje recibido! Gracias por contactarnos, te responderemos pronto.",
+    "success_mock": "¡Mensaje recibido! Gracias por contactarnos, te responderemos pronto."
   },
   "seo": {
     "about_description": "Conoce la historia, misión y principios de BoardStack, la plataforma de transferencia y colaboración en tiempo real.",

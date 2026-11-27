@@ -1,5 +1,13 @@
 import { config } from '../config/env.config.js';
 import { corePool } from '../config/database.config.js';
+import {
+  DEFAULT_USER_ROLE_SLUG,
+  isSuperAdminRole,
+  LEGACY_ROLE_SLUG_MAP,
+  matchesRoleRequirement,
+  PLATFORM_ROLES_CATALOG,
+} from '../config/roles.config.js';
+import { logger } from '../utils/logger.js';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 interface PermissionRow extends RowDataPacket {
@@ -12,6 +20,7 @@ interface PermissionRow extends RowDataPacket {
 }
 
 interface RoleRow extends RowDataPacket {
+  category: string;
   created_at: string;
   description: string | null;
   id: number;
@@ -66,7 +75,7 @@ async function getUserPermissions(userId: number, appSlug: string = config.appSl
   );
 
   const isSuperAdmin = globalRoleRows.some(
-    (row) => String(row.slug).toLowerCase() === 'superadministrator'
+    (row) => isSuperAdminRole(String(row.slug))
   );
 
   const permissionSet = new Set<string>();
@@ -223,11 +232,7 @@ async function hasRole(
   appSlug: string = config.appSlug
 ): Promise<boolean> {
   const roles = await getUserRoles(userId, appSlug);
-  const target = roleName.trim().toLowerCase();
-  return roles.some((r) => {
-    const norm = r.toLowerCase();
-    return norm === target || (target === 'admin' && (norm === 'superadministrator' || norm === 'administrator'));
-  });
+  return matchesRoleRequirement(roles, roleName);
 }
 
 async function hasPermission(
@@ -255,14 +260,14 @@ async function ensureDefaultUserRole(
 
   await corePool.execute(
     `INSERT IGNORE INTO user_app_roles (user_id, app_id, role_id)
-     SELECT ?, ?, id FROM roles WHERE is_default = TRUE LIMIT 1`,
-    [userId, appId]
+     SELECT ?, ?, id FROM roles WHERE is_default = TRUE OR UPPER(slug) = ? ORDER BY is_default DESC, id ASC LIMIT 1`,
+    [userId, appId, DEFAULT_USER_ROLE_SLUG]
   );
 }
 
 async function getAllRoles(): Promise<RoleRow[]> {
   const [rows] = await corePool.execute<RoleRow[]>(
-    'SELECT id, slug, name, description, level, is_default, is_global, created_at, updated_at FROM roles ORDER BY level ASC, id ASC'
+    'SELECT id, slug, name, description, category, level, is_default, is_global, created_at, updated_at FROM roles ORDER BY level ASC, id ASC'
   );
   return rows;
 }
@@ -272,6 +277,138 @@ async function getAllPermissions(): Promise<PermissionRow[]> {
     'SELECT id, code, name, description, category, created_at FROM permissions ORDER BY category ASC, code ASC'
   );
   return rows;
+}
+
+async function syncRolesCatalog(): Promise<void> {
+  try {
+    const [columnRows] = await corePool.execute<RowDataPacket[]>(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'roles'
+         AND COLUMN_NAME = 'category'`
+    );
+    if (columnRows.length === 0) {
+      await corePool.execute(
+        "ALTER TABLE roles ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'general' AFTER description"
+      );
+    }
+
+    const [indexRows] = await corePool.execute<RowDataPacket[]>(
+      `SELECT INDEX_NAME
+       FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'roles'
+         AND INDEX_NAME = 'idx_roles_category'`
+    );
+    if (indexRows.length === 0) {
+      await corePool.execute(
+        'ALTER TABLE roles ADD INDEX idx_roles_category (category)'
+      );
+    }
+
+    const connection = await corePool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      for (const role of PLATFORM_ROLES_CATALOG) {
+        await connection.execute(
+          `INSERT INTO roles (slug, name, description, category, level, is_default, is_global)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             slug = VALUES(slug),
+             name = VALUES(name),
+             description = VALUES(description),
+             category = VALUES(category),
+             level = VALUES(level),
+             is_default = VALUES(is_default),
+             is_global = VALUES(is_global)`,
+          [
+            role.slug,
+            role.name,
+            role.description,
+            role.category,
+            role.level,
+            role.isDefault,
+            role.isGlobal,
+          ]
+        );
+      }
+
+      for (const [legacySlug, targetSlug] of Object.entries(LEGACY_ROLE_SLUG_MAP)) {
+        if (legacySlug.toLowerCase() === targetSlug.toLowerCase()) {
+          continue;
+        }
+        const [legacyRows] = await connection.execute<RowDataPacket[]>(
+          'SELECT id FROM roles WHERE LOWER(slug) = ? LIMIT 1',
+          [legacySlug.toLowerCase()]
+        );
+        if (legacyRows.length === 0) {
+          continue;
+        }
+        const legacyId = Number(legacyRows[0].id);
+
+        const [targetRows] = await connection.execute<RowDataPacket[]>(
+          'SELECT id FROM roles WHERE BINARY slug = ? LIMIT 1',
+          [targetSlug]
+        );
+        if (targetRows.length === 0) {
+          continue;
+        }
+        const targetId = Number(targetRows[0].id);
+
+        if (legacyId !== targetId) {
+          await connection.execute(
+            `INSERT IGNORE INTO user_global_roles (user_id, role_id, assigned_at, assigned_by)
+             SELECT user_id, ?, assigned_at, assigned_by
+             FROM user_global_roles
+             WHERE role_id = ?`,
+            [targetId, legacyId]
+          );
+          await connection.execute(
+            `INSERT IGNORE INTO user_app_roles (user_id, app_id, role_id, assigned_at, assigned_by)
+             SELECT user_id, app_id, ?, assigned_at, assigned_by
+             FROM user_app_roles
+             WHERE role_id = ?`,
+            [targetId, legacyId]
+          );
+          await connection.execute('DELETE FROM roles WHERE id = ?', [legacyId]);
+        }
+      }
+
+      for (const role of PLATFORM_ROLES_CATALOG) {
+        if (isSuperAdminRole(role.slug)) {
+          await connection.execute(
+            `INSERT IGNORE INTO role_permissions (role_id, permission_id)
+             SELECT r.id, p.id
+             FROM roles r
+             CROSS JOIN permissions p
+             WHERE r.slug = ?`,
+            [role.slug]
+          );
+        } else if (role.defaultPermissions.length > 0) {
+          const placeholders = role.defaultPermissions.map(() => '?').join(', ');
+          await connection.execute(
+            `INSERT IGNORE INTO role_permissions (role_id, permission_id)
+             SELECT r.id, p.id
+             FROM roles r
+             INNER JOIN permissions p ON p.code IN (${placeholders})
+             WHERE r.slug = ?`,
+            [...role.defaultPermissions, role.slug]
+          );
+        }
+      }
+
+      await connection.commit();
+    } catch (txError) {
+      await connection.rollback();
+      throw txError;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    logger.database.error('[RolesSync] Failed to synchronize roles catalog:', error);
+  }
 }
 
 export {
@@ -285,7 +422,8 @@ export {
   getUserRolesAndPermissions,
   hasPermission,
   hasRole,
-  removeUserRole
+  removeUserRole,
+  syncRolesCatalog
 };
 
 export type {

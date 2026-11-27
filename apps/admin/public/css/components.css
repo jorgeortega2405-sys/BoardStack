@@ -963,6 +963,14 @@ html.is-auth-view [data-ref="main-wrapper"] {
   gap: 8px;
 }
 
+.component-button--h44 {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 14.5px;
+  gap: 8px;
+}
+
 .component-button--h55 {
   height: 55px;
   min-height: 55px;
@@ -3474,6 +3482,8 @@ html.is-auth-view [data-ref="main-wrapper"] {
   border: 1px solid var(--border-color, #e5e7eb);
   padding: 32px 28px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  text-align: left;
+  align-items: stretch;
 }
 
 .component-card--featured {
@@ -3484,11 +3494,14 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-card-section {
   display: flex;
   flex-direction: column;
+  text-align: left;
+  align-items: flex-start;
 }
 
 .component-card-section--header {
   gap: 4px;
   align-items: flex-start;
+  text-align: left;
 }
 
 .component-card-title {
@@ -3497,6 +3510,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   font-weight: 700;
   color: var(--text-primary, #111827);
   letter-spacing: -0.3px;
+  text-align: left;
 }
 
 .component-card-desc {
@@ -3504,11 +3518,13 @@ html.is-auth-view [data-ref="main-wrapper"] {
   margin: 0 0 16px 0;
   color: var(--text-secondary, #6b7280);
   line-height: 1.5;
+  text-align: left;
 }
 
 .component-card-storage-badge {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--border-color, #e5e7eb);
@@ -3516,6 +3532,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-primary, #111827);
+  text-align: left;
 }
 
 .component-card-storage-badge .component-icon {
@@ -3526,18 +3543,25 @@ html.is-auth-view [data-ref="main-wrapper"] {
 
 .component-card-section--price {
   gap: 4px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .component-card-price-label {
   font-size: 13px;
   color: var(--text-secondary, #6b7280);
+  text-align: left;
+  align-self: flex-start;
 }
 
 .component-card-price-container {
   display: flex;
   align-items: baseline;
+  justify-content: flex-start;
   gap: 6px;
   flex-wrap: wrap;
+  text-align: left;
+  width: 100%;
 }
 
 .component-card-price {
@@ -3545,16 +3569,19 @@ html.is-auth-view [data-ref="main-wrapper"] {
   font-weight: 800;
   color: var(--text-primary, #111827);
   letter-spacing: -1px;
+  text-align: left;
 }
 
 .component-card-period {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary, #6b7280);
+  text-align: left;
 }
 
 .component-card-section--action {
   width: 100%;
+  align-items: stretch;
 }
 
 .component-card-button {
@@ -3579,12 +3606,17 @@ html.is-auth-view [data-ref="main-wrapper"] {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  text-align: left;
+  align-items: flex-start;
+  width: 100%;
 }
 
 .component-card-feature-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  text-align: left;
+  width: 100%;
 }
 
 .component-card-feature-icon {
@@ -3600,18 +3632,62 @@ html.is-auth-view [data-ref="main-wrapper"] {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-align: left;
+  align-items: flex-start;
+  flex: 1;
 }
 
 .component-card-feature-title {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-primary, #111827);
+  text-align: left;
 }
 
 .component-card-feature-desc {
   font-size: 12.5px;
   color: var(--text-secondary, #6b7280);
   line-height: 1.4;
+  text-align: left;
+}
+
+/* --------------------------------------------------------------------------
+   TOP LOGO HEADER BLOCK (.component-block--logo)
+   -------------------------------------------------------------------------- */
+.component-block--logo {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding: 18px 28px !important;
+  gap: 0 !important;
+  min-height: auto !important;
+}
+
+.component-block--logo .component-brand {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+.component-block--logo .component-brand__img {
+  height: 32px !important;
+  width: auto !important;
+}
+
+@media (max-width: 768px) {
+  .component-block--logo {
+    padding: 14px 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .component-block--logo .component-brand__img {
+    height: 28px !important;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -4310,7 +4386,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
 .component-bottom--page {
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 24px;
+  padding: 16px;
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -4330,12 +4406,15 @@ html.is-auth-view [data-ref="main-wrapper"] {
   border-radius: 14px;
   background-color: var(--bg-surface, #ffffff);
   box-sizing: border-box;
-  transition: border-color var(--sl-transition-fast), transform var(--sl-transition-fast);
+  transition: border-color var(--sl-transition-fast);
 }
 
 .component-card--metric-h:hover {
-  border-color: var(--border-hover, #cbd5e1);
-  transform: translateY(-1px);
+  border-color: #000000;
+}
+
+[data-theme="dark"] .component-card--metric-h:hover {
+  border-color: #ffffff;
 }
 
 .component-card--metric-h .component-card__icon-box {
@@ -4346,8 +4425,16 @@ html.is-auth-view [data-ref="main-wrapper"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-hover, #f1f5f9);
+  background-color: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
   color: var(--text-primary, #0f172a);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.component-card--metric-h .component-card__icon-box .component-icon {
+  width: 22px;
+  height: 22px;
 }
 
 .component-card--metric-h .component-card__content {

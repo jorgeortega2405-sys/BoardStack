@@ -6,6 +6,7 @@ import type {
   AppDashboardStats,
 } from '../types/admin.types.js';
 import { appPool, corePool } from '../config/database.config.js';
+import { DEFAULT_USER_ROLE, ROLE_ORDER } from '../config/roles.config.js';
 import type { RowDataPacket } from 'mysql2';
 
 interface UserTotalsRow extends RowDataPacket {
@@ -93,9 +94,8 @@ interface ResolvedUserRole {
   roleSlug: string;
 }
 
-const DEFAULT_STORAGE_LIMIT_BYTES = 5368709120;
-const ROLE_ORDER = ['user', 'moderator', 'administrator', 'superadministrator'];
-const PLAN_ORDER = ['free', 'pro', 'enterprise'];
+const DEFAULT_STORAGE_LIMIT_BYTES = 0;
+const PLAN_ORDER = ['free', 'pro', 'business', 'enterprise'];
 
 function buildLastDays(daysCount: number): string[] {
   const now = new Date();
@@ -113,13 +113,15 @@ async function resolveEffectiveRolesForApp(appId: number): Promise<Map<number, R
     corePool.execute<UserRoleAssignmentRow[]>(
       `SELECT ugr.user_id, r.slug AS role_slug, r.name AS role_name, r.level
        FROM user_global_roles ugr
-       INNER JOIN roles r ON r.id = ugr.role_id`
+       INNER JOIN roles r ON r.id = ugr.role_id
+       ORDER BY r.level DESC, r.id ASC`
     ),
     corePool.execute<UserRoleAssignmentRow[]>(
       `SELECT uar.user_id, r.slug AS role_slug, r.name AS role_name, r.level
        FROM user_app_roles uar
        INNER JOIN roles r ON r.id = uar.role_id
-       WHERE uar.app_id = ?`,
+       WHERE uar.app_id = ?
+       ORDER BY r.level DESC, r.id ASC`,
       [appId]
     ),
   ]);
@@ -134,7 +136,7 @@ async function resolveEffectiveRolesForApp(appId: number): Promise<Map<number, R
         roleMap.set(uid, {
           level,
           roleName: String(row.role_name),
-          roleSlug: String(row.role_slug).toLowerCase(),
+          roleSlug: String(row.role_slug).trim().toUpperCase(),
         });
       }
     }
@@ -287,7 +289,7 @@ async function getAppDashboardStats(appId: number): Promise<AppDashboardStats> {
   }
   for (const row of appUsersIdRows) {
     const role = effectiveRolesMap.get(Number(row.user_id));
-    const slug = role ? role.roleSlug : 'user';
+    const slug = role ? role.roleSlug : DEFAULT_USER_ROLE.slug;
     roleCounts.set(slug, (roleCounts.get(slug) || 0) + 1);
   }
   const roleDistribution: AdminDistributionItem[] = Array.from(roleCounts.entries()).map(([key, count]) => ({
@@ -402,8 +404,8 @@ async function getAppUsersList(appId: number): Promise<AppAdminUserItem[]> {
       id: uid,
       joinedAt: String(row.joined_at || row.created_at),
       lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
-      roleName: role ? role.roleName : 'User',
-      roleSlug: role ? role.roleSlug : 'user',
+      roleName: role ? role.roleName : DEFAULT_USER_ROLE.name,
+      roleSlug: role ? role.roleSlug : DEFAULT_USER_ROLE.slug,
       roomsCount: roomsMap.get(uid) || 0,
       status: String(row.status || 'active'),
       storageLimitBytes: profile ? Number(profile.storage_limit_bytes || DEFAULT_STORAGE_LIMIT_BYTES) : DEFAULT_STORAGE_LIMIT_BYTES,

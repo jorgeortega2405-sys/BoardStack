@@ -240,7 +240,7 @@ function calculatePeriodEnd(startDate: Date, billingType: 'one_time' | 'recurrin
 const STORAGE_TIER_LIMITS = {
   business: 1099511627776,
   enterprise: 10995116277760,
-  free: 5368709120,
+  free: 0,
   pro: 107374182400,
 } as const;
 
@@ -270,7 +270,7 @@ function getStorageTierLabel(tier: string | null | undefined): string {
   if (tier === 'enterprise') return 'Custom';
   if (tier === 'business') return '1 TB';
   if (tier === 'pro') return '100 GB';
-  return '5 GB';
+  return '0 GB';
 }
 
 export {

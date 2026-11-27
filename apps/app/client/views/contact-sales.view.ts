@@ -1,9 +1,10 @@
 import { createFooterComponent } from '../components/footer.component.js';
-import { i18n } from '../i18n/i18n.service.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { currentUser, postApi } from '../services/api.service.js';
+import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
-import { toast } from '../services/toast.service.js';
 import { setupDropdown } from '../utils/dom.util.js';
+import { toast } from '../services/toast.service.js';
 
 interface LeadFormState {
   companyName: string;
@@ -331,6 +332,8 @@ async function createContactSalesView(navigate: (path: string) => void): Promise
   renderIcons(heroBlock);
   renderIcons(formContainer);
 
+  const topLogoBlock = createHeaderLogoComponent(navigate);
+  container.appendChild(topLogoBlock);
   container.appendChild(heroBlock);
   container.appendChild(formContainer);
   container.appendChild(footerBlock);

@@ -1,6 +1,7 @@
 import type { AccessibleAdminApp, AdminPageSummary, UserAdminAccess } from '../types/admin.types.js';
 import { corePool } from '../config/database.config.js';
 import type { RowDataPacket } from 'mysql2';
+import { SUPER_ADMIN_ROLE } from '../config/roles.config.js';
 
 interface AppRow extends RowDataPacket {
   base_url: string | null;
@@ -104,7 +105,10 @@ async function getUserAdminAccess(userId: number): Promise<UserAdminAccess> {
     ),
   ]);
 
-  const isSuperAdmin = globalRoleRows.some((r) => String(r.slug).toLowerCase() === 'superadministrator');
+  const superAdminRoleRow = globalRoleRows.find(
+    (r) => String(r.slug).trim().toUpperCase() === SUPER_ADMIN_ROLE.slug
+  );
+  const isSuperAdmin = Boolean(superAdminRoleRow);
   const allPermissionCodes = allPermissionRows.map((row) => String(row.code));
 
   const roleIds = Array.from(
@@ -174,8 +178,8 @@ async function getUserAdminAccess(userId: number): Promise<UserAdminAccess> {
         name: String(app.name),
         pages: appPages,
         permissions: allPermissionCodes,
-        roleName: 'Super Administrator',
-        roleSlug: 'superadministrator',
+        roleName: superAdminRoleRow ? String(superAdminRoleRow.name) : SUPER_ADMIN_ROLE.name,
+        roleSlug: superAdminRoleRow ? String(superAdminRoleRow.slug).trim().toUpperCase() : SUPER_ADMIN_ROLE.slug,
         slug: String(app.slug),
       });
       continue;
@@ -216,7 +220,7 @@ async function getUserAdminAccess(userId: number): Promise<UserAdminAccess> {
       pages: authorizedPages,
       permissions: Array.from(permissionSet).sort(),
       roleName: primaryRole ? String(primaryRole.name) : 'Custom',
-      roleSlug: primaryRole ? String(primaryRole.slug) : 'custom',
+      roleSlug: primaryRole ? String(primaryRole.slug).trim().toUpperCase() : 'custom',
       slug: String(app.slug),
     });
   }

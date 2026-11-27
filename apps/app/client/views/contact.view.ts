@@ -1,6 +1,9 @@
 import { createFooterComponent } from '../components/footer.component.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { i18n } from '../i18n/i18n.service.js';
+import { postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { setButtonLoading } from '../utils/dom.util.js';
 import { toast } from '../services/toast.service.js';
 
 async function createContactView(navigate?: (path: string) => void): Promise<HTMLElement> {
@@ -114,8 +117,8 @@ async function createContactView(navigate?: (path: string) => void): Promise<HTM
             <span class="field__label" data-ref="label-contact-message">${i18n.t('contact.field_message')}</span>
           </label>
 
-          <button type="submit" class="component-button component-button--black component-button--h44" data-ref="btn-submit-contact" style="width: 100%; margin-top: 4px;">
-            <span>${i18n.t('contact.btn_submit')}</span>
+          <button type="submit" class="component-button component-button--black component-button--h44" data-ref="btn-submit-contact" style="width: 100%; min-height: 44px; margin-top: 4px;">
+            <span data-ref="btn-submit-contact-text">${i18n.t('contact.btn_submit')}</span>
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
           </button>
         </form>
@@ -142,8 +145,9 @@ async function createContactView(navigate?: (path: string) => void): Promise<HTM
   const emailInput = contentContainer.querySelector<HTMLInputElement>('[data-ref="input-contact-email"]');
   const subjectInput = contentContainer.querySelector<HTMLInputElement>('[data-ref="input-contact-subject"]');
   const messageInput = contentContainer.querySelector<HTMLTextAreaElement>('[data-ref="textarea-contact-message"]');
+  const submitBtn = contentContainer.querySelector<HTMLButtonElement>('[data-ref="btn-submit-contact"]');
 
-  formEl?.addEventListener('submit', (e: Event) => {
+  formEl?.addEventListener('submit', async (e: Event) => {
     e.preventDefault();
     const nameVal = nameInput?.value.trim() || '';
     const emailVal = emailInput?.value.trim() || '';
@@ -155,12 +159,42 @@ async function createContactView(navigate?: (path: string) => void): Promise<HTM
       return;
     }
 
-    toast.success(i18n.t('contact.success_mock'));
-    formEl.reset();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailVal)) {
+      toast.error(i18n.t('contact.err_invalid_email'));
+      return;
+    }
+
+    setButtonLoading(submitBtn, true);
+
+    try {
+      const res = await postApi<{ message: string; ok: boolean }>('/api/contact', {
+        email: emailVal,
+        message: messageVal,
+        name: nameVal,
+        subject: subjectVal,
+      });
+
+      if (res && res.ok) {
+        toast.success(i18n.t('contact.success'));
+        formEl.reset();
+      } else {
+        toast.error((res as any)?.error || i18n.t('contact.err_send'));
+      }
+    } catch (err: any) {
+      toast.error(err.message || i18n.t('contact.err_send'));
+    } finally {
+      setButtonLoading(submitBtn, false);
+      if (submitBtn) {
+        renderIcons(submitBtn);
+      }
+    }
   });
 
   const footerBlock = createFooterComponent(navigate);
+  const topLogoBlock = createHeaderLogoComponent(navigate);
 
+  container.appendChild(topLogoBlock);
   container.appendChild(heroBlock);
   container.appendChild(contentContainer);
   container.appendChild(footerBlock);

@@ -38,7 +38,7 @@ interface RouteConfig {
 const ROUTES: Record<string, RouteConfig> = {
   '/': { path: '/', railId: 'home', title: 'Inicio' },
   '/about': { path: '/about', railId: 'home', title: 'Sobre nosotros' },
-  '/account': { path: '/account', railId: 'login', title: 'Cuenta' },
+  '/account': { path: '/settings/account', railId: 'login', title: 'Tu cuenta' },
   '/checkout': { path: '/checkout', railId: 'home', title: 'Checkout' },
   '/contact': { path: '/contact', railId: 'home', title: 'Contacto' },
   '/contact-sales': { path: '/contact-sales', railId: 'home', title: 'Hablar con ventas' },
@@ -898,6 +898,9 @@ class LayoutNavController {
     }
 
     let cleanPath = (strippedPath || '/').replace(/\/+$/, '') || '/';
+    if (cleanPath === '/account') {
+      cleanPath = currentUser ? '/settings/account' : '/login';
+    }
     if (cleanPath === '/settings') {
       cleanPath = currentUser ? '/settings/account' : '/settings/guest';
     }

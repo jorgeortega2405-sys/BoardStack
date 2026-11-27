@@ -1,4 +1,5 @@
 import { createFooterComponent } from '../components/footer.component.js';
+import { createHeaderLogoComponent } from '../components/header-logo.component.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 
@@ -8,6 +9,9 @@ async function createHelpView(section: HelpSection = 'faq', navigate?: (path: st
   const container = document.createElement('div');
   container.className = 'component-layout--full component-main--gap-24';
   container.setAttribute('data-ref', 'help-layout');
+
+  const topLogoBlock = createHeaderLogoComponent(navigate);
+  container.appendChild(topLogoBlock);
 
   if (section === 'faq') {
     const heroBlock = document.createElement('div');

@@ -1,4 +1,5 @@
 import adminRoutes from './routes/admin.routes.js';
+import { appPool, corePool, testDatabaseConnection } from './config/database.config.js';
 import authRoutes from './routes/auth.routes.js';
 import compression from 'compression';
 import { config } from './config/env.config.js';
@@ -8,14 +9,13 @@ import { errorHandlerMiddleware, httpLoggerMiddleware } from './middlewares/logg
 import { escapeHtml } from './utils/html.util.js';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
+import { getRedisClient, testRedisConnection } from './config/redis.config.js';
 import { getValidatedAdminSession } from './middlewares/auth.middleware.js';
 import http from 'http';
 import { initS3Bucket } from './services/s3.service.js';
 import { logger } from './utils/logger.js';
 import { normalizeSubscriptionTier } from './utils/user.util.js';
 import path from 'path';
-import { testDatabaseConnection } from './config/database.config.js';
-import { testRedisConnection } from './config/redis.config.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -40,10 +40,29 @@ app.use(csrfProtectionMiddleware);
 app.use('/api', authRoutes);
 app.use('/api', adminRoutes);
 
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({
+app.get('/api/health', async (_req: Request, res: Response) => {
+  let dbOk = false;
+  let redisOk = false;
+  try {
+    await corePool.query('SELECT 1');
+    await appPool.query('SELECT 1');
+    dbOk = true;
+  } catch {}
+  try {
+    const redis = getRedisClient();
+    if (redis && (await redis.ping()) === 'PONG') {
+      redisOk = true;
+    }
+  } catch {}
+
+  const isHealthy = dbOk && redisOk;
+  res.status(isHealthy ? 200 : 503).json({
     app: 'BoardStack Admin',
-    status: 'ok',
+    checks: {
+      database: dbOk ? 'ok' : 'unreachable',
+      redis: redisOk ? 'ok' : 'unreachable',
+    },
+    status: isHealthy ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
@@ -240,8 +259,16 @@ server.listen(PORT, HOST, async () => {
 
 const gracefulShutdown = (signal: string) => {
   logger.system.info(`[BoardStack Admin] Signal ${signal} received. Closing HTTP server...`);
-  server.close(() => {
+  server.close(async () => {
     logger.system.info('[BoardStack Admin] HTTP server closed gracefully.');
+    try {
+      await corePool.end();
+      await appPool.end();
+    } catch {}
+    try {
+      const redis = getRedisClient();
+      await redis?.quit();
+    } catch {}
     process.exit(0);
   });
 };

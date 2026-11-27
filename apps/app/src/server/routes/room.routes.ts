@@ -220,7 +220,7 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
     const dbRoom = await findRoomByIdentifier(data.room_id || clean);
     const isOwner = Boolean(
       (currentUser && dbRoom && dbRoom.owner_id && currentUser.id === dbRoom.owner_id) ||
-      (currentUser && dbRoom && currentUser.username === dbRoom.owner_username) ||
+      (currentUser && dbRoom && !dbRoom.owner_id && currentUser.username === dbRoom.owner_username) ||
       (currentUser && !dbRoom && data.owner_username && currentUser.username === data.owner_username)
     );
     const effectiveOwnerToken = dbRoom
@@ -290,7 +290,7 @@ async function resolveRoomHandler(req: Request, res: Response): Promise<void> {
 
   const isOwner = Boolean(
     (currentUser && dbRoom.owner_id && currentUser.id === dbRoom.owner_id) ||
-    (currentUser && currentUser.username === dbRoom.owner_username)
+    (currentUser && !dbRoom.owner_id && currentUser.username === dbRoom.owner_username)
   );
 
   res.json({
@@ -342,7 +342,7 @@ async function uploadRoomFileHandler(req: Request, res: Response): Promise<void>
   const actualRoomId = dbRoom ? dbRoom.room_id : roomId;
   const isRoomOwner = Boolean(
     (user && dbRoom && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
-    (user && dbRoom && user.username === dbRoom.owner_username)
+    (user && dbRoom && !dbRoom.owner_id && user.username === dbRoom.owner_username)
   );
 
   if (dbRoom && dbRoom.requires_password && !isRoomOwner) {
@@ -541,7 +541,7 @@ async function getRoomFilesHandler(req: Request, res: Response): Promise<void> {
     const user = await getValidatedCurrentUser(req, res);
     const isOwner = Boolean(
       (user && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
-      (user && user.username === dbRoom.owner_username)
+      (user && !dbRoom.owner_id && user.username === dbRoom.owner_username)
     );
 
     if (!isOwner) {
@@ -593,7 +593,7 @@ async function downloadRoomFileHandler(req: Request, res: Response): Promise<voi
     const user = await getValidatedCurrentUser(req, res);
     const isOwner = Boolean(
       (user && dbRoom.owner_id && user.id === dbRoom.owner_id) ||
-      (user && user.username === dbRoom.owner_username)
+      (user && !dbRoom.owner_id && user.username === dbRoom.owner_username)
     );
 
     if (!isOwner) {
@@ -697,7 +697,7 @@ async function getMyRoomsHandler(req: Request, res: Response): Promise<void> {
        COALESCE(SUM(rf.download_count), 0) AS total_downloads
      FROM rooms r
      LEFT JOIN room_files rf ON r.room_id = rf.room_id
-     WHERE (r.owner_id = ? OR r.owner_username = ?)
+     WHERE (r.owner_id = ? OR (r.owner_id IS NULL AND r.owner_username = ?))
        AND (r.expires_at IS NULL OR r.expires_at > NOW())
      GROUP BY r.room_id, r.code, r.slug, r.is_persistent, r.requires_password, r.save_to_cloud, r.upload_permission, r.max_downloads, r.expires_at, r.created_at
      ORDER BY r.created_at DESC`,
@@ -742,7 +742,7 @@ async function deleteRoomHandler(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const isOwner = (dbRoom.owner_id && user.id === dbRoom.owner_id) || (user.username === dbRoom.owner_username);
+  const isOwner = (dbRoom.owner_id && user.id === dbRoom.owner_id) || (!dbRoom.owner_id && user.username === dbRoom.owner_username);
   if (!isOwner) {
     res.status(403).json({ error: 'Only the room host can delete this room.', ok: false });
     return;
@@ -777,7 +777,7 @@ async function updateRoomHandler(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const isOwner = (dbRoom.owner_id && user.id === dbRoom.owner_id) || (user.username === dbRoom.owner_username);
+  const isOwner = (dbRoom.owner_id && user.id === dbRoom.owner_id) || (!dbRoom.owner_id && user.username === dbRoom.owner_username);
   if (!isOwner) {
     res.status(403).json({ error: 'Only the room host can modify room settings.', ok: false });
     return;

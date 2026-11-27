@@ -1,6 +1,7 @@
 import { clearSessionCookie, getMultiAccountSession } from '../services/auth.service.js';
 import { findUserById } from '../services/user.service.js';
 import { getRedisClient } from '../config/redis.config.js';
+import { matchesRoleRequirement } from '../config/roles.config.js';
 import type { NextFunction, Request, Response } from 'express';
 import type { SessionAccount } from '../types/auth.types.js';
 
@@ -84,11 +85,7 @@ function requireRole(roleName: string) {
       return;
     }
     const roles = Array.isArray(user.roles) ? user.roles : [];
-    const normalizedTarget = roleName.trim().toLowerCase();
-    const hasMatch = roles.some((r) => {
-      const norm = String(r).trim().toLowerCase();
-      return norm === normalizedTarget || (normalizedTarget === 'admin' && (norm === 'superadministrator' || norm === 'administrator'));
-    });
+    const hasMatch = matchesRoleRequirement(roles, roleName);
     if (!hasMatch) {
       res.status(403).json({ error: 'Access denied: insufficient role privileges.', ok: false });
       return;
