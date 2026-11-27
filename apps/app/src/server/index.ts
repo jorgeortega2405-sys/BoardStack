@@ -390,7 +390,11 @@ const server = http.createServer(app);
 server.on('upgrade', (req, socket, head) => {
   const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
   if (url.pathname.startsWith('/ws/room')) {
+    if (socket instanceof net.Socket) {
+      socket.setKeepAlive(true, 10000);
+    }
     const proxySocket = net.connect(config.roomServer.port, config.roomServer.host, () => {
+      proxySocket.setKeepAlive(true, 10000);
       let rawHeaders = '';
       if (req.rawHeaders && req.rawHeaders.length > 0) {
         for (let i = 0; i < req.rawHeaders.length; i += 2) {
@@ -418,6 +422,18 @@ server.on('upgrade', (req, socket, head) => {
     socket.on('error', () => {
       if (!proxySocket.destroyed) {
         proxySocket.destroy();
+      }
+    });
+
+    proxySocket.on('end', () => {
+      if (!socket.destroyed) {
+        socket.end();
+      }
+    });
+
+    socket.on('end', () => {
+      if (!proxySocket.destroyed) {
+        proxySocket.end();
       }
     });
 

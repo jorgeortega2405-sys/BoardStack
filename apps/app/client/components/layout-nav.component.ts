@@ -72,6 +72,7 @@ const ROUTES: Record<string, RouteConfig> = {
 
 class LayoutNavController {
   private activeAuthViewEl: HTMLElement | null = null;
+  private activeViewCleanup: (() => void) | null = null;
   private appLayoutEl: HTMLElement | null = null;
   private collapseBtn: HTMLElement | null = null;
   private currentDrawerMode: 'general' | 'help' | 'settings' = 'general';
@@ -144,6 +145,18 @@ class LayoutNavController {
 
   private isAuthRoute(path: string): boolean {
     return path === '/login' || path === '/register' || path === '/forgot-password' || path === '/reset-password';
+  }
+
+  private clearActiveView(): void {
+    if (this.activeViewCleanup) {
+      try {
+        this.activeViewCleanup();
+      } catch {}
+      this.activeViewCleanup = null;
+    }
+    if (this.viewContainerEl) {
+      this.viewContainerEl.innerHTML = '';
+    }
   }
 
   private clearAuthViews(): void {
@@ -975,9 +988,7 @@ class LayoutNavController {
         }
 
         this.clearAuthViews();
-        if (this.viewContainerEl) {
-          this.viewContainerEl.innerHTML = '';
-        }
+        this.clearActiveView();
 
         if (authView && this.appLayoutEl) {
           this.activeAuthViewEl = authView;
@@ -994,8 +1005,8 @@ class LayoutNavController {
         this.renderDrawerContent();
 
         if (this.viewContainerEl) {
-          this.viewContainerEl.innerHTML = '';
-          let nextView: DocumentFragment | HTMLElement | null = null;
+          this.clearActiveView();
+          let nextView: (DocumentFragment | HTMLElement) & { cleanup?: () => void } | null = null;
           if (targetRoute.path === '/') {
             nextView = await createHomeView((p) => this.navigate(p));
           } else if (targetRoute.path === '/features') {
@@ -1046,6 +1057,7 @@ class LayoutNavController {
           }
 
           if (navId !== this.navigationSeq) {
+            nextView?.cleanup?.();
             return;
           }
 
@@ -1061,8 +1073,9 @@ class LayoutNavController {
             dotsBackdropEl.classList.toggle('is-hidden', !showDots);
           }
 
-          this.viewContainerEl.innerHTML = '';
+          this.clearActiveView();
           if (nextView) {
+            this.activeViewCleanup = nextView.cleanup || null;
             this.viewContainerEl.appendChild(nextView);
           }
         }

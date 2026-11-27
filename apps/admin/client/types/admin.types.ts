@@ -86,6 +86,7 @@ interface AppAdminUserItem {
 }
 
 interface EnterpriseLeadMatchedUser {
+  avatarUrl: string | null;
   email: string;
   id: number;
   organizationDomain: string | null;

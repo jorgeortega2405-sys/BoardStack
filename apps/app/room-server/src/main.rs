@@ -14,10 +14,16 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::{broadcast, Mutex};
+use tokio::{
+    sync::{broadcast, oneshot, Mutex},
+    time::{Duration, MissedTickBehavior},
+};
 use tower_http::cors::{Any, CorsLayer};
 use uuid::Uuid;
 
@@ -26,9 +32,13 @@ struct Participant {
     peer_id: String,
     username: String,
     avatar_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_id: Option<String>,
     is_owner: bool,
     can_upload: bool,
     joined_at: u64,
+    #[serde(skip)]
+    conn_id: String,
 }
 
 #[allow(dead_code)]
@@ -48,6 +58,7 @@ struct Room {
     owner_avatar_url: Option<String>,
     created_at: u64,
     participants: HashMap<String, Participant>,
+    peer_shutdowns: HashMap<String, oneshot::Sender<()>>,
     tx: broadcast::Sender<String>,
 }
 
@@ -134,6 +145,7 @@ struct ErrorResponse {
 #[derive(Deserialize)]
 struct WsQuery {
     peer_id: Option<String>,
+    user_id: Option<String>,
     username: Option<String>,
     avatar_url: Option<String>,
     #[allow(dead_code)]
@@ -338,6 +350,7 @@ async fn create_room(
         owner_avatar_url: payload.avatar_url,
         created_at: current_timestamp(),
         participants: HashMap::new(),
+        peer_shutdowns: HashMap::new(),
         tx,
     };
 
@@ -759,6 +772,16 @@ async fn handle_socket(
         return;
     }
 
+    let conn_id = Uuid::new_v4().to_string();
+    let user_id = query.user_id.and_then(|s| {
+        let trimmed = s.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+
     let peer_id = query
         .peer_id
         .filter(|s| !s.trim().is_empty())
@@ -790,7 +813,7 @@ async fn handle_socket(
             }
         });
 
-    let (rx_opt, room_tx_opt, auth_error) = {
+    let (rx_opt, room_tx_opt, shutdown_rx_opt, auth_error) = {
         let mut lock = state.lock().await;
         if let Some(room) = lock.rooms.get_mut(&actual_room_id) {
             let can_upload = if is_owner {
@@ -807,9 +830,11 @@ async fn handle_socket(
                 peer_id: peer_id.clone(),
                 username: username.clone(),
                 avatar_url: query.avatar_url,
+                user_id: user_id.clone(),
                 is_owner,
                 can_upload,
                 joined_at: current_timestamp(),
+                conn_id: conn_id.clone(),
             };
 
             let auth_failed = if !is_owner {
@@ -832,12 +857,37 @@ async fn handle_socket(
             };
 
             if let Some(reason) = auth_failed {
-                (None, None, Some(reason))
+                (None, None, None, Some(reason))
             } else {
+                let superseded_peer_ids: Vec<String> = room
+                    .participants
+                    .iter()
+                    .filter_map(|(existing_peer_id, p)| {
+                        let same_peer = existing_peer_id == &peer_id;
+                        let same_owner = is_owner && p.is_owner;
+                        let same_user = user_id.is_some() && p.user_id == user_id;
+                        if same_peer || same_owner || same_user {
+                            Some(existing_peer_id.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                for old_peer_id in superseded_peer_ids {
+                    if let Some(old_p) = room.participants.remove(&old_peer_id) {
+                        if let Some(old_tx) = room.peer_shutdowns.remove(&old_p.conn_id) {
+                            let _ = old_tx.send(());
+                        }
+                    }
+                }
+
                 if is_owner {
                     room.owner_peer_id = Some(peer_id.clone());
                 }
 
+                let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+                room.peer_shutdowns.insert(conn_id.clone(), shutdown_tx);
                 room.participants.insert(peer_id.clone(), participant);
                 let rx = room.tx.subscribe();
                 let room_tx = room.tx.clone();
@@ -859,10 +909,10 @@ async fn handle_socket(
                 .unwrap_or_default();
 
                 let _ = room.tx.send(state_msg);
-                (Some(rx), Some(room_tx), None)
+                (Some(rx), Some(room_tx), Some(shutdown_rx), None)
             }
         } else {
-            (None, None, None)
+            (None, None, None, None)
         }
     };
 
@@ -895,16 +945,39 @@ async fn handle_socket(
         None => return,
     };
 
+    let shutdown_rx = match shutdown_rx_opt {
+        Some(rx) => rx,
+        None => return,
+    };
+
+    let last_seen = Arc::new(AtomicU64::new(current_timestamp()));
+    let last_seen_for_send = last_seen.clone();
+
     let mut send_task = tokio::spawn(async move {
+        let mut ping_interval = tokio::time::interval(Duration::from_secs(15));
+        ping_interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        ping_interval.tick().await;
         loop {
-            match rx.recv().await {
-                Ok(msg) => {
-                    if sender.send(Message::Text(msg.into())).await.is_err() {
+            tokio::select! {
+                recv_res = rx.recv() => {
+                    match recv_res {
+                        Ok(msg) => {
+                            if sender.send(Message::Text(msg.into())).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                        Err(broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+                _ = ping_interval.tick() => {
+                    if current_timestamp().saturating_sub(last_seen_for_send.load(Ordering::Relaxed)) > 35 {
+                        break;
+                    }
+                    if sender.send(Message::Ping(Vec::new().into())).await.is_err() {
                         break;
                     }
                 }
-                Err(broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(broadcast::error::RecvError::Closed) => break,
             }
         }
     });
@@ -912,12 +985,14 @@ async fn handle_socket(
     let state_for_recv = state.clone();
     let actual_room_id_for_recv = actual_room_id.clone();
     let room_tx_for_recv = room_tx.clone();
+    let last_seen_for_recv = last_seen.clone();
 
     let mut recv_task = tokio::spawn(async move {
         let mut msg_count = 0u32;
         let mut last_window = current_timestamp();
         while let Some(Ok(msg)) = receiver.next().await {
             let now = current_timestamp();
+            last_seen_for_recv.store(now, Ordering::Relaxed);
             if now != last_window {
                 last_window = now;
                 msg_count = 0;
@@ -999,13 +1074,31 @@ async fn handle_socket(
     tokio::select! {
         _ = (&mut send_task) => recv_task.abort(),
         _ = (&mut recv_task) => send_task.abort(),
+        _ = async {
+            if shutdown_rx.await.is_err() {
+                std::future::pending::<()>().await;
+            }
+        } => {
+            send_task.abort();
+            recv_task.abort();
+        }
     };
 
     let mut lock = state.lock().await;
-    if is_owner {
-        if let Some(room) = lock.rooms.get_mut(&actual_room_id) {
+    if let Some(room) = lock.rooms.get_mut(&actual_room_id) {
+        room.peer_shutdowns.remove(&conn_id);
+        let is_active_conn = room
+            .participants
+            .get(&peer_id)
+            .map(|p| p.conn_id == conn_id)
+            .unwrap_or(false);
+
+        if is_active_conn {
             room.participants.remove(&peer_id);
-            room.owner_peer_id = None;
+            if is_owner && room.owner_peer_id.as_deref() == Some(peer_id.as_str()) {
+                room.owner_peer_id = None;
+            }
+
             let state_msg = serde_json::to_string(&WsRoomStatePayload {
                 r#type: "room_state".to_string(),
                 room_id: room.id.clone(),
@@ -1023,7 +1116,7 @@ async fn handle_socket(
             .unwrap_or_default();
             let _ = room.tx.send(state_msg);
 
-            if !room.is_persistent {
+            if is_owner && !room.is_persistent && room.owner_peer_id.is_none() {
                 let delayed_state = state.clone();
                 let delayed_room_id = actual_room_id.clone();
                 tokio::spawn(async move {
@@ -1048,24 +1141,6 @@ async fn handle_socket(
                 });
             }
         }
-    } else if let Some(room) = lock.rooms.get_mut(&actual_room_id) {
-        room.participants.remove(&peer_id);
-        let state_msg = serde_json::to_string(&WsRoomStatePayload {
-            r#type: "room_state".to_string(),
-            room_id: room.id.clone(),
-            code: room.code.clone(),
-            slug: room.slug.clone(),
-            is_persistent: room.is_persistent,
-            requires_password: room.password.is_some(),
-            owner_username: room.owner_username.clone(),
-            participants: room.participants.values().cloned().collect(),
-            expires_at: room.expires_at,
-            max_downloads: room.max_downloads,
-            save_to_cloud: room.save_to_cloud,
-            upload_permission: room.upload_permission.clone(),
-        })
-        .unwrap_or_default();
-        let _ = room.tx.send(state_msg);
     }
 }
 

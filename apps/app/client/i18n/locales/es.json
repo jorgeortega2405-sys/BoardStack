@@ -932,7 +932,13 @@
     "requires_enterprise": "Esta sección es exclusiva para suscriptores de los planes Business o Empresas.",
     "explore_enterprise": "Explorar planes",
     "seats_available": "{count} disponibles",
-    "search_placeholder": "Buscar miembros..."
+    "search_placeholder": "Buscar miembros...",
+    "copy_email": "Copiar correo",
+    "saml_idp_title": "Identity Provider (IdP)",
+    "saml_sp_title": "Service Provider (SP) - BoardStack",
+    "saml_toggle_subtitle": "SAML 2.0 / Single Sign-On (SSO)",
+    "search_no_results": "No se encontraron miembros que coincidan con tu búsqueda.",
+    "selected_count": "{count} seleccionado"
   },
   "sales": {
     "title": "Hablar con ventas",

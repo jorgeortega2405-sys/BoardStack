@@ -35,6 +35,7 @@ interface OrganizationMemberRecord {
   org_id: number;
   role: string;
   status: string;
+  subscription_tier?: string | null;
   user_id: number | null;
   username?: string | null;
 }
@@ -185,25 +186,38 @@ async function getOrganizationMembers(orgId: number): Promise<OrganizationMember
   );
 
   const userMap = new Map<number, { avatar_url: string | null; username: string | null }>();
+  const tierMap = new Map<number, string>();
   if (userIds.length > 0) {
     const placeholders = userIds.map(() => '?').join(', ');
-    const [coreUsers] = await corePool.query<RowDataPacket[]>(
-      `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
-      userIds
-    );
+    const [[coreUsers], [profileRows]] = await Promise.all([
+      corePool.query<RowDataPacket[]>(
+        `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
+        userIds
+      ),
+      pool.query<RowDataPacket[]>(
+        `SELECT user_id, subscription_tier FROM app_user_profiles WHERE user_id IN (${placeholders})`,
+        userIds
+      ),
+    ]);
     for (const u of coreUsers) {
       userMap.set(Number(u.id), {
         avatar_url: u.avatar_url || null,
         username: u.username || null,
       });
     }
+    for (const p of profileRows) {
+      tierMap.set(Number(p.user_id), String(p.subscription_tier || 'free').toLowerCase());
+    }
   }
 
   return rows.map((row) => {
-    const info = row.user_id ? userMap.get(Number(row.user_id)) : undefined;
+    const uid = row.user_id ? Number(row.user_id) : null;
+    const info = uid ? userMap.get(uid) : undefined;
+    const subscriptionTier = uid ? (tierMap.get(uid) || 'free') : 'free';
     return {
       ...row,
       avatar_url: info?.avatar_url || null,
+      subscription_tier: subscriptionTier,
       username: info?.username || null,
     } as OrganizationMemberRecord;
   });
@@ -265,6 +279,7 @@ async function addOrganizationMember(
     [orgId, userId, email, role, status]
   );
 
+  let memberSubscriptionTier = 'free';
   if (matchedUser) {
     const [ownerRows] = await pool.query<RowDataPacket[]>(
       'SELECT p.subscription_tier, p.storage_limit_bytes FROM organizations o JOIN app_user_profiles p ON o.owner_id = p.user_id WHERE o.id = ? LIMIT 1',
@@ -279,6 +294,11 @@ async function addOrganizationMember(
        WHERE user_id = ? AND subscription_tier = 'free'`,
       [orgTier, orgStorage, matchedUser.id]
     );
+    const [memberProfileRows] = await pool.query<RowDataPacket[]>(
+      'SELECT subscription_tier FROM app_user_profiles WHERE user_id = ? LIMIT 1',
+      [matchedUser.id]
+    );
+    memberSubscriptionTier = String(memberProfileRows[0]?.subscription_tier || orgTier || 'free').toLowerCase();
   }
 
   return {
@@ -289,6 +309,7 @@ async function addOrganizationMember(
     org_id: orgId,
     role,
     status,
+    subscription_tier: memberSubscriptionTier,
     user_id: userId,
     username: matchedUser?.username || null,
   };

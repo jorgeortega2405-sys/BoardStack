@@ -106,6 +106,7 @@ interface EnterpriseContractItem {
 }
 
 interface EnterpriseLeadMatchedUser {
+  avatarUrl: string | null;
   email: string;
   id: number;
   organizationDomain: string | null;

@@ -293,7 +293,12 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     return fragment;
   }
 
-  const myPeerId = `peer_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+  const peerStorageKey = `room_peer_id_${resolvedRoomId}`;
+  let myPeerId = sessionStorage.getItem(peerStorageKey) || '';
+  if (!myPeerId) {
+    myPeerId = `peer_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+    sessionStorage.setItem(peerStorageKey, myPeerId);
+  }
 
   let myUsername = '';
   let myAvatarUrl = '';
@@ -336,17 +341,13 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       <button type="button" class="component-button component-button--icon-only component-button--h40 component-button--destructive" data-ref="btn-leave-room" data-tooltip="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}" data-tooltip-placement="bottom" aria-label="${isOwner ? i18n.t('room.close_room') : i18n.t('room.leave_room')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
       </button>
-      <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="room-selected-badge"></span>
+      <span class="component-badge component-badge--sm is-hidden" data-ref="room-selected-badge"></span>
     </div>
 
     <div class="component-top__right" data-ref="top-right">
       <div class="component-group component-group--actions is-hidden" data-ref="room-selection-actions">
-        <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-room-download-selected">
+        <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only" data-ref="btn-room-download-selected" data-tooltip="${i18n.t('room.download_selected')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_selected')}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-          <span>${i18n.t('room.download_selected')}</span>
-        </button>
-        <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-room-clear-selection" data-tooltip="${i18n.t('room.deselect')}" aria-label="${i18n.t('room.deselect')}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
         </button>
       </div>
 
@@ -427,23 +428,19 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     <div class="component-block__scrollable is-hidden" data-ref="room-table-container" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
       <div class="component-top is-hidden" data-ref="folder-header-bar">
         <div class="component-top__left" data-ref="folder-header-left">
-          <button type="button" class="component-button component-button--icon-only component-button--h34" data-ref="btn-back-to-root" data-tooltip="${i18n.t('room.back_to_root')}" aria-label="${i18n.t('room.back_to_root')}">
+          <button type="button" class="component-button component-button--icon-only component-button--h40" data-ref="btn-back-to-root" data-tooltip="${i18n.t('room.back_to_root')}" aria-label="${i18n.t('room.back_to_root')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           </button>
           <div class="component-top__title-box" data-ref="folder-title-box">
             <span class="component-top__title-text" data-ref="folder-header-title"></span>
-            <span class="component-badge component-badge--neutral component-badge--sm" data-ref="folder-header-desc"></span>
-            <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="folder-selected-badge"></span>
+            <span class="component-badge component-badge--sm" data-ref="folder-header-desc"></span>
+            <span class="component-badge component-badge--sm is-hidden" data-ref="folder-selected-badge"></span>
           </div>
         </div>
         <div class="component-top__right" data-ref="folder-header-actions">
           <div class="component-group component-group--actions is-hidden" data-ref="folder-selection-actions">
-            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-folder-download-selected">
+            <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only" data-ref="btn-folder-download-selected" data-tooltip="${i18n.t('room.download_selected')}" data-tooltip-placement="bottom" aria-label="${i18n.t('room.download_selected')}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>${i18n.t('room.download_selected')}</span>
-            </button>
-            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-folder-clear-selection" data-tooltip="${i18n.t('room.deselect')}" aria-label="${i18n.t('room.deselect')}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
         </div>
@@ -453,10 +450,10 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         <table class="component-table component-table--flush" data-ref="room-files-table">
           <thead class="component-table__head" data-ref="room-files-thead">
             <tr>
-              <th class="component-table__cell--pl20" data-ref="th-name">${i18n.t('room.col_name')}</th>
+              <th data-ref="th-name">${i18n.t('room.col_name')}</th>
               <th data-ref="th-size">${i18n.t('room.col_size')}</th>
               <th data-ref="th-sender">${i18n.t('room.col_sender')}</th>
-              <th class="component-table__cell--pr20" data-ref="th-status" style="text-align: right;">${i18n.t('room.col_status')}</th>
+              <th data-ref="th-status">${i18n.t('room.col_status')}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="room-files-tbody">
@@ -488,7 +485,6 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const roomSelectedBadge = topEl.querySelector<HTMLElement>('[data-ref="room-selected-badge"]');
   const roomSelectionActions = topEl.querySelector<HTMLElement>('[data-ref="room-selection-actions"]');
   const btnRoomDownloadSelected = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-download-selected"]');
-  const btnRoomClearSelection = topEl.querySelector<HTMLButtonElement>('[data-ref="btn-room-clear-selection"]');
   const addMoreWrapper = topEl.querySelector<HTMLElement>('[data-ref="add-more-wrapper"]');
   const shareWrapper = topEl.querySelector<HTMLElement>('[data-ref="share-wrapper"]');
 
@@ -500,7 +496,6 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   const folderSelectedBadge = bottomEl.querySelector<HTMLElement>('[data-ref="folder-selected-badge"]');
   const folderSelectionActions = bottomEl.querySelector<HTMLElement>('[data-ref="folder-selection-actions"]');
   const btnFolderDownloadSelected = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-download-selected"]');
-  const btnFolderClearSelection = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-folder-clear-selection"]');
   const btnBackToRoot = bottomEl.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-root"]');
   const filesTbody = bottomEl.querySelector<HTMLElement>('[data-ref="room-files-tbody"]');
   const dropzoneArea = bottomEl.querySelector<HTMLElement>('[data-ref="dropzone-area"]');
@@ -594,18 +589,6 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
   btnRoomDownloadSelected?.addEventListener('click', downloadSelectedFiles);
   btnFolderDownloadSelected?.addEventListener('click', downloadSelectedFiles);
-
-  btnRoomClearSelection?.addEventListener('click', () => {
-    selectedItemIds.clear();
-    updateSelectionUI();
-    renderTableRows();
-  });
-
-  btnFolderClearSelection?.addEventListener('click', () => {
-    selectedItemIds.clear();
-    updateSelectionUI();
-    renderTableRows();
-  });
 
   const handleKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && selectedItemIds.size > 0) {
@@ -745,7 +728,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     void selectFolderWithPicker();
   });
 
-  document.addEventListener('click', (e: MouseEvent) => {
+  const handleDocumentClick = (e: MouseEvent) => {
     const target = e.target as HTMLElement | null;
     if (shareDropdown?.classList.contains('is-open')) {
       if (!shareDropdown.contains(target) && !btnShare?.contains(target)) {
@@ -757,7 +740,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         addMoreDropdown.classList.remove('is-open');
       }
     }
-  });
+  };
+  document.addEventListener('click', handleDocumentClick);
 
   const updateConnectionModeBadge = () => {
     if (!btnConnectionMode) return;
@@ -791,6 +775,17 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     await copyToClipboard(shareUrl, i18n.t('room.link_copied'));
   });
 
+  const clearRoomSession = () => {
+    sessionStorage.removeItem(`room_owner_${roomId}`);
+    sessionStorage.removeItem(`room_owner_${resolvedRoomId}`);
+    sessionStorage.removeItem(`room_owner_token_${resolvedRoomId}`);
+    sessionStorage.removeItem(peerStorageKey);
+    if (currentSlug) {
+      sessionStorage.removeItem(`room_owner_${currentSlug}`);
+      sessionStorage.removeItem(`room_owner_token_${currentSlug}`);
+    }
+  };
+
   const handleExit = () => {
     if (isOwner && isPersistentRoom) {
       openModal({
@@ -804,6 +799,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         confirmText: i18n.t('room.delete_permanently'),
         description: i18n.t('room.delete_room_confirm_title'),
         onCancel: () => {
+          clearRoomSession();
           cleanup();
           navigate?.('/');
         },
@@ -814,6 +810,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'close_room' }));
           }
+          clearRoomSession();
           cleanup();
           navigate?.('/');
         },
@@ -833,6 +830,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
               await deleteApi('/api/rooms/' + encodeURIComponent(resolvedRoomId));
             } catch {}
           }
+          clearRoomSession();
           cleanup();
           navigate?.('/');
         },
@@ -1624,9 +1622,9 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         row.setAttribute('data-ref', `file-row-${f.fileId}`);
 
         const statusBadge = f.isLimitReached
-          ? `<span class="component-badge component-badge--sm component-badge--destructive" data-ref="badge-limit-${f.fileId}">${i18n.t('room.download_limit_reached')}</span>`
+          ? `<span class="component-badge component-badge--sm" data-ref="badge-limit-${f.fileId}">${i18n.t('room.download_limit_reached')}</span>`
           : (f.progress >= 100
-            ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
+            ? `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${i18n.t('room.status_ready')}</span>`
             : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${f.fileId}">${f.progress}%</span>`);
 
         const downloadCountHtml = (f.maxDownloads !== undefined && f.maxDownloads !== null)
@@ -1634,12 +1632,12 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           : '';
 
         row.innerHTML = `
-          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${f.fileId}">
+          <td class="component-table__cell" data-ref="cell-name-${f.fileId}">
             <div class="component-table__cell-content">
               <div class="component-table__icon-box">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(f.name)}"></use></svg>
               </div>
-              <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(f.relativePath || f.name)}">${escapeHtml(f.name)}</span>
+              <span class="component-badge component-badge--sm" title="${escapeHtml(f.relativePath || f.name)}">${escapeHtml(f.name)}</span>
             </div>
           </td>
           <td class="component-table__cell" data-ref="cell-size-${f.fileId}">
@@ -1648,7 +1646,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${f.fileId}">
             <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
           </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${f.fileId}" style="text-align: right;">
+          <td class="component-table__cell" data-ref="cell-status-${f.fileId}">
             ${downloadCountHtml}
             ${statusBadge}
           </td>
@@ -1698,17 +1696,17 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         folderRow.setAttribute('data-ref', `folder-row-${folder.id}`);
 
         const statusBadge = allComplete
-          ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="folder-badge-${folder.id}">${i18n.t('room.status_ready')}</span>`
+          ? `<span class="component-badge component-badge--sm" data-ref="folder-badge-${folder.id}">${i18n.t('room.status_ready')}</span>`
           : `<span class="component-badge component-badge--sm" data-ref="folder-badge-${folder.id}">${overallProgress}%</span>`;
 
         folderRow.innerHTML = `
-          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${folder.id}">
+          <td class="component-table__cell" data-ref="cell-name-${folder.id}">
             <div class="component-table__cell-content">
               <div class="component-table__icon-box">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</span>
+                <span class="component-badge component-badge--sm" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</span>
                 <span class="component-badge component-badge--sm">${i18n.t('room.folder')}</span>
               </div>
             </div>
@@ -1719,7 +1717,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${folder.id}">
             <span class="component-badge component-badge--sm">${escapeHtml(folder.senderUsername)}</span>
           </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${folder.id}" style="text-align: right;">
+          <td class="component-table__cell" data-ref="cell-status-${folder.id}">
             <span class="component-badge component-badge--sm" style="margin-right: 6px;" data-ref="folder-count-${folder.id}">${i18n.t('room.files_count', { count: folder.files.size })}</span>
             ${statusBadge}
           </td>
@@ -1743,9 +1741,9 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         fileRow.setAttribute('data-ref', `file-row-${file.fileId}`);
 
         const statusBadge = file.isLimitReached
-          ? `<span class="component-badge component-badge--destructive" data-ref="badge-limit-${file.fileId}">${i18n.t('room.download_limit_reached')}</span>`
+          ? `<span class="component-badge component-badge--sm" data-ref="badge-limit-${file.fileId}">${i18n.t('room.download_limit_reached')}</span>`
           : (file.progress >= 100
-            ? `<span class="component-badge component-badge--sm component-badge--success" data-ref="progress-badge-${file.fileId}">${i18n.t('room.status_ready')}</span>`
+            ? `<span class="component-badge component-badge--sm" data-ref="progress-badge-${file.fileId}">${i18n.t('room.status_ready')}</span>`
             : `<span class="component-badge component-badge--sm" data-ref="progress-badge-${file.fileId}">${file.progress}%</span>`);
 
         const downloadCountHtml = (file.maxDownloads !== undefined && file.maxDownloads !== null)
@@ -1753,12 +1751,12 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           : '';
 
         fileRow.innerHTML = `
-          <td class="component-table__cell component-table__cell--pl20" data-ref="cell-name-${file.fileId}">
+          <td class="component-table__cell" data-ref="cell-name-${file.fileId}">
             <div class="component-table__cell-content">
               <div class="component-table__icon-box">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${getFileIcon(file.name)}"></use></svg>
               </div>
-              <span class="component-table__title" style="font-weight: 600; font-size: 13.5px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+              <span class="component-badge component-badge--sm" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
             </div>
           </td>
           <td class="component-table__cell" data-ref="cell-size-${file.fileId}">
@@ -1767,7 +1765,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           <td class="component-table__cell" data-ref="cell-sender-${file.fileId}">
             <span class="component-badge component-badge--sm">${escapeHtml(file.senderUsername)}</span>
           </td>
-          <td class="component-table__cell component-table__cell--pr20" data-ref="cell-status-${file.fileId}" style="text-align: right;">
+          <td class="component-table__cell" data-ref="cell-status-${file.fileId}">
             ${downloadCountHtml}
             ${statusBadge}
           </td>
@@ -1969,7 +1967,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         }
         const errBadge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${item.fileId}"]`);
         if (errBadge) {
-          errBadge.className = 'component-badge component-badge--sm component-badge--destructive';
+          errBadge.className = 'component-badge component-badge--sm';
           errBadge.textContent = i18n.t('room.status_error');
         }
       }
@@ -2060,7 +2058,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
     if (badge) {
       if (progress >= 100) {
-        badge.className = 'component-badge component-badge--sm component-badge--success';
+        badge.className = 'component-badge component-badge--sm';
         badge.textContent = i18n.t('room.status_ready');
       } else {
         badge.textContent = `${progress}%`;
@@ -2077,7 +2075,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${f.fileId}"]`);
         if (badge) {
           if (f.progress >= 100) {
-            badge.className = 'component-badge component-badge--sm component-badge--success';
+            badge.className = 'component-badge component-badge--sm';
             badge.textContent = i18n.t('room.status_ready');
           } else {
             badge.textContent = `${f.progress}%`;
@@ -2120,7 +2118,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
       if (sizeEl) sizeEl.textContent = formatBytes(folderBytes);
       if (badgeEl) {
         if (allComplete) {
-          badgeEl.className = 'component-badge component-badge--sm component-badge--success';
+          badgeEl.className = 'component-badge component-badge--sm';
           badgeEl.textContent = i18n.t('room.status_ready');
         } else {
           badgeEl.textContent = `${overallProgress}%`;
@@ -2561,7 +2559,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         }
         const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${fileId}"]`);
         if (badge) {
-          badge.className = 'component-badge component-badge--sm component-badge--destructive';
+          badge.className = 'component-badge component-badge--sm';
           badge.textContent = i18n.t('room.status_error');
         }
         toast.error(uploadRes.error || i18n.t('common.error'));
@@ -2760,8 +2758,30 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   };
 
   const renderParticipants = (participants: RoomParticipant[]) => {
+    const uniqueParticipantsMap = new Map<string, RoomParticipant>();
+    participants.forEach((p) => {
+      uniqueParticipantsMap.set(p.peer_id, p);
+    });
+    const uniqueParticipants = Array.from(uniqueParticipantsMap.values());
+    const activePeerIds = new Set(uniqueParticipants.map((p) => p.peer_id));
+
+    let removedStalePeer = false;
+    peers.forEach((peer, peerId) => {
+      if (!activePeerIds.has(peerId)) {
+        try {
+          if (peer.dataChannel) peer.dataChannel.close();
+          peer.pc.close();
+        } catch {}
+        peers.delete(peerId);
+        removedStalePeer = true;
+      }
+    });
+    if (removedStalePeer) {
+      updateConnectionModeBadge();
+    }
+
     if (isOwner) {
-      participants.forEach((p) => {
+      uniqueParticipants.forEach((p) => {
         if (p.peer_id !== myPeerId && !peers.has(p.peer_id)) {
           void initiatePeerConnection(p.peer_id);
         }
@@ -2770,7 +2790,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
     if (!avatarGroupEl) return;
 
-    avatarGroupEl.innerHTML = participants.map((p) => {
+    avatarGroupEl.innerHTML = uniqueParticipants.map((p) => {
       const isSelf = p.peer_id === myPeerId;
       const roleText = p.is_owner
         ? ` (${i18n.t('room.host_badge')})`
@@ -2789,7 +2809,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     }).join('');
 
     if (isOwner) {
-      participants.forEach((p) => {
+      uniqueParticipants.forEach((p) => {
         if (!p.is_owner && p.peer_id !== myPeerId) {
           const avEl = avatarGroupEl.querySelector<HTMLElement>(`[data-ref="avatar-${escapeHtml(p.peer_id)}"]`);
           if (avEl) {
@@ -2803,12 +2823,17 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     }
   };
 
+  function closeSocketOnUnload(): void {
+    cleanup();
+  }
+
   const cleanup = () => {
     if (isCleanedUp) return;
     isCleanedUp = true;
-    window.removeEventListener('beforeunload', cleanup);
+    window.removeEventListener('beforeunload', closeSocketOnUnload);
+    window.removeEventListener('pagehide', closeSocketOnUnload);
     window.removeEventListener('keydown', handleKeyDown);
-    sessionStorage.removeItem(`room_owner_${roomId}`);
+    document.removeEventListener('click', handleDocumentClick);
 
     peers.forEach((peer) => {
       try {
@@ -2845,6 +2870,9 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
 
     if (ws) {
       try {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
         if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
           ws.close();
         }
@@ -2853,7 +2881,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     }
   };
 
-  window.addEventListener('beforeunload', cleanup);
+  window.addEventListener('beforeunload', closeSocketOnUnload);
+  window.addEventListener('pagehide', closeSocketOnUnload);
 
   const showPasswordPrompt = () => {
     isAuthPending = true;
@@ -2908,6 +2937,20 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
   };
 
   const initWebSocket = () => {
+    if (isCleanedUp) return;
+
+    if (ws) {
+      try {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+          ws.close();
+        }
+      } catch {}
+      ws = null;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     const savedPassword = sessionStorage.getItem(`room_password_${resolvedRoomId}`) ||
@@ -2916,8 +2959,9 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     const ownerToken = sessionStorage.getItem(`room_owner_token_${resolvedRoomId}`) ||
                        (currentSlug ? sessionStorage.getItem(`room_owner_token_${currentSlug}`) : null) ||
                        '';
+    const userIdParam = currentUser?.id ? `&user_id=${encodeURIComponent(String(currentUser.id))}` : '';
 
-    const wsUrl = `${protocol}//${host}/ws/room/${encodeURIComponent(resolvedRoomId)}?peer_id=${encodeURIComponent(myPeerId)}&username=${encodeURIComponent(myUsername)}&avatar_url=${encodeURIComponent(myAvatarUrl)}&is_owner=${isOwner}&owner_token=${encodeURIComponent(ownerToken)}&password=${encodeURIComponent(savedPassword)}`;
+    const wsUrl = `${protocol}//${host}/ws/room/${encodeURIComponent(resolvedRoomId)}?peer_id=${encodeURIComponent(myPeerId)}&username=${encodeURIComponent(myUsername)}&avatar_url=${encodeURIComponent(myAvatarUrl)}&is_owner=${isOwner}&owner_token=${encodeURIComponent(ownerToken)}&password=${encodeURIComponent(savedPassword)}${userIdParam}`;
 
     ws = new WebSocket(wsUrl);
 
@@ -2989,6 +3033,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
         } else if (data.type === 'peer_kicked') {
           if (data.target_peer_id === myPeerId) {
             toast.error(i18n.t('room.user_kicked_notice'));
+            clearRoomSession();
             cleanup();
             navigate?.('/');
           }
@@ -3038,7 +3083,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           if (limitReached) {
             const badge = filesTbody?.querySelector<HTMLElement>(`[data-ref="progress-badge-${data.file_id}"]`);
             if (badge) {
-              badge.className = 'component-badge component-badge--sm component-badge--destructive';
+              badge.className = 'component-badge component-badge--sm';
               badge.textContent = i18n.t('room.download_limit_reached');
             }
           }
@@ -3048,6 +3093,7 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
           } else {
             toast.info(i18n.t('room.closed_notice'));
           }
+          clearRoomSession();
           cleanup();
           navigate?.('/');
         }
@@ -3080,6 +3126,8 @@ async function createRoomView(roomId: string, navigate?: (path: string) => void)
     initWebSocket();
     void loadCloudFiles();
   }
+
+  (fragment as DocumentFragment & { cleanup?: () => void }).cleanup = cleanup;
 
   return fragment;
 }

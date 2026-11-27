@@ -33,6 +33,7 @@ interface LeadRow extends RowDataPacket {
 }
 
 interface CoreUserLookupRow extends RowDataPacket {
+  avatar_url: string | null;
   email: string;
   id: number;
   status: string;
@@ -112,7 +113,7 @@ async function resolveMatchedUsersMap(leads: LeadRow[]): Promise<Map<number, Ent
   }
 
   const [coreUsers] = await corePool.execute<CoreUserLookupRow[]>(
-    `SELECT id, username, email, status FROM users WHERE ${conditions.join(' OR ')}`,
+    `SELECT id, username, email, avatar_url, status FROM users WHERE ${conditions.join(' OR ')}`,
     params
   );
 
@@ -165,6 +166,7 @@ async function resolveMatchedUsersMap(leads: LeadRow[]): Promise<Map<number, Ent
     const p = profileMap.get(uid);
     const o = orgMap.get(uid);
     const matched: EnterpriseLeadMatchedUser = {
+      avatarUrl: u.avatar_url || null,
       email: String(u.email),
       id: uid,
       organizationDomain: o?.domain || null,
@@ -334,7 +336,7 @@ async function lookupAppUserByEmail(email: string): Promise<EnterpriseLeadMatche
   if (!cleanEmail) return null;
 
   const [coreUsers] = await corePool.execute<CoreUserLookupRow[]>(
-    'SELECT id, username, email, status FROM users WHERE LOWER(email) = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, status FROM users WHERE LOWER(email) = ? LIMIT 1',
     [cleanEmail]
   );
 
@@ -372,6 +374,7 @@ async function lookupAppUserByEmail(email: string): Promise<EnterpriseLeadMatche
   const o = orgs[0] || null;
 
   return {
+    avatarUrl: u.avatar_url || null,
     email: String(u.email),
     id: uid,
     organizationDomain: o?.domain || null,

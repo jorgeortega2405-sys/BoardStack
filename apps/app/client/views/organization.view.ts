@@ -1,6 +1,7 @@
-import { copyToClipboard, setupDropdown } from '../utils/dom.util.js';
+import { copyToClipboard, escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import { currentUser, deleteApi, getApi, postApi, putApi } from '../services/api.service.js';
 import { formatDate } from '../utils/format.util.js';
+import { getUserAvatarUrl } from '../utils/avatar.util.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { openModal } from '../components/modal.component.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -29,7 +30,17 @@ interface OrgMemberData {
   joined_at: string;
   role: string;
   status: string;
+  subscription_tier?: string | null;
+  user_id?: number | null;
   username?: string | null;
+}
+
+function normalizeMemberTier(tier?: string | null): 'enterprise' | 'business' | 'pro' | 'free' {
+  const normalized = String(tier || 'free').toLowerCase();
+  if (normalized === 'enterprise' || normalized === 'business' || normalized === 'pro') {
+    return normalized;
+  }
+  return 'free';
 }
 
 interface OrgApiResponse {
@@ -90,7 +101,7 @@ function renderOverviewHtml(
               </div>
             ` : (isEnterpriseOwner ? `
               <div style="margin-top: 10px;">
-                <span class="component-badge component-badge--sm component-badge--neutral" data-ref="badge-enterprise-seats-managed">${i18n.t('organization.enterprise_managed_seats_badge')}</span>
+                <span class="component-badge component-badge--sm" data-ref="badge-enterprise-seats-managed">${i18n.t('organization.enterprise_managed_seats_badge')}</span>
               </div>
             ` : '')}
           </div>
@@ -138,7 +149,7 @@ function renderDetailsHtml(org: OrgData): string {
   return `
     <div class="component-top" data-ref="details-top-bar">
       <div class="component-top__left" data-ref="details-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
         </button>
         <div class="component-top__title-box" data-ref="details-title-heading">
@@ -146,7 +157,7 @@ function renderDetailsHtml(org: OrgData): string {
         </div>
       </div>
       <div class="component-top__right" data-ref="details-top-right">
-        <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-save-details">
+        <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-details">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
           <span>${i18n.t('organization.btn_save_changes')}</span>
         </button>
@@ -154,21 +165,19 @@ function renderDetailsHtml(org: OrgData): string {
     </div>
 
     <div class="component-bottom component-bottom--centered" data-ref="details-bottom-area">
-      <div class="component-container component-container--narrow" data-ref="details-layout" style="margin: 0 auto; width: 100%; max-width: 680px;">
-        
-        <div class="component-card" data-ref="card-org-details" style="padding: 28px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 16px;">
-          
-          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
-            <h2 class="component-title" data-ref="details-title" style="font-size: 18px; font-weight: 700; margin: 0 0 4px 0;">${i18n.t('organization.general_title')}</h2>
-            <p class="component-subtitle" data-ref="details-subtitle" style="font-size: 13px; margin: 0;">${i18n.t('organization.general_desc')}</p>
-          </div>
+      <div class="component-container component-container--narrow" data-ref="details-layout" style="margin: 0 auto; width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 16px;">
+        <div class="component-header" data-ref="details-header">
+          <h1 class="component-title" data-ref="details-title">${i18n.t('organization.general_title')}</h1>
+          <p class="component-subtitle" data-ref="details-subtitle">${i18n.t('organization.general_desc')}</p>
+        </div>
 
+        <div class="component-card" data-ref="card-org-details" style="padding: 28px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 16px;">
           <label class="field" data-ref="field-org-name">
             <input
               type="text"
               class="field__input"
               data-ref="input-org-name"
-              value="${org.name}"
+              value="${escapeHtml(org.name)}"
               placeholder=" "
               required
             />
@@ -180,7 +189,7 @@ function renderDetailsHtml(org: OrgData): string {
               type="text"
               class="field__input"
               data-ref="input-org-slug"
-              value="${org.slug}"
+              value="${escapeHtml(org.slug)}"
               placeholder=" "
               required
               style="font-family: monospace;"
@@ -193,21 +202,12 @@ function renderDetailsHtml(org: OrgData): string {
               type="text"
               class="field__input"
               data-ref="input-org-domain"
-              value="${org.domain || ''}"
+              value="${escapeHtml(org.domain || '')}"
               placeholder=" "
             />
             <span class="field__label">${i18n.t('organization.domain_label')}</span>
           </label>
-
-          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-            <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-details-bottom">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
-              <span>${i18n.t('organization.btn_save_changes')}</span>
-            </button>
-          </div>
-
         </div>
-
       </div>
     </div>
   `;
@@ -217,7 +217,7 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
   return `
     <div class="component-top" data-ref="saml-top-bar">
       <div class="component-top__left" data-ref="saml-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
         </button>
         <div class="component-top__title-box" data-ref="saml-title-heading">
@@ -225,7 +225,7 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
         </div>
       </div>
       <div class="component-top__right" data-ref="saml-top-right">
-        <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-save-saml">
+        <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-saml">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
           <span>${i18n.t('organization.btn_save_changes')}</span>
         </button>
@@ -234,11 +234,15 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
 
     <div class="component-bottom component-bottom--centered" data-ref="saml-bottom-area">
       <div class="component-container component-container--narrow" data-ref="saml-layout" style="margin: 0 auto; width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 16px;">
-        
+        <div class="component-header" data-ref="saml-header">
+          <h1 class="component-title" data-ref="saml-title">${i18n.t('organization.saml_title')}</h1>
+          <p class="component-subtitle" data-ref="saml-subtitle">${i18n.t('organization.saml_desc')}</p>
+        </div>
+
         <div class="component-card" data-ref="card-saml-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff);">
           <div>
             <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">${i18n.t('organization.saml_enable')}</h3>
-            <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">SAML 2.0 / Single Sign-On (SSO)</p>
+            <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">${i18n.t('organization.saml_toggle_subtitle')}</p>
           </div>
           <label class="component-switch" data-ref="switch-saml-label">
             <input type="checkbox" data-ref="switch-saml-enabled" ${org.saml_enabled ? 'checked' : ''} />
@@ -247,8 +251,8 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
         </div>
 
         <div class="component-card" data-ref="card-sp-fields" style="padding: 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 14px;">
-          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
-            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">Service Provider (SP) - BoardStack</h3>
+          <div class="component-card__header" style="gap: 4px; margin-bottom: 4px;">
+            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0;">${i18n.t('organization.saml_sp_title')}</h3>
             <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">${i18n.t('organization.saml_desc')}</p>
           </div>
 
@@ -257,13 +261,13 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
               type="text"
               class="field__input field__input--has-action"
               data-ref="input-sp-acs"
-              value="${spAcsUrl}"
+              value="${escapeHtml(spAcsUrl)}"
               readonly
               placeholder=" "
               style="font-family: monospace;"
             />
             <span class="field__label">${i18n.t('organization.saml_sp_acs')}</span>
-            <button type="button" class="field__action" data-ref="btn-copy-acs" data-copy="${spAcsUrl}" title="${i18n.t('room.link_copied')}" aria-label="Copy">
+            <button type="button" class="field__action" data-ref="btn-copy-acs" data-copy="${escapeHtml(spAcsUrl)}" data-tooltip="${escapeHtml(i18n.t('common.copy'))}" aria-label="${escapeHtml(i18n.t('common.copy'))}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
             </button>
           </label>
@@ -273,21 +277,21 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
               type="text"
               class="field__input field__input--has-action"
               data-ref="input-sp-entity"
-              value="${spEntityId}"
+              value="${escapeHtml(spEntityId)}"
               readonly
               placeholder=" "
               style="font-family: monospace;"
             />
             <span class="field__label">${i18n.t('organization.saml_sp_entity_id')}</span>
-            <button type="button" class="field__action" data-ref="btn-copy-entity" data-copy="${spEntityId}" title="${i18n.t('room.link_copied')}" aria-label="Copy">
+            <button type="button" class="field__action" data-ref="btn-copy-entity" data-copy="${escapeHtml(spEntityId)}" data-tooltip="${escapeHtml(i18n.t('common.copy'))}" aria-label="${escapeHtml(i18n.t('common.copy'))}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
             </button>
           </label>
         </div>
 
         <div class="component-card" data-ref="card-idp-fields" style="padding: 24px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 18px; background: var(--bg-surface, #ffffff); display: flex; flex-direction: column; gap: 14px;">
-          <div class="component-header" style="margin-bottom: 4px; text-align: left; align-items: flex-start; padding: 0; background: transparent; border: none;">
-            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">Identity Provider (IdP)</h3>
+          <div class="component-card__header" style="gap: 4px; margin-bottom: 4px;">
+            <h3 class="component-title" style="font-size: 15px; font-weight: 600; margin: 0;">${i18n.t('organization.saml_idp_title')}</h3>
             <p class="component-subtitle" style="font-size: 12.5px; margin: 0;">${i18n.t('organization.saml_desc')}</p>
           </div>
 
@@ -296,7 +300,7 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
               type="text"
               class="field__input"
               data-ref="input-idp-entry"
-              value="${org.saml_entry_point || ''}"
+              value="${escapeHtml(org.saml_entry_point || '')}"
               placeholder=" "
               style="font-family: monospace;"
             />
@@ -308,7 +312,7 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
               type="text"
               class="field__input"
               data-ref="input-idp-issuer"
-              value="${org.saml_issuer || ''}"
+              value="${escapeHtml(org.saml_issuer || '')}"
               placeholder=" "
               style="font-family: monospace;"
             />
@@ -322,18 +326,10 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
               rows="5"
               placeholder=" "
               style="font-family: monospace; font-size: 12px; line-height: 1.4;"
-            >${org.saml_cert || ''}</textarea>
+            >${escapeHtml(org.saml_cert || '')}</textarea>
             <span class="field__label">${i18n.t('organization.saml_idp_cert')}</span>
           </label>
-
-          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-            <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-save-saml-bottom">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
-              <span>${i18n.t('organization.btn_save_changes')}</span>
-            </button>
-          </div>
         </div>
-
       </div>
     </div>
   `;
@@ -342,70 +338,37 @@ function renderSamlHtml(org: OrgData, spAcsUrl: string, spEntityId: string): str
 function renderMembersHtml(org: OrgData, members: OrgMemberData[], canSelfBuySeats = false): string {
   const seatsLimit = org.seats_limit || 3;
 
-  const rowsHtml = members.map((m) => `
-    <tr class="component-table__row" data-ref="member-row-${m.id}" data-member-id="${m.id}" data-search-target="${(m.username || '') + ' ' + m.email}">
-      <td class="component-table__cell component-table__cell--pl20">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="component-avatar component-avatar--sm" data-ref="member-avatar">
-            ${m.avatar_url ? `<img class="component-avatar__img" src="${m.avatar_url}" alt="${m.username || m.email}" />` : `<span>${(m.username || m.email).charAt(0).toUpperCase()}</span>`}
-          </div>
-          <div>
-            <div style="font-weight: 600; font-size: 13.5px;">${m.username || m.email.split('@')[0]}</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">${m.email}</div>
-          </div>
-        </div>
-      </td>
-      <td class="component-table__cell">
-        <span class="component-badge">${m.role === 'owner' ? i18n.t('organization.role_owner') : (m.role === 'admin' ? i18n.t('organization.role_admin') : i18n.t('organization.role_member'))}</span>
-      </td>
-      <td class="component-table__cell">
-        <span class="component-badge ${m.status === 'active' ? 'component-badge--success' : 'component-badge--warning'}">${m.status === 'active' ? i18n.t('organization.status_active') : i18n.t('organization.status_invited')}</span>
-      </td>
-      <td class="component-table__cell" style="font-size: 12.5px; color: var(--text-secondary);">
-        ${formatDate(m.joined_at)}
-      </td>
-      <td class="component-table__cell component-table__cell--pr20" style="text-align: right;">
-        ${m.role !== 'owner' ? `
-          <button type="button" class="component-button component-button--h34" data-ref="btn-remove-member" data-member-id="${m.id}" title="${i18n.t('organization.remove_member')}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-          </button>
-        ` : ''}
-      </td>
-    </tr>
-  `).join('');
-
   return `
     <div class="component-top" data-ref="members-top-bar">
       <div class="component-top__left" data-ref="members-top-left">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" title="${i18n.t('common.back')}" aria-label="${i18n.t('common.back')}">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-back-to-org" data-tooltip="${escapeHtml(i18n.t('common.back'))}" aria-label="${escapeHtml(i18n.t('common.back'))}">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
         </button>
         <div class="component-top__title-box" data-ref="members-title-heading">
           <span class="component-top__title-text" data-ref="members-top-title">${i18n.t('organization.seats_title')}</span>
-          <span class="component-badge" data-ref="members-count-badge">${members.length} / ${seatsLimit}</span>
+          <span class="component-badge component-badge--sm" data-ref="members-count-badge">${members.length} / ${seatsLimit}</span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="members-selected-badge"></span>
         </div>
       </div>
       <div class="component-top__right" data-ref="members-top-right">
-        <div class="component-search" data-ref="members-search-box" style="width: 240px;">
-          <div class="component-search__icon">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </div>
-          <div class="component-search__input-box">
-            <input
-              type="text"
-              class="component-search__input"
-              data-ref="input-search-members"
-              placeholder="${i18n.t('organization.search_placeholder')}"
-            />
-          </div>
+        <div class="component-group component-group--actions is-hidden" data-ref="members-selection-actions">
+          <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-member-copy-email" data-tooltip="${escapeHtml(i18n.t('organization.copy_email'))}" aria-label="${escapeHtml(i18n.t('organization.copy_email'))}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only is-hidden" data-ref="btn-member-remove" data-tooltip="${escapeHtml(i18n.t('organization.remove_member'))}" aria-label="${escapeHtml(i18n.t('organization.remove_member'))}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
         </div>
+        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-members-search" data-tooltip="${escapeHtml(i18n.t('common.search'))}" aria-label="${escapeHtml(i18n.t('common.search'))}">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+        </button>
         ${canSelfBuySeats ? `
-          <button type="button" class="component-button component-button--secondary component-button--h34" data-ref="btn-expand-seats">
+          <button type="button" class="component-button component-button--secondary component-button--h40" data-ref="btn-expand-seats">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_shopping_cart"></use></svg>
             <span>${i18n.t('organization.buy_seats_btn')}</span>
           </button>
         ` : ''}
-        <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-open-add-member">
+        <button type="button" class="component-button component-button--black component-button--h40" data-ref="btn-open-add-member">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           <span>${i18n.t('organization.add_member_btn')}</span>
         </button>
@@ -413,19 +376,40 @@ function renderMembersHtml(org: OrgData, members: OrgMemberData[], canSelfBuySea
     </div>
 
     <div class="component-bottom component-bottom--full" data-ref="members-bottom-area">
+      <div class="component-floating-search is-hidden" data-ref="members-search-toolbar">
+        <div class="component-floating-search__inner" data-ref="members-search-inner">
+          <div class="component-search component-search--floating" data-ref="members-search-box">
+            <div class="component-search__icon" data-ref="members-search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="members-search-input-box">
+              <input
+                type="text"
+                class="component-search__input"
+                data-ref="input-search-members"
+                placeholder="${escapeHtml(i18n.t('organization.search_placeholder'))}"
+                maxlength="100"
+                autocomplete="off"
+              />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-members-search" aria-label="${escapeHtml(i18n.t('common.clear_search'))}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="component-table-wrapper component-table-wrapper--flush" data-ref="members-table-wrapper">
         <table class="component-table component-table--flush" data-ref="members-table">
           <thead class="component-table__head" data-ref="members-thead">
             <tr>
-              <th class="component-table__cell--pl20">${i18n.t('organization.table_header_member')}</th>
-              <th>${i18n.t('organization.table_header_role')}</th>
-              <th>${i18n.t('organization.table_header_status')}</th>
-              <th>${i18n.t('organization.table_header_joined')}</th>
-              <th class="component-table__cell--pr20" style="text-align: right;">${i18n.t('organization.table_header_actions')}</th>
+              <th data-ref="th-member">${i18n.t('organization.table_header_member')}</th>
+              <th data-ref="th-role">${i18n.t('organization.table_header_role')}</th>
+              <th data-ref="th-status">${i18n.t('organization.table_header_status')}</th>
+              <th data-ref="th-joined">${i18n.t('organization.table_header_joined')}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="members-tbody">
-            ${rowsHtml || `<tr><td colspan="5" style="text-align: center; padding: 48px; color: var(--text-secondary);">${i18n.t('organization.empty_members')}</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -672,9 +656,6 @@ async function createOrganizationView(
     const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-details"]');
     btnSave?.addEventListener('click', () => handleSaveDetails(btnSave));
 
-    const btnSaveBottom = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-details-bottom"]');
-    btnSaveBottom?.addEventListener('click', () => handleSaveDetails(btnSaveBottom));
-
     return container;
   }
 
@@ -727,9 +708,6 @@ async function createOrganizationView(
     const btnSave = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-saml"]');
     btnSave?.addEventListener('click', () => handleSaveSaml(btnSave));
 
-    const btnSaveBottom = container.querySelector<HTMLButtonElement>('[data-ref="btn-save-saml-bottom"]');
-    btnSaveBottom?.addEventListener('click', () => handleSaveSaml(btnSaveBottom));
-
     return container;
   }
 
@@ -749,53 +727,278 @@ async function createOrganizationView(
       navigate(baseBackPath);
     });
 
+    const seatsLimit = org.seats_limit || 3;
+    const countBadge = container.querySelector<HTMLElement>('[data-ref="members-count-badge"]');
+    const selectedBadge = container.querySelector<HTMLElement>('[data-ref="members-selected-badge"]');
+    const selectionActions = container.querySelector<HTMLElement>('[data-ref="members-selection-actions"]');
+    const btnCopyEmail = container.querySelector<HTMLButtonElement>('[data-ref="btn-member-copy-email"]');
+    const btnRemoveMember = container.querySelector<HTMLButtonElement>('[data-ref="btn-member-remove"]');
+    const btnToggleSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-members-search"]');
+    const btnExpandSeatsTop = container.querySelector<HTMLButtonElement>('[data-ref="btn-expand-seats"]');
+    const btnOpenAdd = container.querySelector<HTMLButtonElement>('[data-ref="btn-open-add-member"]');
+    const searchToolbar = container.querySelector<HTMLElement>('[data-ref="members-search-toolbar"]');
+    const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
+    const btnClearSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-members-search"]');
+    const tableWrapper = container.querySelector<HTMLElement>('[data-ref="members-table-wrapper"]');
+    const tableEl = container.querySelector<HTMLElement>('[data-ref="members-table"]');
+    const tbody = container.querySelector<HTMLElement>('[data-ref="members-tbody"]');
+
+    let currentlyDisplayedMembers: OrgMemberData[] = membersList;
+    let selectedMemberId: number | null = null;
+
     if (canSelfBuySeats) {
       setupExpandSeatsModal(container, org, () => navigate(`${baseBackPath}/members`));
     }
 
-    const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
-    searchInput?.addEventListener('input', () => {
-      const q = (searchInput.value || '').toLowerCase().trim();
-      const rows = container.querySelectorAll<HTMLElement>('[data-search-target]');
-      rows.forEach((r) => {
-        const target = (r.getAttribute('data-search-target') || '').toLowerCase();
-        if (!q || target.includes(q)) {
-          r.style.display = '';
-        } else {
-          r.style.display = 'none';
+    const updateSelectionUI = (): void => {
+      const selectedMember = selectedMemberId !== null
+        ? membersList.find((m) => m.id === selectedMemberId) || null
+        : null;
+
+      if (selectedMember) {
+        if (selectedBadge) {
+          selectedBadge.textContent = i18n.t('organization.selected_count', { count: 1 });
+          selectedBadge.classList.remove('is-hidden');
         }
+        selectionActions?.classList.remove('is-hidden');
+        if (selectedMember.role !== 'owner') {
+          btnRemoveMember?.classList.remove('is-hidden');
+        } else {
+          btnRemoveMember?.classList.add('is-hidden');
+        }
+        btnToggleSearch?.classList.add('is-hidden');
+        btnExpandSeatsTop?.classList.add('is-hidden');
+        btnOpenAdd?.classList.add('is-hidden');
+      } else {
+        selectedBadge?.classList.add('is-hidden');
+        selectionActions?.classList.add('is-hidden');
+        btnRemoveMember?.classList.add('is-hidden');
+        btnToggleSearch?.classList.remove('is-hidden');
+        btnExpandSeatsTop?.classList.remove('is-hidden');
+        btnOpenAdd?.classList.remove('is-hidden');
+      }
+      renderIcons(container);
+    };
+
+    const getMemberRoleLabel = (role: string): string => {
+      if (role === 'owner') return i18n.t('organization.role_owner');
+      if (role === 'admin') return i18n.t('organization.role_admin');
+      return i18n.t('organization.role_member');
+    };
+
+    const filterMembers = (queryRaw: string): OrgMemberData[] => {
+      const query = queryRaw.toLowerCase().trim();
+      if (!query) return membersList;
+      return membersList.filter((m) => {
+        const displayName = (m.username || m.email.split('@')[0]).toLowerCase();
+        const email = m.email.toLowerCase();
+        const roleLabel = getMemberRoleLabel(m.role).toLowerCase();
+        return displayName.includes(query) || email.includes(query) || roleLabel.includes(query);
+      });
+    };
+
+    const renderMemberRows = (members: OrgMemberData[], isSearchResult = false): void => {
+      currentlyDisplayedMembers = members;
+      if (!tbody) return;
+
+      if (members.length === 0) {
+        tbody.innerHTML = '';
+        tableEl?.classList.add('is-hidden');
+        if (selectedMemberId !== null) {
+          selectedMemberId = null;
+          updateSelectionUI();
+        }
+        if (tableWrapper) {
+          renderEmptyState({
+            container: tableWrapper,
+            dataRef: 'members-empty-state',
+            desc: isSearchResult
+              ? i18n.t('organization.search_no_results')
+              : i18n.t('organization.empty_members'),
+            graphicType: 'search',
+            isTable: true,
+            title: isSearchResult
+              ? i18n.t('common.search')
+              : i18n.t('organization.seats_title'),
+          });
+        }
+        return;
+      }
+
+      tableEl?.classList.remove('is-hidden');
+      if (tableWrapper) {
+        removeEmptyState(tableWrapper, 'members-empty-state');
+      }
+
+      if (selectedMemberId !== null && !members.some((m) => m.id === selectedMemberId)) {
+        selectedMemberId = null;
+        updateSelectionUI();
+      }
+
+      tbody.innerHTML = '';
+      members.forEach((m) => {
+        const isSelected = selectedMemberId === m.id;
+        const row = document.createElement('tr');
+        row.className = `component-table__row component-cursor-pointer${isSelected ? ' is-selected' : ''}`;
+        row.setAttribute('data-ref', `member-row-${m.id}`);
+
+        const displayName = m.username || m.email.split('@')[0];
+        const avatarSrc = getUserAvatarUrl(
+          {
+            avatar_url: m.avatar_url || null,
+            email: m.email,
+            id: m.user_id ?? m.id,
+            username: displayName,
+          },
+          64
+        );
+        const tier = normalizeMemberTier(m.subscription_tier);
+        const roleLabel = getMemberRoleLabel(m.role);
+        const statusLabel = m.status === 'active'
+          ? i18n.t('organization.status_active')
+          : i18n.t('organization.status_invited');
+
+        row.innerHTML = `
+          <td class="component-table__cell" data-ref="cell-member-${m.id}">
+            <div class="component-table__user" data-ref="member-cell-box-${m.id}">
+              <div class="component-avatar component-avatar--sm" data-ref="member-avatar-${m.id}" data-tier="${tier}">
+                <img class="component-avatar__img" src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(displayName)}" referrerpolicy="no-referrer" loading="lazy" />
+              </div>
+              <div class="component-table__user-meta">
+                <span class="component-badge component-badge--sm" data-ref="text-member-name-${m.id}">${escapeHtml(displayName)}</span>
+                <span class="component-badge component-badge--sm" data-ref="text-member-email-${m.id}">${escapeHtml(m.email)}</span>
+              </div>
+            </div>
+          </td>
+          <td class="component-table__cell" data-ref="cell-role-${m.id}">
+            <span class="component-badge component-badge--sm" data-ref="text-member-role-${m.id}">${escapeHtml(roleLabel)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-status-${m.id}">
+            <span class="component-badge component-badge--sm" data-ref="text-member-status-${m.id}">${escapeHtml(statusLabel)}</span>
+          </td>
+          <td class="component-table__cell" data-ref="cell-joined-${m.id}">
+            <span class="component-badge component-badge--sm" data-ref="text-member-joined-${m.id}">${escapeHtml(formatDate(m.joined_at))}</span>
+          </td>
+        `;
+
+        row.addEventListener('click', () => {
+          selectedMemberId = selectedMemberId === m.id ? null : m.id;
+          updateSelectionUI();
+          renderMemberRows(currentlyDisplayedMembers, isSearchResult);
+        });
+
+        tbody.appendChild(row);
+      });
+
+      renderIcons(tbody);
+    };
+
+    const hideSearchToolbar = (): void => {
+      if (!searchToolbar) return;
+      searchToolbar.classList.add('is-hidden');
+      if (searchInput && searchInput.value) {
+        searchInput.value = '';
+        btnClearSearch?.classList.add('is-hidden');
+        renderMemberRows(membersList);
+      }
+    };
+
+    btnToggleSearch?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!searchToolbar) return;
+      const isClosed = searchToolbar.classList.contains('is-hidden');
+      searchToolbar.classList.toggle('is-hidden', !isClosed);
+      if (isClosed && searchInput) {
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    });
+
+    searchInput?.addEventListener('input', () => {
+      const val = searchInput.value || '';
+      if (btnClearSearch) {
+        btnClearSearch.classList.toggle('is-hidden', !val.trim());
+      }
+      renderMemberRows(filterMembers(val), Boolean(val.trim()));
+    });
+
+    btnClearSearch?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (searchInput) {
+        searchInput.value = '';
+        btnClearSearch.classList.add('is-hidden');
+        renderMemberRows(membersList);
+        searchInput.focus();
+      }
+    });
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        if (document.querySelector('.modal-backdrop.is-visible')) {
+          return;
+        }
+        if (selectedMemberId !== null) {
+          selectedMemberId = null;
+          updateSelectionUI();
+          renderMemberRows(currentlyDisplayedMembers, Boolean(searchInput?.value.trim()));
+        } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+          hideSearchToolbar();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    btnCopyEmail?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const selected = membersList.find((m) => m.id === selectedMemberId);
+      if (selected?.email) {
+        void copyToClipboard(selected.email, i18n.t('room.link_copied'));
+      }
+    });
+
+    btnRemoveMember?.addEventListener('click', () => {
+      const selected = membersList.find((m) => m.id === selectedMemberId);
+      if (!selected || selected.role === 'owner') return;
+
+      const confirmModal = openModal({
+        cancelText: i18n.t('common.cancel'),
+        confirmClass: 'component-button--danger',
+        confirmText: i18n.t('common.delete'),
+        description: i18n.t('organization.remove_confirm'),
+        onConfirm: async () => {
+          confirmModal.setConfirmLoading(true);
+          try {
+            const res = await deleteApi<{ ok: boolean }>(`/api/organization/members/${selected.id}`);
+            if (res.ok) {
+              toast.success(i18n.t('organization.member_removed'));
+              membersList = membersList.filter((m) => m.id !== selected.id);
+              selectedMemberId = null;
+              if (countBadge) {
+                countBadge.textContent = `${membersList.length} / ${seatsLimit}`;
+              }
+              updateSelectionUI();
+              const q = searchInput?.value || '';
+              renderMemberRows(filterMembers(q), Boolean(q.trim()));
+              return true;
+            }
+            toast.error(i18n.t('common.error'));
+            return false;
+          } catch (err: any) {
+            toast.error(err.message || i18n.t('common.error'));
+            return false;
+          } finally {
+            confirmModal.setConfirmLoading(false);
+          }
+        },
+        size: 'sm',
+        title: i18n.t('organization.remove_member'),
       });
     });
 
-    const setupRemoveButtons = () => {
-      container.querySelectorAll<HTMLButtonElement>('[data-ref="btn-remove-member"]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const memberId = btn.getAttribute('data-member-id');
-          if (!memberId) return;
+    renderMemberRows(membersList);
 
-          const confirmed = window.confirm(i18n.t('organization.remove_confirm'));
-          if (!confirmed) return;
-
-          btn.disabled = true;
-          try {
-            const res = await deleteApi<{ ok: boolean }>(`/api/organization/members/${memberId}`);
-            if (res.ok) {
-              toast.success(i18n.t('organization.member_removed'));
-              navigate(`${baseBackPath}/members`);
-            } else {
-              toast.error(i18n.t('common.error'));
-            }
-          } catch (err: any) {
-            toast.error(err.message || i18n.t('common.error'));
-          } finally {
-            btn.disabled = false;
-          }
-        });
-      });
+    (container as HTMLElement & { cleanup?: () => void }).cleanup = () => {
+      document.removeEventListener('keydown', handleKeyDown);
     };
-    setupRemoveButtons();
-
-    const btnOpenAdd = container.querySelector<HTMLButtonElement>('[data-ref="btn-open-add-member"]');
     btnOpenAdd?.addEventListener('click', () => {
       const modal = openModal({
         bodyHtml: `

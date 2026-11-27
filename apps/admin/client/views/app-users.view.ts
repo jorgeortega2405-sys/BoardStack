@@ -3,7 +3,7 @@ import { copyToClipboard, escapeHtml, removeEmptyState, renderEmptyState } from 
 import { formatBytes, formatDate, formatDateTime, formatNumber } from '../utils/format.util.js';
 import { getApi } from '../services/api.service.js';
 import { getRoleLabel } from '../components/layout-user-menu.component.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { getUserAvatarUrl, normalizeSubscriptionTier } from '../utils/avatar.util.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { toast } from '../services/toast.service.js';
@@ -23,32 +23,15 @@ function getPlanLabel(tier: string): string {
   return translated !== key ? translated : normalized.toUpperCase();
 }
 
-function getStatusBadgeInfo(status: string): { badgeClass: string; label: string } {
+function getStatusLabel(status: string): string {
   const normalized = (status || 'active').toLowerCase();
   if (normalized === 'suspended') {
-    return {
-      badgeClass: 'component-badge--warning',
-      label: i18n.t('admin.users.status_suspended'),
-    };
+    return i18n.t('admin.users.status_suspended');
   }
   if (normalized === 'deleted') {
-    return {
-      badgeClass: 'component-badge--destructive',
-      label: i18n.t('admin.users.status_deleted'),
-    };
+    return i18n.t('admin.users.status_deleted');
   }
-  return {
-    badgeClass: 'component-badge--success',
-    label: i18n.t('admin.users.status_active'),
-  };
-}
-
-function getPlanBadgeClass(tier: string): string {
-  const normalized = (tier || 'free').toLowerCase();
-  if (normalized === 'free') {
-    return 'component-badge--neutral';
-  }
-  return '';
+  return i18n.t('admin.users.status_active');
 }
 
 async function createAppUsersView(
@@ -64,22 +47,17 @@ async function createAppUsersView(
       <div class="component-top__left" data-ref="users-top-left">
         <div class="component-top__title-box" data-ref="users-title-heading">
           <span class="component-top__title-text" data-ref="users-title">${escapeHtml(i18n.t('admin.users.title'))}</span>
-          <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="users-total-badge"></span>
-          <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="users-selected-badge"></span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="users-total-badge"></span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="users-selected-badge"></span>
         </div>
       </div>
       <div class="component-top__right" data-ref="users-header-actions">
         <div class="component-group component-group--actions is-hidden" data-ref="users-selection-actions">
-          <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-copy-user-email">
+          <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only" data-ref="btn-copy-user-email" data-tooltip="${escapeHtml(i18n.t('admin.users.copy_email'))}" aria-label="${escapeHtml(i18n.t('admin.users.copy_email'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
-            <span>${escapeHtml(i18n.t('admin.users.copy_email'))}</span>
           </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-copy-user-id" data-tooltip="${escapeHtml(i18n.t('admin.users.copy_id'))}">
+          <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-copy-user-id" data-tooltip="${escapeHtml(i18n.t('admin.users.copy_id'))}" aria-label="${escapeHtml(i18n.t('admin.users.copy_id'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-            <span>${escapeHtml(i18n.t('admin.users.copy_id'))}</span>
-          </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-clear-user-selection" data-tooltip="${escapeHtml(i18n.t('admin.users.deselect'))}" aria-label="${escapeHtml(i18n.t('admin.users.deselect'))}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-refresh-users" data-tooltip="${escapeHtml(i18n.t('common.refresh'))}" aria-label="${escapeHtml(i18n.t('common.refresh'))}">
@@ -112,13 +90,13 @@ async function createAppUsersView(
         <table class="component-table component-table--flush" data-ref="users-table">
           <thead class="component-table__head" data-ref="users-thead">
             <tr>
-              <th class="component-table__cell--pl20" data-ref="th-user">${escapeHtml(i18n.t('admin.users.col_user'))}</th>
+              <th data-ref="th-user">${escapeHtml(i18n.t('admin.users.col_user'))}</th>
               <th data-ref="th-role">${escapeHtml(i18n.t('admin.users.col_role'))}</th>
               <th data-ref="th-plan">${escapeHtml(i18n.t('admin.users.col_plan'))}</th>
               <th data-ref="th-status">${escapeHtml(i18n.t('admin.users.col_status'))}</th>
               <th data-ref="th-activity">${escapeHtml(i18n.t('admin.users.col_activity'))}</th>
               <th data-ref="th-storage">${escapeHtml(i18n.t('admin.users.col_storage'))}</th>
-              <th class="component-table__cell--pr20" data-ref="th-joined">${escapeHtml(i18n.t('admin.users.col_joined'))}</th>
+              <th data-ref="th-joined">${escapeHtml(i18n.t('admin.users.col_joined'))}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="users-tbody">
@@ -141,7 +119,6 @@ async function createAppUsersView(
   const selectionActions = container.querySelector<HTMLElement>('[data-ref="users-selection-actions"]');
   const btnCopyEmail = container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-user-email"]');
   const btnCopyId = container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-user-id"]');
-  const btnClearSelection = container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-user-selection"]');
 
   let allUsers: AppAdminUserItem[] = [];
   let currentlyDisplayedUsers: AppAdminUserItem[] = [];
@@ -186,7 +163,7 @@ async function createAppUsersView(
     return allUsers.filter((u) => {
       const roleLabel = getRoleLabel(u.roleSlug, u.roleName).toLowerCase();
       const planLabel = getPlanLabel(u.subscriptionTier).toLowerCase();
-      const statusLabel = getStatusBadgeInfo(u.status).label.toLowerCase();
+      const statusLabel = getStatusLabel(u.status).toLowerCase();
       return (
         u.username.toLowerCase().includes(query) ||
         u.email.toLowerCase().includes(query) ||
@@ -250,8 +227,8 @@ async function createAppUsersView(
       );
       const roleLabel = getRoleLabel(u.roleSlug, u.roleName);
       const planLabel = getPlanLabel(u.subscriptionTier);
-      const planBadgeClass = getPlanBadgeClass(u.subscriptionTier);
-      const statusInfo = getStatusBadgeInfo(u.status);
+      const statusLabel = getStatusLabel(u.status);
+      const tier = normalizeSubscriptionTier(u.subscriptionTier);
       const activityText = i18n.t('admin.users.activity_summary', {
         files: formatNumber(u.filesCount),
         rooms: formatNumber(u.roomsCount),
@@ -263,12 +240,14 @@ async function createAppUsersView(
         : i18n.t('admin.users.last_login_none');
 
       row.innerHTML = `
-        <td class="component-table__cell component-table__cell--pl20" data-ref="cell-user-${u.id}">
+        <td class="component-table__cell" data-ref="cell-user-${u.id}">
           <div class="component-table__user" data-ref="user-cell-box-${u.id}">
-            <img class="component-table__user-avatar" data-ref="user-avatar-${u.id}" src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(u.username)}" loading="lazy" />
+            <div class="component-avatar component-avatar--sm" data-ref="user-avatar-${u.id}" data-tier="${tier}">
+              <img class="component-avatar__img" src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(u.username)}" referrerpolicy="no-referrer" loading="lazy" />
+            </div>
             <div class="component-table__user-meta">
-              <span class="component-table__user-name" data-ref="text-username-${u.id}">${escapeHtml(u.username)}</span>
-              <span class="component-table__user-email" data-ref="text-email-${u.id}">${escapeHtml(u.email)}</span>
+              <span class="component-badge component-badge--sm" data-ref="text-username-${u.id}">${escapeHtml(u.username)}</span>
+              <span class="component-badge component-badge--sm" data-ref="text-email-${u.id}">${escapeHtml(u.email)}</span>
             </div>
           </div>
         </td>
@@ -276,19 +255,19 @@ async function createAppUsersView(
           <span class="component-badge component-badge--sm" data-ref="text-role-${u.id}">${escapeHtml(roleLabel)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-plan-${u.id}">
-          <span class="component-badge component-badge--sm${planBadgeClass ? ` ${planBadgeClass}` : ''}" data-ref="text-plan-${u.id}">${escapeHtml(planLabel)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-plan-${u.id}">${escapeHtml(planLabel)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-status-${u.id}">
-          <span class="component-badge component-badge--sm ${statusInfo.badgeClass}" data-ref="text-status-${u.id}">${escapeHtml(statusInfo.label)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-status-${u.id}">${escapeHtml(statusLabel)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-activity-${u.id}">
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="text-activity-${u.id}">${escapeHtml(activityText)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-activity-${u.id}">${escapeHtml(activityText)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-storage-${u.id}">
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="text-storage-${u.id}">${escapeHtml(storageText)}</span>
+          <span class="component-badge component-badge--sm" data-ref="text-storage-${u.id}">${escapeHtml(storageText)}</span>
         </td>
-        <td class="component-table__cell component-table__cell--pr20" data-ref="cell-joined-${u.id}">
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="text-joined-${u.id}" data-tooltip="${escapeHtml(lastLoginTooltip)}">${escapeHtml(joinedFormatted)}</span>
+        <td class="component-table__cell" data-ref="cell-joined-${u.id}">
+          <span class="component-badge component-badge--sm" data-ref="text-joined-${u.id}" data-tooltip="${escapeHtml(lastLoginTooltip)}">${escapeHtml(joinedFormatted)}</span>
         </td>
       `;
 
@@ -345,13 +324,6 @@ async function createAppUsersView(
       renderRows(allUsers);
       searchInput.focus();
     }
-  });
-
-  btnClearSelection?.addEventListener('click', (e) => {
-    e.preventDefault();
-    selectedUserId = null;
-    updateSelectionUI();
-    renderRows(currentlyDisplayedUsers, Boolean(searchInput?.value.trim()));
   });
 
   btnCopyEmail?.addEventListener('click', (e) => {

@@ -234,21 +234,16 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
       <div class="component-top__left" data-ref="purchases-top-left">
         <div class="component-top__title-box" data-ref="purchases-title-heading">
           <span class="component-top__title-text" data-ref="purchases-title">${i18n.t('settings.purchases.title')}</span>
-          <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="purchases-selected-badge"></span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="purchases-selected-badge"></span>
         </div>
       </div>
       <div class="component-top__right" data-ref="purchases-header-actions">
         <div class="component-group component-group--actions is-hidden" data-ref="purchases-selection-actions">
-          <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-download-invoice">
+          <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only" data-ref="btn-download-invoice" data-tooltip="${i18n.t('settings.purchases.download_invoice')}" aria-label="${i18n.t('settings.purchases.download_invoice')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            <span>${i18n.t('settings.purchases.download_invoice')}</span>
           </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-copy-reference" data-tooltip="${i18n.t('settings.purchases.copy_reference')}">
+          <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-copy-reference" data-tooltip="${i18n.t('settings.purchases.copy_reference')}" aria-label="${i18n.t('settings.purchases.copy_reference')}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-            <span>${i18n.t('settings.purchases.copy_reference')}</span>
-          </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-clear-selection" data-tooltip="${i18n.t('settings.purchases.deselect')}" aria-label="${i18n.t('settings.purchases.deselect')}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
         <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-toggle-search" data-tooltip="${i18n.t('common.search')}" aria-label="${i18n.t('common.search')}">
@@ -278,12 +273,12 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
         <table class="component-table component-table--flush" data-ref="purchases-table">
           <thead class="component-table__head" data-ref="purchases-thead">
             <tr>
-              <th class="component-table__cell--pl20" data-ref="th-plan">${i18n.t('settings.purchases.col_plan')}</th>
+              <th data-ref="th-plan">${i18n.t('settings.purchases.col_plan')}</th>
               <th data-ref="th-period">${i18n.t('settings.purchases.col_period')}</th>
               <th data-ref="th-amount">${i18n.t('settings.purchases.col_amount')}</th>
               <th data-ref="th-status">${i18n.t('settings.purchases.col_status')}</th>
               <th data-ref="th-date">${i18n.t('settings.purchases.col_date')}</th>
-              <th class="component-table__cell--pr20" data-ref="th-reference">${i18n.t('settings.purchases.col_reference')}</th>
+              <th data-ref="th-reference">${i18n.t('settings.purchases.col_reference')}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="purchases-tbody">
@@ -304,7 +299,6 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
   const selectionActions = container.querySelector<HTMLElement>('[data-ref="purchases-selection-actions"]');
   const btnDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-download-invoice"]');
   const btnCopyReference = container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-reference"]');
-  const btnClearSelection = container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-selection"]');
 
   let allPurchases: PurchaseRecord[] = [];
   let currentlyDisplayedPurchases: PurchaseRecord[] = [];
@@ -346,17 +340,18 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
     }
   };
 
-  container.addEventListener('keydown', (e: KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       if (selectedPurchaseId !== null) {
         selectedPurchaseId = null;
         updateSelectionUI();
-        renderRows(currentlyDisplayedPurchases);
+        renderRows(currentlyDisplayedPurchases, Boolean(searchInput?.value.trim()));
       } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
         hideSearchToolbar();
       }
     }
-  });
+  };
+  document.addEventListener('keydown', handleKeyDown);
 
   btnClearSearch?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -366,13 +361,6 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
       renderRows(allPurchases);
       searchInput.focus();
     }
-  });
-
-  btnClearSelection?.addEventListener('click', (e) => {
-    e.preventDefault();
-    selectedPurchaseId = null;
-    updateSelectionUI();
-    renderRows(currentlyDisplayedPurchases);
   });
 
   btnCopyReference?.addEventListener('click', async (e) => {
@@ -527,7 +515,7 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
       const shortRef = refId.length > 20 ? `${refId.slice(0, 10)}...${refId.slice(-6)}` : refId;
 
       row.innerHTML = `
-        <td class="component-table__cell component-table__cell--pl20" data-ref="cell-plan-${p.id}">
+        <td class="component-table__cell" data-ref="cell-plan-${p.id}">
           <span class="component-badge component-badge--sm" data-ref="text-plan-${p.id}">${escapeHtml(planName)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-period-${p.id}">
@@ -542,7 +530,7 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
         <td class="component-table__cell" data-ref="cell-date-${p.id}">
           <span class="component-badge component-badge--sm" data-ref="text-date-${p.id}">${escapeHtml(dateFormatted)}</span>
         </td>
-        <td class="component-table__cell component-table__cell--pr20" data-ref="cell-ref-${p.id}">
+        <td class="component-table__cell" data-ref="cell-ref-${p.id}">
           <span class="component-badge component-badge--sm" data-ref="text-ref-${p.id}" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
         </td>
       `;
@@ -572,6 +560,10 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
       allPurchases = [];
       renderRows([]);
     }
+  };
+
+  (container as HTMLElement & { cleanup?: () => void }).cleanup = () => {
+    document.removeEventListener('keydown', handleKeyDown);
   };
 
   renderIcons(container);

@@ -10,7 +10,7 @@ import type {
 import { copyToClipboard, escapeHtml, removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
 import { formatBytes, formatDate, formatDateTime, formatNumber } from '../utils/format.util.js';
-import { getUserAvatarUrl } from '../utils/avatar.util.js';
+import { getUserAvatarUrl, normalizeSubscriptionTier } from '../utils/avatar.util.js';
 import { i18n } from '../i18n/i18n.service.js';
 import { openDialog } from '../components/dialog.component.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -89,41 +89,18 @@ function getPlanLabel(tier: string): string {
   return translated !== key ? translated : normalized.toUpperCase();
 }
 
-function getPlanBadgeClass(tier: string): string {
-  const normalized = (tier || 'free').toLowerCase();
-  if (normalized === 'enterprise') {
-    return 'component-badge--success';
-  }
-  if (normalized === 'free') {
-    return 'component-badge--neutral';
-  }
-  return '';
-}
-
-function getLeadStatusInfo(status: string): { badgeClass: string; label: string } {
+function getLeadStatusLabel(status: string): string {
   const normalized = (status || 'pending').toLowerCase();
   if (normalized === 'approved') {
-    return {
-      badgeClass: 'component-badge--success',
-      label: i18n.t('admin.sales.status_approved'),
-    };
+    return i18n.t('admin.sales.status_approved');
   }
   if (normalized === 'rejected') {
-    return {
-      badgeClass: 'component-badge--destructive',
-      label: i18n.t('admin.sales.status_rejected'),
-    };
+    return i18n.t('admin.sales.status_rejected');
   }
   if (normalized === 'contacted') {
-    return {
-      badgeClass: '',
-      label: i18n.t('admin.sales.status_contacted'),
-    };
+    return i18n.t('admin.sales.status_contacted');
   }
-  return {
-    badgeClass: 'component-badge--warning',
-    label: i18n.t('admin.sales.status_pending'),
-  };
+  return i18n.t('admin.sales.status_pending');
 }
 
 function getRoleLevelLabel(roleLevel: string): string {
@@ -189,29 +166,23 @@ async function createAppSalesView(
       <div class="component-top__left" data-ref="sales-top-left">
         <div class="component-top__title-box" data-ref="sales-title-heading">
           <span class="component-top__title-text" data-ref="sales-title">${escapeHtml(i18n.t('admin.sales.title'))}</span>
-          <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="sales-total-badge"></span>
-          <span class="component-badge component-badge--neutral component-badge--sm is-hidden" data-ref="sales-selected-badge"></span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="sales-total-badge"></span>
+          <span class="component-badge component-badge--sm is-hidden" data-ref="sales-selected-badge"></span>
         </div>
       </div>
       <div class="component-top__right" data-ref="sales-header-actions">
         <div class="component-group component-group--actions is-hidden" data-ref="sales-selection-actions">
-          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-lead-view-detail">
+          <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-lead-view-detail" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_view_detail'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_view_detail'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            <span>${escapeHtml(i18n.t('admin.sales.action_view_detail'))}</span>
           </button>
-          <a class="component-button component-button--h36 component-button--secondary" data-ref="btn-lead-contact-mail" href="#" target="_blank" rel="noopener noreferrer">
+          <a class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-lead-contact-mail" href="#" target="_blank" rel="noopener noreferrer" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_contact_email'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_contact_email'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#mail"></use></svg>
-            <span>${escapeHtml(i18n.t('admin.sales.action_contact_email'))}</span>
           </a>
-          <button type="button" class="component-button component-button--h36 component-button--black is-hidden" data-ref="btn-lead-assign-enterprise">
+          <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only is-hidden" data-ref="btn-lead-assign-enterprise" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_assign_enterprise'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_assign_enterprise'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rocket_launch"></use></svg>
-            <span>${escapeHtml(i18n.t('admin.sales.action_assign_enterprise'))}</span>
           </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-lead-copy-email" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_copy_email'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_copy_email'))}">
+          <button type="button" class="component-button component-button--h40 component-button--secondary component-button--icon-only" data-ref="btn-lead-copy-email" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_copy_email'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_copy_email'))}">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-          </button>
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--icon-only" data-ref="btn-clear-lead-selection" data-tooltip="${escapeHtml(i18n.t('admin.sales.action_deselect'))}" aria-label="${escapeHtml(i18n.t('admin.sales.action_deselect'))}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
         <button type="button" class="component-button component-button--h36 component-button--black is-hidden" data-ref="btn-open-direct-provision">
@@ -248,13 +219,13 @@ async function createAppSalesView(
         <table class="component-table component-table--flush" data-ref="sales-table">
           <thead class="component-table__head" data-ref="sales-thead">
             <tr>
-              <th class="component-table__cell--pl20" data-ref="th-contact">${escapeHtml(i18n.t('admin.sales.col_contact'))}</th>
+              <th data-ref="th-contact">${escapeHtml(i18n.t('admin.sales.col_contact'))}</th>
               <th data-ref="th-company">${escapeHtml(i18n.t('admin.sales.col_company'))}</th>
               <th data-ref="th-account">${escapeHtml(i18n.t('admin.sales.col_account'))}</th>
               <th data-ref="th-status">${escapeHtml(i18n.t('admin.sales.col_status'))}</th>
               <th data-ref="th-location-role">${escapeHtml(i18n.t('admin.sales.col_location_role'))}</th>
               <th data-ref="th-contracts">${escapeHtml(i18n.t('admin.sales.col_contracts'))}</th>
-              <th class="component-table__cell--pr20" data-ref="th-date">${escapeHtml(i18n.t('admin.sales.col_date'))}</th>
+              <th data-ref="th-date">${escapeHtml(i18n.t('admin.sales.col_date'))}</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="sales-tbody">
@@ -280,7 +251,6 @@ async function createAppSalesView(
   const btnContactMail = container.querySelector<HTMLAnchorElement>('[data-ref="btn-lead-contact-mail"]');
   const btnAssignEnterprise = container.querySelector<HTMLButtonElement>('[data-ref="btn-lead-assign-enterprise"]');
   const btnCopyEmail = container.querySelector<HTMLButtonElement>('[data-ref="btn-lead-copy-email"]');
-  const btnClearSelection = container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-lead-selection"]');
 
   let allLeads: EnterpriseLeadItem[] = [];
   let currentlyDisplayedLeads: EnterpriseLeadItem[] = [];
@@ -341,7 +311,7 @@ async function createAppSalesView(
     }
     return allLeads.filter((l) => {
       const fullName = `${l.firstName} ${l.lastName}`.toLowerCase();
-      const statusLabel = getLeadStatusInfo(l.status).label.toLowerCase();
+      const statusLabel = getLeadStatusLabel(l.status).toLowerCase();
       const roleLabel = getRoleLevelLabel(l.roleLevel).toLowerCase();
       const matchedUsername = (l.matchedUser?.username || '').toLowerCase();
       return (
@@ -1140,61 +1110,62 @@ async function createAppSalesView(
       const fullName = `${lead.firstName} ${lead.lastName}`.trim();
       const avatarSrc = getUserAvatarUrl(
         {
-          avatar_url: null,
+          avatar_url: lead.matchedUser?.avatarUrl || null,
           email: lead.matchedUser?.email || lead.workEmail,
           id: lead.matchedUser?.id || lead.id,
           username: lead.matchedUser?.username || fullName,
         },
         64
       );
-      const statusInfo = getLeadStatusInfo(lead.status);
+      const tier = normalizeSubscriptionTier(lead.matchedUser?.subscriptionTier);
+      const statusLabel = getLeadStatusLabel(lead.status);
       const roleText = getRoleLevelLabel(lead.roleLevel);
       const sizeText = i18n.t('admin.sales.company_size_suffix', { size: lead.companySize });
 
       const accountCellHtml = lead.matchedUser
         ? `
           <div class="component-table__user-meta">
-            <div>
-              <span class="component-badge component-badge--sm ${getPlanBadgeClass(lead.matchedUser.subscriptionTier)}" data-ref="lead-plan-${lead.id}">${escapeHtml(getPlanLabel(lead.matchedUser.subscriptionTier))}</span>
-            </div>
-            <span class="component-table__user-email" data-ref="lead-account-meta-${lead.id}">${escapeHtml(lead.matchedUser.username)} · ${escapeHtml(formatBytes(lead.matchedUser.storageLimitBytes))}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-plan-${lead.id}">${escapeHtml(getPlanLabel(lead.matchedUser.subscriptionTier))}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-account-meta-${lead.id}">${escapeHtml(lead.matchedUser.username)} · ${escapeHtml(formatBytes(lead.matchedUser.storageLimitBytes))}</span>
           </div>
         `
-        : `<span class="component-badge component-badge--sm component-badge--neutral" data-ref="lead-no-account-${lead.id}">${escapeHtml(i18n.t('admin.sales.account_not_registered'))}</span>`;
+        : `<span class="component-badge component-badge--sm" data-ref="lead-no-account-${lead.id}">${escapeHtml(i18n.t('admin.sales.account_not_registered'))}</span>`;
 
       row.innerHTML = `
-        <td class="component-table__cell component-table__cell--pl20" data-ref="cell-contact-${lead.id}">
+        <td class="component-table__cell" data-ref="cell-contact-${lead.id}">
           <div class="component-table__user" data-ref="lead-contact-box-${lead.id}">
-            <img class="component-table__user-avatar" data-ref="lead-avatar-${lead.id}" src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(fullName)}" loading="lazy" />
+            <div class="component-avatar component-avatar--sm" data-ref="lead-avatar-${lead.id}" data-tier="${tier}">
+              <img class="component-avatar__img" src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(fullName)}" referrerpolicy="no-referrer" loading="lazy" />
+            </div>
             <div class="component-table__user-meta">
-              <span class="component-table__user-name" data-ref="lead-name-${lead.id}">${escapeHtml(fullName)}</span>
-              <span class="component-table__user-email" data-ref="lead-email-${lead.id}">${escapeHtml(lead.workEmail)}</span>
+              <span class="component-badge component-badge--sm" data-ref="lead-name-${lead.id}">${escapeHtml(fullName)}</span>
+              <span class="component-badge component-badge--sm" data-ref="lead-email-${lead.id}">${escapeHtml(lead.workEmail)}</span>
             </div>
           </div>
         </td>
         <td class="component-table__cell" data-ref="cell-company-${lead.id}">
           <div class="component-table__user-meta">
-            <span class="component-table__user-name" data-ref="lead-company-name-${lead.id}">${escapeHtml(lead.companyName)}</span>
-            <span class="component-table__user-email" data-ref="lead-company-size-${lead.id}">${escapeHtml(sizeText)}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-company-name-${lead.id}">${escapeHtml(lead.companyName)}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-company-size-${lead.id}">${escapeHtml(sizeText)}</span>
           </div>
         </td>
         <td class="component-table__cell" data-ref="cell-account-${lead.id}">
           ${accountCellHtml}
         </td>
         <td class="component-table__cell" data-ref="cell-status-${lead.id}">
-          <span class="component-badge component-badge--sm ${statusInfo.badgeClass}" data-ref="lead-status-${lead.id}">${escapeHtml(statusInfo.label)}</span>
+          <span class="component-badge component-badge--sm" data-ref="lead-status-${lead.id}">${escapeHtml(statusLabel)}</span>
         </td>
         <td class="component-table__cell" data-ref="cell-location-${lead.id}">
           <div class="component-table__user-meta">
-            <span class="component-table__user-name" data-ref="lead-country-${lead.id}">${escapeHtml(lead.country)}</span>
-            <span class="component-table__user-email" data-ref="lead-role-${lead.id}">${escapeHtml(roleText)}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-country-${lead.id}">${escapeHtml(lead.country)}</span>
+            <span class="component-badge component-badge--sm" data-ref="lead-role-${lead.id}">${escapeHtml(roleText)}</span>
           </div>
         </td>
         <td class="component-table__cell" data-ref="cell-contracts-${lead.id}">
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="lead-contracts-${lead.id}">${escapeHtml(i18n.t('admin.sales.contracts_count', { count: formatNumber(lead.contractsCount) }))}</span>
+          <span class="component-badge component-badge--sm" data-ref="lead-contracts-${lead.id}">${escapeHtml(i18n.t('admin.sales.contracts_count', { count: formatNumber(lead.contractsCount) }))}</span>
         </td>
-        <td class="component-table__cell component-table__cell--pr20" data-ref="cell-date-${lead.id}">
-          <span class="component-badge component-badge--sm component-badge--neutral" data-ref="lead-date-${lead.id}" data-tooltip="${escapeHtml(formatDateTime(lead.createdAt))}">${escapeHtml(formatDate(lead.createdAt))}</span>
+        <td class="component-table__cell" data-ref="cell-date-${lead.id}">
+          <span class="component-badge component-badge--sm" data-ref="lead-date-${lead.id}" data-tooltip="${escapeHtml(formatDateTime(lead.createdAt))}">${escapeHtml(formatDate(lead.createdAt))}</span>
         </td>
       `;
 
@@ -1258,13 +1229,6 @@ async function createAppSalesView(
       renderRows(allLeads);
       searchInput.focus();
     }
-  });
-
-  btnClearSelection?.addEventListener('click', (e) => {
-    e.preventDefault();
-    selectedLeadId = null;
-    updateSelectionUI();
-    renderRows(currentlyDisplayedLeads, Boolean(searchInput?.value.trim()));
   });
 
   btnCopyEmail?.addEventListener('click', (e) => {
