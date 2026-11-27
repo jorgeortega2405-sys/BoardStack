@@ -2368,9 +2368,9 @@ html.is-auth-view [data-ref="main-wrapper"] {
   gap: 6px;
   background-color: var(--bg-surface, #ffffff);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 6px;
+  padding: 4px;
   width: 100%;
   max-width: 440px;
   box-sizing: border-box;
@@ -2936,12 +2936,13 @@ html.is-auth-view [data-ref="main-wrapper"] {
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.02));
 }
 
-.component-table tbody tr.is-selected {
-  background-color: var(--bg-selected, #f1f3f5) !important;
+.component-table tbody tr.is-selected,
+.component-table tbody tr.is-selected:hover {
+  background-color: transparent !important;
 }
 
 .component-table tbody tr.is-selected td {
-  background-color: var(--bg-selected, #f1f3f5) !important;
+  background-color: transparent !important;
   border-top: none !important;
   border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
   color: var(--text-primary, #111827) !important;
@@ -2981,8 +2982,9 @@ html.is-auth-view [data-ref="main-wrapper"] {
 }
 
 [data-theme="dark"] .component-table tbody tr.is-selected,
+[data-theme="dark"] .component-table tbody tr.is-selected:hover,
 [data-theme="dark"] .component-table tbody tr.is-selected td {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: transparent !important;
   border-top: none !important;
   border-bottom-color: var(--border-color, #27272a) !important;
   color: #ffffff !important;
@@ -4283,7 +4285,7 @@ html.is-auth-view [data-ref="main-wrapper"] {
 }
 
 .component-bottom--centered {
-  padding: 32px 16px;
+  padding: 0;
   align-items: center;
   justify-content: flex-start;
   width: 100%;

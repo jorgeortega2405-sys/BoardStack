@@ -737,6 +737,7 @@ async function createOrganizationView(
     const btnExpandSeatsTop = container.querySelector<HTMLButtonElement>('[data-ref="btn-expand-seats"]');
     const btnOpenAdd = container.querySelector<HTMLButtonElement>('[data-ref="btn-open-add-member"]');
     const searchToolbar = container.querySelector<HTMLElement>('[data-ref="members-search-toolbar"]');
+    const searchInner = container.querySelector<HTMLElement>('[data-ref="members-search-inner"]');
     const searchInput = container.querySelector<HTMLInputElement>('[data-ref="input-search-members"]');
     const btnClearSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-members-search"]');
     const tableWrapper = container.querySelector<HTMLElement>('[data-ref="members-table-wrapper"]');
@@ -896,6 +897,7 @@ async function createOrganizationView(
     const hideSearchToolbar = (): void => {
       if (!searchToolbar) return;
       searchToolbar.classList.add('is-hidden');
+      searchInput?.blur();
       if (searchInput && searchInput.value) {
         searchInput.value = '';
         btnClearSearch?.classList.add('is-hidden');
@@ -907,9 +909,13 @@ async function createOrganizationView(
       e.preventDefault();
       if (!searchToolbar) return;
       const isClosed = searchToolbar.classList.contains('is-hidden');
-      searchToolbar.classList.toggle('is-hidden', !isClosed);
-      if (isClosed && searchInput) {
-        setTimeout(() => searchInput.focus(), 50);
+      if (isClosed) {
+        searchToolbar.classList.remove('is-hidden');
+        if (searchInput) {
+          setTimeout(() => searchInput.focus(), 50);
+        }
+      } else {
+        hideSearchToolbar();
       }
     });
 
@@ -936,16 +942,28 @@ async function createOrganizationView(
         if (document.querySelector('.modal-backdrop.is-visible')) {
           return;
         }
-        if (selectedMemberId !== null) {
+        if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+          e.preventDefault();
+          hideSearchToolbar();
+        } else if (selectedMemberId !== null) {
           selectedMemberId = null;
           updateSelectionUI();
           renderMemberRows(currentlyDisplayedMembers, Boolean(searchInput?.value.trim()));
-        } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
-          hideSearchToolbar();
         }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
+
+    const handleDocumentClick = (e: MouseEvent): void => {
+      if (!searchToolbar || searchToolbar.classList.contains('is-hidden')) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (searchInner?.contains(target) || btnToggleSearch?.contains(target)) {
+        return;
+      }
+      hideSearchToolbar();
+    };
+    document.addEventListener('click', handleDocumentClick);
 
     btnCopyEmail?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -998,6 +1016,7 @@ async function createOrganizationView(
 
     (container as HTMLElement & { cleanup?: () => void }).cleanup = () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('click', handleDocumentClick);
     };
     btnOpenAdd?.addEventListener('click', () => {
       const modal = openModal({

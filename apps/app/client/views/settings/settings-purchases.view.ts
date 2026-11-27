@@ -295,6 +295,7 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
   const btnClearSearch = container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
   const btnToggleSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="purchases-search-toolbar"]');
+  const searchInner = container.querySelector<HTMLElement>('[data-ref="purchases-search-inner"]');
   const selectedBadge = container.querySelector<HTMLElement>('[data-ref="purchases-selected-badge"]');
   const selectionActions = container.querySelector<HTMLElement>('[data-ref="purchases-selection-actions"]');
   const btnDownloadInvoice = container.querySelector<HTMLButtonElement>('[data-ref="btn-download-invoice"]');
@@ -320,19 +321,10 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
     renderIcons(container);
   };
 
-  btnToggleSearch?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (!searchToolbar) return;
-    const isClosed = searchToolbar.classList.contains('is-hidden');
-    searchToolbar.classList.toggle('is-hidden', !isClosed);
-    if (isClosed && searchInput) {
-      setTimeout(() => searchInput.focus(), 50);
-    }
-  });
-
   const hideSearchToolbar = () => {
     if (!searchToolbar) return;
     searchToolbar.classList.add('is-hidden');
+    searchInput?.blur();
     if (searchInput && searchInput.value) {
       searchInput.value = '';
       btnClearSearch?.classList.add('is-hidden');
@@ -340,18 +332,47 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
     }
   };
 
+  btnToggleSearch?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!searchToolbar) return;
+    const isClosed = searchToolbar.classList.contains('is-hidden');
+    if (isClosed) {
+      searchToolbar.classList.remove('is-hidden');
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    } else {
+      hideSearchToolbar();
+    }
+  });
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      if (selectedPurchaseId !== null) {
+      if (document.querySelector('.modal-backdrop.is-visible')) {
+        return;
+      }
+      if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+        e.preventDefault();
+        hideSearchToolbar();
+      } else if (selectedPurchaseId !== null) {
         selectedPurchaseId = null;
         updateSelectionUI();
         renderRows(currentlyDisplayedPurchases, Boolean(searchInput?.value.trim()));
-      } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
-        hideSearchToolbar();
       }
     }
   };
   document.addEventListener('keydown', handleKeyDown);
+
+  const handleDocumentClick = (e: MouseEvent) => {
+    if (!searchToolbar || searchToolbar.classList.contains('is-hidden')) return;
+    const target = e.target as Node | null;
+    if (!target) return;
+    if (searchInner?.contains(target) || btnToggleSearch?.contains(target)) {
+      return;
+    }
+    hideSearchToolbar();
+  };
+  document.addEventListener('click', handleDocumentClick);
 
   btnClearSearch?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -564,6 +585,7 @@ async function createSettingsPurchasesView(navigate: (path: string) => void): Pr
 
   (container as HTMLElement & { cleanup?: () => void }).cleanup = () => {
     document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('click', handleDocumentClick);
   };
 
   renderIcons(container);

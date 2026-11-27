@@ -244,6 +244,7 @@ async function createAppSalesView(
   const btnRefresh = container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-sales"]');
   const btnOpenDirectProvision = container.querySelector<HTMLButtonElement>('[data-ref="btn-open-direct-provision"]');
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="sales-search-toolbar"]');
+  const searchInner = container.querySelector<HTMLElement>('[data-ref="sales-search-inner"]');
   const totalBadge = container.querySelector<HTMLElement>('[data-ref="sales-total-badge"]');
   const selectedBadge = container.querySelector<HTMLElement>('[data-ref="sales-selected-badge"]');
   const selectionActions = container.querySelector<HTMLElement>('[data-ref="sales-selection-actions"]');
@@ -1188,6 +1189,7 @@ async function createAppSalesView(
   const hideSearchToolbar = () => {
     if (!searchToolbar) return;
     searchToolbar.classList.add('is-hidden');
+    searchInput?.blur();
     if (searchInput && searchInput.value) {
       searchInput.value = '';
       btnClearSearch?.classList.add('is-hidden');
@@ -1199,9 +1201,13 @@ async function createAppSalesView(
     e.preventDefault();
     if (!searchToolbar) return;
     const isClosed = searchToolbar.classList.contains('is-hidden');
-    searchToolbar.classList.toggle('is-hidden', !isClosed);
-    if (isClosed && searchInput) {
-      setTimeout(() => searchInput.focus(), 50);
+    if (isClosed) {
+      searchToolbar.classList.remove('is-hidden');
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    } else {
+      hideSearchToolbar();
     }
   });
 
@@ -1210,16 +1216,28 @@ async function createAppSalesView(
       if (document.querySelector('[data-ref="dialog-backdrop"]')) {
         return;
       }
-      if (selectedLeadId !== null) {
+      if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+        e.preventDefault();
+        hideSearchToolbar();
+      } else if (selectedLeadId !== null) {
         selectedLeadId = null;
         updateSelectionUI();
         renderRows(currentlyDisplayedLeads, Boolean(searchInput?.value.trim()));
-      } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
-        hideSearchToolbar();
       }
     }
   };
   document.addEventListener('keydown', handleKeyDown);
+
+  const handleDocumentClick = (e: MouseEvent) => {
+    if (!searchToolbar || searchToolbar.classList.contains('is-hidden')) return;
+    const target = e.target as Node | null;
+    if (!target) return;
+    if (searchInner?.contains(target) || btnToggleSearch?.contains(target)) {
+      return;
+    }
+    hideSearchToolbar();
+  };
+  document.addEventListener('click', handleDocumentClick);
 
   btnClearSearch?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -1326,6 +1344,7 @@ async function createAppSalesView(
   container.cleanup = () => {
     isDisposed = true;
     document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('click', handleDocumentClick);
   };
 
   renderIcons(container);

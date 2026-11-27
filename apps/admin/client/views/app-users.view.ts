@@ -114,6 +114,7 @@ async function createAppUsersView(
   const btnToggleSearch = container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-users-search"]');
   const btnRefresh = container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-users"]');
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="users-search-toolbar"]');
+  const searchInner = container.querySelector<HTMLElement>('[data-ref="users-search-inner"]');
   const totalBadge = container.querySelector<HTMLElement>('[data-ref="users-total-badge"]');
   const selectedBadge = container.querySelector<HTMLElement>('[data-ref="users-selected-badge"]');
   const selectionActions = container.querySelector<HTMLElement>('[data-ref="users-selection-actions"]');
@@ -286,6 +287,7 @@ async function createAppUsersView(
   const hideSearchToolbar = () => {
     if (!searchToolbar) return;
     searchToolbar.classList.add('is-hidden');
+    searchInput?.blur();
     if (searchInput && searchInput.value) {
       searchInput.value = '';
       btnClearSearch?.classList.add('is-hidden');
@@ -297,24 +299,43 @@ async function createAppUsersView(
     e.preventDefault();
     if (!searchToolbar) return;
     const isClosed = searchToolbar.classList.contains('is-hidden');
-    searchToolbar.classList.toggle('is-hidden', !isClosed);
-    if (isClosed && searchInput) {
-      setTimeout(() => searchInput.focus(), 50);
+    if (isClosed) {
+      searchToolbar.classList.remove('is-hidden');
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    } else {
+      hideSearchToolbar();
     }
   });
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      if (selectedUserId !== null) {
+      if (document.querySelector('[data-ref="dialog-backdrop"]')) {
+        return;
+      }
+      if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
+        e.preventDefault();
+        hideSearchToolbar();
+      } else if (selectedUserId !== null) {
         selectedUserId = null;
         updateSelectionUI();
         renderRows(currentlyDisplayedUsers, Boolean(searchInput?.value.trim()));
-      } else if (searchToolbar && !searchToolbar.classList.contains('is-hidden')) {
-        hideSearchToolbar();
       }
     }
   };
   document.addEventListener('keydown', handleKeyDown);
+
+  const handleDocumentClick = (e: MouseEvent) => {
+    if (!searchToolbar || searchToolbar.classList.contains('is-hidden')) return;
+    const target = e.target as Node | null;
+    if (!target) return;
+    if (searchInner?.contains(target) || btnToggleSearch?.contains(target)) {
+      return;
+    }
+    hideSearchToolbar();
+  };
+  document.addEventListener('click', handleDocumentClick);
 
   btnClearSearch?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -408,6 +429,7 @@ async function createAppUsersView(
   container.cleanup = () => {
     isDisposed = true;
     document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener('click', handleDocumentClick);
   };
 
   renderIcons(container);
